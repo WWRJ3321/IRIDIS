@@ -70,6 +70,7 @@ import com.iris.localai.ui.theme.SmoothRoundedShape
 internal object FilesText {
     const val TITLE = "文件"
     const val ARCHIVE_MODE = "档案模式"
+    const val VIEW_STYLE = "视图"
     const val SYSTEM_BADGE = "系统"
     const val NEW_FOLDER = "新建文件夹"
     /** Same wording as 智能体 › 工作区. */
@@ -86,6 +87,12 @@ internal fun systemIcon(s: SystemFolder): ImageVector = when (s) {
     SystemFolder.KNOWLEDGE -> IrisIcons.Memory
     SystemFolder.CONFIG -> IrisIcons.Settings
     SystemFolder.WORKSPACE -> IrisIcons.Agent
+}
+
+internal fun styleIcon(s: FileViewStyle): ImageVector = when (s) {
+    FileViewStyle.LIST -> IrisIcons.File
+    FileViewStyle.ARCHIVE -> IrisIcons.Archive
+    FileViewStyle.CARDS -> IrisIcons.Layers
 }
 
 internal fun entryIcon(e: FileEntry): ImageVector = e.system?.let(::systemIcon) ?: if (e.isDir) IrisIcons.Folder else IrisIcons.File
@@ -119,18 +126,32 @@ fun AppFilesPage(onBack: () -> Unit) {
     BackHandler(enabled = !state.atRoot) { vm.up() }
     state.message?.let { m -> LaunchedEffect(m) { kotlinx.coroutines.delay(4000); vm.consumeMessage() } }
 
-    val archive = state.viewStyle == FileViewStyle.ARCHIVE
+    val styled = state.viewStyle != FileViewStyle.LIST
+    var styleMenu by remember { mutableStateOf(false) }
     SubpageScaffold(FilesText.TITLE, onBack, actions = {
-        PressableIcon(
-            IrisIcons.Archive, FilesText.ARCHIVE_MODE + if (archive) "：开" else "：关",
-            tint = if (archive) Iris.colors.accent else Iris.colors.text,
-            background = if (archive) Iris.colors.accentContainer else androidx.compose.ui.graphics.Color.Transparent,
-        ) { vm.setViewStyle(if (archive) FileViewStyle.LIST else FileViewStyle.ARCHIVE) }
+        // 2.1.9: small view-style menu — 列表 / 档案 / 卡片.
+        Box {
+            PressableIcon(
+                styleIcon(state.viewStyle), FilesText.VIEW_STYLE + "：" + state.viewStyle.label,
+                tint = if (styled) Iris.colors.accent else Iris.colors.text,
+                background = if (styled) Iris.colors.accentContainer else androidx.compose.ui.graphics.Color.Transparent,
+            ) { styleMenu = true }
+            IrisMenu(expanded = styleMenu, onDismiss = { styleMenu = false }) {
+                FileViewStyle.entries.forEach { s ->
+                    IrisMenuItem(s.label, if (s == state.viewStyle) IrisIcons.Check else styleIcon(s)) {
+                        styleMenu = false
+                        vm.setViewStyle(s)
+                    }
+                }
+            }
+        }
     }) {
         when (state.viewStyle) {
             FileViewStyle.LIST -> ListFileView(state, vm)
-            // 2.2 part B: pseudo-3D archive deck (same FilesState / FilesActions, same dialogs).
+            // 2.1.9 「档案」: isometric slab field (same FilesState / FilesActions, same dialogs).
             FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)
+            // 2.1.9 「卡片」: the first 档案模式 card deck, kept as its own style.
+            FileViewStyle.CARDS -> CardStackFileView(state, vm)
         }
     }
     FilesDialogs(state, vm)

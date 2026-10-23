@@ -119,6 +119,12 @@ object IrisMotion {
     const val ARCHIVE_RISE_MS = 480
     /** Diagonal "decrypt" sweep of the file sheet, frosted → clear. */
     const val ARCHIVE_DECRYPT_MS = 640
+    /** 2.1.9 档案: the white intro (title only) before the slab field fades in, first open per session. */
+    const val ARCHIVE_INTRO_MS = 700
+    /** 2.1.9 档案: the slab field fading in / settling after the intro. */
+    const val ARCHIVE_SETTLE_MS = 620
+    /** 2.1.9 档案: the file detail — decrypt line, frosted → clear glass, redaction bars retracting. */
+    const val ARCHIVE_REVEAL_MS = 1150
     /** Emphasized ease for one-shot 0 → 1 progress values (a wave or sweep has no value to retarget). */
     val ProgressEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     /** Ease-in for things leaving (the falling cards). */

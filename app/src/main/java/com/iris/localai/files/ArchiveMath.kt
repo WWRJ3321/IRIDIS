@@ -8,7 +8,9 @@ import kotlin.math.sign
 import kotlin.math.sin
 
 /**
- * 2.2 「档案模式」: the pure geometry of the archive deck (no Android / Compose types, unit-tested).
+ * 2.2 「档案模式」 / 「卡片」: the pure geometry of the archive views (no Android / Compose types, unit-tested).
+ * The first half is the card deck of [com.iris.localai.ui.files.CardStackFileView] (「卡片」); the
+ * slab field of [com.iris.localai.ui.files.ArchiveFileView] (「档案」) follows at the end.
  *
  * The deck is a vertical column of cards around a continuous scroll position `pos` measured in
  * cards. A card's *offset* `d = logicalIndex - pos` (0 = focused, front-facing) drives its depth:
@@ -77,6 +79,22 @@ object ArchiveMath {
         loops(count) -> pos
         else -> pos.coerceIn(0f, (count - 1).toFloat())
     }
+
+    /**
+     * 「卡片」 fix: vertical bias (card heights) that centres the visible stack of a bounded deck
+     * rather than only the focused card, so a short folder does not leave the top half empty.
+     * 0 for looping decks (symmetric) and single cards.
+     */
+    fun deckBias(pos: Float, count: Int): Float {
+        if (count <= 1 || loops(count)) return 0f
+        val half = MAX_HALF_WINDOW.toFloat()
+        val above = pos.coerceIn(0f, half)
+        val below = ((count - 1) - pos).coerceIn(0f, half)
+        return -(spacing(below) - spacing(above)) / 2f
+    }
+
+    /** 「卡片」 fix: only the focused card shows its text; it fades out within half a card of scroll. */
+    fun contentAlpha(d: Float): Float = (1f - abs(d) * 2f).coerceIn(0f, 1f)
 
     // ---------------------------------------------------------------- per-card depth
 
@@ -265,4 +283,472 @@ object ArchiveMath {
 
     /** Path tag of the HUD: "/IRIDIS" or "/IRIDIS/models/qwen". */
     fun pathTag(rel: String): String = "/" + FilesPaths.ROOT_LABEL + (if (rel.isEmpty()) "" else "/" + rel.trim('/'))
+
+    // ================================================================ 2.1.9 「档案模式」 slab field
+    //
+    // The archive view is a full-screen field of thin rectangular slabs ("archive cassettes")
+    // lying in parallel rows, drawn as 2.5D prisms by an oblique parallel projection. World axes:
+    // X = across the rows (columns side by side), Y = along a slab's length, Z = up. Each entry of
+    // the current column is one slab of the *active row* (row 0); every other slab is decoration.
+    // The selected slab stands upright (rotates about its near bottom edge), neighbours lift in a
+    // decaying wave. Everything below is allocation-free per frame and unit-tested.
+
+    /** Slab and grid metrics in dp (world units = dp before the projection). */
+    object Field {
+        /** Slab thickness (X), height when lying (Z) and length (Y). */
+        const val W = 6f
+        const val H = 25f
+        const val L = 142f
+        /** Gap between the ends of two slabs in a column (≥ [H], so a rising slab never cuts into its neighbour). */
+        const val GAP = 30f
+        /** Column pitch along X and the per-column stagger along Y (the staircase of slab ends). */
+        const val PITCH = 31f
+        const val STAGGER = 25f
+        /** Screen directions of the X and Y axes (degrees, screen y down); Z is straight up. */
+        const val EX_DEG = 52f
+        const val EY_DEG = -24f
+        /** The selected slab widens to H × this when it stands (a plate rather than a pole). */
+        const val STAND_WIDEN = 1.4f
+        /** Peak lift (dp) of the first neighbour, and of the selection wave. */
+        const val LIFT = 16f
+        const val WAVE = 10f
+        /** Neighbours further than this (columns) do not lift. */
+        const val LIFT_REACH = 5f
+        /** Anchor of the selected slab's base, as fractions of the canvas. */
+        const val ANCHOR_X = 0.30f
+        const val ANCHOR_Y = 0.60f
+        /** Margin (dp) around the canvas inside which slabs are generated. */
+        const val MARGIN = 220f
+        /** Height of the intro "settle" drop (dp). */
+        const val DROP = 36f
+        const val ROW = L + GAP
+        /** Vertices per slab at most: shadow + 3 faces + highlight + dot + label (2 quads), 6 each. */
+        const val VERTS_PER_SLAB = 8 * 6
+    }
+
+    /** Smoothstep: how upright the slab [d] columns from the scroll position stands (1 at 0, 0 from 1 on). */
+    fun standOf(d: Float): Float {
+        val a = abs(d)
+        if (a >= 1f) return 0f
+        val t = 1f - a
+        return t * t * (3f - 2f * t)
+    }
+
+    /** Lift (0..1 of [Field.LIFT]) of an active slab [d] columns away: decays with distance, 0 beyond the reach. */
+    fun liftOf(d: Float): Float {
+        val a = abs(d)
+        if (a >= Field.LIFT_REACH) return 0f
+        return kotlin.math.exp(-0.75f * a) * (1f - a / Field.LIFT_REACH)
+    }
+
+    /** Extra lift (dp) of the selection wave at progress [t] for a slab [d] columns away (staggered outwards). */
+    fun fieldWave(t: Float, d: Float): Float {
+        if (t <= 0f || t >= 1f) return 0f
+        val slot = abs(d).roundToInt().coerceAtMost(MAX_HALF_WINDOW)
+        val p = staggered(t, slot)
+        return sin(PI.toFloat() * p) * Field.WAVE / (1f + slot * 0.6f)
+    }
+
+    /** Global rise 0..1 (folder change / intro / back from a file) for the slab [d] columns away (staggered). */
+    fun riseFor(rise: Float, d: Float): Float =
+        if (rise >= 1f) 1f else if (rise <= 0f) 0f else staggered(rise, abs(d).roundToInt().coerceAtMost(MAX_HALF_WINDOW))
+
+    /** Snap target of the looping field after a release at [velocity] columns / s (never clamped: the field always loops). */
+    fun fieldSnap(pos: Float, velocity: Float): Float =
+        (pos + velocity * FLING_PROJECTION).coerceIn(pos - MAX_FLING_CARDS, pos + MAX_FLING_CARDS).roundToInt().toFloat()
+
+    // ---------------------------------------------------------------- columns (categories)
+
+    /** The archive's columns, switched with ← COLUMN →; empty ones are skipped. [code] prefixes the file number. */
+    enum class Column(val label: String, val code: Char) {
+        FOLDERS("文件夹", 'F'), DOCS("文档", 'D'), MEDIA("媒体", 'M'), MODELS("模型", 'N'), OTHER("其他", 'X')
+    }
+
+    private val DOCS = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "rtf", "odt")
+
+    fun columnOf(isDir: Boolean, system: Boolean, extension: String): Column = when (kind(isDir, system, extension)) {
+        Kind.SYSTEM, Kind.FOLDER -> Column.FOLDERS
+        Kind.TEXT -> Column.DOCS
+        Kind.MEDIA -> Column.MEDIA
+        Kind.MODEL -> Column.MODELS
+        Kind.PACKAGE, Kind.OTHER -> if (extension.lowercase(Locale.ROOT) in DOCS) Column.DOCS else Column.OTHER
+    }
+
+    fun columnOf(e: FileEntry): Column = columnOf(e.isDir, e.system != null, e.extension)
+
+    /** Non-empty columns of [entries], in [Column] order. */
+    fun columns(entries: List<FileEntry>): List<Column> {
+        val present = entries.mapTo(HashSet()) { columnOf(it) }
+        return Column.entries.filter { it in present }
+    }
+
+    /** The entries of [column], keeping the page's sort order. */
+    fun inColumn(entries: List<FileEntry>, column: Column?): List<FileEntry> =
+        if (column == null) emptyList() else entries.filter { columnOf(it) == column }
+
+    /** The column to show after the entries changed: the same one when still present, else the first. */
+    fun keepColumn(columns: List<Column>, current: Column?): Column? = if (current != null && current in columns) current else columns.firstOrNull()
+
+    /** "F-001" for the first folder ([index] 0); wider past 999. */
+    fun fileNumber(column: Column, index: Int): String = column.code + "-" + (index.coerceAtLeast(0) + 1).toString().padStart(3, '0')
+
+    /** Two-digit counter text: "01", "12", "128". */
+    fun counter(value: Int): String = value.coerceAtLeast(0).toString().padStart(2, '0')
+
+    /** "COLUMN 01 / 03". */
+    fun columnLabel(index: Int, count: Int): String = "COLUMN " + counter(index + 1) + " / " + counter(count)
+
+    /** Path line of the HUD: "DOWNLOAD / IRIDIS / 模型 / qwen". */
+    fun pathLine(crumbLabels: List<String>): String = (listOf("DOWNLOAD") + crumbLabels).joinToString(" / ")
+
+    /** Ticks of the bottom ruler: at most [max], the selected one at [selected] (wraps for long folders). */
+    fun rulerTicks(count: Int, max: Int = 12): Int = count.coerceIn(0, max)
+    fun rulerSelected(index: Int, count: Int, max: Int = 12): Int = if (count <= max) index else ((index.toLong() * max) / count.coerceAtLeast(1)).toInt().coerceIn(0, max - 1)
+
+    // ---------------------------------------------------------------- detail reveal
+
+    /** Local 0..1 progress of the redaction bar [i] (bars retract left → right, one after another) at overall [t]. */
+    fun redactProgress(t: Float, i: Int, start: Float = 0.42f, stagger: Float = 0.04f, span: Float = 0.25f): Float =
+        ((t - start - i * stagger) / span).coerceIn(0f, 1f)
+
+    /**
+     * The decrypt line across the glass panel at progress [t]: it grows from the bottom-left corner
+     * to the top-right (0 → [LINE_GROW]), then collapses into the top-right ([LINE_GROW] → [LINE_END]).
+     * Writes the start / end fractions (0 = bottom-left, 1 = top-right) into [out] and returns false when hidden.
+     */
+    fun decryptLine(t: Float, out: FloatArray): Boolean {
+        val grow = (t / LINE_GROW).coerceIn(0f, 1f)
+        val collapse = ((t - LINE_GROW) / (LINE_END - LINE_GROW)).coerceIn(0f, 1f)
+        out[0] = collapse
+        out[1] = grow
+        return t > 0f && collapse < 1f
+    }
+    const val LINE_GROW = 0.38f
+    const val LINE_END = 0.62f
+
+    /** Frost → clear front of the glass panel, top-down (0 = all frosted, 1 = clear), at overall [t]. */
+    fun frostFront(t: Float): Float = ((t - 0.18f) / 0.55f).coerceIn(0f, 1f)
+
+    private val IMAGES = setOf("png", "jpg", "jpeg", "webp")
+    /** Image files get a thumbnail inside the glass slab. */
+    fun isImage(extension: String): Boolean = extension.lowercase(Locale.ROOT) in IMAGES
+
+    /** inSampleSize (power of two) so the larger side of a [w]×[h] image is ≤ [maxSide]. */
+    fun sampleSize(w: Int, h: Int, maxSide: Int): Int {
+        var s = 1
+        while (maxOf(w, h) / (s * 2) >= maxSide) s *= 2
+        return s
+    }
+
+    // ---------------------------------------------------------------- colours (ARGB ints, no Android types)
+
+    fun lerpColor(a: Int, b: Int, t: Float): Int {
+        val k = t.coerceIn(0f, 1f)
+        fun ch(shift: Int): Int {
+            val x = (a ushr shift) and 0xFF
+            val y = (b ushr shift) and 0xFF
+            return (x + ((y - x) * k)).roundToInt() and 0xFF
+        }
+        return (ch(24) shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
+
+    /** Palette of the field. Light default = the warm off-white of the reference; dark = deep graphite. */
+    class FieldColors(
+        val background: Int,
+        /** Face colour lit head-on and facing away from the light. */
+        val lit: Int,
+        val shade: Int,
+        /** Haze toward the top of the field. */
+        val haze: Int,
+        val shadow: Int,
+        val highlight: Int,
+        val dot: Int,
+        val label: Int,
+    ) {
+        companion object {
+            val LIGHT = FieldColors(
+                background = 0xFFEFEBE5.toInt(), lit = 0xFFFBF9F5.toInt(), shade = 0xFFC2BAAE.toInt(), haze = 0xFFF5F2EE.toInt(),
+                shadow = 0xFFD3CCC1.toInt(), highlight = 0xFFFFFFFF.toInt(), dot = 0xFF85807A.toInt(), label = 0xFF2A2826.toInt(),
+            )
+            val DARK = FieldColors(
+                background = 0xFF141416.toInt(), lit = 0xFF4C4C52.toInt(), shade = 0xFF19191C.toInt(), haze = 0xFF1B1B1E.toInt(),
+                shadow = 0xFF0C0C0D.toInt(), highlight = 0xFF66666D.toInt(), dot = 0xFF9A9AA2.toInt(), label = 0xFFD8D8DE.toInt(),
+            )
+
+            /** [base] tinted toward [accent] by [amount] (non-default palettes get a hint of their colour). */
+            fun tinted(base: FieldColors, accent: Int, amount: Float): FieldColors = if (amount <= 0f) base else FieldColors(
+                lerpColor(base.background, accent, amount * 0.5f), lerpColor(base.lit, accent, amount * 0.4f),
+                lerpColor(base.shade, accent, amount), lerpColor(base.haze, accent, amount * 0.5f),
+                lerpColor(base.shadow, accent, amount), base.highlight, base.dot, base.label,
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------- the field itself
+
+    /**
+     * Geometry of the whole slab field for one canvas size. [layout] once per size, then [build]
+     * per frame: it writes triangles (x, y pairs) into [verts] and per-vertex colours into [colors]
+     * in painter's order (one `drawVertices` call draws everything) and returns the vertex count.
+     * Nothing is allocated in [build].
+     */
+    class SlabField {
+        // screen basis (dp per world unit) of X and Y; Z maps to straight up
+        private val exx = kotlin.math.cos(Field.EX_DEG * PI.toFloat() / 180f)
+        private val exy = sin(Field.EX_DEG * PI.toFloat() / 180f)
+        private val eyx = kotlin.math.cos(Field.EY_DEG * PI.toFloat() / 180f)
+        private val eyy = sin(Field.EY_DEG * PI.toFloat() / 180f)
+        /** Direction toward the viewer (kernel of the projection, oriented up): a face is visible when n·k > 0. */
+        val kx: Float; val ky: Float; val kz: Float
+        // light direction (normalised): from the upper left, in front
+        private val lx: Float; private val ly: Float; private val lz: Float
+
+        init {
+            // rows of the 2×3 projection: (exx, eyx, 0) and (exy, eyy, -1); k = r1 × r2
+            var ax = eyx * -1f - 0f * eyy
+            var ay = 0f * exy - exx * -1f
+            var az = exx * eyy - eyx * exy
+            if (az < 0f) { ax = -ax; ay = -ay; az = -az }
+            kx = ax; ky = ay; kz = az
+            val n = kotlin.math.sqrt(0.35f * 0.35f + 0.55f * 0.55f + 0.76f * 0.76f)
+            lx = -0.35f / n; ly = -0.55f / n; lz = 0.76f / n
+        }
+
+        var width = 0f; private set
+        var height = 0f; private set
+        var density = 1f; private set
+        private var anchorX = 0f
+        private var anchorY = 0f
+        private var uMin = 0f; private var uMax = 0f
+        private var jMin = 0; private var jMax = 0
+
+        var verts = FloatArray(0); private set
+        var colors = IntArray(0); private set
+        var capacitySlabs = 0; private set
+
+        /** Screen bounds (l, t, r, b) and logical column of every active slab drawn by the last [build]. */
+        val activeBounds = FloatArray(MAX_ACTIVE * 4)
+        val activeColumn = IntArray(MAX_ACTIVE)
+        var activeCount = 0; private set
+        /** Logical column of the selected slab in the last [build] (round(pos)). */
+        var selectedColumn = 0; private set
+
+        /** Sizes the field for a [w]×[h] px canvas at [density] px / dp; reallocates only when needed. */
+        fun layout(w: Float, h: Float, density: Float) {
+            if (w == width && h == height && density == this.density && verts.isNotEmpty()) return
+            width = w; height = h; this.density = density
+            anchorX = w * Field.ANCHOR_X
+            anchorY = h * Field.ANCHOR_Y
+            // invert the column / row basis at the four (margin-expanded) corners
+            val m = Field.MARGIN * density
+            val ax = (Field.PITCH * exx + Field.STAGGER * eyx) * density
+            val ay = (Field.PITCH * exy + Field.STAGGER * eyy) * density
+            val bx = Field.ROW * eyx * density
+            val by = Field.ROW * eyy * density
+            val det = ax * by - ay * bx
+            var u0 = Float.MAX_VALUE; var u1 = -Float.MAX_VALUE; var j0 = Float.MAX_VALUE; var j1 = -Float.MAX_VALUE
+            for (i in 0 until 4) {
+                val cx = (if (i and 1 == 0) -m else w + m) - anchorX
+                val cy = (if (i and 2 == 0) -m else h + m) - anchorY
+                val u = (cx * by - cy * bx) / det
+                val j = (ax * cy - ay * cx) / det
+                u0 = minOf(u0, u); u1 = maxOf(u1, u); j0 = minOf(j0, j); j1 = maxOf(j1, j)
+            }
+            uMin = u0; uMax = u1
+            jMin = kotlin.math.floor(j0).toInt() - 1
+            jMax = kotlin.math.ceil(j1).toInt() + 1
+            val cols = kotlin.math.ceil(u1 - u0).toInt() + 3
+            val rows = jMax - jMin + 1
+            capacitySlabs = cols * rows
+            verts = FloatArray(capacitySlabs * Field.VERTS_PER_SLAB * 2)
+            colors = IntArray(capacitySlabs * Field.VERTS_PER_SLAB)
+        }
+
+        /** Column range drawn for scroll position [pos] (inclusive). */
+        fun firstColumn(pos: Float): Int = kotlin.math.floor(pos + uMin).toInt() - 1
+        fun lastColumn(pos: Float): Int = kotlin.math.ceil(pos + uMax).toInt() + 1
+
+        // ---- per-slab scratch (no allocation)
+        private var n = 0
+        private var sx0 = 0f; private var sy0 = 0f; private var sz0 = 0f // slab origin (world dp)
+        private var cosT = 1f; private var sinT = 0f; private var hh = Field.H; private var yOff = 0f
+        private var px = 0f; private var py = 0f
+        private val cx = FloatArray(8); private val cy = FloatArray(8)
+        private lateinit var pal: FieldColors
+
+        /** World → screen px (into px / py). */
+        private fun project(x: Float, y: Float, z: Float) {
+            px = anchorX + (x * exx + y * eyx) * density
+            py = anchorY + (x * exy + y * eyy - z) * density
+        }
+
+        /** Slab-local (x across, u along, v up) → screen, through the slab's rotation about its near bottom edge. */
+        private fun local(x: Float, u: Float, v: Float) =
+            project(sx0 + x, sy0 + yOff + u * cosT - v * sinT, sz0 + u * sinT + v * cosT)
+
+        /** Haze toward the top: 0 at 55 % of the height and below, up to 0.65 at the top edge. */
+        private fun hazeAt(y: Float): Float {
+            val t = (1f - y / (height * 0.55f)).coerceIn(0f, 1f)
+            return t * kotlin.math.sqrt(t) * 0.65f
+        }
+
+        private fun shadeOf(nx: Float, ny: Float, nz: Float): Int =
+            lerpColor(pal.shade, pal.lit, 0.5f + 0.5f * (nx * lx + ny * ly + nz * lz))
+
+        private fun vertex(x: Float, y: Float, color: Int) {
+            verts[n * 2] = x; verts[n * 2 + 1] = y
+            colors[n] = lerpColor(color, pal.haze, hazeAt(y))
+            n++
+        }
+
+        /** Quad from the corner points a, b, c, d (indices into [cx] / [cy]) with one colour and a darker bottom pair. */
+        private fun face(a: Int, b: Int, c: Int, d: Int, color: Int, aoA: Float, aoB: Float, aoC: Float, aoD: Float) {
+            val ca = lerpColor(color, pal.shade, aoA); val cb = lerpColor(color, pal.shade, aoB)
+            val cc = lerpColor(color, pal.shade, aoC); val cd = lerpColor(color, pal.shade, aoD)
+            vertex(cx[a], cy[a], ca); vertex(cx[b], cy[b], cb); vertex(cx[c], cy[c], cc)
+            vertex(cx[a], cy[a], ca); vertex(cx[c], cy[c], cc); vertex(cx[d], cy[d], cd)
+        }
+
+        private var qx0 = 0f; private var qy0 = 0f; private var qx1 = 0f; private var qy1 = 0f
+        private var qx2 = 0f; private var qy2 = 0f
+
+        /** Quad of slab-local points on one face, flat [color] (or [c2] for the far pair). */
+        private fun localQuad(
+            x0: Float, u0: Float, v0: Float, x1: Float, u1: Float, v1: Float,
+            x2: Float, u2: Float, v2: Float, x3: Float, u3: Float, v3: Float, color: Int, c2: Int = color,
+        ) {
+            local(x0, u0, v0); qx0 = px; qy0 = py
+            local(x1, u1, v1); qx1 = px; qy1 = py
+            local(x2, u2, v2); qx2 = px; qy2 = py
+            local(x3, u3, v3)
+            vertex(qx0, qy0, color); vertex(qx1, qy1, color); vertex(qx2, qy2, c2)
+            vertex(qx0, qy0, color); vertex(qx2, qy2, c2); vertex(px, py, c2)
+        }
+
+        /**
+         * Rebuilds the vertex buffers.
+         * @param pos scroll position in columns (the selected slab is the column round(pos))
+         * @param hasActive false = no entries: every slab lies flat
+         * @param rise global stand / lift 0..1 (staggered outwards from the selection)
+         * @param shiftRows 0..1: the whole field slides one row along the slabs (folder change)
+         * @param wave selection wave progress 0..1 (no effect at 0 or 1)
+         * @param drop 0..1 intro drop (1 = slabs float [Field.DROP] above their rest)
+         * @return vertex count (each vertex is two floats in [verts])
+         */
+        fun build(pos: Float, hasActive: Boolean, rise: Float, shiftRows: Float, wave: Float, drop: Float, palette: FieldColors): Int {
+            pal = palette
+            n = 0
+            activeCount = 0
+            selectedColumn = pos.roundToInt()
+            val c0 = firstColumn(pos); val c1 = lastColumn(pos)
+            val maxVerts = colors.size
+            val sideX = shadeOf(1f, 0f, 0f)
+            for (c in c0..c1) {
+                val u = c - pos
+                for (j in jMax downTo jMin) {
+                    if (n + Field.VERTS_PER_SLAB > maxVerts) return n
+                    val active = hasActive && j == 0
+                    val stand = if (active) standOf(u) * riseFor(rise, u) else 0f
+                    val lift = if (active) (liftOf(u) * Field.LIFT * riseFor(rise, u) + fieldWave(wave, u)) * (1f - stand) else 0f
+                    val theta = stand * (PI.toFloat() / 2f)
+                    cosT = kotlin.math.cos(theta); sinT = sin(theta)
+                    hh = Field.H * (1f + Field.STAND_WIDEN * stand)
+                    yOff = maxOf(0f, hh * sinT - (Field.GAP - 2f))
+                    sx0 = u * Field.PITCH
+                    sy0 = (j + shiftRows) * Field.ROW + u * Field.STAGGER
+                    sz0 = lift + drop * Field.DROP * (1f + 0.15f * (j and 3))
+                    // corners: bit 0 = x (0 / W), bit 1 = u (0 / L), bit 2 = v (0 / hh)
+                    var minX = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE; var minY = Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
+                    for (k in 0 until 8) {
+                        local(if (k and 1 != 0) Field.W else 0f, if (k and 2 != 0) Field.L else 0f, if (k and 4 != 0) hh else 0f)
+                        cx[k] = px; cy[k] = py
+                        minX = minOf(minX, px); maxX = maxOf(maxX, px); minY = minOf(minY, py); maxY = maxOf(maxY, py)
+                    }
+                    val sh = 14f * density
+                    if (maxX + sh < 0f || minX > width || maxY + sh < 0f || minY > height) continue
+                    if (active && activeCount < MAX_ACTIVE && abs(u) <= MAX_ACTIVE / 2) {
+                        activeBounds[activeCount * 4] = minX; activeBounds[activeCount * 4 + 1] = minY
+                        activeBounds[activeCount * 4 + 2] = maxX; activeBounds[activeCount * 4 + 3] = maxY
+                        activeColumn[activeCount] = c
+                        activeCount++
+                    }
+                    // contact shadow on the ground along the +X side of the footprint
+                    val yNear = sy0 + yOff - hh * sinT
+                    val yFar = sy0 + yOff + Field.L * cosT
+                    val sAlpha = 1f / (1f + sz0 * 0.08f)
+                    val sc = lerpColor(pal.background, pal.shadow, sAlpha)
+                    project(sx0 + Field.W, yNear, 0f); qx0 = px; qy0 = py
+                    project(sx0 + Field.W, yFar, 0f); qx1 = px; qy1 = py
+                    project(sx0 + Field.W + 13f, yFar + 5f, 0f); qx2 = px; qy2 = py
+                    project(sx0 + Field.W + 13f, yNear + 5f, 0f)
+                    vertex(qx0, qy0, sc); vertex(qx1, qy1, sc); vertex(qx2, qy2, pal.background)
+                    vertex(qx0, qy0, sc); vertex(qx2, qy2, pal.background); vertex(px, py, pal.background)
+                    // +X side (always visible): darker toward the ground
+                    face(1, 3, 7, 5, sideX, 0.22f, 0.22f, 0f, 0f)
+                    // original top (+Z) or bottom face
+                    val topNy = -sinT; val topNz = cosT
+                    val topVisible = topNy * ky + topNz * kz > 0f
+                    if (topVisible) face(4, 5, 7, 6, shadeOf(0f, topNy, topNz), 0f, 0f, 0f, 0f)
+                    else face(0, 1, 3, 2, shadeOf(0f, sinT, -cosT), 0f, 0f, 0f, 0f)
+                    // near (−Y) or far (+Y) end
+                    val nearNy = -cosT; val nearNz = -sinT
+                    if (nearNy * ky + nearNz * kz > 0f) face(0, 1, 5, 4, shadeOf(0f, nearNy, nearNz), 0.12f, 0.12f, 0f, 0f)
+                    else face(2, 3, 7, 6, shadeOf(0f, cosT, sinT), 0f, 0f, 0f, 0f)
+                    if (topVisible) {
+                        // bevel highlight along the +X edge of the top face, and the small dark dot near the far end
+                        val hw = 1.1f
+                        localQuad(Field.W - hw, 0f, hh, Field.W, 0f, hh, Field.W, Field.L, hh, Field.W - hw, Field.L, hh, pal.highlight)
+                        val d0 = Field.W / 2f - 1.7f; val d1 = Field.W / 2f + 1.7f
+                        localQuad(d0, Field.L - 14f, hh, d1, Field.L - 14f, hh, d1, Field.L - 10f, hh, d0, Field.L - 10f, hh, pal.dot)
+                    }
+                    val tag = if (active) riseFor(rise, u) else 0f
+                    if (tag > 0f) {
+                        // the entry's tag: a light label with a dark strip on the +X face near the far end,
+                        // fading in with the rise (so a lying active row looks like any other row)
+                        val lu0 = Field.L - 34f; val lu1 = Field.L - 18f
+                        val lv0 = hh * 0.36f; val lv1 = hh * 0.64f
+                        localQuad(Field.W, lu0, lv0, Field.W, lu1, lv0, Field.W, lu1, lv1, Field.W, lu0, lv1, lerpColor(sideX, pal.highlight, 0.45f * tag))
+                        localQuad(Field.W, lu1 - 2.5f, lv0, Field.W, lu1, lv0, Field.W, lu1, lv1, Field.W, lu1 - 2.5f, lv1, lerpColor(sideX, pal.label, 0.55f * tag))
+                    }
+                }
+            }
+            return n
+        }
+
+        /**
+         * Logical column of the active slab under ([x], [y]) from the last [build], preferring the
+         * selected one, then the nearest by bounds centre; null when none.
+         */
+        fun hit(x: Float, y: Float, slop: Float = 0f): Int? {
+            var best: Int? = null
+            var bestD = Float.MAX_VALUE
+            for (i in 0 until activeCount) {
+                val l = activeBounds[i * 4] - slop; val t = activeBounds[i * 4 + 1] - slop
+                val r = activeBounds[i * 4 + 2] + slop; val b = activeBounds[i * 4 + 3] + slop
+                if (x < l || x > r || y < t || y > b) continue
+                if (activeColumn[i] == selectedColumn) return selectedColumn
+                val dx = x - (l + r) / 2f; val dy = y - (t + b) / 2f
+                val d = dx * dx + dy * dy
+                if (d < bestD) { bestD = d; best = activeColumn[i] }
+            }
+            return best
+        }
+
+        /** Bounds of the selected slab from the last [build] into [out] (l, t, r, b); false when it was not drawn. */
+        fun selectedBounds(out: FloatArray): Boolean {
+            for (i in 0 until activeCount) if (activeColumn[i] == selectedColumn) {
+                for (k in 0 until 4) out[k] = activeBounds[i * 4 + k]
+                return true
+            }
+            return false
+        }
+
+        /** Screen position (px) of world point ([x], [y], [z]) relative to the anchor, for tests. */
+        fun screenOf(x: Float, y: Float, z: Float, out: FloatArray) { project(x, y, z); out[0] = px; out[1] = py }
+
+        companion object {
+            /** Active slabs whose bounds are kept for hit testing (centred on the selection). */
+            const val MAX_ACTIVE = 12
+        }
+    }
 }

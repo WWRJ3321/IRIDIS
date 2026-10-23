@@ -12,11 +12,13 @@ import java.util.Locale
  * leave the root and the app's own folders stay put.
  */
 
-/** 「档案模式」 switch on the page's top bar; stored as [com.iris.localai.data.AppSettings.fileViewStyle]. */
-enum class FileViewStyle {
-    LIST,
-    /** Pseudo-3D archive deck (「档案模式」, ArchiveFileView). */
-    ARCHIVE;
+/** View style menu on the page's top bar (列表 / 档案 / 卡片); stored as [com.iris.localai.data.AppSettings.fileViewStyle]. */
+enum class FileViewStyle(val label: String) {
+    LIST("列表"),
+    /** 2.1.9 「档案」: isometric slab field (ArchiveFileView, design inspiration LBEILC/RhineLabUI). */
+    ARCHIVE("档案"),
+    /** 2.1.9 「卡片」: the pseudo-3D card deck (CardStackFileView, the first 「档案模式」). */
+    CARDS("卡片");
 
     companion object {
         fun parse(s: String?): FileViewStyle = entries.firstOrNull { it.name.equals(s?.trim(), ignoreCase = true) } ?: LIST
