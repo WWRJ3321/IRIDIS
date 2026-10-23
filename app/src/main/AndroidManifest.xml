@@ -101,6 +101,19 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="On-device language model the user selected is being compiled for the GPU; runs only until that load finishes so the half-built compile cache is not lost." />
         </service>
+        <!-- 2.2 GUI 智能体（形态 A）: sees the screen (screenshot + node tree) and taps / swipes / types for a task the user started; off until the user enables it in 系统设置 › 无障碍. -->
+        <service
+            android:name=".agent.gui.android.IrisAccessibilityService"
+            android:exported="false"
+            android:label="@string/gui_a11y_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/iris_accessibility_service" />
+        </service>
         <!-- 1.12.0: scheduled tasks fire here (and are re-armed after a reboot / update / clock change). -->
         <receiver
             android:name=".agent.ScheduleReceiver"

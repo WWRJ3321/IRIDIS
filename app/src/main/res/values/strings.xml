@@ -5,4 +5,6 @@
     <string name="api_notification_title">IRIDIS API 服务运行中</string>
     <string name="api_notification_text">OpenAI 兼容接口 · 端口 %1$d</string>
     <string name="api_stop">停止</string>
+    <string name="gui_a11y_label">IRIDIS GUI 智能体</string>
+    <string name="gui_a11y_desc">让 IRIDIS 的 GUI 智能体在你发起任务时查看屏幕（截图和界面元素）并代你点击、滑动、输入。只在任务运行时操作，悬浮条可随时停止；支付、发送、删除等操作会先问你。画面只交给本机模型处理，不上传。</string>
 </resources>

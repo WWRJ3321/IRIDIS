@@ -217,6 +217,9 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenTerminal: () -> Unit = {}, onOpe
                     onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
             }
 
+            // 2.2: GUI 智能体（无障碍，形态 A）.
+            GuiAgentSection()
+
             // 1.12.0: search provider, command rules, scheduled tasks, skills, backup and logs.
             AgentExtraSections()
 
