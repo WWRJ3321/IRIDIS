@@ -53,3 +53,12 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - 读取（缩略图、前几行与行数、文件夹子项）全部在 IO 线程，经 `FilesPaths.resolve` / `FilesIo.list` 限制在 下载/IRIDIS 内。
 - 几何与时序（阶段进度、四边形插值、景深参数、扫描多边形 / 线段、标题停顿、行内错峰、中文类型名、字形、序号、行数、摘要）在 `ArchiveMath`，新增 ArchiveOpenTest。
 - 未真机验证转场观感与帧率（全屏模糊层 + 透视矩阵）；JVM 单测无法覆盖 Compose 绘制。
+
+
+## 语音提速（feat/voice-stream c276ddb + feat/voice-echo bd0f9a9）
+- 智能体语音边生成边开口：`AgentVoiceStream` 按句切分，句末后再等 4 个非空白字符确认不是工具调用才送 TTS；出现 `<`、反引号、`{`、`tool_call` 等即停止本轮放行；结束后 `finish()` 只补读未读部分。
+- 保住 KV 缓存：语音 NOTE 由「最新用户轮」移到系统提示末尾（`withVoiceSystem`），历史按原样发送，同一次通话前缀一致。代价：进出语音模式时整段重新预填充一次。
+- 回声门：`TAIL_MS` 450→200，`MAX_RESIDUAL_MS` 1500→600；`PreOpenBuffer` 环形缓冲最多 10 帧（约 300ms），只存 `echoFree` 帧（播放结束 + 排队余量 + 64ms 之后），门打开时先回放给 VAD/barge-in。
+- 新增 V219VoiceStreamTest、V219EchoGateTest；VoiceReplyTest 同步旧行为断言。
+- 输入框两行改版（be68291）应用户要求撤回（6977f2b）。
+- 待真机验证：首句提前开口、工具前开场白不读、多轮预填充时间下降、开头音节不再被吞、强混响下 200ms 尾巴是否够用。
