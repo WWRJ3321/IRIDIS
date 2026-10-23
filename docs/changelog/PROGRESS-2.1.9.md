@@ -36,9 +36,3 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - 「卡片」（CardStackFileView，原卡组）：整组卡片垂直居中（不再空出上半屏）；卡片不透明，只有聚焦卡绘制文字（滚动半张卡内淡出），不再透字。
 - 几何（投影、阵列布局与遮挡顺序、竖起 / 抬升 / 波浪、循环、分类分组、编号 / 计数格式、解密进度）在 `ArchiveMath`，新增 ArchiveFieldTest；FilesLogicTest / V219ReleaseTest 更新。
 - 未真机验证新「档案」的观感与帧率；无 Robolectric / Paparazzi，仅 JVM 单测（可用 IRIS_ARCHIVE_PREVIEW 输出平面着色预览图）。
-
-## 输入框改为两行（同版本 2.1.9 / vc187）
-- 合并 feat/composer-row（be68291，基于 release/2.1.8）。
-- 「思考 / 速度」移至顶部胶囊行（紧凑，窄屏可横向滚动，「+」固定在右侧）；输入框与语音键同一行（底部对齐），输入框整体少一行。
-- 智能体占位文字精简为「交给 IRIDIS 智能体」。
-- 测试：V1102Test 更新占位文字；新增 V219ComposerRowTest。

@@ -74,20 +74,16 @@ class V1102Test {
         assertTrue(b.substring(agent, field).contains("onClick = onToggleAgent"))
     }
 
-    @Test fun thinkingAndSpeedSitInTheTopChipRow() {
-        // 2.1.9 (user: one row less): 思考 + speed moved up after 智能体 / 技能, above the text field;
-        // the text field and the voice capsule now share the row below (see v219/V219ComposerRowTest).
+    @Test fun thinkingAndSpeedStayInTheBottomRow() {
         val b = composerBody
-        val agent = b.indexOf("ComposerText.AGENT,")
         val field = b.indexOf("BasicTextField(")
         val think = b.indexOf("ComposerText.THINK,")
         val speed = b.indexOf("SpeedChip(state.resourceTier")
         // 2.2: the mic + round button became one voice capsule (see v220/V220ComposerTest)
         val action = b.indexOf("ComposerActions.of(")
         val mic = b.indexOf("VoiceCapsuleButton(")
-        assertTrue(agent in 1 until think)
-        assertTrue(think < speed && speed < field)
-        assertTrue(field < action && action < mic)
+        assertTrue(field in 1 until think)
+        assertTrue(think < speed && speed < action && action < mic)
         // 智能体 + 技能 (2.2) + 思考 pills + one speed chip
         assertEquals(3, Regex("ComposerPill\\(").findAll(b).count())
         assertEquals(1, Regex("SpeedChip\\(").findAll(b).count())
