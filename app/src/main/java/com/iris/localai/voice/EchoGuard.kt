@@ -16,6 +16,8 @@ import java.text.Normalizer
  *     microphone is not fed to VAD / ASR at all, and voice barge-in is off (tap still interrupts).
  *     On a private route (earpiece, wired / Bluetooth / USB headset) the speaker cannot reach the
  *     mic, so barge-in by voice keeps working as before.
+ *     2.1.9: shorter tail, and the last ~300 ms heard after playback (inside the tail) is replayed
+ *     into VAD when the gate opens ([PreOpenBuffer]), so the first syllable is not swallowed.
  *  2. [EchoTextGuard]: a recognised text that closely matches what TTS just said is dropped.
  */
 
@@ -63,9 +65,12 @@ enum class MicAction {
 class HalfDuplexGate(
     val tailMs: Long = TAIL_MS,
     val maxResidualMs: Long = MAX_RESIDUAL_MS,
+    val settleMs: Long = PREOPEN_SETTLE_MS,
 ) {
     private var wasAudible = false
     private var closedUntil = 0L
+    /** 2.1.9: from here on the mic no longer hears our playback (queued residual played + settle). */
+    private var echoFreeFrom = 0L
 
     fun decide(nowMs: Long, replying: Boolean, audible: Boolean, route: OutputRoute, residualMs: Long = 0L): MicAction {
         if (audible) {
@@ -74,19 +79,65 @@ class HalfDuplexGate(
         }
         if (wasAudible) {
             wasAudible = false
-            closedUntil = nowMs + tailMs + residualMs.coerceIn(0L, maxResidualMs)
+            val residual = residualMs.coerceIn(0L, maxResidualMs)
+            closedUntil = nowMs + tailMs + residual
+            echoFreeFrom = nowMs + residual + settleMs
         }
         if (nowMs < closedUntil) return MicAction.MUTED
         return if (replying) MicAction.BARGE_IN_ONLY else MicAction.LISTEN
     }
 
-    fun reset() { wasAudible = false; closedUntil = 0L }
+    /**
+     * 2.1.9: true when a frame captured at [nowMs] is past the end of our playback (still queued
+     * audio + [settleMs] of output latency). Only such frames may go into the [PreOpenBuffer].
+     */
+    fun echoFree(nowMs: Long): Boolean = !wasAudible && nowMs >= echoFreeFrom
+
+    fun reset() { wasAudible = false; closedUntil = 0L; echoFreeFrom = 0L }
 
     companion object {
-        /** Room echo / output latency after the last sample left the track. */
-        const val TAIL_MS = 450L
-        const val MAX_RESIDUAL_MS = 1500L
+        /**
+         * Room echo / output latency after the last sample left the track.
+         * 2.1.9: 450 → 200 ms (450 swallowed the first syllable of a quick answer).
+         */
+        const val TAIL_MS = 200L
+        /** 2.1.9: 1500 → 600 ms cap on the still-queued audio added to the tail. */
+        const val MAX_RESIDUAL_MS = 600L
+        /** 2.1.9: output latency of the last played sample; frames before this are never buffered. */
+        const val PREOPEN_SETTLE_MS = 64L
+        /** 2.1.9: how much audio from just before the gate opens is replayed into VAD / ASR. */
+        const val PREOPEN_MS = 300L
+        /** [PREOPEN_MS] in whole 32 ms mic frames (VAD_WINDOW samples at 16 kHz), rounded up. */
+        val PREOPEN_FRAMES: Int = ((PREOPEN_MS * ASR_SAMPLE_RATE / 1000 + VAD_WINDOW - 1) / VAD_WINDOW).toInt()
     }
+}
+
+/**
+ * 2.1.9: short ring of mic frames heard while the half-duplex gate is still closed, so a user who
+ * starts talking inside the tail does not lose the first syllable. When the gate opens the frames
+ * are replayed into VAD (and on into ASR) ahead of the live audio, instead of the VAD starting
+ * from nothing.
+ *
+ * Only echo-free frames are kept (after playback and its settle time, see [HalfDuplexGate.echoFree]):
+ * a frame that may contain our own TTS empties the ring, so playback audio is never replayed.
+ */
+class PreOpenBuffer(val capacityFrames: Int = HalfDuplexGate.PREOPEN_FRAMES) {
+    private val frames = ArrayDeque<FloatArray>(capacityFrames)
+
+    val size: Int get() = frames.size
+
+    /** A frame the gate muted. [echoFree] false → our voice may be in it: drop everything. */
+    fun onMutedFrame(frame: FloatArray, echoFree: Boolean) {
+        if (!echoFree) { frames.clear(); return }
+        if (capacityFrames <= 0) return
+        if (frames.size == capacityFrames) frames.removeFirst()
+        frames.addLast(frame)
+    }
+
+    /** The buffered frames, oldest first; the buffer is empty afterwards. */
+    fun drain(): List<FloatArray> = frames.toList().also { frames.clear() }
+
+    fun clear() = frames.clear()
 }
 
 /**
