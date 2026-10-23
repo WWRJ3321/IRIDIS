@@ -131,6 +131,7 @@ fun AppSettings.sanitized(): AppSettings {
         backgroundImage = backgroundImage.takeIf { com.iris.localai.ui.theme.BackgroundImage.isValidName(it) } ?: "",
         backgroundBlur = backgroundBlur.coerceIn(0, com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP),
         backgroundScrim = backgroundScrim.coerceIn(0, com.iris.localai.ui.theme.BackgroundImage.MAX_SCRIM),
+        fileViewStyle = com.iris.localai.files.FileViewStyle.parse(fileViewStyle).name,
     )
 }
 

@@ -184,7 +184,7 @@ class V178Test {
             assertTrue("key $k still exists", k in now)
             assertEquals("default of $k", v, now[k].toString())
         }
-        assertEquals(setOf("tierProfiles", "thinkingBudget", "mnnNoVisual", "mnnForceNoMmap", "topBarCapsules", "showStatusRack", "welcomeAccepted", "thermalLimitC", "knowledgeInChat", "haptics", "sound", "ggufEngine", "themePalette", "backgroundImage", "backgroundBlur", "backgroundScrim", "renderHtml", "loadNetworkImages", "defaultModelFile", "visionSide"), now.keys - DEFAULTS_177.map { it.first }.toSet() - setOf("askedBatteryExemption"))
+        assertEquals(setOf("tierProfiles", "thinkingBudget", "mnnNoVisual", "mnnForceNoMmap", "topBarCapsules", "showStatusRack", "welcomeAccepted", "thermalLimitC", "knowledgeInChat", "haptics", "sound", "ggufEngine", "themePalette", "backgroundImage", "backgroundBlur", "backgroundScrim", "renderHtml", "loadNetworkImages", "defaultModelFile", "visionSide", "fileViewStyle"), now.keys - DEFAULTS_177.map { it.first }.toSet() - setOf("askedBatteryExemption"))
     }
 
     // ---------------------------------------------------------------- pinning from the user's cores

@@ -172,4 +172,21 @@ object IrisIcons {
 
     /** 工具 (wrench) */
     val Tool: ImageVector by lazy { icon("Tool", "M14.7 6.3a4 4 0 0 0 5 5L20 11.6a5 5 0 0 1-6.3 2.9L7.5 20.7a1.8 1.8 0 0 1-2.5-2.5l6.2-6.2A5 5 0 0 1 14 5.7z") }
+
+    // ---- 2.2 文件 ----
+
+    /** 文件 (document) */
+    val File: ImageVector by lazy { icon("File", "M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M14 3v5h5 M9 13h6 M9 17h4") }
+
+    /** 新建文件夹 */
+    val FolderPlus: ImageVector by lazy { icon("FolderPlus", "M3.5 7a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7z M12 10.5v5 M9.5 13h5") }
+
+    /** 排序 */
+    val Sort: ImageVector by lazy { icon("Sort", "M7 4v16 M4 17l3 3 3-3 M17 20V4 M14 7l3-3 3 3") }
+
+    /** 档案模式 (stacked cards) */
+    val Archive: ImageVector by lazy { icon("Archive", "M6 8h12a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 6 8z M7 5h10 M9 2.5h6 M10 13h4") }
+
+    /** 用其他应用打开 */
+    val OpenExternal: ImageVector by lazy { icon("OpenExternal", "M14 4h6v6 M20 4l-9 9 M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4") }
 }

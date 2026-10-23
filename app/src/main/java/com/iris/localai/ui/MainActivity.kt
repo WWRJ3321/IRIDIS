@@ -67,7 +67,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, TERMINAL, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, TERMINAL, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES }
 
 class MainActivity : ComponentActivity() {
 
@@ -250,7 +250,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpenSettings = { push(Route.SETTINGS) },
             onOpenVoiceSettings = { push(Route.VOICE) },
             onOpenApi = { push(Route.API) },
-            onOpenFiles = { push(Route.FILES) },
+            onOpenFiles = { push(Route.APP_FILES) }, // 2.2: sidebar 文件 = the whole Download/IRIDIS
             onOpenTerminal = { push(Route.TERMINAL) },
             onOpenImageGen = { push(Route.IMAGEGEN) },
         )
@@ -276,6 +276,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.TERMINAL -> com.iris.localai.ui.agent.TerminalPage(onBack = pop, onOpenFiles = { push(Route.FILES) })
         Route.FILES -> com.iris.localai.ui.agent.FilesPage(onBack = pop, onOpenTerminal = { push(Route.TERMINAL) })
         Route.BROWSER -> com.iris.localai.ui.agent.BrowserPage(onBack = pop)
+        Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage(onBack = pop)
         Route.MEMORY -> com.iris.localai.ui.settings.ContextPage(settingsVm, onBack = pop) // 2.1.3: one 记忆与上下文 page
         Route.STORAGE -> com.iris.localai.ui.settings.StoragePage(
             settingsVm, onBack = pop,

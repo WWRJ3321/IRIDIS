@@ -112,7 +112,7 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
-        <!-- 2.2: shares a chat image (a copy in cache/shared) with other apps; nothing else is exposed. -->
+        <!-- 2.2: shares a chat image (a copy in cache/shared) and files of Download/IRIDIS picked on the 文件 page. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

@@ -327,6 +327,10 @@ data class AppSettings(
     val defaultModelFile: String = "",
     /** 「识图清晰度」: long side (px) of the picture copy a vision model reads — 384 快速 / 512 标准 / 1024 清晰 ([com.iris.localai.util.VisionQuality]). */
     val visionSide: Int = 512,
+
+    // ---- 2.2 文件 ----
+    /** 「文件」 page view: "LIST" (default) or "ARCHIVE" (「档案模式」, [com.iris.localai.files.FileViewStyle]). */
+    val fileViewStyle: String = "LIST",
 )
 
 /** How a conversation's history is fitted into the model's context window. */

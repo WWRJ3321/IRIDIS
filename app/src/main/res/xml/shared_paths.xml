@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 2.2: only cache/shared (one image copied there right before the share sheet opens). -->
+<!-- 2.2: cache/shared (one image copied there right before the share sheet opens) and the app root
+     Download/IRIDIS for the 「文件」 page (open / share one file the user picked; read-only grants). -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <external-path name="iridis" path="Download/IRIDIS/" />
 </paths>
