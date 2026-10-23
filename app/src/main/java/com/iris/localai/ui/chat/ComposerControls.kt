@@ -70,6 +70,8 @@ object ComposerPillStyle {
     const val COMPACT_HEIGHT_DP = 28f
     const val COMPACT_MIN_WIDTH_DP = 0f
     const val COMPACT_H_PADDING_DP = 10f
+    /** 2.1.9: gap between the four compact chips in the top row (智能体 技能 思考 速度). */
+    const val COMPACT_GAP_DP = 6f
     val ON_LIGHT = Color(0xFF0D84FF)
     val ON_DARK = Color(0xFF3482FF)
     val ON_TEXT = Color(0xFFFFFFFF)
@@ -137,6 +139,6 @@ internal fun ComposerPill(
     ) {
         if (icon != null) Icon(icon, null, tint = fg.copy(alpha = a), modifier = Modifier.size(if (compact) 14.dp else 16.dp))
         Text(text, style = if (compact) IrisType.labelSmall else IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = fg.copy(alpha = a), maxLines = 1)
-        if (trailingIcon != null) Icon(trailingIcon, null, tint = fg.copy(alpha = a * 0.7f), modifier = Modifier.size(16.dp))
+        if (trailingIcon != null) Icon(trailingIcon, null, tint = fg.copy(alpha = a * 0.7f), modifier = Modifier.size(if (compact) 14.dp else 16.dp))
     }
 }
