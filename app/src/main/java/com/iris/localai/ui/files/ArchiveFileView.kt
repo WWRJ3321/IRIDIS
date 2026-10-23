@@ -1,6 +1,32 @@
 package com.iris.localai.ui.files
 
 import android.graphics.BitmapFactory
+import android.webkit.MimeTypeMap
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Icon
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import com.iris.localai.files.FileProtection
+import com.iris.localai.files.FilesIo
+import com.iris.localai.files.SystemFolder
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -180,7 +206,15 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
     val field = remember { ArchiveMath.SlabField() }
     var shownKey by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf<FileEntry?>(null) }
-    var lastDetail by remember { mutableStateOf<FileEntry?>(null) }
+    // 打开转场: the selected slab is carried to the detail's glass panel (hidden in the field meanwhile)
+    val anim = remember { DetailAnim() }
+    val shared = remember { SharedSlab() }
+    var hideSelected by remember { mutableStateOf(false) }
+    val blurs = LocalGlassQuality.current.blurs
+    val backdropBlur: Array<RenderEffect?> = remember(density, blurs) {
+        val max = with(density) { BLUR_MAX.toPx() }
+        Array(BLUR_STEPS) { i -> if (i == 0 || !blurs) null else BlurEffect(max * i / (BLUR_STEPS - 1), max * i / (BLUR_STEPS - 1), TileMode.Decal) }
+    }
     var menuOpen by remember { mutableStateOf(false) }
     var menuAnchor by remember { mutableStateOf(IntOffset.Zero) }
     var sortMenu by remember { mutableStateOf(false) }
@@ -242,19 +276,52 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
 
     fun step(delta: Int) { if (n > 0) settleTo((pos.floatValue.roundToInt() + delta).toFloat()) }
 
+    /** Opens the detail of [e] (file or folder): the standing slab's face becomes the glass panel. */
     fun open(e: FileEntry) {
-        if (e.isDir) actions.onEntryClick(e) // the transition runs when the folder has loaded
-        else { detail = e; lastDetail = e }
+        if (detail != null) return
+        jobs.settle?.cancel()
+        shared.hasFrom = field.selectedFace(shared.from)
+        val center = ArchiveMath.quadCenter(shared.from, FloatArray(2))
+        shared.originX = if (shared.hasFrom && field.width > 0f) (center[0] / field.width).coerceIn(0f, 1f) else 0.5f
+        shared.originY = if (shared.hasFrom && field.height > 0f) (center[1] / field.height).coerceIn(0f, 1f) else 0.5f
+        anim.closing = false
+        detail = e
+        hideSelected = shared.hasFrom
+        scope.launch {
+            anim.close.snapTo(0f)
+            if (reduce) anim.open.snapTo(1f)
+            else {
+                anim.open.snapTo(0f)
+                anim.open.animateTo(1f, IrisMotion.timeline(IrisMotion.ARCHIVE_OPEN_MS))
+            }
+        }
     }
 
+    /** Reverse: info fades, the panel shrinks back into its slot, the field clears. */
     fun closeDetail() {
-        detail = null
-        if (reduce) return
-        // back from a file: the slab lies down and stands up again
+        if (detail == null || anim.closing) return
+        if (reduce) { detail = null; hideSelected = false; return }
+        anim.closeFromPush = anim.push()
+        anim.closeFromInfo = anim.info()
+        anim.closing = true
         scope.launch {
-            rise.animateTo(0f, IrisMotion.progressOut(IrisMotion.ARCHIVE_FALL_MS))
-            rise.animateTo(1f, IrisMotion.progress(IrisMotion.ARCHIVE_RISE_MS))
+            anim.open.stop()
+            anim.close.snapTo(0f)
+            anim.close.animateTo(1f, IrisMotion.timeline(IrisMotion.ARCHIVE_CLOSE_MS))
+            detail = null
+            hideSelected = false
+            anim.closing = false
+            anim.open.snapTo(0f)
         }
+    }
+
+    /** 进入 from the detail: straight into the folder (its own lie-down / rise transition plays). */
+    fun enterFromDetail(e: FileEntry) {
+        detail = null
+        hideSelected = false
+        anim.closing = false
+        scope.launch { anim.open.snapTo(0f); anim.close.snapTo(0f) }
+        actions.onEntryClick(e)
     }
 
     fun switchColumn(delta: Int) {
@@ -289,7 +356,15 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
         // ---- the slab field: one canvas, one drawVertices call
         Spacer(
             Modifier.fillMaxSize()
-                .graphicsLayer { alpha = fieldAlpha.value }
+                .graphicsLayer {
+                    // depth of field while the detail is open: zoom toward the slab, fade toward the background, blur
+                    val p = if (detail != null) anim.push() else 0f
+                    alpha = fieldAlpha.value * ArchiveMath.backdropAlpha(p)
+                    val z = ArchiveMath.backdropScale(p)
+                    scaleX = z; scaleY = z
+                    transformOrigin = TransformOrigin(shared.originX, shared.originY)
+                    renderEffect = backdropBlur[ArchiveMath.blurStep(1f - p, BLUR_STEPS)]
+                }
                 .draggable(
                     drag, Orientation.Vertical, enabled = n > 0 && detail == null,
                     onDragStarted = { jobs.settle?.cancel() },
@@ -300,7 +375,7 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
                     field.layout(size.width, size.height, this.density)
                     val paint = android.graphics.Paint()
                     onDrawBehind {
-                        val count = field.build(pos.floatValue, n > 0, rise.value, shift.value, wave.value, drop.value, palette)
+                        val count = field.build(pos.floatValue, n > 0, rise.value, shift.value, wave.value, drop.value, palette, hideSelected)
                         if (count > 0) drawIntoCanvas {
                             it.nativeCanvas.drawVertices(
                                 android.graphics.Canvas.VertexMode.TRIANGLES, count * 2, field.verts, 0,
@@ -311,6 +386,8 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
                 },
         )
 
+        // ---- HUD (fades out while the detail's panel travels)
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (detail != null) 1f - anim.push() else 1f }) {
         // ---- legibility scrims behind the HUD
         Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(listOf(bg.copy(alpha = 0.88f), bg.copy(alpha = 0f)))))
         Box(
@@ -392,7 +469,7 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
                         if (current.system != null) Text(current.name, style = hudMono, color = grey)
                         Spacer(Modifier.height(16.dp))
                         Row(
-                            Modifier.clickable { open(current) }.padding(vertical = 6.dp),
+                            Modifier.clickable { if (current.isDir) actions.onEntryClick(current) else open(current) }.padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(if (current.isDir) "进入  ACCESS FOLDER" else "打开  ACCESS FILE", style = hudAction, color = ink)
@@ -467,6 +544,8 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
             state.rootPath?.let { Text(it, style = hudMono, color = grey, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
 
+        }
+
         // ---- long press = the list's menu, anchored where the finger is
         current?.let { e ->
             Box(Modifier.offset { menuAnchor }.size(1.dp)) {
@@ -474,13 +553,14 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
             }
         }
 
-        // ---- file detail (decrypt)
-        AnimatedVisibility(detail != null, enter = IrisMotion.fadeIn(), exit = IrisMotion.fadeOut()) {
-            lastDetail?.let { e ->
-                val idx = entries.indexOfFirst { it.relPath == e.relPath }.coerceAtLeast(0)
-                val col = ArchiveMath.columnOf(e)
-                ArchiveDetail(e, ArchiveMath.fileNumber(col, idx), col, state, actions, palette, onClose = { closeDetail() })
-            }
+        // ---- detail: the slab carried forward into a glass panel, scan, decrypt (no sheet, no dialog fade)
+        detail?.let { e ->
+            val idx = entries.indexOfFirst { it.relPath == e.relPath }.let { if (it < 0) sel else it }
+            val col = ArchiveMath.columnOf(e)
+            ArchiveDetail(
+                e, ArchiveMath.fileNumber(col, idx), ArchiveMath.serialLabel(idx, n), state, actions, palette, anim, shared,
+                onClose = { closeDetail() }, onEnter = { enterFromDetail(e) },
+            )
         }
 
         // ---- intro: blank white, small bold title
@@ -498,366 +578,771 @@ fun ArchiveFileView(state: FilesState, actions: FilesActions, modifier: Modifier
     }
 }
 
-// ================================================================ file detail
+// ================================================================ file detail (2.1.9 打开转场与详情页重做)
 
-/** Redaction bar over a value that retracts left → right, revealing the text under it. */
-private fun Modifier.redacted(bar: Color, progress: () -> Float): Modifier = drawWithContent {
-    val p = progress()
-    if (p >= 1f) { drawContent(); return@drawWithContent }
-    if (p > 0f) clipRect(right = size.width * p) { this@drawWithContent.drawContent() }
-    drawRect(bar, Offset(size.width * p, 0f), Size(size.width * (1f - p), size.height))
+/**
+ * The open / close timelines of the detail. Every value is read in layout / draw only, so the
+ * transition redraws without recomposing. Phases come from [ArchiveMath] (push, scan, rows),
+ * eased with [IrisMotion.ProgressEasing].
+ */
+private class DetailAnim {
+    val open = Animatable(0f)
+    val close = Animatable(0f)
+    var closing by mutableStateOf(false)
+    var closeFromPush = 1f
+    var closeFromInfo = 1f
+    private val ease: (Float) -> Float = { IrisMotion.ProgressEasing.transform(it) }
+    fun push(): Float = if (closing) ArchiveMath.closePush(close.value, closeFromPush, ease) else ArchiveMath.pushOf(open.value, ease)
+    fun info(): Float = if (closing) ArchiveMath.closeInfo(close.value) * closeFromInfo else ArchiveMath.infoOf(open.value)
+    fun scan(): Float = ArchiveMath.scanOf(open.value, ease)
+    fun content(): Float = if (closing) ArchiveMath.closeContent(close.value) else 1f
+    fun row(i: Int): Float = ArchiveMath.rowOf(open.value, i, ease)
+}
+
+/** Where the selected slab's face was on screen when the detail opened (field coordinates, px). */
+private class SharedSlab {
+    val from = FloatArray(8)
+    var hasFrom = false
+    /** Transform origin of the field's zoom, as fractions of the canvas. */
+    var originX = 0.5f
+    var originY = 0.5f
+}
+
+/** Maps the glass panel's own rectangle onto the interpolated quad between the slab face and the panel. */
+private class GlassTransform {
+    val matrix = android.graphics.Matrix()
+    private val src = FloatArray(8)
+    private val dst = FloatArray(8)
+    private val from = FloatArray(8)
+    var x = 0f
+    var y = 0f
+
+    fun update(w: Float, h: Float, p: Float, shared: SharedSlab) {
+        ArchiveMath.rectQuad(0f, 0f, w, h, src)
+        if (shared.hasFrom) for (i in 0 until 4) {
+            from[i * 2] = shared.from[i * 2] - x
+            from[i * 2 + 1] = shared.from[i * 2 + 1] - y
+        } else ArchiveMath.scaleQuad(src, 0.82f, from)
+        ArchiveMath.lerpQuad(from, src, p, dst)
+        if (!matrix.setPolyToPoly(src, 0, dst, 0, 4)) matrix.reset()
+    }
+}
+
+/** What the detail read from disk (off the main thread). */
+private class Loaded(
+    val thumb: ImageBitmap? = null,
+    val imageWidth: Int = 0,
+    val imageHeight: Int = 0,
+    val head: List<String> = emptyList(),
+    val lines: Int? = null,
+    val children: Int? = null,
+    val childNames: List<String> = emptyList(),
+)
+
+private val hudTitle = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif)
+private val hudSub = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.SansSerif)
+private val hudValue = TextStyle(fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.SansSerif)
+private val hudBody = TextStyle(fontSize = 14.sp, lineHeight = 22.sp, fontFamily = FontFamily.SansSerif)
+private val clockFormat = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT)
+
+/** Folder shown on the glass's tag: the parent folder (系统目录 by its label), IRIDIS at the root. */
+private fun folderLabel(rel: String): String {
+    val parent = FilesPaths.parent(rel)
+    return when {
+        parent.isEmpty() -> FilesPaths.ROOT_LABEL
+        !parent.contains('/') -> SystemFolder.of(parent)?.label ?: parent
+        else -> parent.substringAfterLast('/')
+    }
 }
 
 /**
- * The decrypt detail of a file: a face-on frosted glass slab (screws, label, faint rings — or the
- * image's thumbnail) that a diagonal line sweeps and collapses across while it clears top-down;
- * fields first shown as black bars that retract to reveal the text; 01 概述 / 02 预览 tabs; the
- * black 打开 / 分享 / 重命名 / 删除 bar. Portrait stacks the slab (~40 %) over the fields.
+ * The file / folder detail. The glass panel is laid out at its final place and drawn through a
+ * perspective matrix that carries it from the selected slab's face ([SharedSlab]) to that place
+ * (no sheet, no fade-in dialog); a diagonal scan then reveals its contents; the info area starts as
+ * redaction bars that retract row by row. Portrait: the panel above the info; landscape: side by side.
  */
 @Composable
 private fun ArchiveDetail(
     e: FileEntry,
     number: String,
-    column: ArchiveMath.Column,
+    serial: String,
     state: FilesState,
     actions: FilesActions,
     palette: ArchiveMath.FieldColors,
+    anim: DetailAnim,
+    shared: SharedSlab,
     onClose: () -> Unit,
+    onEnter: () -> Unit,
 ) {
-    val c = Iris.colors
-    val reduce = LocalReduceMotion.current
     val bg = Color(palette.background)
-    val t = remember(e.relPath) { Animatable(if (reduce) 1f else 0f) }
-    LaunchedEffect(e.relPath) { if (!reduce) t.animateTo(1f, IrisMotion.progress(IrisMotion.ARCHIVE_REVEAL_MS)) }
-    val maxSide = with(LocalDensity.current) { 360.dp.roundToPx() }
-    val thumb by produceState<ImageBitmap?>(null, e.relPath, state.rootPath) { value = loadThumb(state.rootPath, e, maxSide) }
+    val maxSide = with(LocalDensity.current) { 420.dp.roundToPx() }
+    val loaded by produceState<Loaded?>(null, e.relPath, e.modified, e.size, state.rootPath) { value = loadDetail(state.rootPath, e, maxSide) }
+    val host = remember { FloatArray(2) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     BoxWithConstraints(
-        Modifier.fillMaxSize().background(bg.copy(alpha = 0.95f))
-            .clickable(remember { MutableInteractionSource() }, indication = null) {},
+        Modifier.fillMaxSize()
+            .onGloballyPositioned { val p = it.positionInRoot(); host[0] = p.x; host[1] = p.y }
+            .drawBehind { drawRect(bg.copy(alpha = ArchiveMath.backdropVeil(anim.push()))) }
+            .clickable(remember { MutableInteractionSource() }, indication = null) {}
+            .focusRequester(focus)
+            .focusable()
+            .onKeyEvent { if (it.type == KeyEventType.KeyUp && it.key == Key.Escape) { onClose(); true } else false },
     ) {
         val wide = maxWidth > maxHeight
-        val glassHeight = maxHeight * 0.4f
+        val infoAlpha = Modifier.graphicsLayer { alpha = anim.info() }
         if (wide) {
             Row(Modifier.fillMaxSize()) {
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    DetailBack(onClose)
-                    GlassSlab(number, thumb, { t.value }, palette, Modifier.weight(1f).fillMaxWidth())
+                Column(Modifier.weight(1.1f).fillMaxHeight()) {
+                    DetailBack(onClose, infoAlpha)
+                    GlassPanel(e, number, loaded, palette, anim, shared, host, Modifier.padding(start = 20.dp, end = 8.dp, bottom = 18.dp).weight(1f).fillMaxWidth())
                 }
-                DetailFields(e, number, column, state, actions, { t.value }, onClose, Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()))
+                Column(Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, end = 20.dp)) {
+                    Column(infoAlpha.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 18.dp)) {
+                        DetailInfo(e, number, loaded, state, actions, anim, onClose, onEnter)
+                    }
+                    DetailFooter(e, serial, actions, onEnter, infoAlpha.navigationBarsPadding())
+                }
             }
         } else {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                DetailBack(onClose)
-                GlassSlab(number, thumb, { t.value }, palette, Modifier.fillMaxWidth().height(glassHeight))
-                DetailFields(e, number, column, state, actions, { t.value }, onClose, Modifier.fillMaxWidth())
+            val glassHeight = min(maxHeight.value * 0.36f, maxWidth.value * 0.80f).dp
+            Column(Modifier.fillMaxSize()) {
+                DetailBack(onClose, infoAlpha)
+                GlassPanel(e, number, loaded, palette, anim, shared, host, Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(glassHeight))
+                Column(infoAlpha.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 16.dp)) {
+                    DetailInfo(e, number, loaded, state, actions, anim, onClose, onEnter)
+                }
+                DetailFooter(e, serial, actions, onEnter, infoAlpha.padding(horizontal = 20.dp).navigationBarsPadding())
             }
         }
     }
 }
 
 @Composable
-private fun DetailBack(onClose: () -> Unit) {
+private fun DetailBack(onClose: () -> Unit, modifier: Modifier) {
+    val c = Iris.colors
     Row(
-        Modifier.padding(start = 12.dp, top = 6.dp).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 10.dp),
+        modifier.padding(start = 12.dp, top = 6.dp).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("←", style = hudArrow, color = Iris.colors.text)
+        Text("←", style = hudArrow, color = c.text)
         Spacer(Modifier.width(12.dp))
-        Text("ARCHIVE OVERVIEW", style = hudMicro.copy(fontWeight = FontWeight.Bold), color = Iris.colors.text)
+        Text("档案总览", style = hudMicro.copy(fontWeight = FontWeight.Bold), color = c.text)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            "ESC", style = hudMicro.copy(fontSize = 7.sp, letterSpacing = 0.6.sp), color = c.textSecondary,
+            modifier = Modifier.border(0.7.dp, c.textSecondary.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
+        )
     }
 }
 
-/** The face-on frosted glass slab of the detail. */
-@Composable
-private fun GlassSlab(number: String, thumb: ImageBitmap?, t: () -> Float, palette: ArchiveMath.FieldColors, modifier: Modifier) {
-    val c = Iris.colors
-    val ink = c.text
-    val density = LocalDensity.current
-    val blurs = LocalGlassQuality.current.blurs
-    val effects: Array<RenderEffect?> = remember(density, blurs) {
-        val max = with(density) { BLUR_MAX.toPx() }
-        Array(BLUR_STEPS) { i -> if (i == 0 || !blurs) null else BlurEffect(max * i / (BLUR_STEPS - 1), max * i / (BLUR_STEPS - 1), TileMode.Decal) }
-    }
-    val dark = c.isDark
-    val glassFill = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.42f)
-    val rimLight = if (dark) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.95f)
-    val rimDark = Color(ArchiveMath.lerpColor(palette.shade, palette.background, 0.35f))
-    val frost = Color(palette.haze).copy(alpha = if (dark) 0.75f else 0.72f)
-    val ring = Color(ArchiveMath.lerpColor(palette.lit, palette.shade, 0.45f))
-    val isDefault = c.accent == IrisPalette.DEFAULT.light.accent || c.accent == IrisPalette.DEFAULT.dark.accent
-    val copper = if (isDefault) Color(0xFFC4875A) else c.accent
-    val line = remember { FloatArray(2) }
-    val digits = number.substringAfter('-')
-
-    Box(modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-        // base: thickness edge, glass face, inner frame
-        Spacer(
-            Modifier.fillMaxSize().drawBehind {
-                val r = CornerRadius(14.dp.toPx())
-                val edge = 6.dp.toPx()
-                drawRoundRect(rimDark.copy(alpha = 0.35f), topLeft = Offset(0f, edge), size = Size(size.width, size.height - edge), cornerRadius = r)
-                drawRoundRect(glassFill, size = Size(size.width, size.height - edge), cornerRadius = r)
-                drawRoundRect(
-                    Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.04f else 0.30f), Color.Transparent)),
-                    size = Size(size.width, size.height - edge), cornerRadius = r,
-                )
-            },
-        )
-        // content: the image thumbnail, or faint rings — blurred while frosted (API 31+, when blur is on)
-        Spacer(
-            Modifier.fillMaxSize()
-                .graphicsLayer { renderEffect = effects[ArchiveMath.blurStep(ArchiveMath.frostFront(t()), BLUR_STEPS)] }
-                .drawBehind {
-                    val w = size.width; val h = size.height - 6.dp.toPx()
-                    if (thumb != null) {
-                        val box = min(w, h) * 0.72f
-                        val scale = min(box / thumb.width, box / thumb.height)
-                        val dw = (thumb.width * scale).roundToInt(); val dh = (thumb.height * scale).roundToInt()
-                        val left = (w * 0.54f - dw / 2f).roundToInt(); val top = (h * 0.5f - dh / 2f).roundToInt()
-                        drawImage(thumb, dstOffset = IntOffset(left, top), dstSize = IntSize(dw, dh), alpha = 0.92f)
-                        drawRect(rimLight, Offset(left.toFloat(), top.toFloat()), Size(dw.toFloat(), dh.toFloat()), style = Stroke(1.dp.toPx()))
-                    } else {
-                        val big = min(w, h) * 0.30f
-                        val cBig = Offset(w * 0.44f, h * 0.56f)
-                        drawCircle(ring.copy(alpha = 0.55f), big, cBig, style = Stroke(big * 0.22f))
-                        drawCircle(rimLight, big * 1.11f, cBig, style = Stroke(1.dp.toPx()))
-                        drawArc(copper.copy(alpha = 0.6f), 115f, 70f, false, Offset(cBig.x - big * 0.89f, cBig.y - big * 0.89f), Size(big * 1.78f, big * 1.78f), style = Stroke(2.dp.toPx()))
-                        val small = big * 0.42f
-                        val cSmall = Offset(w * 0.75f, h * 0.33f)
-                        drawCircle(ring.copy(alpha = 0.5f), small, cSmall, style = Stroke(small * 0.34f))
-                        drawCircle(copper.copy(alpha = 0.55f), small * 0.78f, cSmall, style = Stroke(small * 0.22f))
-                    }
-                },
-        )
-        // frost veil (clears top-down), rims, screws, the decrypt line and markers
-        Spacer(
-            Modifier.fillMaxSize().drawWithCache {
-                val edge = 6.dp.toPx()
-                val face = Size(size.width, size.height - edge)
-                val r = CornerRadius(14.dp.toPx())
-                val clip = Path().apply { addRoundRect(RoundRect(0f, 0f, face.width, face.height, r)) }
-                val inset = 12.dp.toPx()
-                val screw = 4.5.dp.toPx()
-                val sq = 5.dp.toPx()
-                onDrawBehind {
-                    val tv = t()
-                    val front = ArchiveMath.frostFront(tv) * face.height
-                    if (front < face.height) clipPath(clip) {
-                        drawRect(frost, Offset(0f, front), Size(face.width, face.height - front))
-                        drawLine(ink.copy(alpha = 0.18f), Offset(0f, front), Offset(face.width, front), strokeWidth = 1.dp.toPx())
-                    }
-                    drawRoundRect(rimLight, size = face, cornerRadius = r, style = Stroke(1.4.dp.toPx()))
-                    drawRoundRect(rimDark, size = face, cornerRadius = r, style = Stroke(0.6.dp.toPx()))
-                    drawRoundRect(
-                        rimLight.copy(alpha = rimLight.alpha * 0.7f), topLeft = Offset(inset * 1.6f, inset * 1.6f),
-                        size = Size(face.width - inset * 3.2f, face.height - inset * 3.2f), cornerRadius = CornerRadius(8.dp.toPx()), style = Stroke(0.7.dp.toPx()),
-                    )
-                    for (k in 0 until 4) {
-                        val p = Offset(if (k and 1 == 0) inset else face.width - inset, if (k and 2 == 0) inset else face.height - inset)
-                        drawCircle(rimDark.copy(alpha = 0.55f), screw, p)
-                        drawCircle(rimLight, screw * 0.45f, p - Offset(screw * 0.2f, screw * 0.2f))
-                    }
-                    val bl = Offset(face.width * 0.12f, face.height * 0.86f)
-                    val tr = Offset(face.width * 0.86f, face.height * 0.14f)
-                    if (ArchiveMath.decryptLine(tv, line)) {
-                        val a = bl + (tr - bl) * line[0]
-                        val b = bl + (tr - bl) * line[1]
-                        drawLine(ink, a, b, strokeWidth = 1.2.dp.toPx())
-                        drawRect(ink, a - Offset(sq / 2, sq / 2), Size(sq, sq))
-                        drawRect(ink, b - Offset(sq / 2, sq / 2), Size(sq, sq))
-                    }
-                    drawRect(ink, tr - Offset(sq / 2, sq / 2), Size(sq * 0.8f, sq * 0.8f))
-                    drawRect(ink, Offset(face.width * 0.87f, face.height * 0.64f), Size(sq * 0.8f, sq * 0.8f))
-                }
-            },
-        )
-        // label tag and the big number
-        Column(
-            Modifier.align(Alignment.TopStart).padding(start = 30.dp, top = 30.dp)
-                .background(if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.85f))
-                .padding(horizontal = 8.dp, vertical = 5.dp),
-        ) {
-            Text("IRIDIS · NO.$digits", style = hudMicro.copy(fontWeight = FontWeight.Bold), color = ink)
-            Text(number, style = hudMono, color = c.textSecondary)
-        }
-        Column(Modifier.align(Alignment.BottomStart).padding(start = 30.dp, bottom = 28.dp)) {
-            Text("NO.$digits", style = hudCounter.copy(fontSize = 30.sp, lineHeight = 34.sp), color = ink)
-            Text("INTERNAL DATABASE", style = hudMicro, color = c.textSecondary)
+/** Clips drawing to the part of the panel the scan has swept ([inside]) or to the rest. */
+private fun Modifier.scanClip(inside: Boolean, scan: () -> Float, path: Path, pts: FloatArray): Modifier = drawWithContent {
+    val s = scan()
+    val n = ArchiveMath.scanPolygon(s, size.width, size.height, pts)
+    when {
+        s >= 1f -> if (inside) drawContent()
+        n < 3 -> if (!inside) drawContent()
+        else -> {
+            path.reset()
+            path.moveTo(pts[0], pts[1])
+            for (i in 1 until n) path.lineTo(pts[i * 2], pts[i * 2 + 1])
+            path.close()
+            clipPath(path, if (inside) ClipOp.Intersect else ClipOp.Difference) { this@drawWithContent.drawContent() }
         }
     }
 }
 
+/** The frosted glass panel: plate, contents (faint and blurred until the scan reveals them), scan line. */
 @Composable
-private fun DetailFields(
+private fun GlassPanel(
     e: FileEntry,
     number: String,
-    column: ArchiveMath.Column,
-    state: FilesState,
-    actions: FilesActions,
-    t: () -> Float,
-    onClose: () -> Unit,
+    loaded: Loaded?,
+    palette: ArchiveMath.FieldColors,
+    anim: DetailAnim,
+    shared: SharedSlab,
+    host: FloatArray,
     modifier: Modifier,
 ) {
     val c = Iris.colors
     val ink = c.text
-    val grey = c.textSecondary
-    val bar = ink
-    var tab by remember(e.relPath) { mutableIntStateOf(0) }
-    val type = if (e.extension.isEmpty()) "文件" else e.extension.uppercase(java.util.Locale.ROOT)
-    val canRename = actions.canRename(e)
-    val canDelete = actions.canDelete(e)
-    val preview = FilePreview.canPreview(e)
+    val density = LocalDensity.current
+    val blurs = LocalGlassQuality.current.blurs
+    val blur: RenderEffect? = remember(density, blurs) {
+        if (!blurs) null else with(density) { BlurEffect(9.dp.toPx(), 9.dp.toPx(), TileMode.Decal) }
+    }
+    val faint = if (blur != null) 0.55f else 0.20f
+    val tf = remember { GlassTransform() }
+    val pathA = remember { Path() }; val ptsA = remember { FloatArray(10) }
+    val pathB = remember { Path() }; val ptsB = remember { FloatArray(10) }
+    val seg = remember { FloatArray(4) }
 
-    Column(modifier.padding(horizontal = 20.dp).padding(top = 14.dp).navigationBarsPadding()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("FILE $number", style = hudMicro.copy(fontWeight = FontWeight.Bold), color = ink)
-            Spacer(Modifier.weight(1f))
-            Text("REFERENCE AREA", style = hudMicro, color = grey)
+    Box(
+        modifier
+            .onGloballyPositioned { val p = it.positionInRoot(); tf.x = p.x - host[0]; tf.y = p.y - host[1] }
+            .drawWithContent {
+                val p = anim.push()
+                if (p >= 0.999f) { drawContent(); return@drawWithContent }
+                tf.update(size.width, size.height, p, shared)
+                drawIntoCanvas { it.nativeCanvas.save(); it.nativeCanvas.concat(tf.matrix) }
+                drawContent()
+                drawIntoCanvas { it.nativeCanvas.restore() }
+            },
+    ) {
+        GlassPlate(palette, Modifier.matchParentSize())
+        // before the scan passes: the visual, faint and out of focus
+        Box(
+            Modifier.matchParentSize()
+                .scanClip(false, { anim.scan() }, pathA, ptsA)
+                .graphicsLayer {
+                    alpha = faint * anim.content() * ArchiveMath.phase(anim.push(), 0.55f, 1f)
+                    renderEffect = blur
+                },
+        ) { GlassVisual(e, loaded, palette) }
+        // what the scan has revealed: tag, number and the visual in focus
+        Box(Modifier.matchParentSize().graphicsLayer { alpha = anim.content() }.scanClip(true, { anim.scan() }, pathB, ptsB)) {
+            GlassVisual(e, loaded, palette)
+            GlassLabels(e, number)
         }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            e.name, style = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif),
-            color = ink, maxLines = 3, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.redacted(bar) { ArchiveMath.redactProgress(t(), 0) },
+        // the scan line with its end markers
+        Spacer(
+            Modifier.matchParentSize().drawBehind {
+                val s = anim.scan()
+                if (!ArchiveMath.scanSegment(s, size.width, size.height, seg)) return@drawBehind
+                val sq = 5.dp.toPx()
+                val a = Offset(seg[0], seg[1]); val b = Offset(seg[2], seg[3])
+                drawLine(ink, a, b, strokeWidth = 1.dp.toPx())
+                drawRect(ink, a - Offset(sq / 2, sq / 2), Size(sq, sq))
+                drawRect(ink, b - Offset(sq / 2, sq / 2), Size(sq, sq))
+                val m = sq * 0.7f
+                drawRect(ink.copy(alpha = 0.7f), Offset(0f, size.height - m), Size(m, m))
+                drawRect(ink.copy(alpha = 0.7f), Offset(size.width - m, 0f), Size(m, m))
+            },
         )
-        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(type, style = hudName, color = ink, modifier = Modifier.redacted(bar) { ArchiveMath.redactProgress(t(), 1) })
-            Spacer(Modifier.width(10.dp))
-            Text(column.label, style = hudMicro, color = grey)
-        }
-        Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().height(1.5.dp).background(ink))
-        Spacer(Modifier.height(12.dp))
-        Row {
-            DetailField("类型 / TYPE", type, 2, t, Modifier.weight(1f))
-            DetailField("大小 / SIZE", FileSizes.format(e.size), 3, t, Modifier.weight(1f))
-        }
-        Row {
-            DetailField("修改 / MODIFIED", formatModified(e.modified), 4, t, Modifier.weight(1f))
-            DetailField("状态 / STATUS", if (canRename && canDelete) "▪ 已归档 · 可编辑" else "▪ 受保护", 5, t, Modifier.weight(1f))
-        }
-        DetailField("路径 / PATH", ArchiveMath.pathTag(e.relPath), 6, t, Modifier.fillMaxWidth(), mono = true)
+    }
+}
 
-        // tabs
-        Row(Modifier.padding(top = 8.dp)) {
-            listOf("概述", "预览").forEachIndexed { i, label ->
-                val on = tab == i
-                Row(
-                    Modifier.clickable { tab = i }.drawBehind {
-                        if (on) drawLine(ink, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.5.dp.toPx())
-                    }.padding(end = 18.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.Bottom,
+/** Plate of the glass: thickness, frosted face, rims, inner frame, channel line, screws, hatching. */
+@Composable
+private fun GlassPlate(palette: ArchiveMath.FieldColors, modifier: Modifier) {
+    val c = Iris.colors
+    val dark = c.isDark
+    val glassFill = if (dark) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.46f)
+    val rimLight = if (dark) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.95f)
+    val rimDark = Color(ArchiveMath.lerpColor(palette.shade, palette.background, 0.35f))
+    val sheen = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.34f)
+    Spacer(
+        modifier.drawWithCache {
+            val edge = 6.dp.toPx()
+            val face = Size(size.width, size.height - edge)
+            val r = CornerRadius(14.dp.toPx())
+            val inset = 14.dp.toPx()
+            val screw = 4.5.dp.toPx()
+            val hair = 0.7.dp.toPx()
+            onDrawBehind {
+                drawRoundRect(rimDark.copy(alpha = 0.35f), topLeft = Offset(0f, edge), size = face, cornerRadius = r)
+                drawRoundRect(glassFill, size = face, cornerRadius = r)
+                drawRoundRect(Brush.linearGradient(listOf(sheen, Color.Transparent), Offset.Zero, Offset(face.width * 0.6f, face.height)), size = face, cornerRadius = r)
+                drawRoundRect(rimLight, size = face, cornerRadius = r, style = Stroke(1.4.dp.toPx()))
+                drawRoundRect(rimDark, size = face, cornerRadius = r, style = Stroke(0.6.dp.toPx()))
+                // inner frame and a channel line down the left, like a circuit groove
+                drawRoundRect(
+                    rimLight.copy(alpha = rimLight.alpha * 0.75f), topLeft = Offset(inset * 1.5f, inset * 1.5f),
+                    size = Size(face.width - inset * 3f, face.height - inset * 3f), cornerRadius = CornerRadius(8.dp.toPx()), style = Stroke(hair),
+                )
+                val gx = inset * 2.3f
+                drawLine(rimDark.copy(alpha = 0.35f), Offset(gx, face.height * 0.34f), Offset(gx, face.height * 0.66f), strokeWidth = hair)
+                drawLine(rimDark.copy(alpha = 0.35f), Offset(gx, face.height * 0.66f), Offset(gx + inset, face.height * 0.66f + inset), strokeWidth = hair)
+                for (k in 0 until 4) {
+                    val p = Offset(if (k and 1 == 0) inset * 0.8f else face.width - inset * 0.8f, if (k and 2 == 0) inset * 0.8f else face.height - inset * 0.8f)
+                    drawCircle(rimDark.copy(alpha = 0.55f), screw, p)
+                    drawCircle(rimLight, screw * 0.45f, p - Offset(screw * 0.2f, screw * 0.2f))
+                }
+                // hatching and a small ring bottom-right
+                val hy = face.height - inset * 2.1f
+                for (i in 0 until 9) {
+                    val x = face.width * 0.60f + i * 4.dp.toPx()
+                    drawLine(rimDark.copy(alpha = 0.40f), Offset(x, hy + 6.dp.toPx()), Offset(x + 4.dp.toPx(), hy - 4.dp.toPx()), strokeWidth = hair)
+                }
+                val ring = Offset(face.width - inset * 3.2f, hy)
+                drawCircle(rimDark.copy(alpha = 0.45f), 5.dp.toPx(), ring, style = Stroke(hair * 1.4f))
+                drawCircle(rimLight, 2.dp.toPx(), ring)
+            }
+        },
+    )
+}
+
+/** Tag (folder, INFO, NO.xxx) top-left; the big number, database line and system marker bottom-left. */
+@Composable
+private fun GlassLabels(e: FileEntry, number: String) {
+    val c = Iris.colors
+    val ink = c.text
+    val digits = number.substringAfter('-')
+    val top = ArchiveMath.systemTop(e.relPath)
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 22.dp)
+                .background(if (c.isDark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.86f))
+                .padding(horizontal = 8.dp, vertical = 5.dp),
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(folderLabel(e.relPath), style = hudMicro.copy(fontWeight = FontWeight.Bold), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Box(Modifier.width(16.dp).height(3.dp).background(ink))
+                    Text("INFO", style = hudMicro.copy(fontSize = 7.sp), color = c.textSecondary)
+                }
+            }
+            Text("NO.$digits", style = hudName.copy(fontSize = 17.sp, lineHeight = 21.sp), color = ink)
+        }
+        Column(Modifier.align(Alignment.BottomStart).padding(start = 24.dp, bottom = 22.dp)) {
+            Text("NO.$digits", style = hudCounter.copy(fontSize = 28.sp, lineHeight = 32.sp), color = ink)
+            Text("INTERNAL DATABASE · IRIDIS 存储", style = hudMicro.copy(fontSize = 7.sp), color = c.textSecondary)
+            if (e.system != null || top != null) {
+                Spacer(Modifier.height(3.dp))
+                Text("▪ 系统目录 / " + (e.system?.label ?: top?.label ?: ""), style = hudMicro.copy(fontSize = 7.sp), color = ink)
+            }
+        }
+    }
+}
+
+/** The main visual inside the glass: thumbnail, printed first lines, a folder drawer, or the type glyph. */
+@Composable
+private fun GlassVisual(e: FileEntry, loaded: Loaded?, palette: ArchiveMath.FieldColors) {
+    val c = Iris.colors
+    val ink = c.text
+    val dark = c.isDark
+    val visual = ArchiveMath.visualOf(e.isDir, e.extension)
+    val thumb = loaded?.thumb
+    val head = loaded?.head.orEmpty()
+    val paper = if (dark) Color.White.copy(alpha = 0.07f) else Color.White.copy(alpha = 0.72f)
+    val rimLight = if (dark) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.95f)
+    val ringColor = Color(ArchiveMath.lerpColor(palette.lit, palette.shade, 0.55f))
+    val isDefault = c.accent == IrisPalette.DEFAULT.light.accent || c.accent == IrisPalette.DEFAULT.dark.accent
+    val copper = if (isDefault) Color(0xFFC4875A) else c.accent
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val vw = maxWidth * 0.54f
+        val vh = maxHeight * 0.64f
+        Box(Modifier.align(Alignment.CenterEnd).padding(end = maxWidth * 0.07f).size(vw, vh)) {
+            when {
+                visual == ArchiveMath.Visual.IMAGE && thumb != null -> Spacer(
+                    Modifier.fillMaxSize().drawBehind {
+                        val pad = 7.dp.toPx()
+                        val scale = min((size.width - pad * 2) / thumb.width, (size.height - pad * 2) / thumb.height)
+                        val dw = (thumb.width * scale).roundToInt(); val dh = (thumb.height * scale).roundToInt()
+                        val left = ((size.width - dw) / 2f).roundToInt(); val top = ((size.height - dh) / 2f).roundToInt()
+                        drawRect(paper, Offset(left - pad, top - pad), Size(dw + pad * 2, dh + pad * 2))
+                        drawImage(thumb, dstOffset = IntOffset(left, top), dstSize = IntSize(dw, dh))
+                        drawRect(rimLight, Offset(left.toFloat(), top.toFloat()), Size(dw.toFloat(), dh.toFloat()), style = Stroke(1.dp.toPx()))
+                        val m = 8.dp.toPx(); val sw = 1.dp.toPx()
+                        val l = left - pad; val t = top - pad; val r = left + dw + pad; val b = top + dh + pad
+                        for ((x, y, dx, dy) in listOf(listOf(l, t, 1f, 1f), listOf(r, t, -1f, 1f), listOf(l, b, 1f, -1f), listOf(r, b, -1f, -1f))) {
+                            drawLine(ink, Offset(x, y), Offset(x + m * dx, y), strokeWidth = sw)
+                            drawLine(ink, Offset(x, y), Offset(x, y + m * dy), strokeWidth = sw)
+                        }
+                    },
+                )
+                visual == ArchiveMath.Visual.TEXT && head.isNotEmpty() -> Column(
+                    Modifier.fillMaxSize().background(paper).drawBehind {
+                        drawRect(ink.copy(alpha = 0.25f), style = Stroke(0.7.dp.toPx()))
+                    }.padding(horizontal = 9.dp, vertical = 8.dp),
                 ) {
-                    Text("0${i + 1}  ", style = hudMono, color = if (on) ink else grey)
-                    Text(label, style = hudAction, color = if (on) ink else grey)
+                    Row {
+                        Text("PRINT", style = hudMicro.copy(fontSize = 7.sp, fontWeight = FontWeight.Bold), color = ink)
+                        Spacer(Modifier.weight(1f))
+                        Text(e.extension.uppercase(java.util.Locale.ROOT), style = hudMicro.copy(fontSize = 7.sp), color = c.textSecondary)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    head.forEachIndexed { i, line ->
+                        Row {
+                            Text((i + 1).toString().padStart(2, '0'), style = hudMono.copy(fontSize = 7.sp, lineHeight = 10.sp), color = c.textTertiary)
+                            Spacer(Modifier.width(6.dp))
+                            Text(line, style = hudMono.copy(fontSize = 7.sp, lineHeight = 10.sp), color = ink, maxLines = 1, overflow = TextOverflow.Clip)
+                        }
+                    }
+                }
+                visual == ArchiveMath.Visual.FOLDER -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom) {
+                    Text("DIR", style = hudCounter.copy(fontSize = 34.sp, lineHeight = 38.sp, letterSpacing = 4.sp), color = ink.copy(alpha = 0.55f), modifier = Modifier.align(Alignment.End))
+                    Spacer(Modifier.weight(1f))
+                    val names = loaded?.childNames.orEmpty()
+                    val slats = if (names.isEmpty()) 3 else names.size
+                    for (i in 0 until slats) {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 4.dp).height(17.dp).background(paper)
+                                .drawBehind { drawLine(ringColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.dp.toPx()) }
+                                .padding(horizontal = 7.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            Text(names.getOrElse(i) { "—" }, style = hudMono.copy(fontSize = 8.sp), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                else -> Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        val cx = size.width / 2f; val cy = size.height / 2f
+                        val r = min(size.width, size.height) * 0.46f
+                        val hair = 0.8.dp.toPx()
+                        drawCircle(ringColor.copy(alpha = 0.55f), r, Offset(cx, cy), style = Stroke(hair))
+                        drawCircle(ringColor.copy(alpha = 0.35f), r * 0.78f, Offset(cx, cy), style = Stroke(hair))
+                        drawArc(copper.copy(alpha = 0.7f), 200f, 64f, false, Offset(cx - r, cy - r), Size(r * 2, r * 2), style = Stroke(2.dp.toPx()))
+                        for (i in 0 until 48) {
+                            val a = (i * 7.5f) * (PI.toFloat() / 180f)
+                            val long = i % 6 == 0
+                            val r0 = r * (if (long) 1.04f else 1.02f); val r1 = r * 1.10f
+                            drawLine(ringColor.copy(alpha = if (long) 0.7f else 0.4f), Offset(cx + r0 * cos(a), cy + r0 * sin(a)), Offset(cx + r1 * cos(a), cy + r1 * sin(a)), strokeWidth = hair)
+                        }
+                        drawLine(ink.copy(alpha = 0.25f), Offset(cx - r * 1.25f, cy), Offset(cx - r * 0.86f, cy), strokeWidth = hair)
+                        drawLine(ink.copy(alpha = 0.25f), Offset(cx + r * 0.86f, cy), Offset(cx + r * 1.25f, cy), strokeWidth = hair)
+                    },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val glyph = ArchiveMath.glyphOf(e.isDir, e.extension)
+                    Text(
+                        glyph, style = hudCounter.copy(fontSize = if (glyph.length > 5) 24.sp else 32.sp, lineHeight = 36.sp, letterSpacing = 2.sp),
+                        color = ink, maxLines = 1,
+                    )
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().height(0.7.dp).background(grey.copy(alpha = 0.4f)))
-        Spacer(Modifier.height(10.dp))
-        if (tab == 0) {
+    }
+}
+
+/**
+ * Text that starts as a redaction bar per line and is revealed left → right; the title stops after
+ * its first [prefixChars] characters before clearing the rest.
+ */
+@Composable
+private fun RedactText(
+    text: String,
+    style: TextStyle,
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
+    color: Color = Iris.colors.text,
+    bar: Color = Iris.colors.text,
+    maxLines: Int = Int.MAX_VALUE,
+    prefixChars: Int = 0,
+) {
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    Text(
+        text, style = style, color = color, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout = it },
+        modifier = modifier.drawWithContent {
+            val p = progress()
+            if (p >= 1f) { drawContent(); return@drawWithContent }
+            val l = layout
+            if (l == null) { drawRect(bar); return@drawWithContent }
+            val lines = l.lineCount
+            for (i in 0 until lines) {
+                val left = l.getLineLeft(i); val right = l.getLineRight(i)
+                val top = l.getLineTop(i); val bottom = l.getLineBottom(i)
+                val width = (right - left).coerceAtLeast(1f)
+                var q = ArchiveMath.lineReveal(p, i, lines)
+                if (i == 0 && prefixChars > 0) {
+                    val end = min(prefixChars, l.getLineEnd(0, visibleEnd = true))
+                    val pre = ((l.getHorizontalPosition(end, true) - left) / width).coerceIn(0f, 1f)
+                    q = ArchiveMath.titleReveal(q, pre)
+                }
+                val x = left + width * q
+                if (q > 0f) clipRect(left = 0f, top = top, right = x, bottom = bottom) { this@drawWithContent.drawContent() }
+                if (q < 1f) {
+                    val inset = (bottom - top) * 0.12f
+                    drawRect(bar, Offset(x, top + inset), Size(right - x, bottom - top - inset * 2f))
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun DetailInfo(
+    e: FileEntry,
+    number: String,
+    loaded: Loaded?,
+    state: FilesState,
+    actions: FilesActions,
+    anim: DetailAnim,
+    onClose: () -> Unit,
+    onEnter: () -> Unit,
+) {
+    val c = Iris.colors
+    val ink = c.text
+    val grey = c.textSecondary
+    var tab by remember(e.relPath) { mutableIntStateOf(0) }
+    val canRename = actions.canRename(e)
+    val canDelete = actions.canDelete(e)
+    val fixed = FileProtection.isFixed(e.relPath)
+    val top = ArchiveMath.systemTop(e.relPath)
+    val typeName = ArchiveMath.typeName(e)
+    val preview = FilePreview.canPreview(e)
+    val warning = FileProtection.warningText(e.relPath)
+    val typeValue = when {
+        e.isDir -> if (e.system != null) "系统文件夹" else "文件夹"
+        e.extension.isEmpty() -> "文件"
+        else -> e.extension.uppercase(java.util.Locale.ROOT)
+    }
+    val children = loaded?.children ?: e.childCount
+    val sizeValue = if (e.isDir) "$children 项" else FileSizes.format(e.size)
+    val status = if (canRename && canDelete) "▪ 可编辑" else "▪ 受保护"
+    val tag = when {
+        e.system != null -> "系统目录"
+        top != null -> top.label + " 目录"
+        FilesPaths.parent(e.relPath).isEmpty() -> "根目录"
+        else -> folderLabel(e.relPath)
+    }
+    val facts = ArchiveMath.Facts(
+        typeName = typeName, isDir = e.isDir, sizeText = FileSizes.format(e.size), modifiedText = formatModified(e.modified),
+        previewable = preview, lines = loaded?.lines, imageWidth = loaded?.imageWidth ?: 0, imageHeight = loaded?.imageHeight ?: 0,
+        children = if (e.isDir) children else null, childNames = loaded?.childNames.orEmpty(),
+        systemLabel = if (e.system == null) top?.label else null, fixed = fixed, warning = warning,
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("FILE $number", style = hudMicro.copy(fontWeight = FontWeight.Bold), color = ink)
+        Spacer(Modifier.weight(1f))
+        Text("REFERENCE AREA", style = hudMicro.copy(fontSize = 7.sp), color = grey)
+    }
+    Spacer(Modifier.height(10.dp))
+    RedactText(e.displayName, hudTitle, { anim.row(0) }, maxLines = 2, prefixChars = ArchiveMath.titlePrefixChars(e.displayName.length))
+    if (e.system != null) Text(e.name, style = hudMono, color = grey)
+    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RedactText(typeName, hudSub, { anim.row(1) })
+        Spacer(Modifier.width(10.dp))
+        Text(tag, style = hudMicro.copy(fontSize = 8.sp), color = grey, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (e.system != null) Text("  「${FilesText.SYSTEM_BADGE}」", style = hudMicro, color = grey)
+    }
+    Spacer(Modifier.height(14.dp))
+    Box(Modifier.fillMaxWidth().height(2.dp).background(ink))
+    Spacer(Modifier.height(14.dp))
+    Row {
+        DetailField("类型 / TYPE", typeValue, 2, anim, Modifier.weight(1f))
+        DetailField("大小 / SIZE", sizeValue, 3, anim, Modifier.weight(1f))
+    }
+    Row {
+        DetailField("修改时间 / MODIFIED", formatModified(e.modified), 4, anim, Modifier.weight(1f))
+        DetailField("状态 / STATUS", status, 5, anim, Modifier.weight(1f))
+    }
+
+    // tabs
+    Row(Modifier.padding(top = 4.dp)) {
+        listOf("概述", "属性", "操作").forEachIndexed { i, label ->
+            val on = tab == i
+            Row(
+                Modifier.clickable { tab = i }.drawBehind {
+                    if (on) drawLine(ink, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.5.dp.toPx())
+                }.padding(end = 20.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text("0${i + 1}  ", style = hudMono.copy(fontSize = 8.sp), color = if (on) ink else grey)
+                Text(label, style = hudAction, color = if (on) ink else grey)
+            }
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(0.7.dp).background(grey.copy(alpha = 0.4f)))
+    Spacer(Modifier.height(12.dp))
+    when (tab) {
+        0 -> {
             Text("ABSTRACT / 摘要", style = hudMicro, color = grey)
             Spacer(Modifier.height(6.dp))
-            Text(
-                abstractOf(e, type, preview), style = TextStyle(fontSize = 14.sp, lineHeight = 22.sp, fontFamily = FontFamily.SansSerif), color = ink,
-                modifier = Modifier.redacted(bar) { ArchiveMath.redactProgress(t(), 7) },
-            )
-        } else {
-            DetailPreview(e, state, preview)
+            RedactText(ArchiveMath.summary(facts), hudBody, { anim.row(6) })
+            val head = loaded?.head.orEmpty()
+            if (!e.isDir && head.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text("HEAD / 前几行", style = hudMicro, color = grey)
+                Spacer(Modifier.height(6.dp))
+                Column(Modifier.fillMaxWidth().background(c.codeBackground.copy(alpha = 0.5f)).padding(10.dp)) {
+                    head.take(6).forEach { Text(it, style = hudMono.copy(fontSize = 11.sp, lineHeight = 15.sp), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        // black action bar
-        Row(Modifier.fillMaxWidth().height(48.dp).background(ink), verticalAlignment = Alignment.CenterVertically) {
-            val onInk = if (c.isDark) Color.Black else Color.White
-            ActionCell("打开", onInk, Modifier.weight(1f)) { actions.openExternal(e) }
-            BarDivider(onInk)
-            ActionCell("分享", onInk, Modifier.weight(1f)) { actions.share(e) }
-            if (canRename) { BarDivider(onInk); ActionCell("重命名", onInk, Modifier.weight(1f)) { onClose(); actions.requestRename(e) } }
-            if (canDelete) { BarDivider(onInk); ActionCell("删除", onInk, Modifier.weight(1f)) { onClose(); actions.requestDelete(e) } }
-        }
-        Spacer(Modifier.height(8.dp))
-        state.rootPath?.let { Text(it, style = hudMono, color = grey, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        Spacer(Modifier.height(16.dp))
+        1 -> DetailProperties(e, state, fixed, warning)
+        else -> DetailActions(e, actions, canRename, canDelete, warning, onClose, onEnter)
     }
+    Spacer(Modifier.height(16.dp))
 }
 
 @Composable
-private fun BarDivider(color: Color) {
-    Box(Modifier.width(0.5.dp).height(22.dp).background(color.copy(alpha = 0.35f)))
-}
-
-@Composable
-private fun ActionCell(label: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    Box(modifier.fillMaxHeight().clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(label, style = hudAction, color = color)
-    }
-}
-
-@Composable
-private fun DetailField(label: String, value: String, index: Int, t: () -> Float, modifier: Modifier, mono: Boolean = false) {
+private fun DetailField(label: String, value: String, row: Int, anim: DetailAnim, modifier: Modifier) {
     val c = Iris.colors
-    Column(modifier.padding(bottom = 12.dp, end = 8.dp)) {
-        Text(label, style = hudMicro, color = c.textSecondary)
+    Column(modifier.padding(bottom = 14.dp, end = 8.dp)) {
+        Text(label, style = hudMicro.copy(fontSize = 8.sp), color = c.textSecondary)
         Spacer(Modifier.height(4.dp))
-        Text(
-            value, style = if (mono) hudMono.copy(fontSize = 11.sp, lineHeight = 15.sp) else hudName.copy(fontSize = 14.sp),
-            color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.redacted(c.text) { ArchiveMath.redactProgress(t(), index) },
+        RedactText(value, hudValue, { anim.row(row) }, maxLines = 2)
+    }
+}
+
+/** 02 属性: full path (selectable, copy), extension, MIME, folder, bytes, protection. */
+@Composable
+private fun DetailProperties(e: FileEntry, state: FilesState, fixed: Boolean, warning: String?) {
+    val c = Iris.colors
+    val clipboard = LocalClipboardManager.current
+    var copied by remember(e.relPath) { mutableStateOf(false) }
+    val full = state.rootPath?.let { it.trimEnd('/') + "/" + e.relPath } ?: ArchiveMath.pathTag(e.relPath)
+    val mime = if (e.isDir) "inode/directory" else MimeTypeMap.getSingleton().getMimeTypeFromExtension(e.extension) ?: FilePreview.mimeFallback(e.extension)
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("完整路径 / PATH", style = hudMicro.copy(fontSize = 8.sp), color = c.textSecondary, modifier = Modifier.weight(1f))
+            Text(
+                if (copied) "已复制" else "复制", style = hudAction, color = c.text,
+                modifier = Modifier.clickable { clipboard.setText(AnnotatedString(full)); copied = true }.padding(horizontal = 6.dp, vertical = 6.dp),
+            )
+        }
+        SelectionContainer { Text(full, style = hudMono.copy(fontSize = 11.sp, lineHeight = 15.sp), color = c.text) }
+        Spacer(Modifier.height(12.dp))
+        PropRow("扩展名 / EXTENSION", if (e.isDir) "—" else if (e.extension.isEmpty()) "无" else "." + e.extension)
+        PropRow("MIME", mime, mono = true)
+        PropRow("所在目录 / FOLDER", ArchiveMath.pathTag(FilesPaths.parent(e.relPath)), mono = true)
+        if (!e.isDir) PropRow("大小 / BYTES", String.format(java.util.Locale.ROOT, "%,d B", e.size), mono = true)
+        PropRow("修改时间 / MODIFIED", formatModified(e.modified))
+        PropRow(
+            "系统保护 / PROTECTED",
+            when {
+                fixed -> "是 · IRIDIS 系统目录，不能重命名或删除"
+                warning != null -> "否 · 位于模型目录，改名或删除会影响模型加载"
+                else -> "否"
+            },
         )
     }
 }
 
-private fun abstractOf(e: FileEntry, type: String, preview: Boolean): String = buildString {
-    append(type).append(" 文件，").append(FileSizes.format(e.size)).append("，最后修改于 ").append(formatModified(e.modified)).append("。")
-    append("归档于 ").append(ArchiveMath.pathTag(FilesPaths.parent(e.relPath))).append("。")
-    append(if (preview) "可在「预览」中直接阅读。" else "这一类型不能在应用内预览，可用「打开」交给其他应用。")
+@Composable
+private fun PropRow(label: String, value: String, mono: Boolean = false) {
+    val c = Iris.colors
+    Column(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+        Text(label, style = hudMicro.copy(fontSize = 8.sp), color = c.textSecondary)
+        Spacer(Modifier.height(3.dp))
+        Text(value, style = if (mono) hudMono.copy(fontSize = 11.sp, lineHeight = 15.sp) else hudValue, color = c.text)
+    }
 }
 
-/** 02 预览: in-app text / Markdown (same limits as the list's preview), the image, or a note. */
+/** 03 操作: the same FilesActions as the list; protected entries show why an action is off. */
 @Composable
-private fun DetailPreview(e: FileEntry, state: FilesState, preview: Boolean) {
-    val c = Iris.colors
-    if (!preview) {
-        Text("无法在应用内预览这一类型 · 可用「打开」交给其他应用", style = hudAction, color = c.textSecondary)
-        return
+private fun DetailActions(
+    e: FileEntry,
+    actions: FilesActions,
+    canRename: Boolean,
+    canDelete: Boolean,
+    warning: String?,
+    onClose: () -> Unit,
+    onEnter: () -> Unit,
+) {
+    val locked = "IRIDIS 系统目录固定在根目录"
+    Column {
+        if (e.isDir) {
+            ActionRow(IrisIcons.Folder, "进入文件夹", "浏览这个文件夹的档案", true) { onEnter() }
+        } else {
+            ActionRow(IrisIcons.File, "打开", if (FilePreview.canPreview(e)) "在应用内阅读" else "交给其他应用打开", true) { actions.onEntryClick(e) }
+            ActionRow(IrisIcons.OpenExternal, "用其他应用打开", "系统的「打开方式」", true) { actions.openExternal(e) }
+            ActionRow(IrisIcons.Share, "分享", "发送到其他应用", true) { actions.share(e) }
+        }
+        ActionRow(IrisIcons.Edit, "重命名", if (!canRename) "$locked，不能重命名" else warning ?: "修改名称", canRename) { onClose(); actions.requestRename(e) }
+        ActionRow(IrisIcons.Trash, "删除", if (!canDelete) "$locked，不能删除" else warning ?: "删除前会再次确认", canDelete, danger = true) { onClose(); actions.requestDelete(e) }
     }
-    val text by produceState<String?>(null, e.relPath, state.rootPath) { value = readPreview(state.rootPath, e) }
-    Box(
-        Modifier.fillMaxWidth().heightIn(max = 420.dp).background(c.codeBackground.copy(alpha = 0.5f))
-            .verticalScroll(rememberScrollState()).padding(10.dp),
+}
+
+@Composable
+private fun ActionRow(icon: ImageVector, label: String, hint: String, enabled: Boolean, danger: Boolean = false, onClick: () -> Unit) {
+    val c = Iris.colors
+    val tint = when {
+        !enabled -> c.textTertiary
+        danger -> c.danger
+        else -> c.text
+    }
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick)
+            .drawBehind { drawLine(c.textSecondary.copy(alpha = 0.25f), Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 0.7.dp.toPx()) }
+            .padding(vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        val s = text
-        when {
-            s == null -> Text("READING …", style = hudAction, color = c.textTertiary)
-            FilePreview.isMarkdown(e.extension) -> SelectionContainer { Markdown(s) }
-            else -> SelectionContainer { Text(s, style = hudMono.copy(fontSize = 12.sp, lineHeight = 17.sp), color = c.text) }
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = hudValue, color = tint)
+            Text(hint, style = hudMicro.copy(fontSize = 9.sp, letterSpacing = 0.4.sp), color = c.textSecondary)
+        }
+        if (enabled) Text("→", style = hudArrow, color = tint)
+    }
+}
+
+/** Dark primary bar「+ 打开文件 · OPEN」(folders: 进入), 分享 ↓, and the HUD line under it. */
+@Composable
+private fun DetailFooter(e: FileEntry, serial: String, actions: FilesActions, onEnter: () -> Unit, modifier: Modifier) {
+    val c = Iris.colors
+    val ink = c.text
+    val onInk = if (c.isDark) Color.Black else Color.White
+    Column(modifier.padding(top = 8.dp)) {
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f).fillMaxHeight().background(ink)
+                    .clickable { if (e.isDir) onEnter() else actions.onEntryClick(e) }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("+  " + if (e.isDir) "进入文件夹" else "打开文件", style = hudAction.copy(fontWeight = FontWeight.Bold), color = onInk)
+                Spacer(Modifier.weight(1f))
+                Text(if (e.isDir) "ENTER" else "OPEN", style = hudMicro, color = onInk.copy(alpha = 0.7f))
+            }
+            if (!e.isDir) Row(
+                Modifier.fillMaxHeight().clickable { actions.share(e) }.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("分享", style = hudAction, color = ink)
+                Spacer(Modifier.width(10.dp))
+                Text("↓", style = hudArrow, color = ink)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("▪  IRIDIS · 本地存储", style = hudMicro.copy(fontSize = 8.sp), color = c.textSecondary)
+            Spacer(Modifier.weight(1f))
+            Text(serial, style = hudMono, color = c.textSecondary)
+            Spacer(Modifier.width(14.dp))
+            HudClock()
+        }
+        Spacer(Modifier.height(10.dp))
+    }
+}
+
+@Composable
+private fun HudClock() {
+    val now by produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(1000L - System.currentTimeMillis() % 1000L)
+            value = System.currentTimeMillis()
         }
     }
+    Text(synchronized(clockFormat) { clockFormat.format(java.util.Date(now)) }, style = hudMono, color = Iris.colors.textSecondary)
 }
 
 /** The file under Download/IRIDIS (null when it would leave the root). */
 private fun resolve(rootPath: String?, e: FileEntry): File? = rootPath?.let { FilesPaths.resolve(File(it), e.relPath) }
 
-/** Downscaled thumbnail for png / jpg / webp (≤ [maxSide] px on the larger side), off the main thread. */
-private suspend fun loadThumb(rootPath: String?, e: FileEntry, maxSide: Int): ImageBitmap? {
-    if (!ArchiveMath.isImage(e.extension)) return null
-    return withContext(Dispatchers.IO) {
-        runCatching {
-            val f = resolve(rootPath, e) ?: return@runCatching null
+private const val HEAD_BYTES = 16L * 1024
+
+/** Thumbnail and size (images), first lines and line count (text), children (folders) — all confined to the root. */
+private suspend fun loadDetail(rootPath: String?, e: FileEntry, maxSide: Int): Loaded = withContext(Dispatchers.IO) {
+    runCatching {
+        if (e.isDir) {
+            val root = rootPath?.let { File(it) } ?: return@runCatching Loaded()
+            val kids = FilesIo.list(root, e.relPath)
+            val names = kids.orEmpty().sortedWith(compareBy<FileEntry>({ !it.isDir }, { it.name.lowercase(java.util.Locale.ROOT) })).take(4).map { it.displayName }
+            return@runCatching Loaded(children = kids?.size, childNames = names)
+        }
+        val f = resolve(rootPath, e) ?: return@runCatching Loaded()
+        if (ArchiveMath.isImage(e.extension)) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(f.path, bounds)
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching Loaded()
             val opts = BitmapFactory.Options().apply { inSampleSize = ArchiveMath.sampleSize(bounds.outWidth, bounds.outHeight, maxSide) }
-            BitmapFactory.decodeFile(f.path, opts)?.asImageBitmap()
-        }.getOrNull()
-    }
-}
-
-private suspend fun readPreview(rootPath: String?, e: FileEntry): String = withContext(Dispatchers.IO) {
-    runCatching {
-        val f = resolve(rootPath, e) ?: error("路径不在 IRIDIS 内")
-        val bytes = FilePreview.readHead(f)
-        if (!FilePreview.looksText(bytes)) "（看起来不是文本文件，可用其他应用打开）" else String(bytes, Charsets.UTF_8)
-    }.getOrElse { "读取失败：${it.message}" }
+            return@runCatching Loaded(BitmapFactory.decodeFile(f.path, opts)?.asImageBitmap(), bounds.outWidth, bounds.outHeight)
+        }
+        if (FilePreview.isText(e.extension)) {
+            val head = FilePreview.readHead(f, HEAD_BYTES)
+            if (!FilePreview.looksText(head)) return@runCatching Loaded()
+            val lines = if (e.size <= FilePreview.MAX_BYTES) ArchiveMath.lineCount(FilePreview.readHead(f)) else null
+            return@runCatching Loaded(head = ArchiveMath.headLines(String(head, Charsets.UTF_8), 10, 44), lines = lines)
+        }
+        Loaded()
+    }.getOrElse { Loaded() }
 }

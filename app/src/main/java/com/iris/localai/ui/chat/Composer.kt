@@ -127,7 +127,7 @@ object ComposerText {
     const val CHAT = "对话"
     const val AGENT = "智能体"
     const val PLACEHOLDER = "给 IRIDIS 发送消息"
-    const val AGENT_PLACEHOLDER = "交给 IRIDIS 智能体"
+    const val AGENT_PLACEHOLDER = "交给 IRIDIS 智能体（可读写工作区文件）"
     // 1.10.1: minimal composer. 1.10.2: the 「+」 menu is gone — voice input is the press-and-hold
     // mic again (right of the pills) and 语音对话 is the round button when the input is empty.
     const val THINK = "思考"
@@ -227,48 +227,31 @@ fun Composer(
 
         // 1.10.2: 「智能体」 is a small pill in the card's top-left corner, above the text field
         // (user: 「智能体放左上」). Same colours as the 1.10.1 pills, just smaller.
-        // 2.1.9 (user: one row less): 思考 + speed moved up here, all four chips compact, after
-        // 智能体 / 技能. The chips scroll sideways on a very narrow screen; 「+」 stays pinned right.
         Row(
             Modifier.fillMaxWidth().padding(start = 4.dp, top = 2.dp, end = 1.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(ComposerPillStyle.COMPACT_GAP_DP.dp),
-            ) {
-                ComposerPill(
-                    ComposerText.AGENT,
-                    selected = state.agentMode,
-                    onClick = onToggleAgent,
-                    icon = com.iris.localai.ui.icons.IrisIcons.Agent,
-                    compact = true,
-                )
-                // 2.2 「技能」: pick an installed skill / agent tool for this message.
-                var skillSheet by remember { mutableStateOf(false) }
-                var catalog by remember { mutableStateOf(RefCatalog.EMPTY) }
-                ComposerPill(
-                    ComposerText.SKILLS,
-                    selected = state.refs.isNotEmpty(),
-                    toggle = false,
-                    onClick = { catalog = refCatalog(); skillSheet = true },
-                    icon = com.iris.localai.ui.icons.IrisIcons.Skill,
-                    compact = true,
-                )
-                if (skillSheet) SkillPickerSheet(catalog, onPick = { onAddRef(it); skillSheet = false }, onDismiss = { skillSheet = false })
-                ComposerPill(
-                    ComposerText.THINK,
-                    selected = state.deepThinking,
-                    enabled = state.thinkingSupported,
-                    onClick = onToggleThinking,
-                    onDisabledClick = onThinkingUnsupported,
-                    icon = com.iris.localai.ui.icons.IrisIcons.Think,
-                    compact = true,
-                )
-                SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
-                Spacer(Modifier.width(2.dp))
-            }
+            ComposerPill(
+                ComposerText.AGENT,
+                selected = state.agentMode,
+                onClick = onToggleAgent,
+                icon = com.iris.localai.ui.icons.IrisIcons.Agent,
+                compact = true,
+            )
+            // 2.2 「技能」: pick an installed skill / agent tool for this message.
+            var skillSheet by remember { mutableStateOf(false) }
+            var catalog by remember { mutableStateOf(RefCatalog.EMPTY) }
+            Spacer(Modifier.width(6.dp))
+            ComposerPill(
+                ComposerText.SKILLS,
+                selected = state.refs.isNotEmpty(),
+                toggle = false,
+                onClick = { catalog = refCatalog(); skillSheet = true },
+                icon = com.iris.localai.ui.icons.IrisIcons.Skill,
+                compact = true,
+            )
+            if (skillSheet) SkillPickerSheet(catalog, onPick = { onAddRef(it); skillSheet = false }, onDismiss = { skillSheet = false })
+            Spacer(Modifier.weight(1f))
             // 1.10.12: attach pictures / files — top-right, opposite 智能体, so the bottom row keeps its layout.
             // 1.10.13: a small IRIS menu first (user: not straight into the file manager).
             // 2.2: a 「+」 as tall as the chips, its right edge on the capsule's right edge.
@@ -299,13 +282,10 @@ fun Composer(
         // 1.14.1: the text field stays in composition while dictating. Swapping it out (1.10–1.14.0)
         // dropped its focus, the keyboard closed, the composer jumped down by the IME height and the
         // finger ended up outside the mic button — which cancelled the hold and cut the dictation off.
-        // 2.1.9: the text field and the voice capsule share one row (capsule right, bottom-aligned
-        // so it stays by the last line when the text grows).
         val recording = state.listening || state.transcribing
         var cancelArmed by remember { mutableStateOf(false) }
         val fieldAlpha by animateFloatAsState(if (recording) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            Box(Modifier.weight(1f)) {
+        Box {
                 BasicTextField(
                     value = state.text,
                     onValueChange = onTextChange,
@@ -316,63 +296,72 @@ fun Composer(
                     readOnly = recording,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = ComposerInputRow.FIELD_MIN_HEIGHT_DP.dp)
+                        .heightIn(min = 44.dp)
                         .graphicsLayer { alpha = fieldAlpha }
                         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
                     decorationBox = { inner ->
                         Box(Modifier.padding(horizontal = 10.dp, vertical = 11.dp)) {
                             if (state.text.isEmpty()) {
-                                Text(if (state.agentMode) ComposerText.AGENT_PLACEHOLDER else ComposerText.PLACEHOLDER, style = IrisType.message.copy(lineHeight = IrisType.row.lineHeight), color = c.textTertiary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                Text(if (state.agentMode) ComposerText.AGENT_PLACEHOLDER else ComposerText.PLACEHOLDER, style = IrisType.message.copy(lineHeight = IrisType.row.lineHeight), color = c.textTertiary)
                             }
                             inner()
                         }
                     },
                 )
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = recording,
-                    enter = fadeIn(IrisMotion.enter()),
-                    exit = fadeOut(IrisMotion.exit()),
-                    modifier = Modifier.matchParentSize(),
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-                        ListeningIndicator(state.micLevel, state.transcribing, cancelArmed)
-                    }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = recording,
+                enter = fadeIn(IrisMotion.enter()),
+                exit = fadeOut(IrisMotion.exit()),
+                modifier = Modifier.matchParentSize(),
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+                    ListeningIndicator(state.micLevel, state.transcribing, cancelArmed)
                 }
             }
-            Spacer(Modifier.width(6.dp))
+        }
+
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // 1.10.2 bottom row: 思考 + speed on the left (they scroll on a very narrow screen instead
+            // of squeezing the buttons), then — as before 1.10.1 — the press-and-hold mic and the
+            // round action button (停止 / 发送 / 语音对话) on the right. No 「+」 menu any more.
+            Row(
+                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Spacer(Modifier.width(0.dp))
+                ComposerPill(
+                    ComposerText.THINK,
+                    selected = state.deepThinking,
+                    enabled = state.thinkingSupported,
+                    onClick = onToggleThinking,
+                    onDisabledClick = onThinkingUnsupported,
+                    icon = com.iris.localai.ui.icons.IrisIcons.Think,
+                )
+                SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
+                Spacer(Modifier.width(4.dp))
+            }
             // 2.2: one long accent capsule (users: the voice button was too small). Tap = 语音通话,
             // long-press = 语音输入 (slide up to cancel); with text / attachments 发送, while generating 停止.
-            // Slide distance is measured in window coordinates (VoiceCapsule.slideUpPx), so its new
-            // place in the row and the IME moving the composer do not matter.
             val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty())
-            Box(Modifier.padding(bottom = ComposerInputRow.capsuleBottomPadDp().dp)) {
-                VoiceCapsuleButton(
-                    action = action,
-                    holding = state.listening,
-                    micLevel = state.micLevel,
-                    sendEnabled = !state.transcribing,
-                    cancelArmed = cancelArmed,
-                    onSend = onSend,
-                    onStop = onStop,
-                    onCall = onVoiceMode,
-                    generating = state.generating,
-                    onInterruptSend = onInterruptSend,
-                    onHoldStart = onHoldToTalkStart,
-                    onHoldEnd = onHoldToTalkEnd,
-                    onHoldCancel = onHoldToTalkCancel,
-                    onCancelArmed = { cancelArmed = it },
-                )
-            }
+            VoiceCapsuleButton(
+                action = action,
+                holding = state.listening,
+                micLevel = state.micLevel,
+                sendEnabled = !state.transcribing,
+                cancelArmed = cancelArmed,
+                onSend = onSend,
+                onStop = onStop,
+                onCall = onVoiceMode,
+                generating = state.generating,
+                onInterruptSend = onInterruptSend,
+                onHoldStart = onHoldToTalkStart,
+                onHoldEnd = onHoldToTalkEnd,
+                onHoldCancel = onHoldToTalkCancel,
+                onCancelArmed = { cancelArmed = it },
+            )
         }
     }
-}
-
-/** 2.1.9: the text field + voice capsule row (pure, unit-tested). */
-object ComposerInputRow {
-    /** One text line: 22 sp line + 2 × 11 dp padding. */
-    const val FIELD_MIN_HEIGHT_DP = 44f
-    /** Bottom gap that centres the capsule on a one-line field and keeps it by the last line after. */
-    fun capsuleBottomPadDp(): Float = ((FIELD_MIN_HEIGHT_DP - VoiceCapsule.HEIGHT_DP) / 2f).coerceAtLeast(0f)
 }
 
 @Composable
@@ -387,7 +376,6 @@ private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed:
         Text(
             if (transcribing) ComposerText.TRANSCRIBING else if (cancelArmed) ComposerText.RELEASE_TO_CANCEL else ComposerText.LISTENING,
             style = IrisType.body, color = if (cancelArmed) c.danger else c.textSecondary,
-            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.pulse(transcribing),
         )
     }
@@ -433,7 +421,6 @@ private fun SpeedChip(tier: Int, note: String?, composerTop: () -> Int, onChange
         ComposerPill(
             speed.label, selected = false, toggle = false, onClick = { open = true },
             icon = Icons.Rounded.Bolt, trailingIcon = Icons.Rounded.KeyboardArrowDown,
-            compact = true,
             modifier = Modifier.semantics { contentDescription = "${ComposerText.SPEED}：${speed.label}" },
         )
         if (open) {

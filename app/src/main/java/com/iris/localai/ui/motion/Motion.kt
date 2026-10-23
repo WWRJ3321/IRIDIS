@@ -125,6 +125,13 @@ object IrisMotion {
     const val ARCHIVE_SETTLE_MS = 620
     /** 2.1.9 档案: the file detail — decrypt line, frosted → clear glass, redaction bars retracting. */
     const val ARCHIVE_REVEAL_MS = 1150
+    /**
+     * 2.1.9 档案 打开转场: one linear 0 → 1 timeline for the whole open — slab → glass push, diagonal
+     * scan, staggered decrypt of the info rows (each phase eases itself with [ProgressEasing]).
+     */
+    const val ARCHIVE_OPEN_MS = 1300
+    /** 2.1.9 档案: closing the detail — info fades, the glass shrinks back into its slot, the field clears. */
+    const val ARCHIVE_CLOSE_MS = 720
     /** Emphasized ease for one-shot 0 → 1 progress values (a wave or sweep has no value to retarget). */
     val ProgressEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     /** Ease-in for things leaving (the falling cards). */
@@ -133,6 +140,9 @@ object IrisMotion {
     /** A one-shot 0 → 1 progress (archive wave, rise, decrypt sweep). */
     fun <T> progress(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
         androidx.compose.animation.core.tween(periodMs, easing = ProgressEasing)
+    /** A linear 0 → 1 timeline whose phases apply their own easing (archive open / close). */
+    fun <T> timeline(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
+        androidx.compose.animation.core.tween(periodMs, easing = androidx.compose.animation.core.LinearEasing)
     /** A one-shot progress for content leaving. */
     fun <T> progressOut(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
         androidx.compose.animation.core.tween(periodMs, easing = ExitEasing)
