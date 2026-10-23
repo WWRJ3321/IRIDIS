@@ -622,6 +622,7 @@ internal val OPEN_SOURCE = listOf(
     "ZipVoice" to "代码 Apache-2.0 · 模型基于 Emilia（CC BY-NC 4.0，仅限非商业）· 音色克隆",
     "Matcha baker" to "标贝数据，仅限非商业 · 语音合成模型",
     "Piper xiao_ya" to "见模型许可 · 语音合成模型",
+    "RhineLabUI" to "MIT · Copyright (c) 2026 LBEILC · 设计灵感：「文件」档案模式（未使用其代码）",
 )
 
 

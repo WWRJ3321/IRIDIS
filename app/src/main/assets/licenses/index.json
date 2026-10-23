@@ -136,5 +136,11 @@
   "license": "BSD-3-Clause; native runtime: Qualcomm Terms of Use (downloaded by the user)",
   "file": "bsd-3-geniex.txt",
   "url": "https://github.com/qualcomm/GenieX"
+ },
+ {
+  "name": "RhineLabUI（设计灵感，未使用其代码）",
+  "license": "MIT",
+  "file": "mit-rhinelabui.txt",
+  "url": "https://github.com/LBEILC/RhineLabUI"
  }
 ]

@@ -15,8 +15,8 @@ class V218ReleaseTest {
 
     @Test fun version() {
         val gradle = listOf("app/build.gradle.kts", "build.gradle.kts").map { File(it) }.first { it.exists() }.readText()
-        assertTrue(gradle.contains("versionCode = 186"))
-        assertTrue(gradle.contains("versionName = \"2.1.8\""))
+        // 2.1.9+: later releases keep bumping
+        assertTrue(Regex("versionCode = (\\d+)").find(gradle)!!.groupValues[1].toInt() >= 186)
     }
 
     @Test fun mergedFixesPresent() {
