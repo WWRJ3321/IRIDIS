@@ -148,6 +148,7 @@ class VoiceController(
             var prefix: FloatArray? = null            // pre-roll kept for the utterance after a barge-in
             var outPeak = 0f          // decaying peak of our own playback level
             val gate = HalfDuplexGate() // 2.1.8: mic closed while our voice is on the loudspeaker (+ tail)
+            val preOpen = PreOpenBuffer() // 2.1.9: echo-free audio from the tail, replayed when the gate opens
             var lastAction = MicAction.LISTEN
             try {
                 Microphone.frames().collect { frame ->
@@ -173,10 +174,17 @@ class VoiceController(
                     lastAction = action
                     if (action == MicAction.MUTED) {
                         // Half-duplex: nothing of what the mic hears now reaches VAD / ASR / barge-in.
-                        if (prev != MicAction.MUTED) { vad.clear(); detector.reset(); preroll.clear(); prefix = null }
+                        if (prev != MicAction.MUTED) { vad.clear(); detector.reset(); preroll.clear(); prefix = null; preOpen.clear() }
+                        // 2.1.9: keep the last ~300 ms heard after playback ended (never TTS itself).
+                        preOpen.onMutedFrame(frame, echoFree = !audible && gate.echoFree(now))
                         return@collect
                     }
-                    if (prev == MicAction.MUTED) vad.clear() // start clean once the gate opens
+                    if (prev == MicAction.MUTED) {
+                        // 2.1.9: the gate opens. Instead of starting from nothing, replay what the
+                        // user may already have said inside the tail, then the live frame.
+                        vad.clear()
+                        for (f in preOpen.drain()) { vad.acceptWaveform(f); preroll.add(f) }
+                    }
                     vad.acceptWaveform(frame)
                     preroll.add(frame)
                     val talking = vad.isSpeechDetected()
