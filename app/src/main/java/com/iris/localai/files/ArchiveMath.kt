@@ -440,6 +440,291 @@ object ArchiveMath {
         return s
     }
 
+    // ---------------------------------------------------------------- open transition (2.1.9 档案 打开转场与详情页重做)
+    //
+    // One linear 0 → 1 timeline drives the whole open (IrisMotion.ARCHIVE_OPEN_MS): the selected
+    // slab's face is carried to the detail's glass panel (shared-element push, the field zooming and
+    // blurring behind it), a diagonal scan line reveals the glass contents, then the info rows
+    // "decrypt" one after another. Each phase gets its own local 0..1 and eases itself (the view
+    // passes IrisMotion.ProgressEasing). Closing runs its own timeline (ARCHIVE_CLOSE_MS) in reverse
+    // order: info fades, the panel shrinks back into its slot, the field clears.
+
+    /** Local 0..1 progress of the phase [start, end] at overall [t]. */
+    fun phase(t: Float, start: Float, end: Float): Float =
+        if (end <= start) (if (t >= end) 1f else 0f) else ((t - start) / (end - start)).coerceIn(0f, 1f)
+
+    object Open {
+        /** Push (slab face → glass panel, field zoom / blur) over [0, PUSH_END]. */
+        const val PUSH_END = 0.40f
+        /** Info area (labels + redaction bars) fades in while the panel travels. */
+        const val INFO_START = 0.10f
+        const val INFO_END = 0.34f
+        /** Diagonal scan across the glass. */
+        const val SCAN_START = 0.38f
+        const val SCAN_END = 0.68f
+        /** Info rows decrypt one after another from ROWS_START, ROW_STAGGER apart, ROW_SPAN each. */
+        const val ROWS_START = 0.50f
+        const val ROW_STAGGER = 0.04f
+        const val ROW_SPAN = 0.22f
+        /** The title row takes longer: a few characters first, a pause, then the rest. */
+        const val TITLE_SPAN = 0.36f
+        /** Rows that decrypt (title, subtitle, four fields, abstract). */
+        const val ROWS = 7
+        // close timeline
+        const val CLOSE_INFO_END = 0.35f
+        const val CLOSE_CONTENT_START = 0.10f
+        const val CLOSE_CONTENT_END = 0.40f
+        const val CLOSE_PUSH_START = 0.25f
+    }
+
+    /** Push progress (0 = the slab in the field, 1 = the glass panel in place) at open time [t], eased by [ease]. */
+    fun pushOf(t: Float, ease: (Float) -> Float = { it }): Float = ease(phase(t, 0f, Open.PUSH_END))
+    fun infoOf(t: Float): Float = phase(t, Open.INFO_START, Open.INFO_END)
+    fun scanOf(t: Float, ease: (Float) -> Float = { it }): Float = ease(phase(t, Open.SCAN_START, Open.SCAN_END))
+
+    /** Decrypt progress of info row [row] (0 = all bar, 1 = all text) at open time [t]; row 0 is the title. */
+    fun rowOf(t: Float, row: Int, ease: (Float) -> Float = { it }): Float {
+        if (row == 0) return phase(t, Open.ROWS_START, Open.ROWS_START + Open.TITLE_SPAN)
+        val start = Open.ROWS_START + row * Open.ROW_STAGGER
+        return ease(phase(t, start, start + Open.ROW_SPAN))
+    }
+
+    /** Close: the info area's opacity, the glass contents' opacity, and the push (from its value [from] at close start). */
+    fun closeInfo(c: Float): Float = 1f - phase(c, 0f, Open.CLOSE_INFO_END)
+    fun closeContent(c: Float): Float = 1f - phase(c, Open.CLOSE_CONTENT_START, Open.CLOSE_CONTENT_END)
+    fun closePush(c: Float, from: Float, ease: (Float) -> Float = { it }): Float =
+        from.coerceIn(0f, 1f) * (1f - ease(phase(c, Open.CLOSE_PUSH_START, 1f)))
+
+    /**
+     * Title reveal with a pause: the bar first retracts to [prefix] (the width fraction of the first
+     * few characters), holds, then clears the rest. [p] is the title row's progress. With prefix 0
+     * it is a plain retract.
+     */
+    fun titleReveal(p: Float, prefix: Float): Float {
+        val k = p.coerceIn(0f, 1f)
+        val pre = prefix.coerceIn(0f, 1f)
+        if (pre <= 0f) return k
+        return when {
+            k < TITLE_FIRST -> pre * (k / TITLE_FIRST)
+            k < TITLE_HOLD -> pre
+            else -> pre + (1f - pre) * ((k - TITLE_HOLD) / (1f - TITLE_HOLD))
+        }.coerceIn(0f, 1f)
+    }
+    const val TITLE_FIRST = 0.38f
+    const val TITLE_HOLD = 0.62f
+
+    /** Characters shown before the title's pause: none for short names (only longer titles stutter). */
+    fun titlePrefixChars(length: Int): Int = if (length < 6) 0 else minOf(3, length / 3)
+
+    /** Within one row of [lines] text lines, line [line]'s own 0..1 (lines start a little after each other). */
+    fun lineReveal(p: Float, line: Int, lines: Int): Float {
+        if (lines <= 1) return p.coerceIn(0f, 1f)
+        val stagger = minOf(0.18f, 0.5f / (lines - 1))
+        val start = line.coerceIn(0, lines - 1) * stagger
+        val span = 1f - (lines - 1) * stagger
+        return phase(p, start, start + span)
+    }
+
+    /** Quad (TL, TR, BR, BL as x, y pairs) of the rectangle [l, t, r, b] into [out]. */
+    fun rectQuad(l: Float, t: Float, r: Float, b: Float, out: FloatArray): FloatArray {
+        out[0] = l; out[1] = t; out[2] = r; out[3] = t; out[4] = r; out[5] = b; out[6] = l; out[7] = b
+        return out
+    }
+
+    /** Corner-wise interpolation of two quads (shared-element geometry: 0 = [from], 1 = [to]). */
+    fun lerpQuad(from: FloatArray, to: FloatArray, t: Float, out: FloatArray): FloatArray {
+        for (i in 0 until 8) out[i] = from[i] + (to[i] - from[i]) * t
+        return out
+    }
+
+    /** Quad [q] scaled by [s] about its own centre (fallback start when the slab was not drawn). */
+    fun scaleQuad(q: FloatArray, s: Float, out: FloatArray): FloatArray {
+        val cx = (q[0] + q[2] + q[4] + q[6]) / 4f
+        val cy = (q[1] + q[3] + q[5] + q[7]) / 4f
+        for (i in 0 until 4) {
+            out[i * 2] = cx + (q[i * 2] - cx) * s
+            out[i * 2 + 1] = cy + (q[i * 2 + 1] - cy) * s
+        }
+        return out
+    }
+
+    /** Centre of quad [q] into [out] (x, y). */
+    fun quadCenter(q: FloatArray, out: FloatArray): FloatArray {
+        out[0] = (q[0] + q[2] + q[4] + q[6]) / 4f
+        out[1] = (q[1] + q[3] + q[5] + q[7]) / 4f
+        return out
+    }
+
+    /** Depth of field behind the push [p]: the field zooms toward the slab, fades toward the background, blurs. */
+    fun backdropScale(p: Float): Float = 1f + BACKDROP_ZOOM * p.coerceIn(0f, 1f)
+    fun backdropAlpha(p: Float): Float = 1f - BACKDROP_FADE * p.coerceIn(0f, 1f)
+    /** Background-coloured veil over the field (never black). */
+    fun backdropVeil(p: Float): Float = BACKDROP_VEIL * p.coerceIn(0f, 1f)
+    const val BACKDROP_ZOOM = 0.30f
+    const val BACKDROP_FADE = 0.40f
+    const val BACKDROP_VEIL = 0.55f
+
+    /**
+     * The scan over a [w]×[h] panel at [s] (0..1): the line x/w + y/h = 2s, oriented bottom-left →
+     * top-right, travels from the top-left corner to the bottom-right one. Writes the revealed region
+     * (the part already swept, x/w + y/h ≤ 2s) as a polygon of up to 5 points into [out] (10 floats);
+     * returns the point count (0 = nothing revealed yet).
+     */
+    fun scanPolygon(s: Float, w: Float, h: Float, out: FloatArray): Int {
+        if (w <= 0f || h <= 0f || s <= 0f) return 0
+        val k = 2f * s.coerceAtMost(1f)
+        val xs = floatArrayOf(0f, w, w, 0f)
+        val ys = floatArrayOf(0f, 0f, h, h)
+        fun f(i: Int) = xs[i] / w + ys[i] / h - k
+        var n = 0
+        for (i in 0 until 4) {
+            val j = (i + 1) % 4
+            val fi = f(i); val fj = f(j)
+            if (fi <= 0f) { out[n * 2] = xs[i]; out[n * 2 + 1] = ys[i]; n++ }
+            if ((fi < 0f && fj > 0f) || (fi > 0f && fj < 0f)) {
+                val a = fi / (fi - fj)
+                out[n * 2] = xs[i] + (xs[j] - xs[i]) * a
+                out[n * 2 + 1] = ys[i] + (ys[j] - ys[i]) * a
+                n++
+            }
+        }
+        return n
+    }
+
+    /** End points (x0, y0 = lower-left end, x1, y1 = upper-right end) of the scan line clipped to the panel; false when not on it. */
+    fun scanSegment(s: Float, w: Float, h: Float, out: FloatArray): Boolean {
+        if (s <= 0f || s >= 1f) return false
+        val k = 2f * s
+        if (k <= 1f) { out[0] = 0f; out[1] = k * h; out[2] = k * w; out[3] = 0f }
+        else { out[0] = (k - 1f) * w; out[1] = h; out[2] = w; out[3] = (k - 1f) * h }
+        return true
+    }
+
+    // ---------------------------------------------------------------- detail facts
+
+    /** The app folder an entry lives in (models/…, voice/…), or null at the root / elsewhere. */
+    fun systemTop(rel: String): SystemFolder? = FilesPaths.segments(rel)?.firstOrNull()?.let { SystemFolder.of(it) }
+
+    private val CODE = setOf("kt", "java", "py", "sh", "js", "ts", "c", "h", "cpp", "rs", "go", "sql", "css")
+    private val CONFIG = setOf("yaml", "yml", "toml", "ini", "cfg", "conf", "properties")
+    private val IMAGE_ALL = setOf("png", "jpg", "jpeg", "webp", "gif", "heic", "bmp")
+    private val AUDIO = setOf("mp3", "wav", "ogg", "m4a", "flac")
+    private val VIDEO = setOf("mp4", "mkv", "webm", "mov")
+
+    /** Chinese type name of the detail's subtitle (模型权重 / 语音模型 / Markdown 文档 / 图片 / 文件夹 …). */
+    fun typeName(isDir: Boolean, system: Boolean, extension: String, top: SystemFolder?): String {
+        val ext = extension.lowercase(Locale.ROOT)
+        return when {
+            system -> "系统文件夹"
+            isDir -> "文件夹"
+            ext in MODEL -> if (top == SystemFolder.VOICE) "语音模型" else "模型权重"
+            ext == "md" || ext == "markdown" -> "Markdown 文档"
+            ext == "txt" -> "文本文档"
+            ext == "log" -> "日志"
+            ext == "json" || ext == "jsonl" -> "JSON 数据"
+            ext in CONFIG -> "配置文件"
+            ext == "xml" -> "XML 文档"
+            ext == "csv" || ext == "tsv" -> "表格数据"
+            ext == "html" || ext == "htm" -> "网页"
+            ext == "jinja" -> "模板"
+            ext == "srt" -> "字幕"
+            ext in CODE -> "源代码"
+            ext in IMAGE_ALL -> "图片"
+            ext in AUDIO -> if (top == SystemFolder.VOICE) "语音素材" else "音频"
+            ext in VIDEO -> "视频"
+            ext == "pdf" -> "PDF 文档"
+            ext == "doc" || ext == "docx" || ext == "odt" || ext == "rtf" -> "文字文档"
+            ext == "xls" || ext == "xlsx" -> "电子表格"
+            ext == "ppt" || ext == "pptx" -> "演示文稿"
+            ext == "epub" -> "电子书"
+            ext == "apk" -> "安装包"
+            ext in PACKAGE -> "压缩包"
+            else -> "文件"
+        }
+    }
+
+    fun typeName(e: FileEntry): String = typeName(e.isDir, e.system != null, e.extension, systemTop(e.relPath))
+
+    /** Big glyph of the glass for types without a picture / text: ".GGUF", "DIR", "FILE". */
+    fun glyphOf(isDir: Boolean, extension: String): String = when {
+        isDir -> "DIR"
+        extension.isBlank() -> "FILE"
+        else -> "." + extension.uppercase(Locale.ROOT).take(6)
+    }
+
+    /** What the glass shows: a thumbnail, the first lines as a printed sheet, a folder drawer, or a glyph. */
+    enum class Visual { IMAGE, TEXT, FOLDER, GLYPH }
+
+    fun visualOf(isDir: Boolean, extension: String): Visual = when {
+        isDir -> Visual.FOLDER
+        isImage(extension) -> Visual.IMAGE
+        FilePreview.isText(extension) -> Visual.TEXT
+        else -> Visual.GLYPH
+    }
+
+    /** "001 / 040": position of the entry in its column. */
+    fun serialLabel(index: Int, total: Int): String =
+        (index.coerceAtLeast(0) + 1).toString().padStart(3, '0') + " / " + total.coerceAtLeast(0).toString().padStart(3, '0')
+
+    /** Lines of a text head (a trailing newline does not start a line; empty = 0). */
+    fun lineCount(bytes: ByteArray, length: Int = bytes.size): Int {
+        if (length <= 0) return 0
+        var n = 0
+        for (i in 0 until length) if (bytes[i] == '\n'.code.toByte()) n++
+        return if (bytes[length - 1] == '\n'.code.toByte()) n else n + 1
+    }
+
+    /** The first [max] non-blank-trimmed lines of [text], each cut to [width] characters (the glass's printed sheet). */
+    fun headLines(text: String, max: Int, width: Int): List<String> =
+        text.replace("\r\n", "\n").split('\n').take(max).map { if (it.length > width) it.take(width - 1) + "…" else it }
+
+    /** What the 概述 tab knows about one entry; [summary] turns it into the abstract. */
+    class Facts(
+        val typeName: String,
+        val isDir: Boolean,
+        val sizeText: String,
+        val modifiedText: String,
+        val previewable: Boolean = false,
+        /** Text files: line count (null = not counted, e.g. too large). */
+        val lines: Int? = null,
+        val imageWidth: Int = 0,
+        val imageHeight: Int = 0,
+        /** Folders: number of visible items (null = unreadable) and the first few names. */
+        val children: Int? = null,
+        val childNames: List<String> = emptyList(),
+        /** Label of the app folder it lives in (模型 / 语音 …), or null. */
+        val systemLabel: String? = null,
+        /** The entry is one of the app's fixed folders. */
+        val fixed: Boolean = false,
+        /** FileProtection.warningText for files inside models / voice. */
+        val warning: String? = null,
+    )
+
+    fun summary(f: Facts): String = buildString {
+        if (f.isDir) {
+            append(f.typeName).append("，")
+            if (f.children == null) append("无法读取内容")
+            else if (f.children == 0) append("空文件夹")
+            else {
+                append("共 ").append(f.children).append(" 项")
+                if (f.childNames.isNotEmpty()) {
+                    append("：").append(f.childNames.joinToString("、"))
+                    if (f.children > f.childNames.size) append(" 等")
+                }
+            }
+            append("。最后修改于 ").append(f.modifiedText).append("。")
+        } else {
+            append(f.typeName).append("，").append(f.sizeText)
+            if (f.lines != null) append("，共 ").append(f.lines).append(" 行")
+            if (f.imageWidth > 0 && f.imageHeight > 0) append("，分辨率 ").append(f.imageWidth).append(" × ").append(f.imageHeight)
+            append("，最后修改于 ").append(f.modifiedText).append("。")
+        }
+        if (f.fixed) append("IRIDIS 的系统目录，固定在根目录，不能重命名或删除。")
+        else if (f.systemLabel != null) append("位于「").append(f.systemLabel).append("」系统目录内。")
+        if (f.warning != null) append(f.warning)
+        else if (!f.isDir) append(if (f.previewable) "可在应用内直接阅读。" else "这一类型交给其他应用打开。")
+    }
+
     // ---------------------------------------------------------------- colours (ARGB ints, no Android types)
 
     fun lerpColor(a: Int, b: Int, t: Float): Int {
@@ -532,6 +817,9 @@ object ArchiveMath {
         var activeCount = 0; private set
         /** Logical column of the selected slab in the last [build] (round(pos)). */
         var selectedColumn = 0; private set
+        /** Screen quad (TL, TR, BR, BL) of the selected slab's broad +X face in the last [build]; see [selectedFace]. */
+        private val selFace = FloatArray(8)
+        private var selFaceValid = false
 
         /** Sizes the field for a [w]×[h] px canvas at [density] px / dp; reallocates only when needed. */
         fun layout(w: Float, h: Float, density: Float) {
@@ -635,10 +923,14 @@ object ArchiveMath {
          * @param drop 0..1 intro drop (1 = slabs float [Field.DROP] above their rest)
          * @return vertex count (each vertex is two floats in [verts])
          */
-        fun build(pos: Float, hasActive: Boolean, rise: Float, shiftRows: Float, wave: Float, drop: Float, palette: FieldColors): Int {
+        fun build(
+            pos: Float, hasActive: Boolean, rise: Float, shiftRows: Float, wave: Float, drop: Float, palette: FieldColors,
+            hideSelected: Boolean = false,
+        ): Int {
             pal = palette
             n = 0
             activeCount = 0
+            selFaceValid = false
             selectedColumn = pos.roundToInt()
             val c0 = firstColumn(pos); val c1 = lastColumn(pos)
             val maxVerts = colors.size
@@ -671,6 +963,15 @@ object ArchiveMath {
                         activeBounds[activeCount * 4 + 2] = maxX; activeBounds[activeCount * 4 + 3] = maxY
                         activeColumn[activeCount] = c
                         activeCount++
+                    }
+                    if (active && c == selectedColumn) {
+                        // the broad +X face: corners 7 (u = L, v = hh), 3, 1, 5 — top-left, top-right,
+                        // bottom-right, bottom-left on screen when the slab stands
+                        selFace[0] = cx[7]; selFace[1] = cy[7]; selFace[2] = cx[3]; selFace[3] = cy[3]
+                        selFace[4] = cx[1]; selFace[5] = cy[1]; selFace[6] = cx[5]; selFace[7] = cy[5]
+                        selFaceValid = true
+                        // the open transition carries this face to the detail's glass panel
+                        if (hideSelected) continue
                     }
                     // contact shadow on the ground along the +X side of the footprint
                     val yNear = sy0 + yOff - hh * sinT
@@ -741,6 +1042,13 @@ object ArchiveMath {
                 return true
             }
             return false
+        }
+
+        /** The selected slab's face quad from the last [build] into [out] (8 floats, TL TR BR BL); false when it was not drawn. */
+        fun selectedFace(out: FloatArray): Boolean {
+            if (!selFaceValid) return false
+            selFace.copyInto(out)
+            return true
         }
 
         /** Screen position (px) of world point ([x], [y], [z]) relative to the anchor, for tests. */
