@@ -217,6 +217,8 @@ class V1102Test {
         assertEquals(PreloadDecision.NO_LAST_MODEL, PreloadPolicy.decide(true, " ", modelFound = false, engineIdle = true))
         assertEquals(PreloadDecision.MODEL_MISSING, PreloadPolicy.decide(true, "gone.litertlm", modelFound = false, engineIdle = true))
         assertEquals(PreloadDecision.ALREADY_LOADING_OR_LOADED, PreloadPolicy.decide(true, "a.litertlm", modelFound = true, engineIdle = false))
+        assertEquals(PreloadDecision.SKIP_AFTER_NATIVE_CRASH, PreloadPolicy.decide(true, "a.mnn", modelFound = true, engineIdle = true, blockedAfterNativeCrash = true))
+        assertEquals(PreloadDecision.DISABLED, PreloadPolicy.decide(false, "a.mnn", modelFound = true, engineIdle = true, blockedAfterNativeCrash = true))
     }
 
     @Test fun preloadRunsAtProcessStartWithTheExistingSwitch() {
@@ -227,7 +229,7 @@ class V1102Test {
         val app = source("src/main/java/com/iris/localai/IrisApp.kt")
         assertTrue(app.contains("container.engine.preloadAtStart()"))
         val em = flat(source("src/main/java/com/iris/localai/engine/EngineManager.kt"))
-        assertTrue(em.contains("PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle)"))
+        assertTrue(em.contains("PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle, blocked)"))
         assertTrue(em.contains("load(m, reason = \"启动预加载\")"))
         // ChatViewModel no longer starts a second load of its own
         val vm = source("src/main/java/com/iris/localai/ui/chat/ChatViewModel.kt")

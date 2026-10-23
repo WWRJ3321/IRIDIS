@@ -166,14 +166,22 @@ object ReloadRules {
 }
 
 /** 1.10.2: background preload of the last-used model at app start. */
-enum class PreloadDecision { LOAD, DISABLED, NO_LAST_MODEL, MODEL_MISSING, ALREADY_LOADING_OR_LOADED }
+enum class PreloadDecision { LOAD, DISABLED, NO_LAST_MODEL, MODEL_MISSING, ALREADY_LOADING_OR_LOADED, SKIP_AFTER_NATIVE_CRASH }
 
 object PreloadPolicy {
-    fun decide(enabled: Boolean, lastModelFile: String?, modelFound: Boolean, engineIdle: Boolean): PreloadDecision = when {
+    fun decide(
+        enabled: Boolean,
+        lastModelFile: String?,
+        modelFound: Boolean,
+        engineIdle: Boolean,
+        /** Previous native load killed the process and has not been followed by a successful load. */
+        blockedAfterNativeCrash: Boolean = false,
+    ): PreloadDecision = when {
         !enabled -> PreloadDecision.DISABLED
         lastModelFile.isNullOrBlank() -> PreloadDecision.NO_LAST_MODEL
         !modelFound -> PreloadDecision.MODEL_MISSING
         !engineIdle -> PreloadDecision.ALREADY_LOADING_OR_LOADED
+        blockedAfterNativeCrash -> PreloadDecision.SKIP_AFTER_NATIVE_CRASH
         else -> PreloadDecision.LOAD
     }
 }
