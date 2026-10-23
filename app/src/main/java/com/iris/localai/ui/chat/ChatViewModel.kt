@@ -911,8 +911,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     private fun planFor(conv: Conversation, ready: EngineState.Ready?, voice: Boolean, thinkingBudget: Int = 0, agent: Boolean = false, maxNewOverride: Int? = null): com.iris.localai.util.ContextPlan {
         val s = c.settings.current
         val eff = c.engine.effective(ready?.model).let { e -> if (maxNewOverride != null) e.copy(maxNewTokens = maxNewOverride) else e }
-        // 2.1.7: the voice instruction rides on the newest user turn (VoiceStyle.withVoiceNote), so the
-        // system prompt — and the engine's cached prefix — is identical in and out of voice mode.
+        // 2.1.9: in a voice call the instruction is appended to the system prompt at send time
+        // (VoiceStyle.withVoiceSystem), so the history stays as stored and the KV prefix holds.
         val baseSystem = eff.systemPrompt.trim()
         // 1.10.0: 智能体 history carries earlier tool steps (rolled up); a compaction summary replaces
         // the folded messages; the frozen long-term memory joins the system prompt.
@@ -1205,11 +1205,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 }
                 val p = plan!!
                 val sampling = c.engine.samplingFor(noThinking, contextShift = p.contextShift, keepTokens = p.keepTokens)
-                promptLog.record(reply.id, if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceNote(p.messages) else p.messages)
+                promptLog.record(reply.id, if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages)
                 replyWatchdog?.prompt(p.estimatedTokens)
                 act(if (answerOnly) "继续生成回答" else if (p.messages.lastOrNull { it.role == PromptMessage.USER }?.let { pickImages(it) } == true) "读取图片与提示（视觉编码 + 预填充）" else "读取提示（预填充）")
                 c.engine.generate(
-                    withImages(if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceNote(p.messages) else p.messages),
+                    withImages(if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages),
                     if (meter != null) sampling.copy(maxNewTokens = meter.engineLimit()) else sampling,
                     requester,
                     engineOwner,
@@ -1538,6 +1538,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         // 2.1.7: a spoken run answers without reasoning (as the plain voice reply always did).
         val disableThinking = !eff.thinking || voiceOut != null
         var toolCues = 0
+        // 2.1.9 边生成边开口: the answer turn is spoken sentence by sentence while it streams.
+        val voiceStream = voiceOut?.let { com.iris.localai.voice.AgentVoiceStream(it) }
         val prefix = if (details?.thinkingPrefilled == true && !disableThinking) "<think>" else ""
         val history = c.agent.history
         val memoryOn = c.agent.memorySettings.current.enabled
@@ -1573,6 +1575,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             var lastPub = 0L
             promptLog.record(reply.id, messages)
             agentCalls++
+            voiceStream?.startTurn()
             val stepTag = if (agentCalls > 1) "第 $agentCalls 轮 · " else ""
             act(stepTag + "读取提示（预填充）")
             replyWatchdog?.prompt(messages.sumOf { com.iris.localai.util.TokenEstimator.message(it.content) })
@@ -1591,6 +1594,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                             com.iris.localai.agent.ToolCallParser.callEnd(prefix + sb)?.let { end ->
                                 sb.setLength((end - prefix.length).coerceIn(0, sb.length)); cut = true; c.engine.cancel(engineOwner)
                             }
+                            voiceStream?.update(ThinkParser.parse(prefix + sb, expectThinking = prefix.isNotEmpty()).answer)
                             val now = System.currentTimeMillis()
                             if (now - lastPub >= FRAME_MS) {
                                 lastPub = now; onText(prefix + sb)
@@ -1706,7 +1710,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             // 2.3: stable system prompt (persona + tools + instructions + frozen memory); the plan goes on the new user turn.
             val base = listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +
                 com.iris.localai.agent.AgentPrompt.withPlanNote(history, c.agent.plans.get(convId))
-                    .let { if (voiceOut != null) com.iris.localai.voice.VoiceStyle.withVoiceNote(it) else it }
+                    .let { if (voiceOut != null) com.iris.localai.voice.VoiceStyle.withVoiceSystem(it) else it }
             val budget = (ctxTokens - maxNew - 32).coerceAtLeast(ctxTokens / 3)
             // 1.10.6: continue from the previous 智能体 run's full prompt when nothing in between
             // changed, so the engine reuses its KV cache (fast first token) and the model still sees
@@ -1728,8 +1732,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             agentTranscript = null
             val o = loop.run(runBase)
             outcome = o
-            // 2.1.7: only the final answer is spoken (no tool blocks, no reasoning).
-            voiceOut?.invoke(ThinkParser.parse(o.finalText, expectThinking = prefix.isNotEmpty()).answer)
+            // 2.1.7: only the final answer is spoken (no tool blocks, no reasoning). 2.1.9: most of it
+            // already went out while it streamed; finish speaks what is still unsaid, once.
+            voiceStream?.finish(ThinkParser.parse(o.finalText, expectThinking = prefix.isNotEmpty()).answer)
             android.util.Log.i(GEN_TAG, "agent: stop=${o.stop} steps=${o.steps.size} tools=${tools.size}" + (o.error?.let { " error=$it" } ?: ""))
             if (o.stop == com.iris.localai.agent.AgentStop.MAX_STEPS) notice.value = "已达到最大步数（${ag.maxSteps} 步），智能体已停止调用工具"
         } catch (e: kotlinx.coroutines.CancellationException) {

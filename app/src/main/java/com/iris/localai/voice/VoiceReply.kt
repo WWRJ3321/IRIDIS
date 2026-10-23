@@ -6,18 +6,21 @@ import com.iris.localai.util.SentenceSplitter
 /**
  * 2.1.7 语音对话 — less "AI味", speakable output, tools in voice. All pure and unit-tested.
  *
- * The voice instruction rides on the newest user turn ([withVoiceNote], like
- * [com.iris.localai.agent.AgentPrompt.withPlanNote]) so the system prompt — and the engine's KV
- * prefix — is byte-identical in and out of voice mode.
+ * 2.1.9: the voice instruction sits at the end of the system prompt ([withVoiceSystem]), a fixed
+ * place: every request in a call has the same system prompt and the stored history is sent exactly
+ * as it is kept, so the engine's KV prefix (LiteRT HistoryMatch, GenieX exact match, llama prefix)
+ * still matches next turn. (2.1.7–2.1.8 put it on the newest user turn only; that turn was sent with
+ * the note but kept without it, so the next voice turn never matched the cached history.)
  */
 object VoiceStyle {
-    /** Per-turn note (short; on the user message, never the system prompt). */
+    /** Voice-call instruction (short), appended to the system prompt while in a call. */
     const val NOTE = "（语音聊天：像人当面说话那样回我，一两句短句，口语，不列清单，不客套，不复述，不总结。）"
 
-    fun withVoiceNote(messages: List<PromptMessage>): List<PromptMessage> {
-        val i = messages.indexOfLast { it.role == PromptMessage.USER }
-        if (i < 0) return messages
-        return messages.mapIndexed { idx, m -> if (idx == i) m.copy(content = m.content.trimEnd() + "\n\n" + NOTE) else m }
+    /** [messages] with [NOTE] at the end of the system prompt (one is added when there is none). */
+    fun withVoiceSystem(messages: List<PromptMessage>): List<PromptMessage> {
+        val i = messages.indexOfFirst { it.role == PromptMessage.SYSTEM }
+        if (i < 0) return listOf(PromptMessage(PromptMessage.SYSTEM, NOTE)) + messages
+        return messages.mapIndexed { idx, m -> if (idx == i) m.copy(content = m.content.trimEnd().let { c -> if (c.isEmpty()) NOTE else c + "\n\n" + NOTE }) else m }
     }
 
     /** Boilerplate openers (only at the very start of a reply). Repeated: 「好的！当然，…」. */

@@ -99,25 +99,27 @@ class VoiceReplyTest {
         assertTrue(vm.contains("runAgentReply(bubble(), voiceOut ="))
         // Confirmation tools are declined in a call; the final answer is the only thing spoken.
         assertTrue(vm.contains("VoiceCues.CONFIRM_ON_SCREEN") && vm.contains("return com.iris.localai.agent.UserDecision.DENY"))
-        assertTrue(vm.contains("voiceOut?.invoke(ThinkParser.parse(o.finalText"))
+        // 2.1.9: the answer turn streams to TTS; the end of the run speaks only what is still unsaid.
+        assertTrue(vm.contains("voiceStream?.finish(ThinkParser.parse(o.finalText"))
     }
 
-    // ---------------------------------------------------------------- KV-stable system prompt
+    // ---------------------------------------------------------------- KV-stable prompt prefix
 
-    @Test fun systemPromptBytesAreIdenticalWithAndWithoutVoice() {
+    /** 2.1.9: the note moved from the newest user turn to the end of the system prompt (see V219VoiceStreamTest). */
+    @Test fun voiceNoteSitsInTheSystemPromptNotTheUserTurn() {
         val msgs = listOf(
             PromptMessage(PromptMessage.SYSTEM, "你是 IRIDIS。\n\n# 关于用户\n喜欢跑步"),
             PromptMessage(PromptMessage.USER, "早"),
             PromptMessage(PromptMessage.ASSISTANT, "早呀"),
             PromptMessage(PromptMessage.USER, "明天天气怎么样"),
         )
-        val voiced = VoiceStyle.withVoiceNote(msgs)
+        val voiced = VoiceStyle.withVoiceSystem(msgs)
         assertEquals(msgs.size, voiced.size)
-        assertTrue(msgs[0].content.toByteArray().contentEquals(voiced[0].content.toByteArray()))
-        assertEquals(msgs.subList(0, 3), voiced.subList(0, 3))
-        assertTrue(voiced[3].content.startsWith("明天天气怎么样") && voiced[3].content.endsWith(VoiceStyle.NOTE))
+        assertTrue(voiced[0].content.startsWith(msgs[0].content) && voiced[0].content.endsWith(VoiceStyle.NOTE))
+        assertEquals(msgs.subList(1, 4), voiced.subList(1, 4))
         val vm = src("ui/chat/ChatViewModel.kt")
         assertFalse(vm.contains("VOICE_HINT"))
+        assertFalse(vm.contains("withVoiceNote"))
         val planFor = vm.substringAfter("private fun planFor(").substringBefore("return com.iris.localai.util.ContextPlanner.plan(")
         assertTrue(planFor.contains("val baseSystem = eff.systemPrompt.trim()"))
         assertFalse(planFor.contains("if (voice)"))
