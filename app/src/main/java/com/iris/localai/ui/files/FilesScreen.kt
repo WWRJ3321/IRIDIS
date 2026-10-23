@@ -92,10 +92,13 @@ internal fun entryIcon(e: FileEntry): ImageVector = e.system?.let(::systemIcon) 
 
 private val timeFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT)
 
+/** "2026-10-23 13:40". */
+internal fun formatModified(ms: Long): String = synchronized(timeFormat) { timeFormat.format(java.util.Date(ms)) }
+
 /** "12 项 · 2026-10-23 13:40" / "4.20 GB · …"; system folders lead with their folder name. */
 internal fun entrySubtitle(e: FileEntry): String {
     val what = if (e.isDir) "${e.childCount} 项" else FileSizes.format(e.size)
-    val time = synchronized(timeFormat) { timeFormat.format(java.util.Date(e.modified)) }
+    val time = formatModified(e.modified)
     return (if (e.system != null) "${e.name} · " else "") + "$what · $time"
 }
 
@@ -126,20 +129,19 @@ fun AppFilesPage(onBack: () -> Unit) {
     }) {
         when (state.viewStyle) {
             FileViewStyle.LIST -> ListFileView(state, vm)
-            // TODO(part B): ArchiveFileView(state, vm) — pseudo-3D looping glass cards, decrypt reveal,
-            //  rolling numbers. Same FilesState / FilesActions; until then the archive mode shows the list.
-            FileViewStyle.ARCHIVE -> ListFileView(state, vm)
+            // 2.2 part B: pseudo-3D archive deck (same FilesState / FilesActions, same dialogs).
+            FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)
         }
     }
     FilesDialogs(state, vm)
 }
 
-/** Breadcrumbs, sort and 新建文件夹 — shared header of every view. */
+/** Breadcrumbs, sort and 新建文件夹 — shared header of every view (the archive HUD draws its own path tag). */
 @Composable
-internal fun FilesHeader(state: FilesState, actions: FilesActions) {
+internal fun FilesHeader(state: FilesState, actions: FilesActions, showCrumbs: Boolean = true) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth()) {
-        Row(
+        if (showCrumbs) Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                 .padding(horizontal = IrisDimens.groupGutter, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

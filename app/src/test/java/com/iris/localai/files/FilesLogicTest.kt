@@ -303,8 +303,21 @@ class FilesLogicTest {
         assertTrue(main.contains("Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage("))
         assertTrue(main.contains("onOpenFiles = { push(Route.APP_FILES) }"))
         val screen = src("ui/files/FilesScreen.kt")
-        assertTrue(screen.contains("FileViewStyle.ARCHIVE -> ListFileView(state, vm)")) // part B: ArchiveFileView
-        assertTrue(screen.contains("TODO(part B)"))
+        // part B: 「档案模式」 renders the archive deck with the same state / actions / dialogs
+        assertTrue(screen.contains("FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)"))
+        assertFalse(screen.contains("TODO(part B)"))
+        val archive = src("ui/files/ArchiveFileView.kt")
+        assertTrue(archive.contains("fun ArchiveFileView(state: FilesState, actions: FilesActions"))
+        assertTrue(archive.contains("LocalReduceMotion.current"))      // reduced motion: no tilt / wave / decrypt
+        assertTrue(archive.contains("actions.canRename(e)") && archive.contains("actions.canDelete(e)"))
+        assertTrue(archive.contains("SystemBadge()"))
+        assertTrue(archive.contains("FilePreview.canPreview(e)"))      // in-app preview reused
+        assertTrue(archive.contains("ArchiveMath.halfWindow(n)"))      // only the visible window is composed
+        assertTrue(archive.contains("Build.VERSION_CODES.S"))           // blur only on API 31+
+        assertTrue(archive.contains("IrisIcons.") && !archive.contains("material.icons"))
+        assertFalse(archive.contains("tween(") || archive.contains("durationMillis"))
+        for (banned in listOf("WebView", "WebGL", "MiSans", "Novecento", "Arknights", "明日方舟", "Rhodes", "罗德岛", "MediaPlayer", "SoundPool"))
+            assertFalse("archive view must not use $banned", archive.contains(banned))
         assertTrue(screen.contains("\"档案模式\""))
         assertFalse(screen.contains("material.icons"))
         assertFalse(src("ui/files/FilesViewModel.kt").contains("material.icons"))

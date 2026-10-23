@@ -108,6 +108,29 @@ object IrisMotion {
     fun <T> linearLoop(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
         androidx.compose.animation.core.tween(periodMs, easing = androidx.compose.animation.core.LinearEasing)
 
+    // ---- 2.2 「档案模式」 (archive deck) --------------------------------------------------------
+    /** Deck settling on the focused card after a drag / fling: firm, a hint of settle. */
+    val ArchiveSnap = SpringToken(response = 0.40f, damping = 0.88f)
+    /** Selection wave rippling through the neighbours of the newly focused card. */
+    const val ARCHIVE_WAVE_MS = 560
+    /** Cards falling back when a folder is opened. */
+    const val ARCHIVE_FALL_MS = 260
+    /** The next folder's cards rising into place. */
+    const val ARCHIVE_RISE_MS = 480
+    /** Diagonal "decrypt" sweep of the file sheet, frosted → clear. */
+    const val ARCHIVE_DECRYPT_MS = 640
+    /** Emphasized ease for one-shot 0 → 1 progress values (a wave or sweep has no value to retarget). */
+    val ProgressEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    /** Ease-in for things leaving (the falling cards). */
+    val ExitEasing: Easing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
+
+    /** A one-shot 0 → 1 progress (archive wave, rise, decrypt sweep). */
+    fun <T> progress(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
+        androidx.compose.animation.core.tween(periodMs, easing = ProgressEasing)
+    /** A one-shot progress for content leaving. */
+    fun <T> progressOut(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =
+        androidx.compose.animation.core.tween(periodMs, easing = ExitEasing)
+
     // ---- Generic specs -----------------------------------------------------------------------
     fun <T> enter(): FiniteAnimationSpec<T> = Gentle.spec()
     fun <T> exit(): FiniteAnimationSpec<T> = FadeOut.spec()

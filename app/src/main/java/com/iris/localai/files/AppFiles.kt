@@ -15,7 +15,7 @@ import java.util.Locale
 /** 「档案模式」 switch on the page's top bar; stored as [com.iris.localai.data.AppSettings.fileViewStyle]. */
 enum class FileViewStyle {
     LIST,
-    /** Pseudo-3D archive view (part B). Until then it renders the list. */
+    /** Pseudo-3D archive deck (「档案模式」, ArchiveFileView). */
     ARCHIVE;
 
     companion object {
