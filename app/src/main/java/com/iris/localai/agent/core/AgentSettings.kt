@@ -393,6 +393,7 @@ class AgentContainer(context: Context) {
         chunkTokens = chunkTokens,
         knowledge = KnowledgeSearch { q, n -> knowledge.search(q, n) },
         imageGen = imageGen,
+        gui = gui,
     )
 
     /**
@@ -407,6 +408,9 @@ class AgentContainer(context: Context) {
     }
     @Volatile private var imageGenOn: Boolean? = null
     @Volatile private var imageGenChecked = 0L
+
+    /** 2.1.9: `screen`'s backend (set by the app container: GuiAgentRunner). */
+    @Volatile var gui: GuiTaskBackend? = null
 
     /** 2.1.7: generate_image's backend (生图 repository + engine). */
     private val imageGen: ImageGenBackend by lazy {

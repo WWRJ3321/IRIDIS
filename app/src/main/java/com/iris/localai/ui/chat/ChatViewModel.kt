@@ -562,6 +562,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     // ------------------------------------------------------------------ messaging
 
+    /** 2.1.9: the guide to show after `screen` was blocked (无障碍 off / no vision model); null = none. */
+    val guiSetup: StateFlow<com.iris.localai.agent.GuiBlocker?> get() = c.gui.setup
+    fun dismissGuiSetup() = c.gui.dismissSetup()
+
+    /** 2.1.9: a 对话-mode message that asks to operate the phone, while `screen` is enabled. */
+    private fun guiTurn(text: String): Boolean {
+        val ag = c.agent.settings.current
+        if (!ag.isEnabled(com.iris.localai.agent.ScreenTool) || !com.iris.localai.agent.GuiIntent.looksLikePhoneTask(text)) return false
+        notice.value = com.iris.localai.agent.GuiIntent.CHAT_NOTICE
+        return true
+    }
+
     fun send(
         text: String,
         attachments: List<com.iris.localai.data.Attachment> = emptyList(),
@@ -1048,7 +1060,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                     // 1.9.0: 智能体 mode. 2.1.7: voice uses tools too — 智能体 on, or a spoken task (VoiceRouting).
                     val agentOn = c.agent.settings.current.agentMode
                     val viaAgent = when (requester) {
-                        Requester.CHAT -> agentOn
+                        // 2.1.9: 「帮我打开设置把亮度调最高」 in 对话 mode runs once through the 智能体 (`screen`).
+                        Requester.CHAT -> agentOn || guiTurn(conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty())
                         Requester.VOICE -> com.iris.localai.voice.VoiceRouting.useAgent(
                             conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty(), agentOn)
                         else -> false

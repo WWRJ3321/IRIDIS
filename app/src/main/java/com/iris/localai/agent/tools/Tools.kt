@@ -99,6 +99,8 @@ class ToolEnv(
     val knowledge: KnowledgeSearch? = null,
     /** 2.1.7: on-device image generation for generate_image (null = not available → "no model" error). */
     val imageGen: ImageGenBackend? = null,
+    /** 2.1.9: the GUI agent for `screen` (null = not available). */
+    val gui: GuiTaskBackend? = null,
 )
 
 /** 1.12.0: one stand-alone model call (no chat history), used by process_file. */
@@ -620,7 +622,7 @@ object AgentTools {
     val all: List<AgentTool> = listOf(
         ReadFileTool, WriteFileTool, EditFileTool, ListDirTool, SearchFilesTool, MoveFileTool, DeleteFileTool, ProcessFileTool,
         PlanTool, CalculatorTool, DateTimeTool, RecallTool, MemoryTool, WebSearchTool, WebFetchTool, BrowserTool, RunCommandTool,
-        PhoneTool, ScheduleTool, SkillTool, GenerateImageTool, ActivateTool,
+        PhoneTool, ScreenTool, ScheduleTool, SkillTool, GenerateImageTool, ActivateTool,
     )
 
     /**
