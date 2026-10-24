@@ -32,6 +32,8 @@ class AppContainer(app: Application) {
     val engine = EngineManager(app, scope, settings, models, modelConfigs)
     /** 1.9.0: 智能体 settings, the app-private workspace (filesDir/workspace) and its undo history. */
     val agent = com.iris.localai.agent.AgentContainer(app)
+    /** 2.2: GUI 智能体（形态 A，无障碍）第一阶段的运行器。 */
+    val gui by lazy { com.iris.localai.agent.gui.android.GuiAgentRunner(app, engine, scope) }
     val voiceStore = VoiceModelStore(app)
     val recognizer = SpeechRecognizer(app, voiceStore, settings)
     val cloneVoices = com.iris.localai.voice.CloneVoiceStore(app)
