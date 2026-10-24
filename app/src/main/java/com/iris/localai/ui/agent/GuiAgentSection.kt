@@ -82,7 +82,7 @@ fun GuiAgentSection() {
                 subtitle = when {
                     run.running -> run.lines.lastOrNull() ?: "运行中…"
                     run.result != null -> run.result
-                    else -> runner.blocker() ?: "输入一个任务，用当前模型在本机屏幕上执行"
+                    else -> runner.blockerText() ?: "输入一个任务，用当前模型在本机屏幕上执行"
                 },
                 enabled = run.running || connected,
                 onClick = { if (run.running) runner.stop() else asking = true },
@@ -99,4 +99,36 @@ fun GuiAgentSection() {
             onConfirm = { runner.start(it) }, onDismiss = { asking = false },
         )
     }
+}
+
+/**
+ * 2.1.9: the chat's guide when 「操控手机」 cannot start — 无障碍 off (去开启 / 受限设置, the same
+ * guide as the settings section) or no vision model (选择模型 opens the model picker).
+ */
+@Composable
+fun GuiSetupDialog(blocker: com.iris.localai.agent.GuiBlocker, onDismiss: () -> Unit, onPickModel: () -> Unit) {
+    val context = LocalContext.current
+    when (blocker) {
+        com.iris.localai.agent.GuiBlocker.A11Y_OFF -> com.iris.localai.ui.components.IrisDialog(
+            onDismiss = onDismiss, title = "开启无障碍服务",
+            confirmText = "去开启", onConfirm = { onDismiss(); IrisAccessibilityService.openSettings(context) },
+            dismissText = "受限设置", onDismissClick = { onDismiss(); IrisAccessibilityService.openAppInfo(context) },
+        ) {
+            androidx.compose.material3.Text(GuiSetupText.A11Y)
+        }
+        com.iris.localai.agent.GuiBlocker.NO_MODEL, com.iris.localai.agent.GuiBlocker.NO_VISION -> com.iris.localai.ui.components.IrisDialog(
+            onDismiss = onDismiss, title = "需要识图模型",
+            confirmText = "选择模型", onConfirm = onPickModel,
+        ) {
+            androidx.compose.material3.Text(GuiSetupText.VISION)
+        }
+        com.iris.localai.agent.GuiBlocker.BUSY -> Unit
+    }
+}
+
+internal object GuiSetupText {
+    const val A11Y = "操控手机要用到「IRIDIS GUI 智能体」无障碍服务。\n" +
+        "点「去开启」：系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 › 开启。\n" +
+        "如果提示「受限设置」，点「受限设置」打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启。开好后在聊天里再说一次。"
+    const val VISION = "操控手机需要能读图的模型看屏幕。请加载一个识图模型（如 Qwen3-VL MNN），再说一次。"
 }

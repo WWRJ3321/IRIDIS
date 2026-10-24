@@ -133,6 +133,7 @@ fun ChatScreen(
     val summaries by vm.summaries.collectAsStateWithLifecycle()
     val models by vm.models.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val guiSetup by vm.guiSetup.collectAsStateWithLifecycle()
     /** 1.10.2: last load per model / backend (model sheet: 「上次加载 N 秒 · 已用缓存」). */
     val loadRecords by vm.loadStats.collectAsStateWithLifecycle()
     val tierApply by vm.tierApply.collectAsStateWithLifecycle()
@@ -673,6 +674,8 @@ fun ChatScreen(
             }
         }
     }
+    // 2.1.9: `screen` was blocked → the matching guide (无障碍 / 受限设置 / 识图模型).
+    guiSetup?.let { b -> GuiSetupDialog(b, onDismiss = vm::dismissGuiSetup, onPickModel = { vm.dismissGuiSetup(); showPicker = true }) }
     // 1.13.0: a tool of the chat running in the background asks only once that chat is on screen.
     LaunchedEffect(permissionAsk != null && backgroundRunId != null) {
         if (permissionAsk != null && backgroundRunId != null) vm.showNotice("后台对话在等你确认权限，去侧边栏查看")
