@@ -308,9 +308,16 @@ std::string MnnEngine::load(const MnnLoadParams& p) {
     const size_t bar = backendType.find('|');
     if (bar != std::string::npos) { power = backendType.substr(bar + 1); backendType.resize(bar); }
     // 1.7.9: "opencl|normal|low" — third field = the tier's GPU perf hint (Adreno cl_qcom_perf_hint).
+    // "cpu|normal|kleidi=0" — third field turns KleidiAI off (Oryon, or the previous nativeLoad died).
     std::string gpuHint;
+    bool kleidi = backendType == "cpu";
     const size_t bar2 = power.find('|');
-    if (bar2 != std::string::npos) { gpuHint = power.substr(bar2 + 1); power.resize(bar2); }
+    if (bar2 != std::string::npos) {
+        const std::string third = power.substr(bar2 + 1);
+        power.resize(bar2);
+        if (third.rfind("kleidi=", 0) == 0) kleidi = third == "kleidi=1";
+        else gpuHint = third;
+    }
     if (gpuHint != "low" && gpuHint != "normal" && gpuHint != "high") gpuHint.clear();
     if (power != "low" && power != "high") power = "normal";
     // 1.7.5: on the CPU, MNN's own core binding is switched off (power=normal) so that we alone decide
@@ -334,7 +341,8 @@ std::string MnnEngine::load(const MnnLoadParams& p) {
         << ",\"cpu_decrease_rate\":" << (backendType == "cpu" && !tp::cores_for(p.cpus, std::max(1, p.threads)).empty() ? 100 : 50)
         << ",\"precision\":\"low\",\"memory\":\"low\""
         // 2.0.3: Arm KleidiAI kernels (IRIS MNN patch hint; libMNN built with MNN_KLEIDIAI=ON).
-        << ",\"enable_kleidiai\":" << (backendType == "cpu" ? 1 : 0)
+        // Off on Oryon: KleidiAI::initKernelInfo executes SVE and SIGSEGVs inside this load.
+        << ",\"enable_kleidiai\":" << (backendType == "cpu" && kleidi ? 1 : 0)
         << ",\"reuse_kv\":true,\"prompt_cache\":true"
         << ",\"max_all_tokens\":" << std::max(512, p.contextLength)
         << ",\"use_mmap\":" << (p.useMmap && !p.tmpDir.empty() ? "true" : "false");
@@ -342,7 +350,7 @@ std::string MnnEngine::load(const MnnLoadParams& p) {
     if (backendType == "opencl" && !gpuHint.empty()) cfg << ",\"iris_cl_perf_hint\":\"" << gpuHint << "\"";
     cfg << "}";
     llm->set_config(cfg.str());
-    loadTrace("stage: set_config done → Llm::load() (runtime + tokenizer + weights)", true);
+    loadTrace(std::string("stage: set_config done → Llm::load() kleidi=") + (backendType == "cpu" && kleidi ? "1" : "0"), true);
     bool ok = false;
     {
         // 1.7.4: MNN's ThreadPool is created inside load() (Llm::initRuntime → createRuntimeManager →

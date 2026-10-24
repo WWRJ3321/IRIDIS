@@ -5,6 +5,8 @@ import android.util.Log
 import com.iris.localai.data.GenerationStats
 import com.iris.localai.data.LocalModel
 import com.iris.localai.engine.EngineException
+import com.iris.localai.engine.MnnKleidiPolicy
+import com.iris.localai.engine.NativeLoadCrash
 import com.iris.localai.engine.GenEvent
 import com.iris.localai.engine.InferenceEngine
 import com.iris.localai.engine.LoadConfig
@@ -151,13 +153,21 @@ class MnnEngine(private val context: Context) : InferenceEngine {
             }.apply { isDaemon = true; start() }
             try {
                 val backend = if (useGpu) "opencl" else "cpu"
+                // Oryon dies in KleidiAI::initKernelInfo during Llm::load (SIGSEGV / SIGILL in nativeLoad).
+                // A previous nativeLoad death turns it off on any SoC for this attempt.
+                val kleidiOn = !useGpu && MnnKleidiPolicy.enabled(
+                    android.os.Build.SOC_MODEL,
+                    NativeLoadCrash.traceShowsLoad(com.iris.localai.util.CrashReporter.nativeCrashText(context)),
+                )
+                if (!useGpu && !kleidiOn) Log.i(TAG, "MNN KleidiAI off (soc=${android.os.Build.SOC_MODEL})")
+                val kleidiArg = if (useGpu) "" else "|kleidi=${if (kleidiOn) 1 else 0}"
                 val h = newHandle()
                 // 1.8.0: per-stage load logging to <files>/iris_mnn_load.log (export button reads it).
                 runCatching { MnnNative.nativeSetDiagDir(context.getExternalFilesDir(null)?.path?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)) }
                 // 1.8.0 crash-diag: 禁用视觉模块 switch → libMNN createLLM probe (strong override in mnn_engine.cpp).
                 runCatching { MnnNative.nativeSetNoVisual(config.noVisual) }
                 val err = MnnNative.nativeLoad(
-                    h, cfg.path.toByteArray(Charsets.UTF_8), "$backend|$power$hintArg", nativeThreads, ctx,
+                    h, cfg.path.toByteArray(Charsets.UTF_8), "$backend|$power$hintArg$kleidiArg", nativeThreads, ctx,
                     cacheDir.path.toByteArray(Charsets.UTF_8), config.useMmap,
                     (plan?.let { com.iris.localai.engine.LiveResourcePolicy.coresFor(it, threads) } ?: emptyList()).toIntArray(),
                     plan?.nice ?: 0, plan != null,

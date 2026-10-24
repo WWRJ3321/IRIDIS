@@ -127,6 +127,8 @@ class EngineManager(
     private val appContext = context.applicationContext
     val threadPolicy = ThreadPolicy(appContext)
     val crashMemory = BackendCrashMemory(appContext)
+    /** Native load deaths are not Java exceptions; this keeps the next start from loading again. */
+    private val startupGuard = StartupLoadGuard(appContext)
     /** 1.10.2: last load time + cache use per model / backend (model sheet, logcat IrisLoad). */
     val loadStats = LoadStatsStore(appContext)
     /** 1.10.2: why the model was last unloaded (logged with the next load). */
@@ -228,6 +230,15 @@ class EngineManager(
     private val _notices = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 8)
     val notices: kotlinx.coroutines.flow.SharedFlow<String> = _notices
 
+    /**
+     * Skip-preload text held until the chat screen collects it. [notices] does not replay,
+     * so a decision made before the UI subscribes would otherwise be dropped.
+     */
+    private val _preloadSkipNotice = MutableStateFlow<String?>(null)
+    val preloadSkipNotice: StateFlow<String?> = _preloadSkipNotice.asStateFlow()
+
+    fun clearPreloadSkipNotice() { _preloadSkipNotice.value = null }
+
     /** 1.7.4: debounced "reload the same model with the new tier" for MNN / LiteRT. */
     private val tierReload = TierReloadScheduler(
         scope = scope,
@@ -308,8 +319,10 @@ class EngineManager(
         val s = settings.current
         if (s.autoLoadLastModel && !s.lastModelFile.isNullOrBlank()) models.refresh()
         val m = models.find(s.lastModelFile)
-        val d = PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle)
+        val blocked = startupGuard.blockAutoLoad()
+        val d = PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle, blocked)
         Log.i(LoadTelemetry.TAG, "preload at start: $d${s.lastModelFile?.let { " ($it)" } ?: ""}")
+        if (d == PreloadDecision.SKIP_AFTER_NATIVE_CRASH) _preloadSkipNotice.value = startupGuard.skipNotice()
         if (d == PreloadDecision.LOAD && m != null) load(m, reason = "启动预加载")
         return d
     }
@@ -348,6 +361,9 @@ class EngineManager(
             }
             if (preferred in crashed) errors.append("[${preferred.label}] 上次在这个后端上加载或首次生成时 App 崩溃，已跳过（模型设置里可重试）\n")
             var e: InferenceEngine? = null
+            // Survives a SIGSEGV (the finally below does not run) so the next start can skip auto-load.
+            com.iris.localai.util.CrashReporter.breadcrumb("加载模型 ${model.fileName}")
+            try {
             try {
                 if (chain.isEmpty()) throw EngineException("没有可用的后端：\n" + options.joinToString("\n") { "${it.backend.label}：${it.reason ?: "可用"}" })
                 var details: ModelDetails? = null
@@ -431,6 +447,7 @@ class EngineManager(
                 if (applyingTier == null) _tierApply.value = null   // a fresh model: no stale status
                 _state.value = EngineState.Ready(model, d.copy(fallbackNote = note))
                 settings.update { it.copy(lastModelFile = model.fileName) }
+                startupGuard.noteLoadSucceeded()
                 scheduleIdleUnload()
                 true
             } catch (t: Throwable) {
@@ -443,6 +460,9 @@ class EngineManager(
                 if (abandoned()) return@withLock false
                 _state.value = EngineState.Failed(model, t.message ?: t.javaClass.simpleName)
                 false
+            }
+            } finally {
+                com.iris.localai.util.CrashReporter.breadcrumb(null)
             }
         }
 

@@ -256,6 +256,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     init {
         // 1.7.7: reload failures / GPU→CPU fallbacks from the engine are shown, never swallowed.
         viewModelScope.launch { c.engine.notices.collect { notice.value = it } }
+        // Held in a StateFlow: preload can decide to skip before this collector exists.
+        viewModelScope.launch {
+            c.engine.preloadSkipNotice.collect { text ->
+                if (text != null) {
+                    notice.value = text
+                    c.engine.clearPreloadSkipNotice()
+                }
+            }
+        }
         // 1.10.0: workspace fallback (Download unavailable) and the one-off migration result.
         viewModelScope.launch {
             c.agent.workspace.collect { w -> w.fallbackReason?.let { r -> if (c.agent.settings.current.agentMode) notice.value = r } }
