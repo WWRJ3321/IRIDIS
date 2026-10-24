@@ -234,6 +234,7 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                 ) {
                     val cardWidth = (maxWidth - IrisDimens.groupGutter * 2 - 16.dp).coerceAtMost(CARD_MAX_WIDTH)
                     val half = ArchiveMath.halfWindow(n)
+                    val veilColor = Iris.colors.background
                     val base = focusLogical
                     for (k in -half..half) {
                         val logical = base + k
@@ -246,8 +247,13 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                                 Modifier.align(Alignment.Center).zIndex((ArchiveMath.MAX_HALF_WINDOW - slot).toFloat())
                                     .width(cardWidth).height(CARD_HEIGHT)
                                     .graphicsLayer {
-                                        ArchiveMath.layer(logical - pos.floatValue, tilt = !reduce, out = layer)
+                                        val d = logical - pos.floatValue
+                                        ArchiveMath.layer(d, tilt = !reduce, out = layer)
+                                        val depth = layer.alpha
                                         ArchiveMath.transit(phase.value, slot, layer)
+                                        // opaque inside the window (depth is the veil drawn below), faded only at its edge
+                                        val transitAlpha = if (depth > 0f) layer.alpha / depth else 0f
+                                        layer.alpha = transitAlpha * ArchiveMath.edgeFade(d, half)
                                         val lift = if (reduce) 0f else ArchiveMath.waveLift(wave.value, slot)
                                         translationY = (layer.y + lift + ArchiveMath.deckBias(pos.floatValue, n)) * cardHeightPx
                                         scaleX = layer.scale
@@ -259,6 +265,11 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                                         shadowElevation = layer.elevation * MAX_SHADOW.toPx()
                                         shape = cardShape
                                         clip = false
+                                    }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val veil = ArchiveMath.depthVeil(logical - pos.floatValue)
+                                        if (veil > 0.005f) drawRoundRect(veilColor.copy(alpha = veil), cornerRadius = CornerRadius(IrisRadius.medium.toPx()))
                                     },
                             ) {
                                 ArchiveCard(

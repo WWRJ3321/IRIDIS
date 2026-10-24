@@ -139,6 +139,16 @@ object ArchiveMath {
         return out
     }
 
+    /**
+     * 「卡片」: opacity of a card [a] cards from the focus in a window of [half] slots. Cards stay
+     * opaque inside the window (depth is a background-coloured veil, so nothing shows through) and
+     * fade to 0 over the last half card, so a card entering or leaving the window never pops.
+     */
+    fun edgeFade(a: Float, half: Int): Float = ((half + 0.5f - abs(a)) / 0.5f).coerceIn(0f, 1f)
+
+    /** 「卡片」: the background-coloured veil over a card [a] cards deep (replaces see-through alpha). */
+    fun depthVeil(a: Float): Float = (ALPHA_STEP * abs(a).coerceAtMost(MAX_DEPTH)).coerceIn(0f, 0.85f)
+
     // ---------------------------------------------------------------- staggered waves
 
     /** Delay of each further slot, as a fraction of the whole wave. */

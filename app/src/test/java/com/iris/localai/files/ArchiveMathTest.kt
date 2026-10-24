@@ -263,4 +263,14 @@ class ArchiveMathTest {
         assertTrue(IrisMotion.ARCHIVE_FALL_MS < IrisMotion.ARCHIVE_RISE_MS)
         assertTrue(IrisMotion.ArchiveSnap.damping in 0.8f..1f)
     }
+    @Test
+    fun cardStackEdgeFadeNeverPops() {
+        // inside the window: opaque; at the point a card enters / leaves (half + 0.5): invisible
+        assertEquals(1f, ArchiveMath.edgeFade(0f, 2), 1e-4f)
+        assertEquals(1f, ArchiveMath.edgeFade(2f, 2), 1e-4f)
+        assertEquals(0f, ArchiveMath.edgeFade(2.5f, 2), 1e-4f)
+        assertEquals(0f, ArchiveMath.edgeFade(-2.5f, 2), 1e-4f)
+        assertEquals(0f, ArchiveMath.depthVeil(0f), 1e-4f)
+        assertTrue(ArchiveMath.depthVeil(2f) > ArchiveMath.depthVeil(1f))
+    }
 }
