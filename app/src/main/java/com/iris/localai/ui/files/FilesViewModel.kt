@@ -52,7 +52,7 @@ sealed interface FileDialog {
 
 /**
  * Everything a view of the 「文件」 page needs. [ListFileView] renders it today; part B's
- * `ArchiveFileView(state, actions)` consumes the same object.
+ * `CardStackFileView(state, actions)` consumes the same object.
  */
 data class FilesState(
     /** Absolute path of Download/IRIDIS (footnote), null when there is no Download folder. */

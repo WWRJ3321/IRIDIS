@@ -329,7 +329,7 @@ data class AppSettings(
     val visionSide: Int = 512,
 
     // ---- 2.2 文件 ----
-    /** 「文件」 page view: "LIST" (default), "ARCHIVE" (「档案」) or "CARDS" (「卡片」) — [com.iris.localai.files.FileViewStyle]. */
+    /** 「文件」 page view: "LIST" (default) or "CARDS" (「卡片」; a stored "ARCHIVE" reads as LIST) — [com.iris.localai.files.FileViewStyle]. */
     val fileViewStyle: String = "LIST",
 )
 

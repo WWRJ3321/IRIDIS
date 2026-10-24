@@ -24,13 +24,13 @@ class V219ReleaseTest {
     @Test fun filesPageAndArchiveModeWired() {
         assertEquals("LIST", AppSettings().fileViewStyle)                 // archive mode is opt-in
         assertEquals(FileViewStyle.LIST, FileViewStyle.parse(null))
-        assertEquals(FileViewStyle.ARCHIVE, FileViewStyle.parse("archive"))
+        assertEquals(FileViewStyle.LIST, FileViewStyle.parse("archive"))   // 「档案」 shelved
         assertEquals(FileViewStyle.CARDS, FileViewStyle.parse("cards"))
-        assertTrue(src("ui/files/FilesScreen.kt").contains("FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)"))
+        assertFalse(src("ui/files/FilesScreen.kt").contains("ArchiveFileView"))
         assertTrue(src("ui/files/FilesScreen.kt").contains("FileViewStyle.CARDS -> CardStackFileView(state, vm)"))
         assertTrue(src("ui/MainActivity.kt").contains("Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage("))
         // pure Compose: no web views, no new fonts / audio
-        for (f in listOf("ui/files/ArchiveFileView.kt", "ui/files/CardStackFileView.kt")) {
+        for (f in listOf("ui/files/CardStackFileView.kt")) {
             val view = src(f)
             for (bad in listOf("WebView", "MiSans", "Novecento", "R.raw", "R.font")) assertFalse(bad, view.contains(bad))
         }
@@ -59,7 +59,8 @@ class V219ReleaseTest {
         assertTrue(cl.contains("## 2.1.9"))
         assertTrue(cl.contains("新增「文件」页"))
         assertTrue(cl.contains("设计灵感 LBEILC/RhineLabUI，MIT"))
-        assertTrue(cl.contains("档案模式 重做"))
+        assertTrue(cl.contains("视图菜单（列表 / 卡片）"))
+        assertTrue(doc.contains("「档案」视图下线"))
         assertTrue(doc.contains("档案模式 重做"))
         assertTrue(cl.indexOf("## 2.1.9") < cl.indexOf("## 2.1.8"))
     }

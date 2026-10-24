@@ -287,12 +287,12 @@ class FilesLogicTest {
     @Test fun fileViewStyleSetting() {
         assertEquals("LIST", AppSettings().fileViewStyle)
         assertEquals(FileViewStyle.LIST, FileViewStyle.parse(null))
-        assertEquals(FileViewStyle.ARCHIVE, FileViewStyle.parse(" archive "))
+        assertEquals(FileViewStyle.LIST, FileViewStyle.parse(" archive "))   // 「档案」 shelved
         assertEquals(FileViewStyle.CARDS, FileViewStyle.parse("cards"))
         assertEquals(FileViewStyle.LIST, FileViewStyle.parse("deck"))
-        assertEquals(listOf("列表", "档案", "卡片"), FileViewStyle.entries.map { it.label })
+        assertEquals(listOf("列表", "卡片"), FileViewStyle.entries.map { it.label })
         assertEquals("LIST", AppSettings(fileViewStyle = "bogus").sanitized().fileViewStyle)
-        assertEquals("ARCHIVE", AppSettings(fileViewStyle = "archive").sanitized().fileViewStyle)
+        assertEquals("LIST", AppSettings(fileViewStyle = "archive").sanitized().fileViewStyle)
         assertEquals("CARDS", AppSettings(fileViewStyle = "Cards").sanitized().fileViewStyle)
     }
 
@@ -307,23 +307,10 @@ class FilesLogicTest {
         assertTrue(main.contains("onOpenFiles = { push(Route.APP_FILES) }"))
         val screen = src("ui/files/FilesScreen.kt")
         // 2.1.9: three styles from a small menu, same state / actions / dialogs
-        assertTrue(screen.contains("FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)"))
+        assertFalse(screen.contains("ArchiveFileView"))
         assertTrue(screen.contains("FileViewStyle.CARDS -> CardStackFileView(state, vm)"))
         assertTrue(screen.contains("FileViewStyle.entries.forEach"))
         assertFalse(screen.contains("TODO(part B)"))
-        val archive = src("ui/files/ArchiveFileView.kt")
-        assertTrue(archive.contains("fun ArchiveFileView(state: FilesState, actions: FilesActions"))
-        assertTrue(archive.contains("LocalReduceMotion.current"))      // reduced motion: no intro / rise / wave / decrypt
-        assertTrue(archive.contains("actions.canRename(e)") && archive.contains("actions.canDelete(e)"))
-        assertTrue(archive.contains("FilesText.SYSTEM_BADGE"))
-        assertTrue(archive.contains("FilePreview.canPreview(e)"))      // in-app preview reused
-        assertTrue(archive.contains("drawVertices("))                   // the field is one vertices call
-        assertTrue(archive.contains("ArchiveMath.SlabField()"))
-        assertTrue(archive.contains("ArchiveSession.introShown"))       // intro once per session
-        assertFalse(archive.contains("FilesHeader("))                   // no list header / sort chips
-        assertTrue(archive.contains("EntryMenu(e, actions"))            // long press = the list's menu
-        assertTrue(archive.contains("IrisIcons.") && !archive.contains("material.icons"))
-        assertFalse(archive.contains("tween(") || archive.contains("durationMillis"))
         val cards = src("ui/files/CardStackFileView.kt")
         assertTrue(cards.contains("fun CardStackFileView(state: FilesState, actions: FilesActions"))
         assertTrue(cards.contains("ArchiveMath.halfWindow(n)"))        // only the visible window is composed
@@ -332,7 +319,7 @@ class FilesLogicTest {
         assertTrue(cards.contains("SystemBadge()"))
         assertTrue(cards.contains("Build.VERSION_CODES.S"))
         assertFalse(cards.contains("tween(") || cards.contains("durationMillis"))
-        for (view in listOf(archive, cards)) for (banned in listOf("WebView", "WebGL", "MiSans", "Novecento", "Arknights", "明日方舟", "Rhodes", "罗德岛", "MediaPlayer", "SoundPool"))
+        for (view in listOf(cards)) for (banned in listOf("WebView", "WebGL", "MiSans", "Novecento", "Arknights", "明日方舟", "Rhodes", "罗德岛", "MediaPlayer", "SoundPool"))
             assertFalse("archive views must not use $banned", view.contains(banned))
         assertTrue(screen.contains("\"档案模式\""))
         assertFalse(screen.contains("material.icons"))

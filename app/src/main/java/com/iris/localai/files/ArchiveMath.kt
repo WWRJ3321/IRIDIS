@@ -10,7 +10,7 @@ import kotlin.math.sin
 /**
  * 2.2 「档案模式」 / 「卡片」: the pure geometry of the archive views (no Android / Compose types, unit-tested).
  * The first half is the card deck of [com.iris.localai.ui.files.CardStackFileView] (「卡片」); the
- * slab field of [com.iris.localai.ui.files.ArchiveFileView] (「档案」) follows at the end.
+ * slab field of the shelved 「档案」 view (branch shelf/archive-terminal; no UI uses it now) follows at the end.
  *
  * The deck is a vertical column of cards around a continuous scroll position `pos` measured in
  * cards. A card's *offset* `d = logicalIndex - pos` (0 = focused, front-facing) drives its depth:

@@ -91,7 +91,6 @@ internal fun systemIcon(s: SystemFolder): ImageVector = when (s) {
 
 internal fun styleIcon(s: FileViewStyle): ImageVector = when (s) {
     FileViewStyle.LIST -> IrisIcons.File
-    FileViewStyle.ARCHIVE -> IrisIcons.Archive
     FileViewStyle.CARDS -> IrisIcons.Layers
 }
 
@@ -129,7 +128,7 @@ fun AppFilesPage(onBack: () -> Unit) {
     val styled = state.viewStyle != FileViewStyle.LIST
     var styleMenu by remember { mutableStateOf(false) }
     SubpageScaffold(FilesText.TITLE, onBack, actions = {
-        // 2.1.9: small view-style menu — 列表 / 档案 / 卡片.
+        // 2.1.9: small view-style menu — 列表 / 卡片.
         Box {
             PressableIcon(
                 styleIcon(state.viewStyle), FilesText.VIEW_STYLE + "：" + state.viewStyle.label,
@@ -148,8 +147,6 @@ fun AppFilesPage(onBack: () -> Unit) {
     }) {
         when (state.viewStyle) {
             FileViewStyle.LIST -> ListFileView(state, vm)
-            // 2.1.9 「档案」: isometric slab field (same FilesState / FilesActions, same dialogs).
-            FileViewStyle.ARCHIVE -> ArchiveFileView(state, vm)
             // 2.1.9 「卡片」: the first 档案模式 card deck, kept as its own style.
             FileViewStyle.CARDS -> CardStackFileView(state, vm)
         }

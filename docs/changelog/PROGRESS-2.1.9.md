@@ -62,3 +62,8 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - 新增 V219VoiceStreamTest、V219EchoGateTest；VoiceReplyTest 同步旧行为断言。
 - 输入框两行改版（be68291）应用户要求撤回（6977f2b）。
 - 待真机验证：首句提前开口、工具前开场白不读、多轮预填充时间下降、开头音节不再被吞、强混响下 200ms 尾巴是否够用。
+
+## 「档案」视图下线（同版本 2.1.9 / vc187）
+- 真机试用后效果不理想，发布前摘掉「档案」（等距档案槽阵列 ArchiveFileView）：视图菜单只剩 列表 / 卡片；已存的 `fileViewStyle = ARCHIVE` 读作 LIST。
+- 代码留存：分支 `shelf/archive-terminal`（含莱茵终端重做与 fix2–fix6 真机修复），交接包 `shelved/archive-terminal/`。`ArchiveMath` 里阵列 / 详情的纯数学暂留（有单测，无界面引用）。
+- 「卡片」视图修复：卡片不透明、远近用背景色蒙层表现，窗口边缘半张卡内淡入淡出，滑动不再闪、后方卡片不再透出。
