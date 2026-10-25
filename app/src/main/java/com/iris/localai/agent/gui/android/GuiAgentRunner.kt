@@ -97,7 +97,12 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     /** Why a run cannot start now, or null (no side effects). */
     fun blockerKind(): GuiBlocker? {
         if (job?.isActive == true || chatRun?.isActive == true) return GuiBlocker.BUSY
-        if (!IrisAccessibilityService.connected) return GuiBlocker.A11Y_OFF
+        if (!IrisAccessibilityService.connected) {
+            // 2.1.9: 清后台 switched it off — put it back when allowed, give it a moment to connect.
+            if (!IrisAccessibilityService.selfEnable(context)) return GuiBlocker.A11Y_OFF
+            repeat(20) { if (!IrisAccessibilityService.connected) Thread.sleep(100) }
+            if (!IrisAccessibilityService.connected) return GuiBlocker.A11Y_OFF
+        }
         val ready = engine.state.value as? EngineState.Ready ?: return GuiBlocker.NO_MODEL
         if (!ready.details.supportsVision) return GuiBlocker.NO_VISION
         return null

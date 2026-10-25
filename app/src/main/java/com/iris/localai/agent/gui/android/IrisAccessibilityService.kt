@@ -70,6 +70,27 @@ class IrisAccessibilityService : AccessibilityService() {
             return list.split(':').any { it.equals(me, ignoreCase = true) }
         }
 
+        /** 2.1.9: whether IRIDIS may switch the service back on itself (granted once over adb / Shizuku). */
+        fun canSelfEnable(context: Context): Boolean =
+            context.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        /**
+         * 2.1.9: HyperOS turns the service off when 清后台 kills IRIDIS. With WRITE_SECURE_SETTINGS the
+         * app puts it back in the enabled list (app start / before a task). True = it asked the system.
+         */
+        fun selfEnable(context: Context): Boolean {
+            if (!canSelfEnable(context) || enabledInSettings(context)) return false
+            return runCatching {
+                val r = context.contentResolver
+                val me = ComponentName(context, IrisAccessibilityService::class.java).flattenToString()
+                val list = Settings.Secure.getString(r, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+                Settings.Secure.putString(r, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, A11yList.add(list, me))
+                Settings.Secure.putInt(r, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
+                Log.i(TAG, "re-enabled after it was switched off")
+                true
+            }.onFailure { Log.w(TAG, "self-enable failed: ${it.message}") }.getOrDefault(false)
+        }
+
         /** Opens 系统设置 › 无障碍 (the user switches it on there; apps cannot). */
         fun openSettings(context: Context) {
             runCatching {
@@ -84,6 +105,14 @@ class IrisAccessibilityService : AccessibilityService() {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
+    }
+}
+
+/** 2.1.9: the `:`-separated enabled-services list with [me] added once (unit-tested). */
+object A11yList {
+    fun add(list: String, me: String): String {
+        val items = list.split(':').map { it.trim() }.filter { it.isNotEmpty() }
+        return if (items.any { it.equals(me, ignoreCase = true) }) items.joinToString(":") else (items + me).joinToString(":")
     }
 }
 

@@ -127,3 +127,12 @@ class GuiPhaseTextTest {
         org.junit.Assert.assertEquals("H 30s · 40 字", t.thinking("H", 30, 40))
     }
 }
+
+class A11yListTest {
+    @org.junit.Test fun addsOnce() {
+        val a = com.iris.localai.agent.gui.android.A11yList
+        org.junit.Assert.assertEquals("x/y", a.add("", "x/y"))
+        org.junit.Assert.assertEquals("a/b:x/y", a.add("a/b", "x/y"))
+        org.junit.Assert.assertEquals("a/b:X/Y", a.add("a/b:X/Y:", "x/y"))
+    }
+}

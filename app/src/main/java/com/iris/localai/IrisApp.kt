@@ -58,6 +58,8 @@ class IrisApp : Application() {
             android.system.Os.setenv("GGML_OPENCL_KERNEL_CACHE_DIR", dir.path, true)
         }
         container = AppContainer(this)
+        // 2.1.9: 清后台 switched the GUI 无障碍 service off → back on (only with WRITE_SECURE_SETTINGS).
+        com.iris.localai.agent.gui.android.IrisAccessibilityService.selfEnable(this)
         // 1.10.2: 「启动时预加载上次的模型」 — start loading the last model in the background right away,
         // while the UI is still coming up (PreloadPolicy decides; same lock as every other load).
         // 1.13.0: only when the UI actually comes up — a boot broadcast, an alarm or the API service
