@@ -78,10 +78,22 @@ object GuiIntent {
         "(在|用)手机上|手机上(帮我|给我|替我)|" +
             "(打开|进入|去)($APPS).{0,24}(把|调|点|发|搜|找|开启|关闭|关掉|设置|设成|切换|改成|播放)|" +
             "(在|用|通过)微信(上|里)?(给|跟|向|和).{1,12}(发|说)|给.{1,12}发(一条|个|条)?(微信|QQ)|" +
-            "(亮度|音量)(调|开|设)(到|成)?(最高|最低|最大|最小)",
+            "(亮度|音量)(调|开|设)(到|成)?(最高|最低|最大|最小)|" +
+            "(在|用|通过)?($APPS)(的|上|里)?.{0,16}(群|聊天|好友)(里|中|上)?.{0,8}(发|说)|" +
+            "(在|用|通过)($APPS)(里|上|中)?.{0,20}(发|搜|点|买|下单|播放|关注|评论|点赞|收藏|转账|付款)",
     )
 
     fun looksLikePhoneTask(text: String): Boolean = text.length <= 200 && PHONE_UI.containsMatchIn(text.trim())
+
+    /** 2.1.9: prompt-only hint on the newest request when it is a phone-UI task (small models picked `phone` and lost the task). */
+    const val HINT = "（这是手机界面操作：调用 screen，task 用用户原话。）"
+
+    fun withHint(messages: List<com.iris.localai.engine.PromptMessage>, screenOn: Boolean): List<com.iris.localai.engine.PromptMessage> {
+        if (!screenOn) return messages
+        val i = messages.indexOfLast { it.role == com.iris.localai.engine.PromptMessage.USER && !it.content.startsWith("<tool_response>") }
+        if (i < 0 || !looksLikePhoneTask(messages[i].content) || messages[i].content.contains(HINT)) return messages
+        return messages.mapIndexed { idx, m -> if (idx == i) m.copy(content = m.content.trimEnd() + "\n\n" + HINT) else m }
+    }
 
     const val CHAT_NOTICE = "这是操控手机的请求，本条已交给智能体执行（智能体模式未开启）"
 }

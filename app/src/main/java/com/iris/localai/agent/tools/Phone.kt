@@ -72,7 +72,7 @@ object PhoneTool : AgentTool {
                 ok(p.addEvent(title, start, maxOf(end, start + 60_000L), Args.str(args, "location", "place"), Args.str(args, "notes", "description")))
             }
             "open_app", "open", "launch" -> {
-                val q = Args.str(args, "name", "app", "package", "text") ?: throw IllegalArgumentException("缺少参数 name")
+                val q = Args.str(args, "name", "app", "app_name", "appName", "package", "target", "text") ?: throw IllegalArgumentException("缺少参数 name（应用名）。要在 App 里点击、发消息等多步操作，请改用 screen(task)")
                 val apps = p.apps()
                 // 2.1.9: Chinese / English / package, fuzzy; not found → the close names.
                 val app = matchApp(q, apps) ?: return AppMatcher.notFound(q, apps).let { ToolResult(false, "Error: $it", it.substringBefore('。')) }

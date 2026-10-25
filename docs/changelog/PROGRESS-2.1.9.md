@@ -82,3 +82,4 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - GUI 循环：AutoGLM `Launch/open/open_app`、MAI-UI `open/awake/launch` 都映射为 Launch，按应用名直接启动；GUI 提示词说明可直接 Launch。
 - 工具提示词裁剪以守住 600 token 预算（`screen` 描述缩短、phone 行精简、手机组提示改为 "asks user first"）。
 - 单测：`v219gui/AppLaunchTest`。
+- 修复真机：「在微信X群里发一句你好」被小模型当成 phone open_app 且漏传应用名，报错后丢了任务。`GuiIntent` 规则放宽（App 群聊/搜索/购买等），命中时只在提示词里给本条请求附一句「调用 screen」；phone open_app 缺 name 时提示改用 screen 并接受 app_name 等别名。单测 `GuiRoutingTest`。
