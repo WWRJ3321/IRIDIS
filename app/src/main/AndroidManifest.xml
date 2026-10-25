@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Held only for the duration of an API request, never while idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 2.1.9: optional, granted by the user over adb / Shizuku: switch the GUI 无障碍 service back on after 清后台. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- 1.10.13: asks once to be left running in the background while a reply generates. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 1.11.0: optional — send commands to Termux (full Linux) for run_command and the 终端 page. -->

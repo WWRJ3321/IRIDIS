@@ -341,7 +341,7 @@ class FilesLogicTest {
         assertTrue(paths.contains("path=\"Download/IRIDIS/\""))
         // no new permission: the manifest's permission list is unchanged
         val manifest = file("src/main/AndroidManifest.xml").readText()
-        assertEquals(13, Regex("<uses-permission ").findAll(manifest).count())
+        assertEquals(14, Regex("<uses-permission ").findAll(manifest).count()) // 2.1.9: + WRITE_SECURE_SETTINGS (GUI 无障碍 self-enable, user-granted)
         assertNotNull(Regex("MANAGE_EXTERNAL_STORAGE").find(manifest))
     }
 }

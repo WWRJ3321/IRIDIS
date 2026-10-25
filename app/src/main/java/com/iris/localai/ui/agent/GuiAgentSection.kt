@@ -27,6 +27,10 @@ internal object GuiAgentText {
     const val CONNECTING = "已在系统设置里开启，正在连接…"
     const val OFF = "未开启 · 点按去 系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 开启"
     const val RESTRICTED = "系统提示「受限设置」时：点按这里打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启"
+    /** 2.1.9: 清后台 turns the service off on HyperOS. */
+    const val KEEP = "清后台会让系统关掉无障碍：在最近任务里把 IRIDIS 加锁，省电策略设为无限制。" +
+        "想掉了自动重开：电脑上执行一次 adb shell pm grant com.iridis android.permission.WRITE_SECURE_SETTINGS"
+    const val SELF_ON = "已授权：被系统关掉后会自动重新开启"
     const val NOTE = "看屏幕 → 思考 → 操作。需要能识图的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。" +
         "运行时顶部有悬浮条可随时停止；支付、发送、删除等操作先问你，密码和支付类应用由你自己操作；最多 30 步。"
 }
@@ -62,6 +66,10 @@ fun GuiAgentSection() {
             onClick = { IrisAccessibilityService.openSettings(context) },
             trailing = { com.iris.localai.ui.components.Chevron() },
         )
+        Divider()
+        SettingsRow("防止掉线", icon = IrisIcons.Info,
+            subtitle = if (IrisAccessibilityService.canSelfEnable(context)) GuiAgentText.SELF_ON else GuiAgentText.KEEP,
+            onClick = { IrisAccessibilityService.openAppInfo(context) })
         if (!connected) {
             Divider()
             SettingsRow("允许受限制的设置", icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
@@ -129,6 +137,7 @@ fun GuiSetupDialog(blocker: com.iris.localai.agent.GuiBlocker, onDismiss: () -> 
 internal object GuiSetupText {
     const val A11Y = "操控手机要用到「IRIDIS GUI 智能体」无障碍服务。\n" +
         "点「去开启」：系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 › 开启。\n" +
-        "如果提示「受限设置」，点「受限设置」打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启。开好后在聊天里再说一次。"
+        "如果提示「受限设置」，点「受限设置」打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启。开好后在聊天里再说一次。\n" +
+        GuiAgentText.KEEP
     const val VISION = "操控手机需要能读图的模型看屏幕。请加载一个识图模型（如 Qwen3-VL MNN），再说一次。"
 }
