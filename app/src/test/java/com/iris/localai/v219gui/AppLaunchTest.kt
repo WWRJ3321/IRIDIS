@@ -119,3 +119,11 @@ class GuiRoutingTest {
         org.junit.Assert.assertEquals("你好", g.withHint(listOf(com.iris.localai.engine.PromptMessage(U, "你好")), true).last().content)
     }
 }
+
+class GuiPhaseTextTest {
+    @org.junit.Test fun showsSecondsAndChars() {
+        val t = com.iris.localai.agent.gui.android.GuiPhaseText
+        org.junit.Assert.assertEquals("H 12s（看图中）", t.thinking("H", 12, 0))
+        org.junit.Assert.assertEquals("H 30s · 40 字", t.thinking("H", 30, 40))
+    }
+}

@@ -36,17 +36,41 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /** The loaded IRIDIS model as the GUI model: greedy, short replies, the screenshot as the image. */
-class EngineGuiModel(private val engine: EngineManager, private val maxNewTokens: Int = 512) : GuiModel {
+class EngineGuiModel(private val engine: EngineManager, private val maxNewTokens: Int = 512, private val timeoutMs: Long = STEP_TIMEOUT_MS) : GuiModel {
+    /** 2.1.9: characters of the reply so far (the 停止 bar shows it next to the seconds). */
+    @Volatile var chars = 0
+        private set
+
     override suspend fun complete(messages: List<PromptMessage>): String {
         val params = engine.samplingFor(disableThinking = true).copy(temperature = 0f, topK = 1, topP = 1f, maxNewTokens = maxNewTokens)
         val sb = StringBuilder()
-        engine.generate(messages, params, Requester.CHAT).collect { e ->
-            when (e) {
-                is GenEvent.Piece -> sb.append(e.text)
-                is GenEvent.Done -> if (e.reason == StopReason.ERROR) throw EngineException(e.error ?: "生成失败")
+        chars = 0
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        var first = -1L
+        val done = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+            engine.generate(messages, params, Requester.CHAT).collect { e ->
+                when (e) {
+                    is GenEvent.Piece -> {
+                        if (first < 0) first = android.os.SystemClock.elapsedRealtime() - t0
+                        sb.append(e.text); chars = sb.length
+                    }
+                    is GenEvent.Done -> if (e.reason == StopReason.ERROR) throw EngineException(e.error ?: "生成失败")
+                }
             }
+            true
         }
+        android.util.Log.i(TAG, "step reply: first piece ${first}ms, total ${android.os.SystemClock.elapsedRealtime() - t0}ms, ${sb.length} chars, images=${messages.sumOf { it.images.size }}")
+        if (done == null) throw EngineException(
+            if (first < 0) "模型 ${timeoutMs / 1000} 秒还没开始输出（看图太慢或卡住），已停止。可换更小的识图模型，或导出日志给我看"
+            else "模型 ${timeoutMs / 1000} 秒没写完一步，已停止",
+        )
         return sb.toString()
+    }
+
+    companion object {
+        const val TAG = "IrisGui"
+        /** One step (look + think) longer than this is treated as stuck. */
+        const val STEP_TIMEOUT_MS = 180_000L
     }
 }
 
@@ -140,12 +164,20 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         _state.value = GuiRunState(running = true, lines = listOf("模型：${ready.model.fileName}（${profile.label} 格式）"))
         lineSink = onLine
         handOverSink = onHandOver
+        val model = EngineGuiModel(engine)
+        guiModel = model
+        // 2.1.9: IRIDIS sits in the background for the whole run — keep the CPU awake for the model.
+        val wake = runCatching {
+            context.getSystemService(android.os.PowerManager::class.java)
+                .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "iris:gui-agent")
+                .apply { setReferenceCounted(false); acquire(30 * 60_000L) }
+        }.getOrNull()
         val outcome: GuiOutcome = try {
             GuiOverlay.show("GUI 智能体 · 准备中") { stop() }
             IrisAccessibilityService.instance?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
             delay(600)
             GuiAgentLoop(
-                model = EngineGuiModel(engine), device = AccessibilityGuiDevice(context), callbacks = callbacks,
+                model = model, device = AccessibilityGuiDevice(context), callbacks = callbacks,
                 profile = profile, maxSteps = maxSteps, today = LocalDate.now().toString(),
             ).run(task)
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -155,6 +187,9 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         } catch (e: Exception) {
             GuiOutcome(GuiStop.ERROR, e.message ?: e.javaClass.simpleName, emptyList())
         } finally {
+            ticker?.cancel(); ticker = null
+            guiModel = null
+            runCatching { if (wake?.isHeld == true) wake.release() }
             GuiOverlay.hide()
             lineSink = {}
             handOverSink = {}
@@ -162,6 +197,8 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         _state.value = _state.value.copy(running = false)
         return outcome
     }
+    @Volatile private var guiModel: EngineGuiModel? = null
+    @Volatile private var ticker: Job? = null
     @Volatile private var lineSink: (String) -> Unit = {}
     @Volatile private var handOverSink: () -> Unit = {}
 
@@ -177,7 +214,23 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
             GuiOverlay.ask("需要你来操作：$message\n完成后点「我已完成」", "我已完成", "停止").also { if (!it) handOverSink() }
         // 第一阶段没有输入框：模型提问时停下，把问题带回 IRIDIS（聊天里由主智能体转述）。
         override suspend fun ask(question: String): String? { addLine("模型提问：$question"); handOverSink(); return null }
+        override fun onPhase(index: Int, phase: com.iris.localai.agent.gui.GuiPhase) {
+            ticker?.cancel(); ticker = null
+            val head = "GUI 智能体 · 第 $index 步 · ${phase.label}"
+            GuiOverlay.update(head)
+            if (phase != com.iris.localai.agent.gui.GuiPhase.THINK) return
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            ticker = scope.launch {
+                while (true) {
+                    delay(1000)
+                    val sec = (android.os.SystemClock.elapsedRealtime() - t0) / 1000
+                    val n = guiModel?.chars ?: 0
+                    GuiOverlay.update(GuiPhaseText.thinking(head, sec, n))
+                }
+            }
+        }
         override fun onStep(step: GuiStep) {
+            ticker?.cancel(); ticker = null
             val what = step.action?.label() ?: "格式错误"
             val mark = when (step.status) {
                 GuiStepStatus.OK -> ""; GuiStepStatus.FAILED -> " ✗"; GuiStepStatus.DENIED -> "（已拒绝）"
@@ -203,4 +256,10 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
                 " · 界面元素 ${els.size} 个 · 前台 ${obs.foregroundPkg ?: "未知"}"
         }.getOrElse { "自检失败：${it.message}" }
     }
+}
+
+/** 2.1.9: the 停止 bar while the model works on a step (unit-tested). */
+object GuiPhaseText {
+    fun thinking(head: String, seconds: Long, chars: Int): String =
+        if (chars <= 0) "$head ${seconds}s（看图中）" else "$head ${seconds}s · $chars 字"
 }
