@@ -80,3 +80,4 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - 修复真机：「在微信X群里发一句你好」被小模型当成 phone open_app 且漏传应用名，报错后丢了任务。`GuiIntent` 规则放宽（App 群聊/搜索/购买等），命中时只在提示词里给本条请求附一句「调用 screen」；phone open_app 缺 name 时提示改用 screen 并接受 app_name 等别名。单测 `GuiRoutingTest`。
 - GUI 智能体停止条一直「准备中」：以前要等第一步整步做完才更新。现在每步实时显示「第 N 步 · 看屏幕 / 思考 Xs（看图中）/ Y 字」；运行期间持唤醒锁；单步 180 秒没结果就停下并说明原因；logcat `IrisGui` 记录每步首字/总耗时。单测 `GuiPhaseTextTest`。
 - 无障碍「清后台就掉」：HyperOS 清后台杀掉整个应用并关闭服务。新增可选权限 WRITE_SECURE_SETTINGS（用户用 adb/Shizuku 授权一次）：打开 IRIDIS 或操控手机前若服务被关，自动重新开启。设置 › GUI 智能体 加「防止掉线」引导（最近任务加锁 / 省电无限制 / adb 命令）。无障碍只订阅 windowStateChanged（原来订阅的界面内容变化事件没有用到）。单测 `A11yListTest`。
+- 上下文压缩补 pi-vcc 的召回提示：智能体模式下开着 recall 时，压缩摘要末尾加一句「需要早期原文细节时用 recall 查，别重做已完成的事」，模型知道被折叠的原文还能搜。单测 `CompactRecallHintTest`。
