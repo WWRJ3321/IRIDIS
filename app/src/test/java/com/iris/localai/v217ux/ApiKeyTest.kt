@@ -13,7 +13,7 @@ class ApiKeyTest {
     @Test fun emptyKeyKeepsOldBehaviour() {
         assertNull(ApiAuth.check("", emptyMap()))
         assertNull(ApiAuth.check("  ", mapOf("authorization" to "Bearer whatever")))
-        assertNull(ApiAuth.check("", mapOf("origin" to "null")))
+        assertEquals(403, ApiAuth.check("", mapOf("origin" to "null"))?.status) // sandboxed iframe / file: page
         assertEquals(403, ApiAuth.check("", mapOf("origin" to "https://evil.example"))?.status)
     }
 

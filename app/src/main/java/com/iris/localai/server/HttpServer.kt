@@ -38,6 +38,8 @@ class HttpServer(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val connections = Semaphore(MAX_CONNECTIONS)
+    /** Whether responses carry `Access-Control-Allow-Origin: *` (only useful when an API key is set). */
+    @Volatile var cors: () -> Boolean = { true }
     @Volatile private var socket: ServerSocket? = null
     @Volatile private var acceptJob: Job? = null
     private val clients: MutableSet<Socket> = java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -65,7 +67,7 @@ class HttpServer(
                     // Never let one connection's failure escape: an uncaught exception in this
                     // scope would reach the default handler and take the whole app down.
                     try {
-                        connections.withPermit { serve(client) }
+                        serve(client)
                     } catch (e: CancellationException) {
                         runCatching { client.close() }
                         throw e
@@ -94,13 +96,15 @@ class HttpServer(
 
     private suspend fun serve(client: Socket) {
         client.use { s ->
-            s.soTimeout = READ_TIMEOUT_MS
             s.tcpNoDelay = true
             val out = s.getOutputStream()
             val input = BufferedInputStream(s.getInputStream())
-            val responder = HttpResponder(out)
-            val request = try {
-                parse(input, out, s.inetAddress)
+            val responder = HttpResponder(out, cors())
+            // The head is read before taking a connection permit, under one overall deadline, so
+            // idle or trickling clients cannot hold all MAX_CONNECTIONS slots (slowloris).
+            val head = try {
+                s.soTimeout = HEAD_TIMEOUT_MS
+                parseHead(input, s.inetAddress, System.nanoTime() + HEAD_TIMEOUT_MS * 1_000_000L)
             } catch (e: HttpError) {
                 runCatching { responder.json(e.status, errorJson(e.message ?: "bad request", e.status)) }
                 return
@@ -110,33 +114,45 @@ class HttpServer(
                 runCatching { responder.json(400, errorJson("malformed request")) }
                 return
             }
-            // 2.0.0: a client that closes its connection cancels its request — also while it waits in
-            // the generation queue or for a non-streamed reply, where no write would notice. Before,
-            // an abandoned (timed-out, retried) request kept generating to max_tokens and held the
-            // engine, so the in-app chat and every later request queued behind it.
-            val requestJob = currentCoroutineContext().job
-            val watcher = scope.launch {
-                if (awaitClientGone(input) { isActive }) requestJob.cancel(CancellationException("client disconnected"))
-            }
-            try {
-                handler(request, responder)
-            } catch (e: HttpError) {
-                if (!responder.committed) runCatching { responder.json(e.status, errorBody(request.path, e.status, e.message ?: "error")) }
-            } catch (e: IOException) {
-                // client went away
-            } catch (e: CancellationException) {
-                throw e
-            } catch (t: Throwable) {
-                Log.w(TAG, "handler crashed", t)
-                if (!responder.committed) runCatching { responder.json(500, errorBody(request.path, 500, t.message ?: "internal error")) }
-            } finally {
-                watcher.cancel() // its blocking read ends when client.use closes the socket
+            s.soTimeout = READ_TIMEOUT_MS
+            connections.withPermit {
+                val request = try {
+                    readBody(head, input, out)
+                } catch (e: HttpError) {
+                    runCatching { responder.json(e.status, errorJson(e.message ?: "bad request", e.status)) }
+                    return
+                } catch (e: IOException) {
+                    return
+                }
+                // 2.0.0: a client that closes its connection cancels its request — also while it waits in
+                // the generation queue or for a non-streamed reply, where no write would notice. Before,
+                // an abandoned (timed-out, retried) request kept generating to max_tokens and held the
+                // engine, so the in-app chat and every later request queued behind it.
+                val requestJob = currentCoroutineContext().job
+                val watcher = scope.launch {
+                    if (awaitClientGone(input) { isActive }) requestJob.cancel(CancellationException("client disconnected"))
+                }
+                try {
+                    handler(request, responder)
+                } catch (e: HttpError) {
+                    if (!responder.committed) runCatching { responder.json(e.status, errorBody(request.path, e.status, e.message ?: "error")) }
+                } catch (e: IOException) {
+                    // client went away
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    Log.w(TAG, "handler crashed", t)
+                    if (!responder.committed) runCatching { responder.json(500, errorBody(request.path, 500, t.message ?: "internal error")) }
+                } finally {
+                    watcher.cancel() // its blocking read ends when client.use closes the socket
+                }
             }
         }
     }
 
-    private fun parse(input: InputStream, out: OutputStream, remote: InetAddress): HttpRequest {
-        val head = readHead(input)
+    /** Request line + headers, validated; the body is read later by [readBody]. */
+    private fun parseHead(input: InputStream, remote: InetAddress, deadlineNanos: Long): HttpRequest {
+        val head = readHead(input, deadlineNanos)
         val lines = head.split("\r\n")
         val parts = lines.first().split(' ')
         if (parts.size < 3) throw HttpError(400, "malformed request line")
@@ -154,24 +170,29 @@ class HttpServer(
         val length = if (rawLength == null) 0L else rawLength.toLongOrNull()?.takeIf { it >= 0 }
             ?: throw HttpError(400, "invalid Content-Length")
         if (length > MAX_BODY) throw HttpError(413, "request body too large")
+        val path = target.substringBefore('?')
+        val query = parseQuery(target.substringAfter('?', ""))
+        return HttpRequest(method, path, query, headers, ByteArray(length.toInt()), remote)
+    }
+
+    /** Fills [head]'s body (sized from Content-Length by [parseHead]). */
+    private fun readBody(head: HttpRequest, input: InputStream, out: OutputStream): HttpRequest {
+        val body = head.body
         // 2.0.0: curl (bodies over 1 KiB / 1 MiB) and some HTTP stacks wait for this before sending the body.
-        if (length > 0 && headers["expect"]?.equals("100-continue", ignoreCase = true) == true) {
+        if (body.isNotEmpty() && head.headers["expect"]?.equals("100-continue", ignoreCase = true) == true) {
             out.write("HTTP/1.1 100 Continue\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
             out.flush()
         }
-        val body = ByteArray(length.toInt())
         var read = 0
         while (read < body.size) {
             val n = input.read(body, read, body.size - read)
             if (n < 0) throw IOException("truncated body")
             read += n
         }
-        val path = target.substringBefore('?')
-        val query = parseQuery(target.substringAfter('?', ""))
-        return HttpRequest(method, path, query, headers, body, remote)
+        return head
     }
 
-    private fun readHead(input: InputStream): String {
+    private fun readHead(input: InputStream, deadlineNanos: Long): String {
         val buf = ByteArrayOutputStream()
         var state = 0
         while (true) {
@@ -179,6 +200,7 @@ class HttpServer(
             if (b < 0) throw IOException("connection closed")
             buf.write(b)
             if (buf.size() > MAX_HEAD) throw HttpError(431, "headers too large")
+            if (System.nanoTime() - deadlineNanos > 0) throw SocketTimeoutException("request head too slow")
             state = when {
                 state == 0 && b == '\r'.code -> 1
                 state == 1 && b == '\n'.code -> 2
@@ -204,6 +226,8 @@ class HttpServer(
         private const val MAX_HEAD = 16 * 1024
         private const val MAX_BODY = 8L * 1024 * 1024
         private const val READ_TIMEOUT_MS = 30_000
+        /** Whole request line + headers must arrive within this (per-read timeout alone allows trickling). */
+        private const val HEAD_TIMEOUT_MS = 10_000
 
         /** OpenAI-style error body; 5xx are `server_error` (as OpenAI reports them), the rest `invalid_request_error`. */
         fun errorJson(message: String, status: Int = 400): String {
@@ -264,7 +288,7 @@ data class HttpRequest(
 }
 
 /** Writes exactly one response. Streaming responses are terminated by closing the connection. */
-class HttpResponder(private val out: OutputStream) {
+class HttpResponder(private val out: OutputStream, private val cors: Boolean = true) {
     var committed = false
         private set
 
@@ -313,7 +337,7 @@ class HttpResponder(private val out: OutputStream) {
         append("HTTP/1.1 ").append(status).append(' ').append(reason(status)).append("\r\n")
         append("Content-Type: ").append(contentType).append("\r\n")
         append("Connection: close\r\n")
-        append("Access-Control-Allow-Origin: *\r\n")
+        if (cors) append("Access-Control-Allow-Origin: *\r\n")
         append("Access-Control-Allow-Headers: ").append(allowHeaders).append("\r\n")
         append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n")
         append(extra)

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Hosts the local OpenAI-compatible API. Runs as a foreground service only while the user has
@@ -32,12 +33,14 @@ class ApiService : LifecycleService() {
 
     private var server: HttpServer? = null
     private lateinit var wakeLock: PowerManager.WakeLock
+    /** Requests in flight: the lock is held from the first one's start to the last one's end. */
+    private val inFlight = AtomicInteger(0)
 
     override fun onCreate() {
         super.onCreate()
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:api-request")
-            .apply { setReferenceCounted(true) }
+            .apply { setReferenceCounted(false) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,14 +62,17 @@ class ApiService : LifecycleService() {
         // 2.1.3: IPv4 127.0.0.1 (not the IPv6 ::1 loopback) unless LAN is on.
         val bind = InetAddress.getByName(ApiPolicy.bindHost(lan))
         val routes = ApiRoutes(c.engine, c.models, c.settings)
+        // Not reference counted: with a timed acquire per request, the timeout's own release could
+        // drop another request's count and the next release() threw "WakeLock under-locked".
         val srv = HttpServer(bind, s.apiPort) { req, res ->
-            wakeLock.acquire(10 * 60_000L)
+            synchronized(inFlight) { if (inFlight.getAndIncrement() == 0) wakeLock.acquire(10 * 60_000L) }
             try {
                 routes.handle(req, res)
             } finally {
-                if (wakeLock.isHeld) wakeLock.release()
+                synchronized(inFlight) { if (inFlight.decrementAndGet() == 0 && wakeLock.isHeld) wakeLock.release() }
             }
         }
+        srv.cors = { c.settings.current.apiKey.isNotBlank() }
         try {
             srv.start()
             server = srv
