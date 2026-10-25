@@ -136,3 +136,13 @@ class A11yListTest {
         org.junit.Assert.assertEquals("a/b:X/Y", a.add("a/b:X/Y:", "x/y"))
     }
 }
+
+class CompactRecallHintTest {
+    @org.junit.Test fun hintOnlyWithRecallAndSummary() {
+        val a = com.iris.localai.context.ContextAssembly
+        val st = com.iris.localai.context.CompactState(upToId = "m1", goals = listOf("修 bug"), messages = 3, times = 1)
+        org.junit.Assert.assertEquals("", a.lead(null, recall = true))
+        org.junit.Assert.assertFalse(a.lead(st).contains("recall"))
+        org.junit.Assert.assertTrue(a.lead(st, recall = true).endsWith(a.RECALL_HINT))
+    }
+}

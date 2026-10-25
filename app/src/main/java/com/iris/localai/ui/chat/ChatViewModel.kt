@@ -967,7 +967,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 system = system,
                 messages = msgs,
                 // 2.3: the compaction summary leads the history (system prompt stays cacheable).
-                lead = com.iris.localai.context.ContextAssembly.lead(compaction),
+                // 2.1.9: 智能体 with recall → the summary says the folded originals can be searched.
+                lead = com.iris.localai.context.ContextAssembly.lead(compaction, recall = agent && c.agent.history != null && c.agent.settings.current.isEnabled(com.iris.localai.agent.RecallTool)),
                 strategy = com.iris.localai.data.ContextStrategy.of(conv.contextStrategy ?: s.contextStrategy),
                 contextTokens = ready?.details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength,
                 // 1.7.8: room for the reasoning budget too (the planner caps the reserve at half the window).

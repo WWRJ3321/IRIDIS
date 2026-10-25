@@ -147,7 +147,7 @@ class PromptBudgetTest {
             .map { File(it) }.first { it.exists() }.readText()
         assertTrue(vm.contains("KbChat.attachAll(m, kbBlocks)"))
         assertTrue(vm.contains("AgentPrompt.withPlanNote(history, c.agent.plans.get(convId))"))
-        assertTrue(vm.contains("lead = com.iris.localai.context.ContextAssembly.lead(compaction)"))
+        assertTrue(vm.contains("lead = com.iris.localai.context.ContextAssembly.lead(compaction, recall = "))
         assertFalse(vm.contains("plan = c.agent.plans.get(convId), planFirst"))
         // 新对话 keeps llama.cpp's cached system prompt; the other engines still reset
         assertTrue(vm.contains("c.engine.resetForNewChat()"))

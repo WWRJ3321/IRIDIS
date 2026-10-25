@@ -55,7 +55,11 @@ object ContextAssembly {
     ).filter { it.isNotEmpty() }.joinToString("\n\n")
 
     /** 2.3: the compaction summary, placed in front of the remaining history (ContextRequest.lead). */
-    fun lead(state: CompactState?): String = state?.let { Compactor.render(it) }.orEmpty()
+    fun lead(state: CompactState?, recall: Boolean = false): String =
+        state?.let { Compactor.render(it) + if (recall) "\n" + RECALL_HINT else "" }.orEmpty()
+
+    /** 2.1.9 (pi-vcc): after a compaction the original messages stay searchable — say how. */
+    const val RECALL_HINT = "需要早期原文细节时用 recall 查，别重做已完成的事。"
 
     /**
      * Whether automatic compaction runs for this reply. 智能体: its own switch. 对话: its switch, and
