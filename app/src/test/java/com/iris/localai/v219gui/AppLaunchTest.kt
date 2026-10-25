@@ -105,3 +105,17 @@ class AppLaunchTest {
         assertFalse(miss.ok); assertFalse(gui.ran)
     }
 }
+
+class GuiRoutingTest {
+    @org.junit.Test fun wechatGroupMessageIsAPhoneTask() {
+        val g = com.iris.localai.agent.GuiIntent
+        org.junit.Assert.assertTrue(g.looksLikePhoneTask("在微信无人群里发一句你好"))
+        org.junit.Assert.assertTrue(g.looksLikePhoneTask("在淘宝里搜一下充电宝"))
+        org.junit.Assert.assertFalse(g.looksLikePhoneTask("微信是什么时候发布的"))
+        val U = com.iris.localai.engine.PromptMessage.USER
+        val m = listOf(com.iris.localai.engine.PromptMessage(U, "在微信无人群里发一句你好"))
+        org.junit.Assert.assertTrue(g.withHint(m, true).last().content.endsWith(g.HINT))
+        org.junit.Assert.assertEquals(m, g.withHint(m, false))
+        org.junit.Assert.assertEquals("你好", g.withHint(listOf(com.iris.localai.engine.PromptMessage(U, "你好")), true).last().content)
+    }
+}

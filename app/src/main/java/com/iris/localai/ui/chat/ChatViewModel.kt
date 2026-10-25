@@ -1739,7 +1739,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             val history = p.messages.filter { it.role != PromptMessage.SYSTEM }
             // 2.3: stable system prompt (persona + tools + instructions + frozen memory); the plan goes on the new user turn.
             val base = listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +
-                com.iris.localai.agent.AgentPrompt.withPlanNote(history, c.agent.plans.get(convId))
+                com.iris.localai.agent.GuiIntent.withHint(com.iris.localai.agent.AgentPrompt.withPlanNote(history, c.agent.plans.get(convId)), tools.any { it.name == "screen" })
                     .let { if (voiceOut != null) com.iris.localai.voice.VoiceStyle.withVoiceSystem(it) else it }
             val budget = (ctxTokens - maxNew - 32).coerceAtLeast(ctxTokens / 3)
             // 1.10.6: continue from the previous 智能体 run's full prompt when nothing in between
