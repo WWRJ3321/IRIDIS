@@ -27,7 +27,7 @@ object ScreenTool : SuspendTool {
     override val name = "screen"
     override val label = "操控手机"
     override val description = "用识图模型看屏幕、代你点击输入完成任务（需开启无障碍）"
-    override val promptLine = "screen(task): operate apps on screen for the user"
+    override val promptLine = "screen(task): tap through apps"
     override val risk = ToolRisk.WRITE
     override val defaultPermission: Permission get() = Permission.ALLOW
     override val group = ToolGroup.OTHER
@@ -48,9 +48,18 @@ object ScreenTool : SuspendTool {
         GuiTaskStatus.STOPPED -> "Stopped by the user: ${r.message}"
     }
 
+    private fun openApp(q: String, p: PhoneActions): ToolResult {
+        val apps = p.apps()
+        val hit = AppMatcher.match(q, apps) ?: return AppMatcher.notFound(q, apps).let { ToolResult(false, "Error: $it", it.substringBefore('。')) }
+        p.openApp(hit.second)
+        return ToolResult(true, "Opened ${hit.first}", "已打开 ${hit.first}")
+    }
+
     override suspend fun runSuspend(args: JsonObject, env: ToolEnv, progress: (String) -> Unit): ToolResult {
         val task = Args.str(args, "task", "goal", "instruction", "text", "query")?.trim()?.takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("缺少参数 task")
+        // 2.1.9: 「打开微信」 only → launch it directly (no screen loop, no vision model needed).
+        LaunchIntent.appName(task)?.let { app -> env.phone?.let { p -> return openApp(app, p) } }
         val gui = env.gui ?: return ToolResult(false, "Error: screen control is not available", "不可用")
         gui.blocker()?.let { b -> val t = blockerText(b); return ToolResult(false, "Error: $t", t.substringBefore('：')) }
         val r = gui.run(task, progress)

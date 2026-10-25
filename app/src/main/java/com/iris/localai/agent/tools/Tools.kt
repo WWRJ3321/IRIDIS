@@ -16,7 +16,7 @@ enum class ToolGroup(val title: String, val label: String, val hint: String) {
     FILES("Files", "文件", "workspace-relative paths; read before edit"),
     WEB("Web", "联网", "you are online; never say you have no internet"),
     SHELL("Terminal", "终端", ""),
-    PHONE("Phone", "手机", "user confirms each action"),
+    PHONE("Phone", "手机", "asks user first"),
     TASKS("Tasks", "定时", ""),
     MEMORY("Memory", "记忆", "use recall for older turns"),
     SKILLS("Skills", "技能", ""),

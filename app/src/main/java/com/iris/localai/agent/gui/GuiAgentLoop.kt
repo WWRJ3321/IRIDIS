@@ -183,7 +183,7 @@ object GuiPrompt {
 <think>{简短推理}</think>
 <answer>{操作}</answer>
 操作（坐标从左上角 (0,0) 到右下角 (999,999)）：
-- do(action="Launch", app="xxx")
+- do(action="Launch", app="xxx")  按应用名直接打开应用（不用去桌面找图标）
 - do(action="Tap", element=[x,y])
 - do(action="Tap", element=[x,y], message="重要操作")  涉及支付、隐私等敏感按钮时使用
 - do(action="Type", text="xxx")  先点击输入框
@@ -196,7 +196,7 @@ object GuiPrompt {
 - do(action="Take_over", message="xxx")  登录、验证码等需要用户操作时
 - do(action="Interact")  有多个符合条件的选项、需要用户选择时
 - finish(message="xxx")  任务完成
-规则：先确认当前应用是否正确，不是就 Launch；进入无关页面先 Back；页面没加载最多 Wait 三次；操作前检查上一步是否生效；结束前确认任务完整完成。"""
+规则：先确认当前应用是否正确，不是就直接 Launch；进入无关页面先 Back；页面没加载最多 Wait 三次；操作前检查上一步是否生效；结束前确认任务完整完成。"""
             )
         }
         GuiFormat.MOBILE_USE -> {
@@ -215,7 +215,7 @@ Actions:
 {"action": "swipe", "direction": "up|down|left|right"}
 {"action": "type", "text": "..."}  (click the input first)
 {"action": "system_button", "button": "back|home|enter"}
-{"action": "open", "text": "app name"}
+{"action": "open", "text": "app name"}  (launches the app directly; no need to find its icon)
 {"action": "wait", "time": seconds}
 {"action": "ask_user", "text": "question"}
 {"action": "terminate", "status": "success|failure", "text": "result for the user"}

@@ -15,7 +15,6 @@ import android.view.Display
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.iris.localai.agent.PhoneTool
 import com.iris.localai.agent.gui.CoordMap
 import com.iris.localai.agent.gui.ExecResult
 import com.iris.localai.agent.gui.GuiAction
@@ -223,7 +222,8 @@ class AccessibilityGuiDevice(
         val pm = context.packageManager
         val apps = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
             .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.distinctBy { it.second }
-        val hit = PhoneTool.matchApp(app, apps) ?: return ExecResult(false, "没有找到应用「$app」")
+        // 2.1.9: PackageManager launch by 中文名 / English / package (fuzzy), never by hunting for the icon.
+        val hit = com.iris.localai.agent.AppMatcher.match(app, apps) ?: return ExecResult(false, com.iris.localai.agent.AppMatcher.notFound(app, apps))
         val i = pm.getLaunchIntentForPackage(hit.second) ?: return ExecResult(false, "无法打开 ${hit.first}")
         return runCatching {
             (IrisAccessibilityService.instance ?: context).startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
