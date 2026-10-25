@@ -70,3 +70,10 @@ feat/files（基于 release/2.1.8）：新增「文件」页（part A）与可�
 - 运行时：悬浮停止条只停 GUI 循环，智能体仍会汇报「已停止」；敏感操作确认框、密码/支付交给用户照旧；结束后自动回到 IRIDIS（singleTask，回到发起的聊天）。
 - 测试：新增 `v219gui/ScreenToolTest`（注册与默认权限、按需载入下仍列出、描述 ≤60 字符且全部工具提示词 ≤800 token、各前置条件分支不启动循环、结果映射、对话模式触发规则正/反例）。未新增设置字段（V178Test 不变）。
 - 未真机验证：聊天触发 → 切后台 → 操作 → 回到聊天的整条链路；后台启动 Activity 是否被 HyperOS 拦截。
+
+### 直接打开应用
+- 新增 `AppMatcher`（中文名/英文名/包名模糊匹配，内置常见 App 别名与「相册/图库」等通用名，找不到时列出相近候选）和 `LaunchIntent`（识别「打开微信」这类纯启动请求）。
+- 聊天里只说「打开X」：直接用 PackageManager 启动，不走模型、不需要识图模型；找不到再照常交给模型。`screen` 工具遇纯启动也直接打开。
+- GUI 循环：AutoGLM `Launch/open/open_app`、MAI-UI `open/awake/launch` 都映射为 Launch，按应用名直接启动；GUI 提示词说明可直接 Launch。
+- 工具提示词裁剪以守住 600 token 预算（`screen` 描述缩短、phone 行精简、手机组提示改为 "asks user first"）。
+- 单测：`v219gui/AppLaunchTest`。

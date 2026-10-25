@@ -40,7 +40,7 @@ object PhoneTool : AgentTool {
     override val name = "phone"
     override val label = "手机操作"
     override val description = "设闹钟、计时器、加日历、打开 App、分享、剪贴板、打开网页、拨号（每次询问）"
-    override val promptLine = "phone(action: alarm|timer|calendar|open_app|share|copy|paste|open_url|dial, time?, end?, seconds?, text?, name?, url?, number?)"
+    override val promptLine = "phone(action: alarm|timer|calendar|open_app|share|copy|paste|open_url|dial, time?, end?, seconds?, text?, name?)"
     override val risk = ToolRisk.WRITE
     override val group = ToolGroup.PHONE
 
@@ -73,7 +73,9 @@ object PhoneTool : AgentTool {
             }
             "open_app", "open", "launch" -> {
                 val q = Args.str(args, "name", "app", "package", "text") ?: throw IllegalArgumentException("缺少参数 name")
-                val app = matchApp(q, p.apps()) ?: return ToolResult(false, "Error: no installed app matches \"$q\"", "没找到 App")
+                val apps = p.apps()
+                // 2.1.9: Chinese / English / package, fuzzy; not found → the close names.
+                val app = matchApp(q, apps) ?: return AppMatcher.notFound(q, apps).let { ToolResult(false, "Error: $it", it.substringBefore('。')) }
                 p.openApp(app.second); ok("Opened ${app.first}")
             }
             "share" -> ok(p.share(text ?: throw IllegalArgumentException("缺少参数 text")))
@@ -114,15 +116,8 @@ object PhoneTool : AgentTool {
         return null
     }
 
-    /** Best match by label (exact, then prefix, then contains), or by package name. */
-    fun matchApp(q: String, apps: List<Pair<String, String>>): Pair<String, String>? {
-        val n = q.trim().lowercase()
-        if (n.isEmpty()) return null
-        return apps.firstOrNull { it.first.lowercase() == n || it.second == n }
-            ?: apps.firstOrNull { it.first.lowercase().startsWith(n) }
-            ?: apps.firstOrNull { it.first.lowercase().contains(n) }
-            ?: apps.firstOrNull { it.second.lowercase().contains(n) }
-    }
+    /** Best match by name (中文 / English / alias), then prefix, contains, package — see [AppMatcher]. */
+    fun matchApp(q: String, apps: List<Pair<String, String>>): Pair<String, String>? = AppMatcher.match(q, apps)
 }
 
 class AndroidPhoneActions(context: Context) : PhoneActions {

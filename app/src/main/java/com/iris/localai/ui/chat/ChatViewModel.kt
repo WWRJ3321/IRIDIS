@@ -594,6 +594,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             rememberCommand(trimmed, fact)
             return
         }
+        // 2.1.9: 「打开微信」 only → the phone tool's open_app right away (no model, no screen loop).
+        if (attachments.isEmpty() && refs.isEmpty()) com.iris.localai.agent.LaunchIntent.appName(trimmed)?.let { app ->
+            if (launchCommand(trimmed, app)) return
+        }
         val ready = c.engine.state.value as? EngineState.Ready
         if (attachments.any { it.kind == com.iris.localai.data.AttachmentKind.IMAGE } && ready != null && ready.details.supportsVision != true)
             notice.value = ATTACH_NO_VISION
@@ -809,6 +813,19 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             }
         }
         return com.iris.localai.memory.MemoryCommand.userMessage(r, entry, target)
+    }
+
+    /** 2.1.9: launches an installed app for a pure 「打开X」; false = not handled (no such app / phone tool off). */
+    private fun launchCommand(userText: String, app: String): Boolean {
+        val ag = c.agent.settings.current
+        val tool = com.iris.localai.agent.PhoneTool
+        if (!ag.isEnabled(tool) || ag.permission(tool) == com.iris.localai.agent.Permission.DENY) return false
+        val apps = runCatching { c.agent.phone.apps() }.getOrDefault(emptyList())
+        val hit = com.iris.localai.agent.AppMatcher.match(app, apps) ?: return false
+        val reply = runCatching { c.agent.phone.openApp(hit.second); "已打开「${hit.first}」。" }.getOrElse { "打开「${hit.first}」失败：${it.message}" }
+        append(ChatMessage(role = Role.USER, content = userText))
+        append(ChatMessage(role = Role.ASSISTANT, content = reply))
+        return true
     }
 
     /** 「记住：…」: the user's line and a short confirmation are added to the chat; the model is not called. */

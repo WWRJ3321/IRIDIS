@@ -177,7 +177,7 @@ object GuiActionParser {
             "back" -> GuiAction.Back
             "home" -> GuiAction.Home
             "enter" -> GuiAction.Enter
-            "launch" -> GuiAction.Launch(args.str("app") ?: throw IllegalArgumentException("Launch 缺少 app"))
+            "launch", "open", "open_app" -> GuiAction.Launch(args.str("app") ?: args.str("name") ?: throw IllegalArgumentException("Launch 缺少 app"))
             "wait" -> GuiAction.Wait(seconds(args.str("duration")))
             "take_over" -> GuiAction.TakeOver(args.str("message") ?: "需要你来操作")
             "interact" -> GuiAction.Ask(args.str("message") ?: "有多个选项，请选择")
@@ -238,7 +238,7 @@ object GuiActionParser {
                 "enter" -> GuiAction.Enter
                 else -> throw IllegalArgumentException("不支持的按键：${a.s("button") ?: a.s("text")}")
             }
-            "open", "launch", "open_app" -> GuiAction.Launch(a.s("text") ?: a.s("app") ?: throw IllegalArgumentException("open 缺少 text"))
+            "open", "launch", "open_app", "awake" -> GuiAction.Launch(a.s("text") ?: a.s("app") ?: a.s("name") ?: throw IllegalArgumentException("open 缺少 text"))
             "wait" -> GuiAction.Wait(((a["time"] as? JsonPrimitive)?.doubleOrNull ?: 1.0).let { (it * 1000).toLong().coerceIn(200L, GuiAction.MAX_WAIT_MS) })
             "terminate" -> GuiAction.Finish(a.s("text") ?: "", success = a.s("status")?.lowercase() != "failure" && a.s("status")?.lowercase() != "fail")
             "answer" -> GuiAction.Finish(a.s("text") ?: "")
