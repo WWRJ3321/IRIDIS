@@ -38,7 +38,11 @@ interface GuiCallbacks {
     /** The model asks a question; null = no answer (stop). */
     suspend fun ask(question: String): String?
     fun onStep(step: GuiStep) {}
+    /** 2.1.9: what step [index] is doing now (the 停止 bar shows it, so a slow model never looks stuck). */
+    fun onPhase(index: Int, phase: GuiPhase) {}
 }
+
+enum class GuiPhase(val label: String) { LOOK("看屏幕"), THINK("思考") }
 
 enum class GuiStepStatus { OK, FAILED, DENIED, BLOCKED, FORMAT_ERROR }
 
@@ -95,10 +99,13 @@ class GuiAgentLoop(
                 currentCoroutineContext().ensureActive()
                 if (stop()) return end(GuiStop.STOPPED, "已停止")
                 if (steps.count { it.status != GuiStepStatus.FORMAT_ERROR } >= maxSteps) return end(GuiStop.MAX_STEPS, "达到步数上限（$maxSteps 步）")
+                val stepNo = steps.size + 1
+                callbacks.onPhase(stepNo, GuiPhase.LOOK)
                 val obs = device.observe()
                 val elements = UiTreeSerializer.elements(obs.tree, obs.width, obs.height, profile.scale)
                 val msgs = GuiPrompt.messages(profile, task, history, obs, elements, includeTree, note, today)
                 note = null
+                callbacks.onPhase(stepNo, GuiPhase.THINK)
                 val raw = model.complete(msgs)
                 if (stop()) return end(GuiStop.STOPPED, "已停止")
                 val parsed = GuiActionParser.parse(raw, profile)
