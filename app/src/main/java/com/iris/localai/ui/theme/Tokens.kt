@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 
 /** 4-dp spacing scale plus a few semantic sizes. */
 object IrisDimens {
+    val screenMargin = 16.dp
     val space2 = 2.dp
     val space4 = 4.dp
     val space6 = 6.dp

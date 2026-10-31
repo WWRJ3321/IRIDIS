@@ -25,27 +25,43 @@ object ThinkParser {
     fun parse(raw: String, expectThinking: Boolean = false): Parts =
         split(raw, raw.indexOf(OPEN), raw.indexOf(CLOSE), expectThinking)
 
+    /** 2.2.8: untagged text shorter than this is shown as (open) thinking when thinking is expected. */
+    const val UNTAGGED_THINK_MAX = 600
+    private val REASONING_STARTS = listOf("The user", "Okay", "Let me", "Alright", "用户", "我需要", "首先")
+
+    /** The reply opens like reasoning (the template pre-filled <think>, so no tag arrives). */
+    fun looksLikeReasoning(raw: String): Boolean {
+        val t = raw.trimStart()
+        return REASONING_STARTS.any { t.startsWith(it) }
+    }
+
+    /** Removes stray <think> / </think> tags (a second close, an echoed open) from visible text. */
+    fun stripTags(text: String): String = text.replace(OPEN, "").replace(CLOSE, "").trim()
+
     /** [parse] with the first-tag positions already known (used by the incremental [ThinkParseCache]). */
     fun split(raw: String, openAt: Int, closeAt: Int, expectThinking: Boolean = false): Parts {
         return when {
             // "reasoning</think>answer" — checked first so an answer that merely *mentions*
             // "<think>" after the real close tag is not mistaken for a new reasoning block.
             closeAt >= 0 && (openAt < 0 || openAt > closeAt) -> Parts(
-                thinking = raw.substring(0, closeAt).trim(),
-                answer = raw.substring(closeAt + CLOSE.length).trim(),
+                thinking = stripTags(raw.substring(0, closeAt)),
+                answer = stripTags(raw.substring(closeAt + CLOSE.length)),
                 thinkingOpen = false,
             )
             openAt >= 0 && closeAt > openAt -> Parts(
-                thinking = raw.substring(openAt + OPEN.length, closeAt).trim(),
-                answer = (raw.substring(0, openAt) + raw.substring(closeAt + CLOSE.length)).trim(),
+                thinking = stripTags(raw.substring(openAt + OPEN.length, closeAt)),
+                answer = stripTags(raw.substring(0, openAt) + raw.substring(closeAt + CLOSE.length)),
                 thinkingOpen = false,
             )
             openAt >= 0 -> Parts(
-                thinking = raw.substring(openAt + OPEN.length).trim(),
-                answer = raw.substring(0, openAt).trim(),
+                thinking = stripTags(raw.substring(openAt + OPEN.length)),
+                answer = stripTags(raw.substring(0, openAt)),
                 thinkingOpen = true,
             )
-            expectThinking -> Parts(thinking = raw.trim(), answer = "", thinkingOpen = true)
+            // 2.2.8: no tag yet. Thinking expected (template pre-filled <think>): short or
+            // reasoning-like text is open thinking until </think> moves it; long plain text is body.
+            expectThinking && (raw.length < UNTAGGED_THINK_MAX || looksLikeReasoning(raw)) ->
+                Parts(thinking = raw.trim(), answer = "", thinkingOpen = true)
             else -> Parts(thinking = "", answer = raw.trim(), thinkingOpen = false)
         }
     }

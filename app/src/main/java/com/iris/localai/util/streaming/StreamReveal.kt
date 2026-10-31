@@ -134,10 +134,11 @@ class ThinkParseCache {
     private var openAt = -1
     private var closeAt = -1
     private var scanned = 0
+    private var lastExpect = false
 
     fun parse(raw: String): ThinkParser.Parts {
-        if (raw === last || raw == last) return lastParts
-        return parseInternal(raw)
+        if ((raw === last || raw == last) && !lastExpect) return lastParts
+        return parseInternal(raw, false)
     }
 
     /**
@@ -145,9 +146,13 @@ class ThinkParseCache {
      * being shown as answer text for a frame and then disappearing (that made the first words jump),
      * and the open thinking block never starts with the newline the model writes after <think>.
      */
-    fun parseStreaming(raw: String): ThinkParser.Parts = parse(raw.substring(0, raw.length - partialTagSuffix(raw)))
+    fun parseStreaming(raw: String, expectThinking: Boolean = false): ThinkParser.Parts {
+        val r = raw.substring(0, raw.length - partialTagSuffix(raw))
+        if ((r === last || r == last) && expectThinking == lastExpect) return lastParts
+        return parseInternal(r, expectThinking)
+    }
 
-    private fun parseInternal(raw: String): ThinkParser.Parts {
+    private fun parseInternal(raw: String, expectThinking: Boolean): ThinkParser.Parts {
         val appended = raw.length > last.length && raw.startsWith(last)
         if (!appended) { openAt = -1; closeAt = -1; scanned = 0 }
         // Re-scan a few characters before the old end: a tag may have been split across pieces.
@@ -156,7 +161,8 @@ class ThinkParseCache {
         if (closeAt < 0) { val i = raw.indexOf(CLOSE, from); if (i >= 0) closeAt = i }
         scanned = raw.length
         last = raw
-        lastParts = ThinkParser.split(raw, openAt, closeAt)
+        lastExpect = expectThinking
+        lastParts = ThinkParser.split(raw, openAt, closeAt, expectThinking)
         return lastParts
     }
 

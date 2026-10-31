@@ -283,6 +283,9 @@ class AgentLoop(
         var echoRetried = false
         var nudged = false
         var toolPushed = false
+        // 2.2.8: raw text of each unreadable call attempt (kept in the UI and logged), and the card of attempt 1.
+        val failedRaw = ArrayList<String>()
+        var retryStep: AgentStep? = null
         // 2.2.5: the tolerant parser fallback recognises exactly the tools of this run.
         ToolCallParser.knownTools = tools.map { it.name }.toSet()
         while (true) {
@@ -297,6 +300,7 @@ class AgentLoop(
             // the think block never closes) used to leave an empty answer: run that call instead.
             val answer = answerOf(turn.text).ifBlank { ToolCallParser.callInOpenThink(turn.text) ?: "" }
             var parsed = ToolCallParser.fillMainArg(ToolCallParser.parse(answer), userTask)
+            retryStep?.let { if (parsed !is ParsedReply.Malformed) { update(it.copy(result = "已重试")); retryStep = null } }
             // 2.2.2: the user picked a tool (@screen) but the reply skips it — small local models
             // often refuse. Push once; if it still refuses, run `screen` with the user's own words.
             val missing = requiredTools.firstOrNull { r -> tools.any { it.name == r } && steps.none { it.tool == r } }
@@ -335,7 +339,7 @@ class AgentLoop(
                             nudge(msgs, AgentPrompt.ANSWER_NOW)
                             continue
                         }
-                        if (steps.isNotEmpty()) {
+                        if (steps.any { it.tool != FORMAT_ERROR }) {
                             val text = closeThink(turn.text) + fallbackAnswer(steps)
                             return AgentOutcome(text, steps.toList(), AgentStop.DONE,
                                 transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, answerOf(text).trim()))
@@ -345,19 +349,29 @@ class AgentLoop(
                         transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, clean))
                 }
                 is ParsedReply.Malformed -> {
+                    failedRaw += turn.text
+                    logRaw(failedRaw.size, p.error, turn.text)
                     if (retried) {
                         // Second unreadable call in a row: stop and show what the model wrote.
                         // 2.2.5: the unreadable markup is hidden; only the prose before it stays.
+                        // 2.2.8: the raw output of every failed attempt stays one tap away.
+                        retryStep?.let { update(it.copy(result = "重试后仍无法识别")); retryStep = null }
+                        steps += AgentStep(tool = FORMAT_ERROR, title = "查看原始输出", result = p.error, status = StepStatus.ERROR,
+                            detail = failedRaw.mapIndexed { i, r -> "── 第 ${i + 1} 次输出 ──\n${r.trim()}" }.joinToString("\n\n"))
+                        callbacks.onSteps(steps.toList())
                         return AgentOutcome(ToolCallParser.stripCalls(p.before), steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
                     }
                     retried = true
-                    // 1.10.8: the first unreadable call is retried silently (no red card), like an unknown tool.
-                    android.util.Log.w(AGENT_TAG, "malformed call (silent retry): ${p.error}")
+                    // 2.2.8: attempt 1 is kept (folded) instead of being replaced by attempt 2's stream.
+                    android.util.Log.w(AGENT_TAG, "malformed call (retry): ${p.error}")
+                    AgentStep(tool = FORMAT_ERROR, title = "第 1 次输出（格式无法识别）", result = "工具格式不对，正在重试…",
+                        status = StepStatus.ERROR, detail = turn.text.trim()).let { retryStep = it; publish(it) }
                     msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim())
                     msgs += PromptMessage(PromptMessage.USER, AgentPrompt.retryHint(p.error))
                 }
                 is ParsedReply.Call -> {
                     retried = false
+                    failedRaw.clear()
                     if (calls >= maxSteps) return finishAtLimit(msgs, fixed, p)
                     calls++
                     var call = p.call
@@ -491,6 +505,12 @@ class AgentLoop(
 
     /** The model's reply as written (already cut after its call); the canonical block if it is empty. */
     private fun rawCall(answer: String, call: ToolCall): String = answer.trim().ifEmpty { call.canonical() }
+
+    /** 2.2.8: the raw output of an unreadable call attempt, in logcat-sized pieces. */
+    private fun logRaw(attempt: Int, error: String, raw: String) {
+        android.util.Log.w(AGENT_TAG, "unreadable call attempt $attempt ($error), raw ${raw.length} chars:")
+        raw.chunked(3000).forEachIndexed { i, c -> android.util.Log.w(AGENT_TAG, "raw[$attempt.$i] $c") }
+    }
 
     private fun publish(s: AgentStep) {
         steps += s; callbacks.onSteps(steps.toList())

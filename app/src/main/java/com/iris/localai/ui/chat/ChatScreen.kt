@@ -470,21 +470,23 @@ fun ChatScreen(
                     .onSizeChanged { topBarHeight = it.height }
                     .statusBarsPadding(),
             ) {
-                Row(
-                    Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.space12),
-                    verticalAlignment = Alignment.CenterVertically,
+                // 2.2.8 (HIG): strict symmetry — identical 42 dp side buttons at the same 16 dp edge
+                // inset, the model pill centred on the screen like a nav title, never closer than
+                // 8 dp to either button.
+                Box(
+                    Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话", size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
-                    Box(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
-                        ModelTitle(
-                            ui.engine,
-                            Modifier
-                                .onGloballyPositioned { pillBounds = it.boundsInRoot() }
-                                // hidden while the morphing surface stands in for it
-                                .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
-                        ) { hideKeyboard(); modelMenu = true }
-                    }
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话", Modifier.align(Alignment.CenterStart), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
+                    ModelTitle(
+                        ui.engine,
+                        Modifier
+                            .padding(horizontal = IrisDimens.topBarControl + IrisDimens.space8)
+                            .onGloballyPositioned { pillBounds = it.boundsInRoot() }
+                            // hidden while the morphing surface stands in for it
+                            .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
+                    ) { hideKeyboard(); modelMenu = true }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.
@@ -762,9 +764,8 @@ private fun engineTag(m: LocalModel): String = when (m.format) {
 
 @Composable
 private fun ModelTitle(engine: EngineState, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val maxW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.6f).dp
     com.iris.localai.ui.components.IrisPill(
-        modifier.widthIn(max = maxW),
+        modifier,
         height = IrisDimens.topBarControl,
         onClick = onClick, onClickLabel = "选择模型",
     ) { ModelPillContent(engine, chevronTurn = 0f) }

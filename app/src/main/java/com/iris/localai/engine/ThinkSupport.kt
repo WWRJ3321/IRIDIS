@@ -11,6 +11,16 @@ import java.io.File
 object ThinkSupport {
     private val MARKERS = listOf("<think>", "enable_thinking", "<|think|>", "<|channel>", "reasoning_content")
 
+    /**
+     * 2.2.8: the templated prompt already opens a reasoning block (`…<think>\n` with no close),
+     * so the model's reply starts mid-thinking and only ever writes `</think>`.
+     */
+    fun promptEndsWithOpenThink(prompt: String?): Boolean {
+        if (prompt.isNullOrEmpty()) return false
+        val open = prompt.lastIndexOf("<think>")
+        return open >= 0 && prompt.indexOf("</think>", open) < 0 && prompt.substring(open + 7).isBlank()
+    }
+
     fun templateThinks(template: String?): Boolean = template != null && MARKERS.any { it in template }
 
     /** Template of [model] (a .gguf file, or a bundle folder with json / jinja files), or null. */

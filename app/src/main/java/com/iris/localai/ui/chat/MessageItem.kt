@@ -156,8 +156,8 @@ fun AssistantMessage(
 ) {
     val c = Iris.colors
     val cache = remember(message.id) { ThinkParseCache() }
-    val parts = remember(message.id, message.content, streaming) {
-        derivedStateOf { if (streaming) cache.parseStreaming(streamText() ?: message.content) else cache.parse(message.content) }
+    val parts = remember(message.id, message.content, streaming, expectThinking) {
+        derivedStateOf { if (streaming) cache.parseStreaming(streamText() ?: message.content, expectThinking) else cache.parse(message.content) }
     }
     // While a thinking reply starts, show the (empty) thinking block right away instead of typing
     // dots that are then swapped for the block: one layout from the first frame, no jump.

@@ -142,12 +142,20 @@ class GenieXEngine(context: Context) : InferenceEngine {
             } + if (visionOk) " · 视觉" else ""
             Log.i(TAG, "loaded ${model.fileName}: $backendLabel ctx=$ctx threads=$threads mmproj=${mmproj != null}")
             onProgress(1f)
+            val thinks = com.iris.localai.engine.ThinkSupport.supports(File(model.path), GenieXSampling::thinkingModel)
+            // 2.2.8: a template that opens <think> itself means the reply streams without the open tag.
+            val prefilled = thinks && runCatching {
+                val probe = vlm?.applyChatTemplate(arrayOf(VlmChatMessage(role = "user", contents = arrayListOf(VlmContent("text", "hi")))), null, true)?.getOrThrow()?.formattedText
+                    ?: llm?.applyChatTemplate(arrayOf(ChatMessage(role = "user", content = "hi")), null, true)?.getOrThrow()?.formattedText
+                com.iris.localai.engine.ThinkSupport.promptEndsWithOpenThink(probe)
+            }.getOrDefault(false)
             ModelDetails(
                 description = model.displayName,
                 parameterCount = 0,
                 contextLength = if (ctx > 0) ctx else config.contextLength,
                 trainContextLength = 0,
-                supportsThinking = com.iris.localai.engine.ThinkSupport.supports(File(model.path), GenieXSampling::thinkingModel),
+                supportsThinking = thinks,
+                thinkingPrefilled = prefilled,
                 supportsVision = visionOk,
                 hasChatTemplate = true,
                 backend = backendLabel,

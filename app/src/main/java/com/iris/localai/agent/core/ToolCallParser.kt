@@ -332,7 +332,91 @@ object ToolCallParser {
     /** `prompt` / `prompt, image?` — the signature from the prompt line, not a value. */
     private val SIGNATURE = Regex("^[A-Za-z_][A-Za-z0-9_]*\\??(\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*\\??)*$")
 
+    /**
+     * 2.2.8: strict reading first; a reply it calls malformed goes through every tolerant reader
+     * ([tolerant]) before the agent loop spends a retry on it.
+     */
     fun parse(reply: String): ParsedReply {
+        val r = parseStrict(reply)
+        if (r !is ParsedReply.Malformed) return r
+        return tolerant(reply)?.let { (call, before) -> ParsedReply.Call(call, before) } ?: r
+    }
+
+    /**
+     * 2.2.8: last-chance readers for a reply the strict parser could not read: fenced / <tool_call>
+     * bodies and the whole text, each tried as (repaired) JSON — single quotes, trailing commas,
+     * Python True/False/None —, `name(k="v")` function calls, `name{…}` / `name k="v"` after a
+     * registered tool name, XML `<function=…>` and GLM `<arg_key>`. Returns the call and the prose before it.
+     */
+    internal fun tolerant(reply: String): Pair<ToolCall, String>? {
+        val text = THINK.replace(reply, "").replace("<think>", "").replace("</think>", "").trim()
+        if (text.isEmpty()) return null
+        val segments = ArrayList<Int>() // start offsets of candidate bodies; the whole text is offset 0
+        FENCE_OPEN.findAll(text).forEach { segments += (it.range.last + 1).coerceAtMost(text.length) }
+        QWEN_OPEN.findAll(text).forEach { segments += it.range.last + 1 }
+        segments += 0
+        for (seg in segments.distinct()) {
+            val body = text.substring(seg).let { b -> b.indexOf("```").let { if (it >= 0 && seg > 0) b.substring(0, it) else b } }
+                .let { b -> QWEN_CLOSE.find(b)?.let { b.substring(0, it.range.first) } ?: b }
+            readAny(body)?.let { (call, at) -> return call to text.substring(0, fenceStart(text, seg + at)).trim() }
+        }
+        return null
+    }
+
+    /** Where the prose before a call at [at] ends: before an opening fence / <tool_call> right above it. */
+    private fun fenceStart(text: String, at: Int): Int {
+        val head = text.substring(0, at)
+        val cut = maxOf(head.lastIndexOf("```"), QWEN_OPEN.findAll(head).lastOrNull()?.range?.first ?: -1)
+        return if (cut >= 0 && head.substring(cut).replace(Regex("(?i)```[A-Za-z_]*|<tool_call>"), "").isBlank()) cut else at
+    }
+
+    private fun readAny(body: String): Pair<ToolCall, Int>? {
+        val names = known()
+        // JSON-ish objects, first readable one wins (`name{…}` after a tool name is read below).
+        var i = body.indexOf('{')
+        while (i >= 0) {
+            val pre = body.substring(0, i).trimEnd().trimEnd('"', '\'', ':', '`')
+            val obj = if (names.any { pre.endsWith(it) && TOOL_NAME.matches(it) }) null else JsonRepair.parse(JsonRepair.extractObject(body, i), json) as? JsonObject
+            if (obj != null) {
+                val nameRaw = NAME_KEYS.firstNotNullOfOrNull { (obj[it] as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }?.trim()?.lowercase()
+                if (nameRaw == null || nameRaw !in ROLE_NAMES) (toCall(obj, CallFormat.PLAIN_JSON) as? Result.Ok)?.let { return it.call to i }
+            }
+            i = body.indexOf('{', i + 1)
+        }
+        // name(k="v") to a registered tool.
+        Regex("([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*\\(").findAll(body).forEach { m ->
+            if (m.groupValues[1] !in names) return@forEach
+            val open = m.range.last
+            val end = closeParen(body, open)
+            val src = body.substring(m.range.first, end) + if (end >= body.length || body[end - 1] != ')') ")" else ""
+            pyCall(src, CallFormat.PLAIN_JSON)?.let { return it to m.range.first }
+        }
+        if (body.contains("<function=", ignoreCase = true)) {
+            val x = body.indexOf("<function=", ignoreCase = true)
+            xmlCall(body.substring(x))?.let { return it to x }
+        }
+        glmStart(body)?.let { (start, _) -> glmCall(body.substring(start))?.let { return it to start } }
+        knownToolCall(body)?.let { return it }
+        return null
+    }
+
+    /** Index just past the `)` closing the `(` at [open] (quotes respected), or the text's end. */
+    private fun closeParen(s: String, open: Int): Int {
+        var depth = 0; var q: Char? = null; var i = open
+        while (i < s.length) {
+            val c = s[i]
+            if (q != null) { if (c == '\\') i++ else if (c == q) q = null }
+            else when (c) {
+                '"', '\'' -> q = c
+                '(', '[', '{' -> depth++
+                ')', ']', '}' -> { depth--; if (depth == 0) return i + 1 }
+            }
+            i++
+        }
+        return s.length
+    }
+
+    private fun parseStrict(reply: String): ParsedReply {
         val text = THINK.replace(reply, "").trim()
 
         // 1) Qwen tag (trained format of Agents-A1 / Qwen3): first <tool_call> wins.
