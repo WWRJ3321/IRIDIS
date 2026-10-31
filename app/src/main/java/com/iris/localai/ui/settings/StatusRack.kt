@@ -1,5 +1,6 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -131,7 +132,7 @@ object RackRules {
         .takeIf { it >= 0 } ?: mods.indexOfFirst { it.state == RackState.RUN || it.state == RackState.LOAD }
 }
 
-private val Orange = Color(0xFFFF8A3D)
+private val Orange = com.iris.localai.ui.theme.IrisChartColors.orange
 private const val C30 = 0.8660254f
 private const val S30 = 0.5f
 
@@ -350,19 +351,19 @@ fun StatusRack(
                     .background(bg)
                     .clickable(onClickLabel = "打开${m.name}设置") { picked = i; onOpen?.invoke(i) }
                     .heightIn(min = 48.dp)
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space6),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 Box(Modifier.size(10.dp).graphicsLayer { val sc = if (breathe) 0.8f + 0.4f * blinkState.value else 1f; scaleX = sc; scaleY = sc }.clip(CircleShape).background(dot))
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(IrisDimens.space12))
                 androidx.compose.material3.Icon(RACK_ICONS.getOrElse(i) { com.iris.localai.ui.icons.IrisIcons.Chip }, null,
-                    tint = if (m.state.up) c.text else c.textTertiary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
+                    tint = if (m.state.up) c.text else c.textTertiary, modifier = Modifier.size(IrisDimens.space20))
+                Spacer(Modifier.width(IrisDimens.space12))
                 Column(Modifier.weight(1f)) {
                     Text(m.name, style = IrisType.row, color = c.text, maxLines = 1)
                     Text(m.detail, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
                 androidx.compose.animation.AnimatedContent(m.state.label, transitionSpec = { IrisMotion.roll(true) }, label = "rackLabel") { t ->
                     Text(t, style = IrisType.caption, color = stateColor)
                 }
@@ -377,7 +378,7 @@ fun StatusRack(
                     .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
                     .clickable(onClickLabel = if (showAll) "收起" else "展开") { showAll = !showAll }
                     .heightIn(min = 40.dp)
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
+                    .padding(horizontal = IrisDimens.space16, vertical = 11.dp),
             )
         }
     }

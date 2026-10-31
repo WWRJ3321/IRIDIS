@@ -1,5 +1,6 @@
 package com.iris.localai.ui.glass
 
+import com.iris.localai.ui.theme.IrisDimens
 import android.os.Build
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
@@ -22,7 +23,7 @@ import androidx.compose.ui.window.DialogWindowProvider
  * the blur only when the windows behind change, so it costs nothing while idle.
  */
 @Composable
-fun DialogWindowBlur(quality: GlassQuality, radius: Dp = 24.dp, dimWhileBlurred: Float = 0.18f) {
+fun DialogWindowBlur(quality: GlassQuality, radius: Dp = IrisDimens.space24, dimWhileBlurred: Float = 0.18f) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     val view = LocalView.current
     val px = with(LocalDensity.current) { radius.roundToPx() }

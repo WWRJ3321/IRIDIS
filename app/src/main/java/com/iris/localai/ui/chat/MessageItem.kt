@@ -96,14 +96,14 @@ fun UserMessage(
       Column(horizontalAlignment = Alignment.End) {
         // 1.10.12: attached pictures / files above the bubble.
         if (message.attachments.isNotEmpty()) {
-            AttachmentStrip(message.attachments, modifier = Modifier.padding(bottom = if (message.content.isNotBlank()) 6.dp else 0.dp))
+            AttachmentStrip(message.attachments, modifier = Modifier.padding(bottom = if (message.content.isNotBlank()) IrisDimens.space6 else 0.dp))
         }
         // 2.2 「技能」: the skills / tools this message pointed the agent at.
         if (message.refs.isNotEmpty()) {
             Text(
                 message.refs.joinToString("  ") { it.token },
                 style = IrisType.labelSmall, color = c.accent, maxLines = 2,
-                modifier = Modifier.padding(end = 4.dp, bottom = 4.dp),
+                modifier = Modifier.padding(end = IrisDimens.space4, bottom = IrisDimens.space4),
             )
         }
         if (message.content.isNotBlank()) Box(
@@ -113,7 +113,7 @@ fun UserMessage(
                 .combinedClickable(onClick = {}, onLongClick = {
                     haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LONG_PRESS); menu = true
                 })
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = IrisDimens.space16, vertical = 10.dp),
         ) {
             Text(message.content, style = IrisType.message, color = c.text)
         }
@@ -199,8 +199,8 @@ fun AssistantMessage(
             streaming && !hasThinking -> TypingDots()
         }
         message.error?.let { err ->
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Outlined.ErrorOutline, null, tint = c.danger, modifier = Modifier.padding(top = 2.dp).size(18.dp))
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                Icon(Icons.Outlined.ErrorOutline, null, tint = c.danger, modifier = Modifier.padding(top = IrisDimens.space2).size(18.dp))
                 Text(err, style = IrisType.secondary, color = c.danger)
             }
         }
@@ -324,7 +324,7 @@ private fun ActionRow(
         PressableIcon(
             if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) "已复制" else "复制",
             size = 40.dp, iconSize = iconSize, tint = c.textSecondary, haptic = true,
-            modifier = Modifier.padding(end = 2.dp),
+            modifier = Modifier.padding(end = IrisDimens.space2),
         ) { clipboard.setText(AnnotatedString(answer)); copied = true }
         if (isLast) {
             PressableIcon(Icons.Outlined.Refresh, "重新生成", size = 40.dp, iconSize = iconSize, tint = c.textSecondary, onClick = onRegenerate)
@@ -372,11 +372,11 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
                 .heightIn(min = 36.dp)
                 .clip(IrisRadius.smallShape)
                 .clickable { expanded = !expanded }
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = IrisDimens.space6),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
-            Icon(com.iris.localai.ui.icons.IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + 2.dp))
+            Icon(com.iris.localai.ui.icons.IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + IrisDimens.space2))
             Text(
                 when {
                     thinking -> "思考中…"
@@ -399,9 +399,9 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
             enter = if (reduce) fadeIn(snap()) else fadeIn(IrisMotion.enter()) + expandVertically(IrisMotion.enter()),
             exit = if (reduce) fadeOut(snap()) else fadeOut(IrisMotion.standard()) + shrinkVertically(IrisMotion.standard()),
         ) {
-            Row(Modifier.padding(start = 6.dp, top = 4.dp).height(IntrinsicSize.Min)) {
-                Box(Modifier.width(2.dp).fillMaxHeight().clip(IrisRadius.pillShape).background(c.outline))
-                ThinkingParagraphs(text, animate = streaming && thinking, modifier = Modifier.padding(start = 12.dp))
+            Row(Modifier.padding(start = IrisDimens.space6, top = IrisDimens.space4).height(IntrinsicSize.Min)) {
+                Box(Modifier.width(IrisDimens.space2).fillMaxHeight().clip(IrisRadius.pillShape).background(c.outline))
+                ThinkingParagraphs(text, animate = streaming && thinking, modifier = Modifier.padding(start = IrisDimens.space12))
             }
         }
     }
@@ -419,7 +419,7 @@ private fun ThinkingParagraphs(text: () -> String, animate: Boolean, modifier: M
     val paragraphs = remember(shown) { splitter.split(shown) }
     val style = IrisType.secondary.copy(lineHeight = IrisType.message.lineHeight.times(0.88f))
     val lineMin = with(androidx.compose.ui.platform.LocalDensity.current) { style.lineHeight.toDp() }
-    Column(modifier.heightIn(min = if (animate) lineMin else 0.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.heightIn(min = if (animate) lineMin else 0.dp), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
         paragraphs.forEachIndexed { i, p ->
             androidx.compose.runtime.key(i) { Text(p, style = style, color = c.textSecondary) }
         }
@@ -475,14 +475,14 @@ fun VersionSwitcher(message: ChatMessage, onSwitch: (Int) -> Unit, modifier: Mod
     if (n < 2) return
     val i = com.iris.localai.data.MessageVersions.active(message)
     val c = Iris.colors
-    Row(modifier.height(32.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.height(IrisDimens.space32), verticalAlignment = Alignment.CenterVertically) {
         PressableIcon(
-            com.iris.localai.ui.icons.IrisIcons.ChevronLeft, VersionText.PREV, size = 32.dp, iconSize = 16.dp,
+            com.iris.localai.ui.icons.IrisIcons.ChevronLeft, VersionText.PREV, size = IrisDimens.space32, iconSize = IrisDimens.space16,
             tint = c.textSecondary, enabled = i > 0, haptic = true,
         ) { onSwitch(i - 1) }
         Text(VersionText.label(i, n), style = IrisType.caption, color = c.textSecondary, maxLines = 1)
         PressableIcon(
-            com.iris.localai.ui.icons.IrisIcons.ChevronRight, VersionText.NEXT, size = 32.dp, iconSize = 16.dp,
+            com.iris.localai.ui.icons.IrisIcons.ChevronRight, VersionText.NEXT, size = IrisDimens.space32, iconSize = IrisDimens.space16,
             tint = c.textSecondary, enabled = i < n - 1, haptic = true,
         ) { onSwitch(i + 1) }
     }

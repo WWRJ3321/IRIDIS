@@ -87,12 +87,12 @@ fun BrowserPage(onBack: () -> Unit) {
             browser.layoutOffscreen(web)
         }
     }
-    SubpageScaffold("浏览器", onBack, actions = {
+    SubpageScaffold("浏览器", onBack, scrollUnder = false, actions = {
         PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, "后退", enabled = web.canGoBack()) { web.goBack() }
         PressableIcon(Icons.Outlined.Refresh, "刷新") { web.reload() }
     }) {
         Column(Modifier.fillMaxSize().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space12, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     url, { url = it },
                     modifier = Modifier.weight(1f),
@@ -105,14 +105,14 @@ fun BrowserPage(onBack: () -> Unit) {
                     keyboardActions = KeyboardActions(onGo = { web.loadUrl(com.iris.localai.agent.BrowserText.normalizeUrl(url)) }),
                 )
             }
-            if (st.loading) com.iris.localai.ui.components.IrisProgressBar(progress = null, height = 2.dp, track = c.outline.copy(alpha = 0.4f))
+            if (st.loading) com.iris.localai.ui.components.IrisProgressBar(progress = null, height = IrisDimens.space2, track = c.outline.copy(alpha = 0.4f))
             Box(Modifier.weight(1f).fillMaxWidth().clip(IrisRadius.mediumShape).background(c.surface)) {
                 AndroidView(factory = {
                     (web.parent as? android.view.ViewGroup)?.removeView(web)
                     web
                 }, modifier = Modifier.fillMaxSize())
             }
-            GroupFootnote(ToolPageText.BROWSER_NOTE, modifier = Modifier.padding(bottom = 8.dp))
+            GroupFootnote(ToolPageText.BROWSER_NOTE, modifier = Modifier.padding(bottom = IrisDimens.space8))
         }
     }
 }

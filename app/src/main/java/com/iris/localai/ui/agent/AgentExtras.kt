@@ -67,7 +67,7 @@ fun AgentExtraSections() {
     // ---- 联网搜索 ----
     SectionTitle("联网搜索")
     SettingsGroup {
-        Column(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+        Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space6)) {
             SettingsRow("搜索服务", subtitle = s.search.label)
             // 2.0.0: six services no longer fit a segmented control: one check row each.
             SearchProvider.entries.forEach { p ->
@@ -80,7 +80,7 @@ fun AgentExtraSections() {
                 var url by remember(s.searxUrl) { mutableStateOf(s.searxUrl) }
                 OutlinedTextField(
                     url, { url = it; agent.settings.update { st -> st.copy(searxUrl = it.trim()) } },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8),
                     singleLine = true, label = { Text("SearXNG 地址，如 https://searx.example.org") },
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
                 )

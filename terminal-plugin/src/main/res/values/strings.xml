@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">IRIDIS 终端</string>
-    <string name="perm_label">在 IRIDIS 终端里运行命令</string>
-    <string name="perm_desc">允许同一签名的 IRIDIS 在终端插件的 Alpine Linux 中运行命令。</string>
-</resources>

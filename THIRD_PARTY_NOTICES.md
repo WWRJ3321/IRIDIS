@@ -18,16 +18,6 @@
 | Apache Commons IO / Lang3 / Codec（Commons Compress 的传递依赖） | 2.16.1 / 3.16.0 / 1.17.1 | Apache-2.0 | 同上 |
 | LiteRT Dispatch (Qualcomm) | assets/npu/libLiteRtDispatch_Qualcomm.so（full 版），取自 Google AI Edge Gallery 1.0.20 随附的预编译库，与本项目使用的 litertlm-android 0.18.0 配套，运行时搭配 QNN/QAIRT 2.50.0（见下表，从 Maven Central 下载） | Apache-2.0（Google，源码公开） | 附许可证；注明来源版本 |
 
-## 随 APK 打包的预编译程序（1.12.0，内置 Linux）
-| 组件 | 版本 | 许可证 | 源码 |
-|---|---|---|---|
-| PRoot（Termux 版，`libproot.so` / `libproot-loader.so`） | 5.1.107.96 | GPL-2.0-or-later | https://github.com/termux/proot |
-| talloc（`libtalloc.so`） | 2.5.0 | LGPL-3.0-or-later | https://www.samba.org/ftp/talloc/ |
-| libandroid-shmem（`libandroid-shmem.so`） | 0.7 | BSD-3-Clause | https://github.com/termux/libandroid-shmem |
-
-取自 Termux 官方软件源（packages.termux.dev，aarch64），仅用 patchelf 改了依赖库名（libtalloc.so.2 → libtalloc.so）并去掉 RUNPATH，没有修改代码。按 GPL-2.0 / LGPL-3.0，可在上面的地址取得对应源码；GPL-2.0、LGPL-3.0（及其引用的 GPL-3.0）全文见 assets/licenses/。这些程序作为独立可执行文件/库运行，不改变 IRIDIS 自身代码的 Apache-2.0 授权。
-Alpine Linux minirootfs 不随 APK 分发：用户点「安装」后从 dl-cdn.alpinelinux.org 下载并校验 SHA-256；其中的软件包各自遵循自己的许可证。
-
 ## 闭源组件（不随源码/APK 分发，运行时下载）
 | 组件 | 来源 | 许可证 | 义务 / 风险 |
 |---|---|---|---|

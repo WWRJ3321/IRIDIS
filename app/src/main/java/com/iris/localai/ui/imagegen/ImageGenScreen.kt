@@ -102,13 +102,13 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     }
     val pickRef = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::pickReference) }
 
-    SubpageScaffold(ImageGenText.TITLE, onBack) {
+    SubpageScaffold(ImageGenText.TITLE, onBack, scrollUnder = false) {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(104.dp),
             modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
             contentPadding = PaddingValues(bottom = IrisDimens.space32),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
+            verticalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
             full { SectionTitle("模型") }
             full {
@@ -161,9 +161,9 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     val fixed = s.model.fixedSize
                     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
                         Text("尺寸", style = IrisType.row, color = Iris.colors.text)
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(IrisDimens.space6))
                         if (fixed != null) Text("$fixed × $fixed（${ImageGenText.FIXED_SIZE}）", style = IrisType.secondary, color = Iris.colors.textSecondary)
-                        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                             for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
                         }
                     }
@@ -177,7 +177,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space12)) {
                     if (s.running) {
                         IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(IrisDimens.space6))
                         Text("第 ${s.step}/${s.total} 步", style = IrisType.caption, color = Iris.colors.textSecondary)
                         Spacer(Modifier.height(IrisDimens.space8))
                         IrisButton(ImageGenText.CANCEL, onClick = vm::cancel, modifier = Modifier.fillMaxWidth(), style = IrisButtonStyle.Tonal, icon = IrisIcons.Stop)
@@ -206,7 +206,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             })
                             IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onSendToChat(path) })
                         }
-                        Text(ImageGenFiles.IMAGES_SUB + "/" + File(path).name, style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = 6.dp))
+                        Text(ImageGenFiles.IMAGES_SUB + "/" + File(path).name, style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space6))
                     }
                 }
             }
@@ -214,7 +214,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             if (s.history.isNotEmpty()) {
                 full { SectionTitle(ImageGenText.HISTORY) }
                 items(s.history, key = { it }) { p ->
-                    Thumb(p, Modifier.padding(horizontal = 2.dp).aspectRatio(1f).clickable { vm.showResult(p) })
+                    Thumb(p, Modifier.padding(horizontal = IrisDimens.space2).aspectRatio(1f).clickable { vm.showResult(p) })
                 }
             }
 
@@ -230,7 +230,7 @@ private fun LazyGridScope.full(content: @Composable () -> Unit) = item(span = { 
 private fun Field(value: String, label: String, minLines: Int = 1, number: Boolean = false, onChange: (String) -> Unit) {
     OutlinedTextField(
         value, onChange,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space6),
         label = { Text(label) }, minLines = minLines, singleLine = minLines == 1,
         keyboardOptions = if (number) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
         shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
@@ -244,7 +244,7 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
         Modifier.clip(IrisRadius.pillShape)
             .background(if (selected) c.accentContainer else c.surfaceVariant)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
     ) { Text(text, style = IrisType.labelSmall, color = if (selected) c.onAccentContainer else c.textSecondary) }
 }
 
@@ -263,14 +263,14 @@ private fun ModelChip(
             .background(if (selected) c.accentContainer else c.surfaceElevated)
             .border(1.dp, if (selected) c.onAccentContainer.copy(alpha = 0.25f) else c.outline, IrisRadius.largeShape)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(12.dp),
+            .padding(IrisDimens.space12),
     ) {
         val fg = if (selected) c.onAccentContainer else c.text
         Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha))
         Text(m.name, style = IrisType.labelSmall, color = fg.copy(alpha = alpha), maxLines = 2)
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(IrisDimens.space4))
         Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: "大小待定", style = IrisType.caption, color = c.textSecondary.copy(alpha = alpha))
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(IrisDimens.space4))
         if (!enabled) {
             Text("「${SelfCheck.HEXAGON_PENDING}」", style = IrisType.caption, color = c.textTertiary)
         } else when (dl) {
@@ -278,7 +278,7 @@ private fun ModelChip(
                 val frac = if (dl is ImageDl.Downloading) dl.fraction else (dl as ImageDl.Extracting).fraction
                 val label = if (dl is ImageDl.Downloading) "${Format.bytes(dl.done)} / ${Format.bytes(dl.total)}"
                     else "${ImageGenText.EXTRACTING} ${(frac * 100).toInt()}%"
-                IrisProgressBar(frac, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                IrisProgressBar(frac, Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(label, style = IrisType.caption, color = c.textSecondary, modifier = Modifier.weight(1f), maxLines = 1)
                     IrisButton(ImageGenText.CANCEL, onClick = onCancel, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Close)

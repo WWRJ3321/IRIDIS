@@ -95,9 +95,9 @@ fun WelcomeScreen(onStart: () -> Unit) {
                 )
                 Spacer(Modifier.height(IrisDimens.space20))
                 // D9 wordmark: letters follow the theme ink, the three I's keep the brand gradient.
-                Box(Modifier.height(32.dp).entrance(enter[1]), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(32.dp).width(165.dp))
-                    Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(32.dp).width(165.dp))
+                Box(Modifier.height(IrisDimens.space32).entrance(enter[1]), contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(IrisDimens.space32).width(165.dp))
+                    Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(IrisDimens.space32).width(165.dp))
                 }
                 Spacer(Modifier.height(IrisDimens.space12))
                 Text(
@@ -164,5 +164,5 @@ private fun rememberStaggeredEntrance(count: Int): List<Animatable<Float, Animat
 private fun Modifier.entrance(p: Animatable<Float, AnimationVector1D>): Modifier = graphicsLayer {
     val v = p.value
     alpha = v.coerceIn(0f, 1f)
-    translationY = (1f - v) * 16.dp.toPx()
+    translationY = (1f - v) * IrisDimens.space16.toPx()
 }

@@ -456,7 +456,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     index = s.resourceTier.coerceIn(0, com.iris.localai.engine.ResourceTier.entries.lastIndex),
                     onChange = { m -> vm.update { it.copy(resourceTier = m) } },
                     status = com.iris.localai.engine.LiveResourcePolicy.statusText(tierApply),
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space12, bottom = 10.dp),
                 )
                 // 2.1.3: 资源档配置 moved to 关于 IRIDIS › 开发者选项.
             }
@@ -562,7 +562,7 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
                     Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(26.dp).width(134.dp))
                     androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(26.dp).width(134.dp))
                 }
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(IrisDimens.space2))
                 Text("版本 ${BuildConfig.VERSION_NAME}", style = IrisType.caption, color = c.textTertiary)
                 Spacer(Modifier.height(IrisDimens.space16))
                 Text(
@@ -751,7 +751,7 @@ private fun BenchmarkDialog(vm: SettingsViewModel) {
                     if (st.done == 0) "预热中" else "测试中 ${st.done}/${st.total}（请保持在本页面）",
                     style = IrisType.secondary, color = c.textSecondary,
                 )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(IrisDimens.space6))
                 TypingDots()
             }
             is SettingsViewModel.Bench.Failed -> Text("测试失败：${st.message}", style = IrisType.secondary, color = c.textSecondary)
@@ -765,7 +765,7 @@ private fun BenchmarkDialog(vm: SettingsViewModel) {
                     val highlight = best != null && r.threads == best.threads
                     val color = if (highlight) c.text else c.textSecondary
                     val style = if (highlight) IrisType.label else IrisType.secondary
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space6)) {
                         Text(if (r.threads == 0) "—" else "${r.threads}", Modifier.weight(1f), style = style, color = color)
                         Text(f1(r.prefillTps), Modifier.weight(1f), style = style, color = color)
                         Text(f1(r.decodeTps), Modifier.weight(1f), style = style, color = color)
@@ -833,7 +833,7 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
     val modules = RackRules.modules(input)
     com.iris.localai.ui.components.SettingsGroup {
         StatusRack(modules, generating = live.generating, modelReady = engine is com.iris.localai.engine.EngineState.Ready,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = IrisDimens.space8),
             onOpen = { i -> onOpen(RACK_PAGES.getOrElse(i) { SettingsPage.AGENT }) })
     }
 }

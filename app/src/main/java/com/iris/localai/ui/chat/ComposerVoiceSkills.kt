@@ -191,7 +191,7 @@ internal fun VoiceCapsuleButton(
                         topLeft = Offset(-grow, -grow),
                         size = Size(size.width + 2 * grow, size.height + 2 * grow),
                         cornerRadius = CornerRadius(size.height / 2 + grow),
-                        style = Stroke(2.dp.toPx()),
+                        style = Stroke(IrisDimens.space2.toPx()),
                     )
                 }
             }
@@ -308,7 +308,7 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
     val c = Iris.colors
     Row(
         modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         refs.forEach { r ->
@@ -321,7 +321,7 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(if (r.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.onAccentContainer, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(IrisDimens.space4))
                 Text(r.token, style = IrisType.labelSmall, color = c.onAccentContainer, maxLines = 1)
                 Box(
                     Modifier
@@ -330,7 +330,7 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
                         .semantics { contentDescription = ComposerText.removeRef(r.name) }
                         .clickable { onRemove(r) },
                     contentAlignment = Alignment.Center,
-                ) { Icon(IrisIcons.Close, null, tint = c.onAccentContainer, modifier = Modifier.size(12.dp)) }
+                ) { Icon(IrisIcons.Close, null, tint = c.onAccentContainer, modifier = Modifier.size(IrisDimens.space12)) }
             }
         }
     }
@@ -347,15 +347,15 @@ internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, on
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = IrisDimens.pageGutter, vertical = 4.dp)
+                    .padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4)
                     .height(40.dp)
                     .clip(IrisRadius.pillShape)
                     .background(c.surfaceVariant)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = IrisDimens.space12),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(IrisIcons.Search, null, tint = c.textTertiary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
                 Box(Modifier.weight(1f)) {
                     if (query.isEmpty()) Text(ComposerText.SKILL_SEARCH, style = IrisType.body, color = c.textTertiary)
                     BasicTextField(query, { query = it }, singleLine = true, textStyle = IrisType.body.copy(color = c.text), cursorBrush = SolidColor(c.text), modifier = Modifier.fillMaxWidth())
@@ -364,7 +364,7 @@ internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, on
         }
         val shown = catalog.filter(query)
         if (catalog.isEmpty) {
-            Text(ComposerText.SKILLS_EMPTY, style = IrisType.body, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = 24.dp))
+            Text(ComposerText.SKILLS_EMPTY, style = IrisType.body, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space24))
         } else {
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
                 item { SectionLabel(ComposerText.SECTION_SKILLS) }
@@ -382,11 +382,11 @@ internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, on
 
 @Composable
 private fun SectionLabel(text: String) =
-    Text(text, style = IrisType.labelSmall, color = Iris.colors.textTertiary, modifier = Modifier.padding(start = IrisDimens.pageGutter, top = 12.dp, bottom = 4.dp))
+    Text(text, style = IrisType.labelSmall, color = Iris.colors.textTertiary, modifier = Modifier.padding(start = IrisDimens.pageGutter, top = IrisDimens.space12, bottom = IrisDimens.space4))
 
 @Composable
 private fun EmptyLine(text: String) =
-    Text(text, style = IrisType.body, color = Iris.colors.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = 8.dp))
+    Text(text, style = IrisType.body, color = Iris.colors.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space8))
 
 @Composable
 private fun RefRow(item: RefItem, onClick: () -> Unit) {
@@ -395,8 +395,8 @@ private fun RefRow(item: RefItem, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = IrisDimens.pageGutter, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(if (item.ref.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.textSecondary, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
+        Icon(if (item.ref.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.space20))
+        Spacer(Modifier.width(IrisDimens.space12))
         Column(Modifier.weight(1f)) {
             Text(item.title, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (item.subtitle.isNotBlank()) Text(item.subtitle, style = IrisType.labelSmall, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)

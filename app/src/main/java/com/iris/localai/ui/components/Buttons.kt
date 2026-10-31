@@ -150,9 +150,9 @@ fun IrisButton(
     val fg by animateColorAsState(fgTarget.copy(alpha = alpha), motionSpec(IrisMotion.Color), label = "btnFg")
     val height = if (compact) 36.dp else IrisDimens.touchTarget
     val hPad = when {
-        style == IrisButtonStyle.Text -> 12.dp
+        style == IrisButtonStyle.Text -> IrisDimens.space12
         compact -> 14.dp
-        else -> 20.dp
+        else -> IrisDimens.space20
     }
     Row(
         modifier
@@ -173,7 +173,7 @@ fun IrisButton(
             )
             .padding(horizontal = hPad),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(18.dp))
         AnimatedContent(text, transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "btnText") { t ->
@@ -215,9 +215,9 @@ fun ToggleChip(
             .drawBehind { if (bg.alpha > 0f) drawRect(bg) }
             .border(1.dp, border, shape)
             .clickable(enabled = enabled, role = Role.Switch, interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = IrisDimens.space12),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
     ) {
         Icon(icon, null, tint = fg.copy(alpha = a), modifier = Modifier.size(IrisDimens.iconSmall).graphicsLayer { scaleX = hop.value; scaleY = hop.value })
         AnimatedContent(text, transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "chipText") { t ->
@@ -238,7 +238,7 @@ fun SuggestionChip(text: String, modifier: Modifier = Modifier, onClick: () -> U
             .clip(IrisRadius.largeShape)
             .border(IrisDimens.hairline + 0.25.dp, c.outline, IrisRadius.largeShape)
             .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 9.dp),
+            .padding(horizontal = IrisDimens.space16, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, style = IrisType.secondary, color = c.textSecondary)
@@ -276,7 +276,7 @@ fun SegmentedControl(
             .height(44.dp)
             .clip(IrisRadius.pillShape)
             .background(c.surfaceVariant)
-            .padding(4.dp)
+            .padding(IrisDimens.space4)
             .pointerInput(n) {
                 var lastIdx = -1
                 val tracker = VelocityTracker()
@@ -342,7 +342,7 @@ fun SegmentedControl(
                         color = color,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                        modifier = Modifier.padding(horizontal = IrisDimens.space4),
                     )
                 }
             }
@@ -408,7 +408,7 @@ fun IrisRadio(selected: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier.size(48.dp).drawBehind {
             val r = 10.dp.toPx()
-            drawCircle(ring, r, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            drawCircle(ring, r, style = androidx.compose.ui.graphics.drawscope.Stroke(IrisDimens.space2.toPx()))
             val inner = 5.dp.toPx() * p.value
             if (inner > 0.1f) drawCircle(c.accent, inner)
         },

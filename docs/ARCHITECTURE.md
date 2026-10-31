@@ -5,7 +5,6 @@ IRIDIS/
 ├── app/
 │   ├── src/main/
 │   │   ├── cpp/                    原生层（C++17）：llama.cpp 引擎、MNN 引擎、JNI
-│   │   ├── jniLibs/arm64-v8a/      预编译原生程序：proot、loader、talloc、android-shmem（内置 Linux）
 │   │   ├── assets/                 Silero VAD、语音清单、NPU 调度库、内置技能 skills/
 │   │   └── java/com/iris/localai/
 │   │       ├── IrisApp.kt          AppContainer：所有单例在此创建（手动依赖注入）
@@ -18,7 +17,6 @@ IRIDIS/
 │   │       ├── agent/              智能体（L2–L5）
 │   │       │   ├── core/           循环 AgentLoop、调用解析、设置与权限、命令前缀规则
 │   │       │   ├── tools/          工具注册表与分组 + 文件 / 计算器 / 记忆 / 手机 / 定时 / 技能
-│   │       │   ├── shell/          run_command 与三个后端：内置 sh、Alpine（PRoot）、Termux
 │   │       │   ├── web/            联网搜索（必应 / DuckDuckGo / SearXNG）、网页读取、WebView 浏览器
 │   │       │   └── workspace/      工作区沙箱、撤销、SAF、位置、Download/IRIDIS 目录布局与迁移（StorageLayout）
 │   │       ├── context/            零模型压缩、上下文拼装

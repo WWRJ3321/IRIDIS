@@ -34,8 +34,8 @@ object IrisDimens {
     /** Inner horizontal padding of rows inside a group (1.8.0: 16 → 20, HyperOS). */
     val rowPadding = 20.dp
     /** Vertical padding of a row (1.8.0: 12 → 15, generous HyperOS rows). */
-    val rowVerticalPadding = 15.dp
-    val rowMinHeight = 60.dp
+    val rowVerticalPadding = 13.dp
+    val rowMinHeight = 56.dp
     /** Minimum accessible touch target. */
     val touchTarget = 48.dp
 
@@ -44,6 +44,9 @@ object IrisDimens {
     val iconLarge = 22.dp
 
     val topBarHeight = 56.dp
+    /** 2.2.4: floating circular top-bar buttons and the chat model pill. */
+    val floatingButton = 44.dp
+    val floatingButtonSmall = 40.dp
     /** Height reserved for the large page title under the top bar (HyperOS / iOS large title). */
     val largeTitleHeight = 64.dp
     val drawerWidth = 304.dp
@@ -63,8 +66,8 @@ object IrisRadius {
 
     val small = 12.dp
     val medium = 16.dp
-    /** Grouped settings cards (HyperOS ≈ 24 dp). */
-    val large = 24.dp
+    /** 2.2.4: cards, grouped settings and floating menus (Kimi-like 20 dp; was 24). */
+    val large = 20.dp
     val bubble = 22.dp
     val composer = 28.dp
     val sheet = 30.dp
@@ -77,8 +80,34 @@ object IrisRadius {
     val composerShape = smoothShape(composer)
     val dialogShape = smoothShape(dialog)
     val pillShape = RoundedCornerShape(50)
+    /** 2.2.4: alias of the radius scale 12 / 16 / 20 / full. */
+    val full = pillShape
     /** 1.10.10: About-page app icon (iOS icon ratio ≈ 22% of 72 dp). */
     val appIconShape = smoothShape(16.dp)
+}
+
+/**
+ * 2.2.4: elevation scale for the soft, low-contrast shadows of floating surfaces (top-bar buttons,
+ * cards, menus). Use [com.iris.localai.ui.theme.softShadow] rather than raw `shadow(...)`.
+ */
+object IrisElevation {
+    val none = 0.dp
+    /** Cards resting on the page. */
+    val card = 3.dp
+    /** Floating top-bar buttons and pills. */
+    val floating = 6.dp
+    /** Menus and popovers. */
+    val menu = 12.dp
+}
+
+/** 2.2.4: fixed category colours for charts (storage breakdown etc.), the same in light and dark. */
+object IrisChartColors {
+    val violet = androidx.compose.ui.graphics.Color(0xFF8E7CF0)
+    val teal = androidx.compose.ui.graphics.Color(0xFF30B0C7)
+    val green = androidx.compose.ui.graphics.Color(0xFF5AC17A)
+    val coral = androidx.compose.ui.graphics.Color(0xFFEF7C74)
+    val grey = androidx.compose.ui.graphics.Color(0xFF9AA3AE)
+    val orange = androidx.compose.ui.graphics.Color(0xFFFF8A3D)
 }
 
 /**
@@ -98,7 +127,7 @@ object IrisType {
     /** Chat message text. */
     val message = TextStyle(fontSize = 16.sp, lineHeight = 25.sp)
     /** Primary text of a list row (HyperOS ≈ 17 sp). */
-    val row = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.Medium)
+    val row = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
     /** Summary line under a row title (HyperOS ≈ 14 sp, grey). */
     val rowSummary = TextStyle(fontSize = 14.sp, lineHeight = 19.sp)
     /** Emphasised list text (model names, drawer). */
@@ -115,6 +144,12 @@ object IrisType {
     /** Subtitles under row titles, meta lines. */
     val caption = TextStyle(fontSize = 12.sp, lineHeight = 17.sp)
     val micro = TextStyle(fontSize = 11.sp, lineHeight = 14.sp)
+    /** 2.2.4: chat model pill — bold model name and the small engine/status line under it. */
+    val pillTitle = TextStyle(fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold)
+    val pillCaption = TextStyle(fontSize = 11.sp, lineHeight = 13.sp)
+    /** 2.2.4: compact menu rows (model menu). */
+    val menuItem = TextStyle(fontSize = 14.sp, lineHeight = 19.sp)
+    val menuItemSelected = TextStyle(fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
     /** 1.10.10: voice-mode spoken reply. */
     val voiceReply = TextStyle(fontSize = 19.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium)
     /** 1.10.10: Markdown inside replies — same body metrics as [message], so streaming plain text

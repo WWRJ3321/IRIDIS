@@ -1,5 +1,6 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.ui.theme.IrisDimens
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,7 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -131,9 +132,9 @@ fun TierSlider(
     }
 
     Column(modifier) {
-        Row(Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Bolt, null, tint = c.textSecondary, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
+        Row(Modifier.fillMaxWidth().height(IrisDimens.space24), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Bolt, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.space16))
+            Spacer(Modifier.width(IrisDimens.space6))
             AnimatedContent(
                 targetState = cur,
                 transitionSpec = { if (reduce) IrisMotion.none else IrisMotion.crossfade() },
@@ -154,7 +155,7 @@ fun TierSlider(
                 Text(s, style = IrisType.labelSmall, color = c.textTertiary, maxLines = 1)
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(IrisDimens.space6))
         Canvas(
             Modifier
                 .fillMaxWidth()

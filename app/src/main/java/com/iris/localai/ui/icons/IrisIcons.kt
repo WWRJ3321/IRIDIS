@@ -1,5 +1,6 @@
 package com.iris.localai.ui.icons
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -15,7 +16,7 @@ import androidx.compose.ui.unit.dp
  */
 object IrisIcons {
     private fun icon(name: String, vararg paths: String): ImageVector = ImageVector.Builder(
-        name = "Iris.$name", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f,
+        name = "Iris.$name", defaultWidth = IrisDimens.space24, defaultHeight = IrisDimens.space24, viewportWidth = 24f, viewportHeight = 24f,
     ).apply {
         paths.forEach { p ->
             if (p.startsWith("F:")) addPath(addPathNodes(p.removePrefix("F:")), fill = SolidColor(Color.Black))

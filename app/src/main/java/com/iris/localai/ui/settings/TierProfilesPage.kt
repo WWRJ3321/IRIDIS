@@ -115,11 +115,11 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
             Stepper(threads, onMinus = { threads-- }, onPlus = { threads++ }, minusEnabled = threads > 1, plusEnabled = threads < maxOf(1, cpus.size))
         })
         Divider()
-        Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = 12.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
             Text("核心", style = IrisType.row, color = c.text)
             Text("按核心簇快速选择，或逐个勾选 cpu 编号：${TierProfiles.coreLabel(cpus.sorted(), vm.topology)} · ${TierProfiles.cpuRange(cpus.sorted())}", style = IrisType.caption, color = c.textTertiary)
-            Spacer(Modifier.width(0.dp).padding(top = 8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            Spacer(Modifier.width(0.dp).padding(top = IrisDimens.space8))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8), modifier = Modifier.padding(top = IrisDimens.space8)) {
                 TierProfiles.clusterChoices(vm.topology).forEach { (name, cl) ->
                     ToggleChip("$name ${TierProfiles.cpuRange(cl)}", Icons.Outlined.DeveloperBoard, selected = cpus.containsAll(cl) && cpus.size == cl.size) {
                         cpus = cl.toSet()
@@ -127,7 +127,7 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
                 }
                 ToggleChip("全部核心", Icons.Outlined.DeveloperBoard, selected = cpus.size == all.size) { cpus = all.toSet() }
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8), modifier = Modifier.padding(top = IrisDimens.space8)) {
                 all.forEach { id ->
                     ToggleChip("cpu$id", Icons.Outlined.Memory, selected = id in cpus) {
                         cpus = if (id in cpus) cpus - id else cpus + id
@@ -152,13 +152,13 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
         if (problems.isNotEmpty()) {
             Text(
                 problems.joinToString("；"), style = IrisType.caption, color = c.danger,
-                modifier = Modifier.padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, bottom = 8.dp),
+                modifier = Modifier.padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, bottom = IrisDimens.space8),
             )
         }
         Divider()
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8),
+            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (custom || dirty) IrisButton("恢复默认", {

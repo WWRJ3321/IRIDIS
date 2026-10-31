@@ -232,7 +232,7 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                         },
                     ),
                 ) {
-                    val cardWidth = (maxWidth - IrisDimens.groupGutter * 2 - 16.dp).coerceAtMost(CARD_MAX_WIDTH)
+                    val cardWidth = (maxWidth - IrisDimens.groupGutter * 2 - IrisDimens.space16).coerceAtMost(CARD_MAX_WIDTH)
                     val half = ArchiveMath.halfWindow(n)
                     val veilColor = Iris.colors.background
                     val base = focusLogical
@@ -312,7 +312,7 @@ private val cardShape = IrisRadius.mediumShape
 @Composable
 private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, focusIndex: Int) {
     val c = Iris.colors
-    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space6)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 state.crumbs.last().label, style = IrisType.display, color = c.text, maxLines = 1,
@@ -320,12 +320,12 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
             )
             Spacer(Modifier.width(10.dp))
             RollingNumber(count, minWidth = 2, style = monoTitle, color = c.accent)
-            Text(" 项", style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+            Text(" 项", style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = IrisDimens.space4))
         }
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
             Row(
                 Modifier.weight(1f, fill = false).clip(IrisRadius.smallShape).background(c.surfaceVariant)
-                    .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 2.dp),
+                    .horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.space6, vertical = IrisDimens.space2),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 state.crumbs.forEachIndexed { i, crumb ->
@@ -335,7 +335,7 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
                     Text(
                         seg, style = IrisType.monoSmall, color = if (last) c.text else c.accent, maxLines = 1,
                         modifier = Modifier.clip(IrisRadius.smallShape).clickable(enabled = !last) { actions.navigate(crumb.relPath) }
-                            .padding(horizontal = 2.dp, vertical = 4.dp),
+                            .padding(horizontal = IrisDimens.space2, vertical = IrisDimens.space4),
                     )
                 }
             }
@@ -386,7 +386,7 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
             .drawWithCache {
                 val bg = Brush.linearGradient(listOf(tint, Color.Transparent), start = Offset.Zero, end = Offset(size.width, size.height))
                 val stroke = Stroke(width = 1.dp.toPx())
-                val tabW = 56.dp.toPx(); val tabH = 4.dp.toPx(); val inset = 18.dp.toPx()
+                val tabW = 56.dp.toPx(); val tabH = IrisDimens.space4.toPx(); val inset = 18.dp.toPx()
                 val line = 0.75.dp.toPx()
                 onDrawBehind {
                     drawRect(fill)
@@ -406,16 +406,16 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
             }
             .then(Modifier.drawWithContent { drawContent(); drawCardRim(this, rim) })
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 12.dp),
+            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = IrisDimens.space12),
     ) {
         // 「卡片」 fix: only the focused card's text is drawn (it fades within half a card of scroll).
         Column(Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha() }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ArchiveMath.serial(index), style = IrisType.monoSmall, color = tab.copy(alpha = 1f))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
                 Text(
                     ArchiveMath.typeTag(e), style = IrisType.micro.copy(fontFamily = FontFamily.Monospace), color = c.textSecondary,
-                    modifier = Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = 6.dp, vertical = 1.dp),
+                    modifier = Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = IrisDimens.space6, vertical = 1.dp),
                 )
                 Spacer(Modifier.weight(1f))
                 if (e.system != null) SystemBadge()
@@ -426,7 +426,7 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
                 Spacer(Modifier.width(10.dp))
                 Text(e.displayName, style = IrisType.titleSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(IrisDimens.space4))
             Text(
                 entrySubtitle(e), style = IrisType.caption.copy(fontFamily = FontFamily.Monospace), color = c.textTertiary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -485,19 +485,19 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
     Column(
         Modifier.fillMaxWidth().widthIn(max = 640.dp).clip(sheetShape).background(c.surfaceElevated)
             .clickable(remember { MutableInteractionSource() }, indication = null) {}
-            .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp),
+            .navigationBarsPadding().padding(horizontal = IrisDimens.space20, vertical = IrisDimens.space16),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(width = 4.dp, height = 18.dp).clip(IrisRadius.smallShape).background(tab))
-            Spacer(Modifier.width(8.dp))
+            Box(Modifier.size(width = IrisDimens.space4, height = 18.dp).clip(IrisRadius.smallShape).background(tab))
+            Spacer(Modifier.width(IrisDimens.space8))
             Text(ArchiveMath.serial(index), style = IrisType.mono, color = c.accent)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(IrisDimens.space8))
             Text(ArchiveMath.typeTag(e), style = IrisType.monoSmall, color = c.textSecondary)
             Spacer(Modifier.weight(1f))
-            PressableIcon(IrisIcons.Close, "关闭", size = 40.dp, iconSize = 20.dp, onClick = onClose)
+            PressableIcon(IrisIcons.Close, "关闭", size = 40.dp, iconSize = IrisDimens.space20, onClick = onClose)
         }
         Box(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(IrisRadius.mediumShape)
+            Modifier.fillMaxWidth().padding(vertical = IrisDimens.space8).clip(IrisRadius.mediumShape)
                 .drawWithContent {
                     drawContent()
                     val tv = t.value
@@ -511,7 +511,7 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
                             drawPath(veilPath, veil)
                         }
                         val f = ArchiveMath.sweepFront(tv, size.width, size.height)
-                        drawLine(edge, Offset(f, 0f), Offset(f - size.height, size.height), strokeWidth = 2.dp.toPx())
+                        drawLine(edge, Offset(f, 0f), Offset(f - size.height, size.height), strokeWidth = IrisDimens.space2.toPx())
                     }
                 },
         ) {
@@ -528,22 +528,22 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
             }
         }
         val preview = FilePreview.canPreview(e)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4)) {
             if (preview) IrisButton("预览", onClick = { actions.onEntryClick(e) }, icon = IrisIcons.Eye, modifier = Modifier.weight(1f), compact = true)
             else IrisButton("打开", onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, modifier = Modifier.weight(1f), compact = true)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(IrisDimens.space8))
             IrisButton("分享", onClick = { actions.share(e) }, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
         }
         val canRename = actions.canRename(e)
         val canDelete = actions.canDelete(e)
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8)) {
             if (preview) {
                 IrisButton("其他应用打开", onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
             }
             if (canRename) {
                 IrisButton("重命名", onClick = { onClose(); actions.requestRename(e) }, icon = IrisIcons.Edit, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
             }
             if (canDelete) IrisButton("删除", onClick = { onClose(); actions.requestDelete(e) }, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.weight(1f), compact = true)
         }

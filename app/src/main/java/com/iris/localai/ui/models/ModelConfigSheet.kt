@@ -14,7 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +95,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             Text(
                 "未单独设置的项跟随全局（标「默认」）",
                 style = IrisType.caption, color = c.textTertiary,
-                modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + 4.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space4),
             )
 
             // 2.1.3: no 「推理引擎」 switch any more — for GGUF the backend decides (NPU = GenieX, GPU / CPU = 内置 llama.cpp).
@@ -133,7 +133,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             val nextLabel = remember(model.id, configs, settings.defaultBackends) { runCatching { engine.preferredBackend(model).label }.getOrDefault("") }
             if (com.iris.localai.engine.CpuFasterHint.shouldShow(loadRecords.values, model.id, nextLabel)) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + 4.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -357,10 +357,10 @@ private fun BackendRow(
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (trailingAction != null) {
-                Text("清除", style = IrisType.labelSmall, color = Iris.colors.accent, modifier = Modifier.clickable(onClick = trailingAction).padding(8.dp))
+                Text("清除", style = IrisType.labelSmall, color = Iris.colors.accent, modifier = Modifier.clickable(onClick = trailingAction).padding(IrisDimens.space8))
             }
             Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-                if (selected) Icon(Icons.Rounded.Check, "已选择", tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+                if (selected) Icon(Icons.Outlined.Check, "已选择", tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
             }
         }
     }
@@ -400,7 +400,7 @@ private fun OvSwitch(title: String, checked: Boolean, inherited: Boolean, subtit
 private fun ResetLink(onReset: () -> Unit) {
     Text(
         "改回默认", style = IrisType.labelSmall, color = Iris.colors.accent,
-        modifier = Modifier.padding(start = IrisDimens.rowPadding, bottom = 8.dp).clickable(onClick = onReset).padding(vertical = 4.dp),
+        modifier = Modifier.padding(start = IrisDimens.rowPadding, bottom = IrisDimens.space8).clickable(onClick = onReset).padding(vertical = IrisDimens.space4),
     )
 }
 

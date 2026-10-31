@@ -68,8 +68,9 @@ fun IrisDialog(
     val c = Iris.colors
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.glassSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
         shape = IrisRadius.dialogShape,
-        containerColor = c.floatingSurface,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
         titleContentColor = c.text,
         textContentColor = c.textSecondary,
@@ -227,14 +228,7 @@ fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
             Box(Modifier.padding(MenuGeometry.MARGIN)) {
                 Column(
                     Modifier
-                        .shadow(
-                            MenuGeometry.ELEVATION, IrisRadius.mediumShape, clip = false,
-                            ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = if (c.isDark) 0.5f else 0.10f),
-                            spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = if (c.isDark) 0.6f else 0.16f),
-                        )
-                        .clip(IrisRadius.mediumShape)
-                        .background(c.floatingSurface)
-                        .border(IrisDimens.hairline, c.outline, IrisRadius.mediumShape)
+                        .glassSurface(IrisRadius.largeShape, com.iris.localai.ui.theme.IrisElevation.menu)
                         .width(androidx.compose.foundation.layout.IntrinsicSize.Max)
                         .widthIn(min = MenuGeometry.MIN_WIDTH)
                         .padding(vertical = IrisDimens.space4),
@@ -247,8 +241,8 @@ fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
 
 /** 1.13.0: where an [IrisMenu] goes (pure, unit-tested). Sizes include the transparent shadow margin. */
 object MenuGeometry {
-    val MARGIN = 20.dp
-    val GAP = 6.dp
+    val MARGIN = IrisDimens.space20
+    val GAP = IrisDimens.space6
     val ELEVATION = 14.dp
     val MIN_WIDTH = 168.dp
 
@@ -288,7 +282,11 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.floatingSurface,
+        modifier = Modifier.glassSurface(
+            com.iris.localai.ui.theme.SmoothRoundedShape(IrisRadius.sheet, IrisRadius.sheet, 0.dp, 0.dp),
+            com.iris.localai.ui.theme.IrisElevation.none,
+        ),
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentColor = c.text,
         scrimColor = com.iris.localai.ui.glass.sheetScrim(c.scrim, com.iris.localai.ui.glass.LocalGlassQuality.current),
         tonalElevation = 0.dp,
@@ -296,13 +294,13 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 10.dp, bottom = 6.dp)
-                    .size(width = 36.dp, height = 4.dp)
+                    .padding(top = 10.dp, bottom = IrisDimens.space6)
+                    .size(width = 36.dp, height = IrisDimens.space4)
                     .background(c.textTertiary.copy(alpha = 0.4f), IrisRadius.pillShape),
             )
         },
     ) {
-        com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current, radius = 16.dp)
+        com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current, radius = IrisDimens.space16)
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = IrisDimens.space12), content = content)
     }
 }
@@ -313,7 +311,7 @@ fun SheetHeader(title: String, trailing: @Composable (() -> Unit)? = null) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(start = IrisDimens.pageGutter, end = IrisDimens.space12, top = 4.dp, bottom = 8.dp),
+            .padding(start = IrisDimens.pageGutter, end = IrisDimens.space12, top = IrisDimens.space4, bottom = IrisDimens.space8),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

@@ -57,21 +57,21 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
                     Modifier
                         .clip(com.iris.localai.ui.theme.IrisRadius.smallShape)
                         .selectable(selected = isSel, role = Role.RadioButton, onClick = { onSelect(p) })
-                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                        .padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space6),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(
                         Modifier
                             .size(44.dp)
-                            .then(if (isSel) Modifier.border(2.dp, p.colors(c.isDark).accent, CircleShape) else Modifier)
-                            .padding(4.dp)
+                            .then(if (isSel) Modifier.border(IrisDimens.space2, p.colors(c.isDark).accent, CircleShape) else Modifier)
+                            .padding(IrisDimens.space4)
                             .clip(CircleShape)
                             .background(p.colors(c.isDark).accent),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isSel) Icon(com.iris.localai.ui.icons.IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(IrisDimens.space4))
                     Text(
                         p.label, style = IrisType.caption, textAlign = TextAlign.Center,
                         color = if (isSel) c.text else c.textSecondary,

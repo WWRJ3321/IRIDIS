@@ -19,10 +19,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 1.12.0: phone tool (alarm / timer via the clock app). -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-    <!-- 2.2.3: optional IRIDIS Terminal plugin (same signature) for run_command. -->
-    <uses-permission android:name="com.iridis.terminal.permission.RUN_COMMAND" />
     <queries>
-        <package android:name="com.iridis.terminal" />
         <!-- 1.12.0: phone tool: find launchable apps and the apps that handle its intents. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />

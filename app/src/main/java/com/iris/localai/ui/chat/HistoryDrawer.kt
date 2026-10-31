@@ -70,6 +70,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.iris.localai.ui.components.TextInputDialog
 import com.iris.localai.ui.components.floatingSurface
+import com.iris.localai.ui.components.glassSurface
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
@@ -132,8 +133,8 @@ fun HistoryDrawer(
         Modifier
             .fillMaxHeight()
             .width(IrisDimens.drawerWidth)
-            .clip(com.iris.localai.ui.theme.SmoothRoundedShape(0.dp, IrisRadius.sheet, IrisRadius.sheet, 0.dp))
-            .background(c.floatingSurface)
+            // 2.2.4: liquid glass over the chat (blurs the message list behind it).
+            .glassSurface(com.iris.localai.ui.theme.SmoothRoundedShape(0.dp, IrisRadius.sheet, IrisRadius.sheet, 0.dp), com.iris.localai.ui.theme.IrisElevation.menu)
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding(),
@@ -151,7 +152,7 @@ fun HistoryDrawer(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     PressableIcon(Icons.Outlined.Close, "退出多选", size = 40.dp, iconSize = IrisDimens.iconMedium, tint = c.text) { selected = emptySet() }
-                    Text("已选 ${selected.size} 项", style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                    Text("已选 ${selected.size} 项", style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
                     com.iris.localai.ui.components.IrisButton(
                         if (all) "全不选" else "全选",
                         { selected = if (all) selected - visibleIds.toSet() else selected + visibleIds },
@@ -298,14 +299,14 @@ private fun DrawerNavButton(icon: androidx.compose.ui.graphics.vector.ImageVecto
             .clip(IrisRadius.mediumShape)
             .clickable(onClickLabel = label, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) { if (badge) stateDescription = DrawerNavText.API_RUNNING }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = IrisDimens.space6),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
             Icon(icon, null, tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
             if (badge) StatusDot(c.success, active = true, size = 7.dp, modifier = Modifier.align(Alignment.TopEnd))
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(IrisDimens.space2))
         Text(label, style = IrisType.caption, color = c.textSecondary, maxLines = 1)
     }
 }
@@ -321,11 +322,11 @@ internal fun SearchField(value: String, onChange: (String) -> Unit, placeholder:
             .heightIn(min = 44.dp)
             .clip(IrisRadius.mediumShape)
             .background(c.surfaceVariant)
-            .padding(start = 12.dp, end = 4.dp),
+            .padding(start = IrisDimens.space12, end = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Outlined.Search, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.iconMedium))
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(IrisDimens.space8))
         BasicTextField(
             value, onChange, singleLine = true,
             textStyle = IrisType.body.copy(color = c.text), cursorBrush = SolidColor(c.text),
@@ -394,7 +395,7 @@ private fun ConversationItem(
             }
             if (s.pinned) {
                 Icon(Icons.Outlined.PushPin, null, tint = c.textTertiary, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(IrisDimens.space6))
             }
             Text(
                 s.title.ifBlank { "新对话" }, style = if (selected) IrisType.rowStrong else IrisType.body, color = c.text,
@@ -402,7 +403,7 @@ private fun ConversationItem(
             )
             // 1.12.3: this conversation's reply keeps running while another one is shown.
             if (running) {
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(IrisDimens.space6))
                 Text("运行中", style = IrisType.caption, color = c.accent, maxLines = 1)
             }
         }
@@ -422,11 +423,11 @@ private fun SelectAction(icon: androidx.compose.ui.graphics.vector.ImageVector, 
         Modifier
             .clip(IrisRadius.mediumShape)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space6),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(IrisDimens.iconLarge))
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(IrisDimens.space2))
         Text(label, style = IrisType.caption, color = tint)
     }
 }

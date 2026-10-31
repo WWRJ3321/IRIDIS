@@ -1,5 +1,6 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -80,17 +81,17 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp)
+                .padding(bottom = IrisDimens.space6)
                 .glass(backdrop, IrisRadius.mediumShape, GlassStyle(tint = c.glassTintOpaque))
                 .clip(IrisRadius.mediumShape),
         ) {
             Row(
                 Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "收起计划" else "展开计划") { open = !open }
-                    .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    .padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space4, bottom = IrisDimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ProgressRing(progress, done = p.finished, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(IrisDimens.space8))
                 Text(
                     if (p.finished) "计划已完成 · ${p.steps.size} 步" else "计划 ${p.done}/${p.steps.size}",
                     style = IrisType.labelSmall, color = if (p.finished) c.success else c.text, maxLines = 1,
@@ -102,14 +103,14 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                     modifier = Modifier.weight(1f),
                 )
                 Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = turn })
-                PressableIcon(Icons.Outlined.Close, "清除计划", size = 32.dp, iconSize = 16.dp, tint = c.textTertiary, onClick = onClear)
+                PressableIcon(Icons.Outlined.Close, "清除计划", size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
             }
             AnimatedVisibility(open, enter = IrisMotion.expand(), exit = IrisMotion.collapse()) {
                 Column(
                     Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())
-                        .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                        .padding(start = IrisDimens.space12, end = IrisDimens.space12, bottom = 10.dp),
                 ) {
-                    if (p.title.isNotBlank()) Text(p.title, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(bottom = 6.dp))
+                    if (p.title.isNotBlank()) Text(p.title, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(bottom = IrisDimens.space6))
                     p.steps.forEachIndexed { i, st -> FlowNode(i + 1, st.text, st.status, first = i == 0, last = i == p.steps.lastIndex) }
                 }
             }
@@ -136,7 +137,7 @@ internal fun FlowNode(n: Int, text: String, status: PlanStatus, first: Boolean, 
                 if (!first) drawLine(if (status == PlanStatus.TODO) lineTodo else lineDone, Offset(x, 0f), Offset(x, cy - 7.dp.toPx()), 1.5.dp.toPx())
                 if (!last) drawLine(if (status == PlanStatus.DONE || status == PlanStatus.SKIPPED) lineDone else lineTodo, Offset(x, cy + 7.dp.toPx()), Offset(x, size.height), 1.5.dp.toPx())
             }
-            Box(Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(14.dp).pulse(status == PlanStatus.DOING, min = 0.45f)) {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = IrisDimens.space4).size(14.dp).pulse(status == PlanStatus.DOING, min = 0.45f)) {
                 Canvas(Modifier.size(14.dp)) {
                     val r = size.minDimension / 2
                     if (status == PlanStatus.DONE) drawCircle(color, r)
@@ -156,12 +157,12 @@ internal fun FlowNode(n: Int, text: String, status: PlanStatus, first: Boolean, 
                 }
             }
         }
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(IrisDimens.space6))
         Text(
             "$n. $text", style = IrisType.caption,
             color = when (status) { PlanStatus.DOING -> c.text; PlanStatus.TODO -> c.textSecondary; else -> c.textTertiary },
             textDecoration = if (status == PlanStatus.SKIPPED) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f).padding(top = 2.dp, bottom = 8.dp),
+            modifier = Modifier.weight(1f).padding(top = IrisDimens.space2, bottom = IrisDimens.space8),
         )
     }
 }
@@ -173,7 +174,7 @@ fun ProgressRing(progress: Float, done: Boolean, modifier: Modifier = Modifier) 
     val track = c.outline
     val fill = if (done) c.success else c.accent
     Canvas(modifier) {
-        val w = 2.dp.toPx()
+        val w = IrisDimens.space2.toPx()
         drawCircle(track, size.minDimension / 2 - w / 2, style = Stroke(w))
         drawArc(fill, -90f, 360f * progress.coerceIn(0f, 1f), false, style = Stroke(w, cap = StrokeCap.Round),
             topLeft = Offset(w / 2, w / 2), size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w))

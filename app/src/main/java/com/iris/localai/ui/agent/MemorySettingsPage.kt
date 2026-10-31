@@ -1,5 +1,6 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -175,7 +176,7 @@ fun MemorySettingsPage(
                     colors = irisTextFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(IrisDimens.space6))
                 Text(
                     MemoryText.usage(value.trim().length) + if (over) " · 超出上限，请删减" else "",
                     style = IrisType.caption, color = if (over) Iris.colors.danger else Iris.colors.textTertiary,

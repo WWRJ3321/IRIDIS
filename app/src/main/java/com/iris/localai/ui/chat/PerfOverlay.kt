@@ -1,5 +1,6 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -55,7 +56,7 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
     Column(
         modifier
             .background(c.surfaceVariant.copy(alpha = 0.92f), IrisRadius.smallShape)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = IrisDimens.space6),
     ) {
         val style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight)
         Text("速度 " + (speed?.let { String.format(Locale.US, "%.1f 字/秒", it) } ?: "—"), style = style, color = c.text)

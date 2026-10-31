@@ -1,5 +1,6 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.theme.IrisChartColors
 import android.app.Application
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -596,10 +597,10 @@ private fun PlaceholderRow() {
     ) {
         Column(Modifier.weight(1f)) {
             Box(Modifier.fillMaxWidth(0.46f).height(14.dp).clip(IrisRadius.pillShape).background(c.surfaceVariant))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(IrisDimens.space8))
             Box(Modifier.fillMaxWidth(0.28f).height(11.dp).clip(IrisRadius.pillShape).background(c.surfaceVariant))
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(IrisDimens.space12))
         Box(Modifier.size(width = 40.dp, height = 14.dp).clip(IrisRadius.pillShape).background(c.surfaceVariant))
     }
 }
@@ -610,11 +611,11 @@ private fun categoryColor(cat: Category): Color {
     val c = Iris.colors
     return when (cat) {
         Category.MODELS -> c.accent
-        Category.MODEL_CACHE -> Color(0xFF8E7CF0)
-        Category.VOICE -> Color(0xFF30B0C7)
-        Category.WORKSPACE -> Color(0xFF5AC17A)
-        Category.CHATS -> Color(0xFFEF7C74)
-        Category.CACHE_LOGS -> Color(0xFF9AA3AE)
+        Category.MODEL_CACHE -> IrisChartColors.violet
+        Category.VOICE -> IrisChartColors.teal
+        Category.WORKSPACE -> IrisChartColors.green
+        Category.CHATS -> IrisChartColors.coral
+        Category.CACHE_LOGS -> IrisChartColors.grey
         Category.OTHER -> c.textTertiary.copy(alpha = 0.45f)
     }
 }
@@ -629,7 +630,7 @@ private fun StorageSummary(r: StorageUsage.Report?, free: Long?, scanning: Boole
             } else {
                 Text(Format.bytes(r.total), style = IrisType.display, color = c.text)
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(IrisDimens.space6))
             Text(
                 when {
                     r == null -> "正在计算…"
@@ -637,14 +638,14 @@ private fun StorageSummary(r: StorageUsage.Report?, free: Long?, scanning: Boole
                 },
                 style = IrisType.secondary, color = c.textSecondary,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(IrisDimens.space16))
             StorageBar(r)
             if (r != null) {
                 Spacer(Modifier.height(14.dp))
                 Legend(r)
             }
             if (note != null) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(IrisDimens.space12))
                 Text(note, style = IrisType.secondary, color = c.accent)
             }
         }
@@ -689,12 +690,12 @@ private fun Legend(r: StorageUsage.Report) {
     val shown = Category.entries.filter { (r.group(it)?.appBytes ?: 0L) > 0L }
     Column {
         shown.chunked(2).forEachIndexed { i, pair ->
-            if (i > 0) Spacer(Modifier.height(8.dp))
+            if (i > 0) Spacer(Modifier.height(IrisDimens.space8))
             Row(Modifier.fillMaxWidth()) {
                 pair.forEach { cat ->
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(8.dp).clip(IrisRadius.pillShape).background(categoryColor(cat)))
-                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(IrisDimens.space8).clip(IrisRadius.pillShape).background(categoryColor(cat)))
+                        Spacer(Modifier.width(IrisDimens.space8))
                         Text(
                             "${cat.title} ${Format.bytes(r.group(cat)?.appBytes ?: 0L)}",
                             style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -725,7 +726,7 @@ private fun StrongWipeDialog(count: Int, onConfirm: () -> Unit, onDismiss: () ->
                 "将永久删除全部 $count 个对话及其附件，无法恢复。确认请输入「${StorageText.WIPE_WORD}」。",
                 style = IrisType.secondary, color = c.textSecondary,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(IrisDimens.space12))
             OutlinedTextField(
                 typed, { typed = it },
                 singleLine = true,

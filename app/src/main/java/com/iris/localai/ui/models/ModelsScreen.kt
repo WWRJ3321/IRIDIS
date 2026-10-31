@@ -258,7 +258,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                                 }
                                 Spacer(Modifier.height(IrisDimens.space8))
                                 IrisProgressBar(progress = hub.progress.takeIf { hub.totalBytes > 0 })
-                                IrisButton("取消下载", vm::cancelDownload, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = 4.dp))
+                                IrisButton("取消下载", vm::cancelDownload, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
                             }
                         }
                         hub.error?.let { Text(it, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8)) }
@@ -279,7 +279,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                             }
                             Spacer(Modifier.height(IrisDimens.space8))
                             IrisProgressBar(progress = import.progress)
-                            IrisButton("取消", vm::cancelImport, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = 4.dp))
+                            IrisButton("取消", vm::cancelImport, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
                         }
                     }
                     import.error?.let { Text(it, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8)) }
@@ -313,7 +313,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
             }
             (engine as? EngineState.Failed)?.let { f ->
                 item(key = "failed", contentType = "failed") {
-                    Text(f.message, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + 4.dp, vertical = IrisDimens.space12))
+                    Text(f.message, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space12))
                 }
             }
 
@@ -447,7 +447,7 @@ private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Uni
                 Column(
                     Modifier.fillMaxWidth().clip(IrisRadius.mediumShape)
                         .background(if (text.trim() == id) c.surfaceVariant else Color.Transparent)
-                        .clickable { text = id }.padding(horizontal = IrisDimens.space8, vertical = 6.dp),
+                        .clickable { text = id }.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
                 ) {
                     Text(id.substringAfter('/'), style = IrisType.rowStrong, color = c.text)
                     Text(note, style = IrisType.caption, color = c.textTertiary)
@@ -478,22 +478,22 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = IrisDimens.space4, end = IrisDimens.space4, top = 8.dp, bottom = 8.dp),
+            .padding(start = IrisDimens.space4, end = IrisDimens.space4, top = IrisDimens.space8, bottom = IrisDimens.space8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.material3.Icon(
             Icons.Outlined.DragHandle, "拖动排序", tint = c.textTertiary,
-            modifier = dragHandle.size(40.dp).padding(8.dp),
+            modifier = dragHandle.size(40.dp).padding(IrisDimens.space8),
         )
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
             Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(IrisDimens.space8))
         when {
-            loaded -> Text("已加载", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = 8.dp))
+            loaded -> Text("已加载", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8))
             loading && (state as? EngineState.Loading)?.applyingTier == null -> IrisButton("取消加载", onCancelLoad, style = IrisButtonStyle.Outline, compact = true)
-            loading -> Text("加载中…", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = 8.dp).pulse())
+            loading -> Text("加载中…", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8).pulse())
             else -> IrisButton("加载", onLoad, style = IrisButtonStyle.Outline, compact = true, enabled = !busy && state !is EngineState.Loading)
         }
         PressableIcon(Icons.Outlined.Tune, "后端与参数", iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings)
@@ -514,7 +514,7 @@ fun ModelListItem(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = IrisDimens.space12, vertical = 2.dp)
+            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space2)
             .heightIn(min = 60.dp)
             .clip(IrisRadius.mediumShape)
             .background(bg)
@@ -522,7 +522,7 @@ fun ModelListItem(
             .padding(horizontal = IrisDimens.space12, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
             Text(model.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(meta, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (extra != null) Text(extra, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -530,7 +530,7 @@ fun ModelListItem(
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
             when {
                 loaded -> Icon(Icons.Outlined.CheckCircle, "已加载", tint = c.accent, modifier = Modifier.size(IrisDimens.iconMedium))
-                loading -> Box(Modifier.size(8.dp).pulse(min = 0.3f).background(c.accent, androidx.compose.foundation.shape.CircleShape))
+                loading -> Box(Modifier.size(IrisDimens.space8).pulse(min = 0.3f).background(c.accent, androidx.compose.foundation.shape.CircleShape))
             }
         }
         if (onSettings != null) {

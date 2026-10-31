@@ -137,9 +137,9 @@ private fun HtmlCard(source: String, kind: HtmlBlocks.Kind, allowImages: Boolean
     val doc = remember(source, kind, allowImages) { HtmlSandbox.document(source, kind, allowImages) }
     val shape = IrisRadius.mediumShape
     Column(Modifier.fillMaxWidth().clip(shape).background(c.codeBackground).border(IrisDimens.hairline, c.outline, shape)) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space2, bottom = IrisDimens.space2), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (kind == HtmlBlocks.Kind.SVG) IrisIcons.Image else IrisIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(IrisDimens.space6))
             Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.textTertiary, fontSize = 12.sp, modifier = Modifier.weight(1f))
             CardAction(IrisIcons.Code, if (showSource) RichText.SHOW_PREVIEW else RichText.SOURCE) { showSource = !showSource }
             CardAction(IrisIcons.Expand, RichText.FULLSCREEN) { fullscreen = true }
@@ -157,11 +157,11 @@ private fun HtmlCard(source: String, kind: HtmlBlocks.Kind, allowImages: Boolean
 private fun CardAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     val c = Iris.colors
     Row(
-        Modifier.clip(IrisRadius.smallShape).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 8.dp),
+        Modifier.clip(IrisRadius.smallShape).clickable(onClick = onClick).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(IrisDimens.space4))
         Text(label, color = c.textSecondary, fontSize = 12.sp)
     }
 }
@@ -170,7 +170,7 @@ private fun CardAction(icon: ImageVector, label: String, onClick: () -> Unit) {
 private fun SourceText(source: String, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState())
-            .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+            .padding(start = 14.dp, end = 14.dp, bottom = IrisDimens.space12),
     ) {
         Text(source, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = Iris.colors.text, softWrap = false)
     }
@@ -204,7 +204,7 @@ private fun WebPreview(doc: String, allowImages: Boolean) {
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            else -> Icon(IrisIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(20.dp))
+            else -> Icon(IrisIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.space20))
         }
     }
 }
@@ -215,13 +215,13 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
     var showSource by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(c.background).systemBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
                 Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
                 CardAction(IrisIcons.Code, if (showSource) RichText.SHOW_PREVIEW else RichText.SOURCE) { showSource = !showSource }
             }
             Box(Modifier.weight(1f).fillMaxWidth().background(c.surfaceVariant)) {
-                if (showSource) SourceText(source, Modifier.fillMaxSize().padding(top = 8.dp))
+                if (showSource) SourceText(source, Modifier.fillMaxSize().padding(top = IrisDimens.space8))
                 else key(doc) {
                     AndroidView(
                         factory = { ctx -> sandboxWebView(ctx, allowImages, onHeight = null, onGone = onDismiss).also { it.loadDataWithBaseURL(null, doc, "text/html", "utf-8", null) } },
@@ -328,12 +328,12 @@ internal fun MarkdownImage(block: MdBlock.Image) {
         value = ChatImageLoader.load(ctx, src, maxSide)?.let { ImageState.Loaded(it) } ?: ImageState.Failed
     }
     var viewer by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
         when (val s = state) {
             ImageState.Loading -> Box(
                 Modifier.fillMaxWidth().height(180.dp).clip(IrisRadius.mediumShape).background(c.surfaceVariant),
                 contentAlignment = Alignment.Center,
-            ) { Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(24.dp)) }
+            ) { Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.space24)) }
             ImageState.Failed -> ImageNote(block.alt, RichText.LOAD_FAILED)
             is ImageState.Loaded -> {
                 val img = remember(s.bitmap) { s.bitmap.asImageBitmap() }
@@ -367,7 +367,7 @@ internal fun ImageThumbnail(path: String, size: Dp = 72.dp) {
         bitmap?.let { b ->
             val img = remember(b) { b.asImageBitmap() }
             Image(img, path.substringAfterLast('/'), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        } ?: Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(20.dp))
+        } ?: Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.space20))
     }
     if (viewer) ImageViewer(src, path.substringAfterLast('/')) { viewer = false }
 }
@@ -376,11 +376,11 @@ internal fun ImageThumbnail(path: String, size: Dp = 72.dp) {
 private fun ImageNote(alt: String, reason: String) {
     val c = Iris.colors
     Row(
-        Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = 10.dp, vertical = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(IrisDimens.space6))
         Text(if (alt.isBlank()) reason else "$alt · $reason", color = c.textTertiary, fontSize = 12.sp, maxLines = 2)
     }
 }
@@ -420,9 +420,9 @@ private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) {
                         }
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                 )
-            } ?: Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.align(Alignment.Center).size(32.dp))
+            } ?: Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.align(Alignment.Center).size(IrisDimens.space32))
             Row(
-                Modifier.fillMaxWidth().systemBarsPadding().background(c.background.copy(alpha = 0.7f)).padding(horizontal = 4.dp),
+                Modifier.fillMaxWidth().systemBarsPadding().background(c.background.copy(alpha = 0.7f)).padding(horizontal = IrisDimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)

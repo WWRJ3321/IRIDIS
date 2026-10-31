@@ -1,5 +1,6 @@
 package com.iris.localai.ui
 
+import com.iris.localai.ui.theme.IrisDimens
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -157,7 +158,7 @@ private fun CrashDialog(report: String, onClose: () -> Unit) {
     ) {
         Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
             Text("复制下面的信息发给开发者，可以更快定位问题。", style = IrisType.secondary, color = c.textSecondary)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(IrisDimens.space8))
             Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text)
         }
     }
@@ -218,7 +219,7 @@ private fun AppNavigation(chat: ChatViewModel) {
                 val scale = 1f - 0.08f * p
                 scaleX = scale; scaleY = scale
                 transformOrigin = TransformOrigin(if (backFromLeft) 1f else 0f, 0.5f)
-                translationX = (if (backFromLeft) 1f else -1f) * 12.dp.toPx() * p
+                translationX = (if (backFromLeft) 1f else -1f) * IrisDimens.space12.toPx() * p
                 shape = com.iris.localai.ui.theme.smoothShape((com.iris.localai.ui.theme.IrisRadius.sheet.value * p).dp)  // 1.10.10: continuous corners like every other surface
                 clip = p > 0f
             } else Modifier

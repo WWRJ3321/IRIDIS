@@ -16,13 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -80,51 +79,51 @@ object LargeTitleMath {
     fun hairlineAlpha(collapse: Float): Float = if (collapse >= 1f) 1f else 0f
 }
 
-/** Shared chrome for every secondary page: back arrow, collapsing large title, actions, body. */
+/** 2.2.4: height of the floating top bar a body scrolls under (status bar included); 0 = padded. */
+private val LocalTopBarInset = compositionLocalOf { 0.dp }
+
+/**
+ * Shared chrome for every secondary page: floating glass back button, collapsing large title,
+ * actions, body. With [scrollUnder] (pages whose body starts with [LargeTitle] / [ScrollBody]) the
+ * body runs under the bar and is blurred by its glass; otherwise it starts below the bar.
+ */
 @Composable
 fun SubpageScaffold(
     title: String,
     onBack: () -> Unit,
+    scrollUnder: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     val state = remember(title) { LargeTitleState(title) }
+    val haze = remember { dev.chrisbanes.haze.HazeState() }
     // Scroll-driven values are read in draw (graphicsLayer) only: no recomposition per frame.
     fun collapse() = if (state.hasLargeTitle) state.collapse else 1f
     val under by remember(state) { derivedStateOf { LargeTitleMath.hairlineAlpha(collapse()) } }
-    val divider by animateFloatAsState(under, IrisMotion.standard(), label = "topDivider")
-    Column(Modifier.fillMaxSize().background(c.background).statusBarsPadding().horizontalCutoutPadding()) {
-        Box(
-            Modifier.fillMaxWidth().height(IrisDimens.topBarHeight).padding(horizontal = IrisDimens.space4),
-            contentAlignment = Alignment.Center,
-        ) {
-            // Small centred title (iOS / HyperOS collapsed bar). Slides up a little as it fades in.
-            Text(
-                title, style = IrisType.title, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .padding(horizontal = IrisDimens.touchTarget + IrisDimens.space16)
-                    .graphicsLayer {
-                        val barAlpha = LargeTitleMath.barTitleAlpha(collapse())
-                        alpha = barAlpha
-                        translationY = if (reduce) 0f else (1f - barAlpha) * 6.dp.toPx()
-                    },
-            )
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, "返回", onClick = onBack)
-                Spacer(Modifier.weight(1f))
-                actions()
+    val strip by animateFloatAsState(under, IrisMotion.standard(), label = "topStrip")
+    val inset = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
+        IrisDimens.topBarHeight + IrisDimens.space8
+    CompositionLocalProvider(LocalGlassHaze provides haze) {
+        Box(Modifier.fillMaxSize().background(c.background).horizontalCutoutPadding()) {
+            CompositionLocalProvider(LocalLargeTitle provides state, LocalTopBarInset provides if (scrollUnder) inset else 0.dp) {
+                Box(
+                    Modifier.fillMaxSize()
+                        .glassBackdrop(haze)
+                        .background(c.background)
+                        .padding(top = if (scrollUnder) 0.dp else inset),
+                ) { content() }
             }
-        }
-        Box(
-            Modifier.fillMaxWidth().height(IrisDimens.hairline)
-                .graphicsLayer { alpha = divider * 0.6f }
-                .background(c.outline),
-        )
-        CompositionLocalProvider(LocalLargeTitle provides state) {
-            Box(Modifier.weight(1f)) { content() }
+            IrisTopBar(
+                title, onBack, actions = actions,
+                stripAlpha = { if (scrollUnder) strip else 0f },
+                titleModifier = Modifier.graphicsLayer {
+                    val barAlpha = LargeTitleMath.barTitleAlpha(collapse())
+                    alpha = barAlpha
+                    translationY = if (reduce) 0f else (1f - barAlpha) * IrisDimens.space6.toPx()
+                },
+            )
         }
     }
 }
@@ -138,8 +137,9 @@ fun LargeTitle(modifier: Modifier = Modifier) {
     val state = LocalLargeTitle.current ?: return
     val c = Iris.colors
     LaunchedEffect(state) { state.hasLargeTitle = true }
+    val inset = LocalTopBarInset.current
     Box(
-        modifier.fillMaxWidth().height(IrisDimens.largeTitleHeight)
+        modifier.fillMaxWidth().padding(top = inset).height(IrisDimens.largeTitleHeight)
             .padding(start = IrisDimens.groupGutter + 14.dp, end = IrisDimens.pageGutter),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -203,7 +203,7 @@ fun VersionFooter(line1: String, line2: String? = null, modifier: Modifier = Mod
     ) {
         Text(line1, style = IrisType.secondary, color = c.textTertiary, textAlign = TextAlign.Center)
         if (line2 != null) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(IrisDimens.space2))
             Text(line2, style = IrisType.secondary, color = c.textTertiary, textAlign = TextAlign.Center)
         }
     }

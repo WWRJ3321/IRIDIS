@@ -150,7 +150,7 @@ fun IrisProgressBar(
 
 /** Small status dot; breathes a few times when it becomes [active], then rests (no endless loop). */
 @Composable
-fun StatusDot(color: Color, active: Boolean, modifier: Modifier = Modifier, size: Dp = 8.dp, cycles: Int = 3) {
+fun StatusDot(color: Color, active: Boolean, modifier: Modifier = Modifier, size: Dp = IrisDimens.space8, cycles: Int = 3) {
     Box(modifier.size(size).pulse(active, min = 0.35f, cycles = cycles).drawBehind { drawCircle(color) })
 }
 
@@ -174,7 +174,7 @@ fun EmptyState(
             .padding(horizontal = IrisDimens.space32, vertical = IrisDimens.space24)
             .graphicsLayer {
                 alpha = appear.value
-                translationY = (1f - appear.value) * 16.dp.toPx()
+                translationY = (1f - appear.value) * IrisDimens.space16.toPx()
                 val sc = 0.96f + 0.04f * appear.value
                 scaleX = sc; scaleY = sc
             },

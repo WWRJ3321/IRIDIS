@@ -142,7 +142,7 @@ object ToolCallParser {
     )
     /** 2.2.3: first positional argument of other tools in Python-style calls. */
     private val POSITIONAL = MAIN_ARG + mapOf(
-        "read_file" to "path", "write_file" to "path", "skill" to "name", "run_command" to "command",
+        "read_file" to "path", "write_file" to "path", "skill" to "name",
         "web_fetch" to "url", "kb_search" to "query", "memory" to "action", "plan" to "title", "activate" to "tool",
     )
     /** 2.2.3: qwen3_coder / LFM XML form `<function=name><parameter=k>v</parameter></function>`. */

@@ -127,7 +127,7 @@ fun AppFilesPage(onBack: () -> Unit) {
 
     val styled = state.viewStyle != FileViewStyle.LIST
     var styleMenu by remember { mutableStateOf(false) }
-    SubpageScaffold(FilesText.TITLE, onBack, actions = {
+    SubpageScaffold(FilesText.TITLE, onBack, scrollUnder = false, actions = {
         // 2.1.9: small view-style menu — 列表 / 卡片.
         Box {
             PressableIcon(
@@ -161,7 +161,7 @@ internal fun FilesHeader(state: FilesState, actions: FilesActions, showCrumbs: B
     Column(Modifier.fillMaxWidth()) {
         if (showCrumbs) Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                .padding(horizontal = IrisDimens.groupGutter, vertical = 6.dp),
+                .padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space6),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             state.crumbs.forEachIndexed { i, crumb ->
@@ -170,22 +170,22 @@ internal fun FilesHeader(state: FilesState, actions: FilesActions, showCrumbs: B
                     crumb.label, style = if (last) IrisType.rowStrong else IrisType.secondary,
                     color = if (last) c.text else c.accent, maxLines = 1,
                     modifier = Modifier.clip(IrisRadius.smallShape).clickable(enabled = !last) { actions.navigate(crumb.relPath) }
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                        .padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space4),
                 )
                 if (!last) Text("›", style = IrisType.secondary, color = c.textTertiary)
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = 2.dp),
+            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.material3.Icon(IrisIcons.Sort, "排序", Modifier.padding(end = 4.dp).size(18.dp), tint = c.textTertiary)
+            androidx.compose.material3.Icon(IrisIcons.Sort, "排序", Modifier.padding(end = IrisDimens.space4).size(18.dp), tint = c.textTertiary)
             FileSort.entries.forEach { s ->
                 val on = s == state.sort
                 Text(
                     s.label + if (on) (if (state.ascending) " ↑" else " ↓") else "",
                     style = IrisType.labelSmall, color = if (on) c.accent else c.textSecondary,
-                    modifier = Modifier.clip(IrisRadius.smallShape).clickable { actions.setSort(s) }.padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.clip(IrisRadius.smallShape).clickable { actions.setSort(s) }.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
                 )
             }
             Spacer(Modifier.weight(1f))
@@ -200,7 +200,7 @@ internal fun FilesAccessNotice(state: FilesState) {
     val context = LocalContext.current
     val c = Iris.colors
     if (state.access == FilesAccess.LIMITED) {
-        Box(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = 6.dp).clip(IrisRadius.smallShape).background(c.surfaceElevated)) {
+        Box(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space6).clip(IrisRadius.smallShape).background(c.surfaceElevated)) {
             SettingsRow(
                 FilesText.GRANT_TITLE, icon = IrisIcons.Folder, subtitle = FilesText.GRANT_HINT, subtitleMaxLines = 3,
                 onClick = { com.iris.localai.ui.models.openAllFilesAccess(context) },
@@ -259,7 +259,7 @@ fun ListFileView(state: FilesState, actions: FilesActions, modifier: Modifier = 
                             val canRename = actions.canRename(e)
                             val canDelete = actions.canDelete(e)
                             if (!e.isDir || canRename || canDelete) Box {
-                                PressableIcon(IrisIcons.More, "更多：${e.displayName}", size = 40.dp, iconSize = 20.dp) { menuFor = e.relPath }
+                                PressableIcon(IrisIcons.More, "更多：${e.displayName}", size = 40.dp, iconSize = IrisDimens.space20) { menuFor = e.relPath }
                                 IrisMenu(expanded = menuFor == e.relPath, onDismiss = { menuFor = null }) {
                                     if (!e.isDir) {
                                         IrisMenuItem("用其他应用打开", IrisIcons.OpenExternal) { menuFor = null; actions.openExternal(e) }
@@ -286,7 +286,7 @@ internal fun SystemBadge() {
     val c = Iris.colors
     Text(
         FilesText.SYSTEM_BADGE, style = IrisType.micro, color = c.onAccentContainer,
-        modifier = Modifier.padding(end = 6.dp).clip(IrisRadius.smallShape).background(c.accentContainer).padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier = Modifier.padding(end = IrisDimens.space6).clip(IrisRadius.smallShape).background(c.accentContainer).padding(horizontal = IrisDimens.space6, vertical = IrisDimens.space2),
     )
 }
 
@@ -356,7 +356,7 @@ private fun FileNameDialog(
         onConfirm = { onConfirm(value.trim()) },
     ) {
         Column {
-            warning?.let { Text(it, style = IrisType.secondary, color = c.warning, modifier = Modifier.padding(bottom = 8.dp)) }
+            warning?.let { Text(it, style = IrisType.secondary, color = c.warning, modifier = Modifier.padding(bottom = IrisDimens.space8)) }
             androidx.compose.material3.OutlinedTextField(
                 value, { value = it }, singleLine = true,
                 isError = problem != null && value.isNotEmpty(),
@@ -366,7 +366,7 @@ private fun FileNameDialog(
                 colors = irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (problem != null && value.isNotEmpty()) Text(problem.message, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = 6.dp))
+            if (problem != null && value.isNotEmpty()) Text(problem.message, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space6))
         }
     }
 }

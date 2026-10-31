@@ -43,7 +43,7 @@
 |---|---|
 | **Three inference engines** | llama.cpp · MNN · LiteRT-LM, picking the fastest of CPU / GPU / NPU for your phone |
 | **Fully offline** | Inference, voice and history stay on the device; works in airplane mode |
-| **Agent** | Files, Linux terminal, web search, scheduled tasks, with undoable changes |
+| **Agent** | Files, web search, scheduled tasks, with undoable changes |
 | **Memory & knowledge base** | Long-term memory, local document search, editable messages with multiple regenerated versions |
 | **Local voice** | Offline speech recognition and TTS, hands-free chat, interrupt by speaking |
 | **LAN API** | OpenAI / Ollama compatible: your phone becomes a model server |

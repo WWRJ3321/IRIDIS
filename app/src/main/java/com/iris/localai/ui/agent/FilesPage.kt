@@ -181,7 +181,7 @@ fun FilesPage(onBack: () -> Unit) {
         }
     }
 
-    SubpageScaffold("文件", onBack, actions = {
+    SubpageScaffold("文件", onBack, scrollUnder = false, actions = {
         PressableIcon(Icons.AutoMirrored.Outlined.Undo, "撤销上次修改", enabled = undoCount > 0) {
             scope.launch {
                 message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { "撤销失败：${it.message}" } } ?: "没有可撤销的修改"
@@ -193,7 +193,7 @@ fun FilesPage(onBack: () -> Unit) {
             item(key = "crumbs") {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                        .padding(horizontal = IrisDimens.groupGutter, vertical = 6.dp),
+                        .padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space6),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val crumbs = FilesOps.crumbs(rel)
@@ -202,17 +202,17 @@ fun FilesPage(onBack: () -> Unit) {
                         Text(
                             label, style = if (last) IrisType.rowStrong else IrisType.secondary,
                             color = if (last) c.text else c.accent, maxLines = 1,
-                            modifier = Modifier.clip(IrisRadius.smallShape).clickable(enabled = !last) { rel = path }.padding(horizontal = 4.dp, vertical = 4.dp),
+                            modifier = Modifier.clip(IrisRadius.smallShape).clickable(enabled = !last) { rel = path }.padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space4),
                         )
                         if (!last) Text("›", style = IrisType.secondary, color = c.textTertiary)
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = 4.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space4)) {
                     com.iris.localai.ui.components.IrisButton(
                         "导入", onClick = { importer.launch(arrayOf("*/*")) }, icon = Icons.Outlined.Add,
                         style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
                     )
-                    androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = 4.dp))
+                    androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = IrisDimens.space4))
                     com.iris.localai.ui.components.IrisButton(
                         "新建文件夹", onClick = { newFolder = true }, icon = Icons.Outlined.CreateNewFolder,
                         style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
@@ -249,7 +249,7 @@ fun FilesPage(onBack: () -> Unit) {
                         onClick = { if (it.dir) rel = it.path else viewing = it },
                         trailing = {
                             Box {
-                                PressableIcon(Icons.Outlined.MoreVert, "更多：${it.name}", size = 40.dp, iconSize = 20.dp) { menuFor = it.path }
+                                PressableIcon(Icons.Outlined.MoreVert, "更多：${it.name}", size = 40.dp, iconSize = IrisDimens.space20) { menuFor = it.path }
                                 IrisMenu(expanded = menuFor == it.path, onDismiss = { menuFor = null }) {
                                     IrisMenuItem("重命名", Icons.Outlined.DriveFileRenameOutline) { menuFor = null; renaming = it }
                                     if (!it.dir) IrisMenuItem("导出到手机", Icons.Outlined.FileUpload) { menuFor = null; exporting = it; exportLauncher.launch(it.name) }

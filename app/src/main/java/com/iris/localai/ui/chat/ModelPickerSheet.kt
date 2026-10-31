@@ -76,17 +76,17 @@ fun ModelPickerSheet(
             exit = fadeOut(IrisMotion.standard()),
         ) {
             val l = loading ?: return@AnimatedVisibility
-            Column(Modifier.padding(horizontal = IrisDimens.pageGutter + 4.dp, vertical = IrisDimens.space8)) {
+            Column(Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space8)) {
                 val secs = loadingSeconds(l)
                 Text("正在加载 ${l.model.displayName} · $secs 秒", style = IrisType.labelSmall, color = c.textSecondary)
                 // 1.10.2: what the previous load of this model really took (telemetry), instead of
                 // always promising that only the first load is slow.
                 val previous = lastLoad(l.model)
                 if (previous != null) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(IrisDimens.space2))
                     Text(previous, style = IrisType.caption, color = c.textTertiary)
                 } else if (secs >= 8) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(IrisDimens.space2))
                     Text("首次加载会把模型优化并缓存到本机，只需一次；之后通常几秒就好。", style = IrisType.caption, color = c.textTertiary)
                 }
                 Spacer(Modifier.height(IrisDimens.space8))
@@ -106,7 +106,7 @@ fun ModelPickerSheet(
         if (engine is EngineState.Failed) {
             Text(
                 engine.message, style = IrisType.caption, color = c.danger,
-                modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + 4.dp, vertical = IrisDimens.space6),
+                modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space6),
             )
         }
         if (models.isEmpty()) {
@@ -135,7 +135,7 @@ fun ModelPickerSheet(
                     )
                     if (cpuFaster(m)) {
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + 4.dp),
+                            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(

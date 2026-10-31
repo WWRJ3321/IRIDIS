@@ -52,7 +52,7 @@ class IrisApp : Application() {
     override fun onCreate() {
         super.onCreate()
         com.iris.localai.util.CrashReporter.install(this)
-        // 2.2.2: the terminal (PRoot + Alpine) is gone; remove its leftover rootfs once, never following links.
+        // 2.2.2: remove the leftover rootfs of a removed feature once, never following links.
         java.io.File(filesDir, "alpine").takeIf { it.exists() }?.let { dir ->
             Thread({ runCatching { com.iris.localai.util.io.Trees.deleteNoFollow(dir.toPath()) } }, "iris-cleanup").start()
         }

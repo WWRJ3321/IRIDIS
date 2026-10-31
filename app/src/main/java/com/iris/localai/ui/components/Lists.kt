@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -74,7 +74,7 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         modifier = modifier.padding(
             start = SectionInset,
             end = IrisDimens.pageGutter,
-            top = IrisDimens.space24 + 4.dp,
+            top = IrisDimens.space24 + IrisDimens.space4,
             bottom = 10.dp,
         ),
     )
@@ -98,21 +98,14 @@ fun GroupFootnote(text: String, modifier: Modifier = Modifier, monospace: Boolea
         text,
         style = if (monospace) IrisType.monoSmall else IrisType.secondary,
         color = Iris.colors.textTertiary,
-        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + 16.dp, top = 10.dp),
+        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + IrisDimens.space16, top = 10.dp),
     )
 }
 
-/** Rounded card holding a list of rows: HyperOS grouped card, continuous 24 dp corners, no dividers. */
+/** Rounded card holding a list of rows (2.2.4: an [IrisCard] — 20 dp corners, soft shadow, no dividers). */
 @Composable
 fun SettingsGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier
-            .padding(horizontal = IrisDimens.groupGutter)
-            .fillMaxWidth()
-            .clip(IrisRadius.largeShape)
-            .background(Iris.colors.surfaceElevated),
-        content = content,
-    )
+    IrisCard(modifier.padding(horizontal = IrisDimens.groupGutter), content = content)
 }
 
 /** Generic list row: optional leading icon, title + subtitle, optional trailing slot. */
@@ -149,7 +142,7 @@ fun SettingsRow(
     ) {
         if (icon != null) {
             Icon(icon, null, tint = c.textSecondary.copy(alpha = a), modifier = Modifier.size(IrisDimens.iconLarge))
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(IrisDimens.space16))
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = IrisType.row, color = titleColor.copy(alpha = titleColor.alpha * a))
@@ -162,7 +155,7 @@ fun SettingsRow(
             }
         }
         if (trailing != null) {
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(IrisDimens.space12))
             trailing()
         }
     }
@@ -209,13 +202,13 @@ fun SegmentedRow(
     icon: ImageVector? = null,
     subtitle: String? = null,
 ) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space16)) {
         SettingsRow(title, subtitle = subtitle, icon = icon, modifier = Modifier.heightIn(min = 44.dp))
         SegmentedControl(
             options, selectedIndex, onSelect,
             Modifier
                 .fillMaxWidth()
-                .padding(start = if (icon != null) IrisDimens.rowPadding + IrisDimens.iconLarge + 16.dp else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
+                .padding(start = if (icon != null) IrisDimens.rowPadding + IrisDimens.iconLarge + IrisDimens.space16 else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
         )
     }
 }
@@ -230,7 +223,7 @@ fun CheckRow(title: String, selected: Boolean, subtitle: String? = null, onClick
                 enter = if (LocalReduceMotion.current) EnterTransition.None else IrisMotion.popIn(0.4f),
                 exit = if (LocalReduceMotion.current) ExitTransition.None else IrisMotion.popOut(0.4f),
             ) {
-                Icon(Icons.Rounded.Check, "已选择", tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
+                Icon(Icons.Outlined.Check, "已选择", tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
             }
         }
     }
@@ -247,10 +240,10 @@ fun SliderRow(
     onChange: (Float) -> Unit,
 ) {
     val c = Iris.colors
-    Column(Modifier.fillMaxWidth().padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, top = IrisDimens.rowVerticalPadding, bottom = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, top = IrisDimens.rowVerticalPadding, bottom = IrisDimens.space6)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = IrisType.row, color = c.text, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(IrisDimens.space12))
             RollingText(display, style = IrisType.secondary.copy(fontWeight = FontWeight.Medium), color = c.textSecondary)
         }
         if (subtitle != null) {
@@ -396,7 +389,7 @@ fun SliderKnob(interaction: MutableInteractionSource) {
     }
     Box(
         Modifier
-            .size(24.dp)
+            .size(IrisDimens.space24)
             .graphicsLayer {
                 scaleX = s.value; scaleY = s.value
                 shadowElevation = 3.dp.toPx(); shape = CircleShape; clip = true

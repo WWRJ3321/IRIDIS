@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 207
-        versionName = "2.2.3"
+        versionCode = 208
+        versionName = "2.2.4"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -161,6 +161,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
 
     implementation(platform(libs.compose.bom))
+    implementation(libs.haze)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.foundation)

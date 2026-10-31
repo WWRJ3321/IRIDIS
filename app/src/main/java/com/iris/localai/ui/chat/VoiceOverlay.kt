@@ -1,5 +1,6 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import android.media.AudioManager
@@ -167,16 +168,16 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
     ) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             // Status pill
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(IrisDimens.space20))
             Row(
                 Modifier
                     .background(c.surfaceVariant.copy(alpha = 0.7f), IrisRadius.pillShape)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = IrisDimens.space8),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val dotColor by animateColorAsState(phaseColor, IrisMotion.standard(), label = "phaseColor")
                 StatusDot(dotColor, active = state.phase != VoicePhase.PREPARING && !muted)
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(IrisDimens.space8))
                 AnimatedContent(
                     targetState = phaseText,
                     transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
@@ -187,7 +188,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 Text(
                     state.error.orEmpty(), style = IrisType.caption, color = c.danger, textAlign = TextAlign.Center,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = IrisDimens.space32, vertical = 10.dp),
                 )
             }
 
@@ -218,7 +219,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                         "“${state.lastHeard}”", style = IrisType.secondary, color = c.textSecondary,
                         textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(IrisDimens.space12))
                 }
                 val reply = state.reply.trim()
                 if (reply.isNotEmpty()) {
@@ -245,7 +246,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             // Controls
             Row(
-                Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 28.dp, start = 24.dp, end = 24.dp),
+                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = 28.dp, start = IrisDimens.space24, end = IrisDimens.space24),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {
@@ -259,7 +260,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 }
                 VoiceControl("打断") {
                     PressableIcon(
-                        Icons.Outlined.PanTool, "打断", size = 64.dp, iconSize = 24.dp, background = c.surfaceVariant,
+                        Icons.Outlined.PanTool, "打断", size = 64.dp, iconSize = IrisDimens.space24, background = c.surfaceVariant,
                         enabled = state.phase == VoicePhase.SPEAKING || state.phase == VoicePhase.THINKING,
                     ) { vm.voice.interrupt() }
                 }
@@ -278,7 +279,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 private fun VoiceControl(label: String, content: @Composable () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         content()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(IrisDimens.space8))
         Text(label, style = IrisType.caption, color = Iris.colors.textSecondary)
     }
 }

@@ -102,12 +102,12 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
                     selected = s.cloneVoiceId == v.id,
                     onSelect = { vm.useClone(v.id) },
                 ) {
-                    if (playing && preview == SettingsViewModel.Preview.Loading) TypingDots(Modifier.padding(horizontal = 8.dp))
+                    if (playing && preview == SettingsViewModel.Preview.Loading) TypingDots(Modifier.padding(horizontal = IrisDimens.space8))
                     else PressableIcon(
                         if (playing) Icons.Outlined.StopCircle else Icons.Outlined.PlayArrow, if (playing) "停止" else "试听",
                         iconSize = 22.dp, tint = c.text,
                     ) { vm.previewVoice(v) }
-                    PressableIcon(Icons.Outlined.DeleteOutline, "删除", iconSize = 20.dp, tint = c.textSecondary) { deleting = v }
+                    PressableIcon(Icons.Outlined.DeleteOutline, "删除", iconSize = IrisDimens.space20, tint = c.textSecondary) { deleting = v }
                 }
             }
             Divider()
@@ -156,7 +156,7 @@ private fun VoiceChoiceRow(
     val c = Iris.colors
     Row(
         Modifier.fillMaxWidth().clickable(role = Role.RadioButton, onClick = onSelect)
-            .padding(start = 4.dp, end = IrisDimens.space4, top = 6.dp, bottom = 6.dp),
+            .padding(start = IrisDimens.space4, end = IrisDimens.space4, top = IrisDimens.space6, bottom = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         com.iris.localai.ui.components.IrisRadio(selected)
@@ -207,13 +207,13 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
                 }
                 is SettingsViewModel.CloneDraft.Processing -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TypingDots(); Spacer(Modifier.width(8.dp))
+                        TypingDots(); Spacer(Modifier.width(IrisDimens.space8))
                         Text(d.message, style = IrisType.secondary, color = c.text)
                     }
                 }
                 else -> {
                     if (d is SettingsViewModel.CloneDraft.Failed) Text(d.message, style = IrisType.secondary, color = c.danger)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                         IrisButton(
                             if (ready != null) "重录" else "录音", {
                                 if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startCloneRecording()
@@ -248,7 +248,7 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(IrisDimens.space2))
         }
     }
 }

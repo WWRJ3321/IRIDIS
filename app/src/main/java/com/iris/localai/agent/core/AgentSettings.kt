@@ -41,7 +41,7 @@ data class AgentSettings(
     /** 2.0.0: true once the user picked a provider in settings (an untouched AUTO is moved to the new default). */
     val searchProviderChosen: Boolean = false,
     val searxUrl: String = "",
-    /** 1.14.0 按需载入: terminal / phone / scheduling tools are listed by name until activated. */
+    /** 1.14.0 按需载入: phone / scheduling tools are listed by name until activated. */
     val lazyTools: Boolean = true,
     /** 1.14.0 计划模式: multi-step tasks are planned first and wait for the user's OK. */
     val planFirst: Boolean = false,
@@ -359,11 +359,7 @@ class AgentContainer(context: Context) {
         knowledge = KnowledgeSearch { q, n -> knowledge.search(q, n) },
         imageGen = imageGen,
         gui = gui,
-        terminal = if (terminalOn()) TerminalPlugin.runner(appContextForTools) else null,
     )
-
-    /** 2.2.3: whether the same-signature terminal plugin (com.iridis.terminal) is installed. */
-    fun terminalOn(): Boolean = TerminalPlugin.available(appContextForTools)
 
     /**
      * 2.1.7: whether a runnable image model is downloaded (generate_image is listed only then).

@@ -93,6 +93,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.iris.localai.R
 import com.iris.localai.data.Role
+import com.iris.localai.data.LocalModel
+import com.iris.localai.ui.components.floatingSurface
+import com.iris.localai.ui.components.glassSurface
+import com.iris.localai.ui.components.glassBackdrop
+import com.iris.localai.data.ModelFormat
 import com.iris.localai.engine.EngineState
 import com.iris.localai.server.ApiService
 import com.iris.localai.ui.components.PressableIcon
@@ -158,6 +163,8 @@ fun ChatScreen(
     val context = LocalContext.current
     val density = LocalDensity.current
     val backdrop = rememberGlassBackdrop()
+    // 2.2.4: Haze backdrop of the floating glass (top bar, model menu, drawer, sheets, dialogs).
+    val haze = remember { dev.chrisbanes.haze.HazeState() }
 
     var input by rememberSaveable { mutableStateOf("") }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -240,6 +247,7 @@ fun ChatScreen(
         else { pendingVoiceAction = action; micPermission.launch(Manifest.permission.RECORD_AUDIO) }
     }
 
+    androidx.compose.runtime.CompositionLocalProvider(com.iris.localai.ui.components.LocalGlassHaze provides haze) {
     ModalNavigationDrawer(
         drawerState = drawer,
         scrimColor = c.scrim,
@@ -351,7 +359,7 @@ fun ChatScreen(
             }
 
             // ---- Message list: top-down, newest at the bottom ----
-            Box(Modifier.fillMaxSize().glassSource(backdrop, Iris.colors.chatBackground)) {
+            Box(Modifier.fillMaxSize().glassBackdrop(haze).glassSource(backdrop, Iris.colors.chatBackground)) {
                 // 2.1.4 外观 › 自定义背景 (inside the glass source so the composer glass blurs it too).
                 com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
                 if (messages.isEmpty()) {
@@ -447,40 +455,38 @@ fun ChatScreen(
             // 2.1.5: with a custom background the bar (status-bar area included) is see-through like
             // the cards, so the picture runs full-bleed to the top edge instead of being cut off.
             val hasBgImage = settings.backgroundImage.isNotEmpty()
+            // 2.2.4: Kimi-style floating top bar — no flat full-width bar; two round buttons and a
+            // model pill float on a transparent background so the chat scrolls under them.
             Column(
                 Modifier
                     .fillMaxWidth()
                     .onSizeChanged { topBarHeight = it.height }
-                    .background(chatTopBarColor(c.chatBackground, hasBgImage))
                     .statusBarsPadding(),
             ) {
                 Row(
-                    Modifier.fillMaxWidth().height(IrisDimens.topBarHeight).padding(horizontal = IrisDimens.space12),
+                    Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.space12),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // 1.11.0 round capsules; 1.14.1 off by default (外观 › 顶栏按钮底色), fading in/out.
-                    val capsuleBg by androidx.compose.animation.animateColorAsState(
-                        if (settings.topBarCapsules) c.surfaceVariant else c.surfaceVariant.copy(alpha = 0f), IrisMotion.Color.spec(), label = "capsule")
-                    PressableIcon(Icons.Outlined.Menu, "历史对话", size = 40.dp, iconSize = 21.dp, background = capsuleBg) { hideKeyboard(); scope.launch { drawer.open() } }
-                    // 2.2.2: model name sits left beside the menu key; it opens a small menu (like the
-                    // file page's) listing models in the order set in 模型管理.
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话") { hideKeyboard(); scope.launch { drawer.open() } }
                     var modelMenu by remember { mutableStateOf(false) }
-                    Box(Modifier.weight(1f).padding(start = 4.dp), contentAlignment = Alignment.CenterStart) {
-                        ModelTitle(ui.engine, capsule = settings.topBarCapsules) { hideKeyboard(); modelMenu = true }
-                        com.iris.localai.ui.components.IrisMenu(modelMenu, { modelMenu = false }) {
-                            val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
-                            val locked = ui.isGenerating || backgroundRunId != null
-                            models.forEach { m ->
-                                com.iris.localai.ui.components.IrisMenuItem(m.displayName, if (m.path == current) Icons.Outlined.Check else null) {
-                                    modelMenu = false
-                                    if (!locked && m.path != current) vm.loadModel(m)
-                                }
-                            }
-                            com.iris.localai.ui.components.IrisMenuItem("档位与加载…", Icons.Outlined.Tune) { modelMenu = false; showPicker = true }
-                            com.iris.localai.ui.components.IrisMenuItem("管理模型", Icons.Outlined.Settings) { modelMenu = false; onOpenModels() }
-                        }
+                    Box(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+                        ModelTitle(ui.engine) { hideKeyboard(); modelMenu = true }
+                        val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
+                        ModelDropdown(
+                            expanded = modelMenu,
+                            models = models.filterNot { isProjectorFile(it.fileName) },
+                            currentPath = current,
+                            onDismiss = { modelMenu = false },
+                            onPick = { m ->
+                                modelMenu = false
+                                val locked = ui.isGenerating || backgroundRunId != null
+                                if (!locked && m.path != current) vm.loadModel(m)
+                            },
+                            onTiers = { modelMenu = false; showPicker = true },
+                            onManage = { modelMenu = false; onOpenModels() },
+                        )
                     }
-                    PressableIcon(Icons.Outlined.EditNote, "新对话", size = 40.dp, iconSize = 21.dp, background = capsuleBg, enabled = messages.isNotEmpty()) { vm.newChat() }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.
@@ -642,6 +648,7 @@ fun ChatScreen(
             }
         }
     }
+    }
 
     if (showPicker) {
         ModelPickerSheet(
@@ -718,8 +725,21 @@ fun ChatScreen(
     }
 }
 
+/** 2.2.4: vision projector files (mmproj etc.) belong to their parent model, never listed as models. */
+internal fun isProjectorFile(name: String): Boolean {
+    val n = name.lowercase()
+    return "mmproj" in n || "projector" in n
+}
+
+private fun engineTag(m: LocalModel): String = when (m.format) {
+    ModelFormat.GGUF -> "GGUF"
+    ModelFormat.MNN -> "MNN"
+    ModelFormat.QAIRT -> "GenieX"
+    ModelFormat.LITERT -> "LiteRT"
+}
+
 @Composable
-private fun ModelTitle(engine: EngineState, capsule: Boolean = false, onClick: () -> Unit) {
+private fun ModelTitle(engine: EngineState, onClick: () -> Unit) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     val title = when (engine) {
@@ -730,42 +750,113 @@ private fun ModelTitle(engine: EngineState, capsule: Boolean = false, onClick: (
     val sub = when (engine) {
         // 1.7.8: the backend really in use; a fallback says so right under the title (never silent).
         is EngineState.Ready -> engine.details.backend + if (engine.details.fallbackNote != null) " · 已回退" else ""
-        // 2.0.x: no ticking seconds here — the activity line above the composer is the one place
-        // that counts (and the title no longer recomposes every second while loading).
-        // 2.1.3: just 「加载中」 (no backend, no seconds); the pill above the composer has the details.
         is EngineState.Loading -> com.iris.localai.engine.SlowLoadHint.subtitle(null, 0)
         is EngineState.Failed -> "加载失败，点按查看"
-        EngineState.Idle -> "未加载模型"
+        EngineState.Idle -> "未加载"
     }
-    Column(
-        Modifier
-            .widthIn(max = 240.dp)
-            .heightIn(min = 40.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(percent = 50))
-            .background(androidx.compose.animation.animateColorAsState(if (capsule) c.surfaceVariant else c.surfaceVariant.copy(alpha = 0f), IrisMotion.Color.spec(), label = "titleCapsule").value)
-            .clickable(onClick = onClick, onClickLabel = "选择模型")
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.Start,
+    val maxW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.6f).dp
+    com.iris.localai.ui.components.IrisPill(
+        Modifier.widthIn(max = maxW),
+        onClick = onClick, onClickLabel = "选择模型",
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(IrisDimens.space16))
+        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.Center) {
             AnimatedContent(
                 targetState = title,
                 transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
                 label = "modelTitle",
-                modifier = Modifier.weight(1f, fill = false),
             ) { t ->
-                Text(t, style = IrisType.titleSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    t, style = IrisType.pillTitle,
+                    color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
-            Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
+            Text(
+                sub,
+                style = IrisType.pillCaption,
+                color = if (engine is EngineState.Failed) c.danger else c.textTertiary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
+            )
         }
-        Text(
-            sub,
-            style = IrisType.micro,
-            color = if (engine is EngineState.Failed) c.danger else c.textTertiary,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
-        )
+        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary, modifier = Modifier.padding(start = IrisDimens.space4, end = IrisDimens.space12).size(18.dp))
+    }
+}
+
+/** 2.2.4: compact rounded model card anchored under the pill (order = the user's drag order). */
+@Composable
+private fun ModelDropdown(
+    expanded: Boolean,
+    models: List<LocalModel>,
+    currentPath: String?,
+    onDismiss: () -> Unit,
+    onPick: (LocalModel) -> Unit,
+    onTiers: () -> Unit,
+    onManage: () -> Unit,
+) {
+    val c = Iris.colors
+    val reduce = LocalReduceMotion.current
+    val visible = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    visible.targetState = expanded
+    if (!visible.currentState && !visible.targetState) return
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val margin = 16.dp
+    val offset = with(density) { androidx.compose.ui.unit.IntOffset(-margin.roundToPx(), (44.dp + 6.dp - margin).roundToPx()) }
+    val maxH = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.55f).dp
+    val shape = IrisRadius.largeShape
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopStart, offset = offset, onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        AnimatedVisibility(
+            visibleState = visible,
+            enter = if (reduce) fadeIn(IrisMotion.Quick.float())
+            else fadeIn(IrisMotion.Quick.float()) + androidx.compose.animation.scaleIn(IrisMotion.Snappy.float(), initialScale = 0.9f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)),
+            exit = fadeOut(IrisMotion.Quick.float()),
+        ) {
+            Box(Modifier.padding(margin)) {
+                Column(
+                    Modifier
+                        .width(260.dp)
+                        .heightIn(max = maxH)
+                        .glassSurface(shape, com.iris.localai.ui.theme.IrisElevation.menu)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(vertical = 6.dp),
+                ) {
+                    models.forEach { m ->
+                        val selected = m.path == currentPath
+                        Row(
+                            Modifier.fillMaxWidth().height(44.dp).clickable { onPick(m) }.padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                m.displayName, style = if (selected) IrisType.menuItemSelected else IrisType.menuItem,
+                                color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                            )
+                            Text(engineTag(m), style = IrisType.micro, color = c.textTertiary, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                            Box(Modifier.padding(start = 6.dp).size(18.dp), contentAlignment = Alignment.Center) {
+                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                    if (models.isNotEmpty()) Box(Modifier.padding(horizontal = 14.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
+                    CompactMenuRow("档位与加载…", Icons.Outlined.Tune, onTiers)
+                    CompactMenuRow("管理模型", Icons.Outlined.Settings, onManage)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactMenuRow(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    val c = Iris.colors
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
+        Text(text, style = IrisType.menuItem, color = c.text, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
     }
 }
 

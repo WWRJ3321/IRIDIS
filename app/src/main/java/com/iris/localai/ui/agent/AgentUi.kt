@@ -49,6 +49,7 @@ import com.iris.localai.ui.components.IrisButton
 import com.iris.localai.ui.components.IrisButtonStyle
 import com.iris.localai.ui.components.TypingDots
 import com.iris.localai.ui.components.floatingSurface
+import com.iris.localai.ui.components.glassSurface
 import com.iris.localai.ui.components.pulse
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
@@ -90,7 +91,7 @@ fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (Ag
     // earlier steps fold into one 「已执行 N 步」 row; the newest steps always stay visible.
     val keep = StepFold.visible(steps.size)
     var expanded by rememberSaveable(steps.first().id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
         val folded = if (expanded) 0 else steps.size - keep
         if (steps.size > keep) {
             val hidden = steps.take(steps.size - keep)
@@ -124,13 +125,13 @@ private fun StepFoldRow(text: String, expanded: Boolean, onClick: () -> Unit) {
     val turn by animateFloatAsState(if (expanded) 180f else 0f, com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Snappy), label = "foldChevron")
     Row(
         Modifier.fillMaxWidth().clip(IrisRadius.mediumShape).clickable(onClickLabel = if (expanded) "收起" else "展开", onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Outlined.Build, null, tint = c.textTertiary, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(IrisDimens.space8))
         Text(text, style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(16.dp).graphicsLayer { rotationZ = turn })
+        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.space16).graphicsLayer { rotationZ = turn })
     }
 }
 
@@ -181,38 +182,38 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
             .clip(IrisRadius.mediumShape)
             .background(c.surfaceVariant)
             .clickable(enabled = expandable, onClickLabel = if (open) "收起" else "展开") { open = !open }
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .padding(horizontal = IrisDimens.space12, vertical = 9.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.pulse(live, min = 0.4f))
-            Spacer(Modifier.width(8.dp))
+            Icon(icon, null, tint = tint, modifier = Modifier.size(IrisDimens.space16).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.pulse(live, min = 0.4f))
+            Spacer(Modifier.width(IrisDimens.space8))
             Text(StepText.header(step), style = IrisType.labelSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(IrisDimens.space6))
             if (live) TypingDots()
             else Text(StepText.status(step.status), style = IrisType.caption, color = tint, maxLines = 1, softWrap = false)
             if (expandable) {
                 Icon(
                     Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary,
-                    modifier = Modifier.padding(start = 2.dp).size(16.dp).graphicsLayer { rotationZ = turn },
+                    modifier = Modifier.padding(start = IrisDimens.space2).size(IrisDimens.space16).graphicsLayer { rotationZ = turn },
                 )
             }
         }
         if (step.result.isNotBlank() && plan == null) {
             Text(
                 step.result, style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 24.dp, top = 2.dp),
+                modifier = Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space2),
             )
         }
         // 2.1.7: pictures the step made (generate_image), tap → full-screen viewer.
         if (step.images.isNotEmpty()) {
-            Row(Modifier.padding(start = 24.dp, top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space6), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                 step.images.take(4).forEach { com.iris.localai.ui.markdown.ImageThumbnail(it) }
             }
         }
         if (plan != null) com.iris.localai.ui.components.Fold(open) {
-            Column(Modifier.padding(top = 6.dp).fillMaxWidth()) {
+            Column(Modifier.padding(top = IrisDimens.space6).fillMaxWidth()) {
                 if (plan.title.isNotBlank()) Text(plan.title, style = IrisType.labelSmall, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(StepText.PLAN_HINT, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
+                Text(StepText.PLAN_HINT, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space2, bottom = IrisDimens.space8))
                 plan.steps.forEachIndexed { i, ps -> FlowNode(i + 1, ps.text, ps.status, first = i == 0, last = i == plan.steps.lastIndex) }
             }
         } else if (!planStep) com.iris.localai.ui.components.Fold(open) {
@@ -220,7 +221,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                 Text(
                     step.detail.take(4000), style = IrisType.monoSmall, color = c.text,
                     modifier = Modifier
-                        .padding(top = 8.dp)
+                        .padding(top = IrisDimens.space8)
                         .fillMaxWidth()
                         .clip(IrisRadius.smallShape)
                         .background(c.codeBackground)
@@ -240,8 +241,9 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
     AlertDialog(
         // Dismissing (back / outside tap) counts as 拒绝: the agent must never hang on a hidden dialog.
         onDismissRequest = { onAnswer(UserDecision.DENY) },
+        modifier = Modifier.glassSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
         shape = IrisRadius.dialogShape,
-        containerColor = c.floatingSurface,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
         title = {
             com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current)
@@ -250,7 +252,7 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
         text = {
             Column(Modifier.fillMaxWidth()) {
                 Text("工具 $toolName 想执行：", style = IrisType.secondary, color = c.textSecondary)
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(IrisDimens.space8))
                 Box(
                     Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
                         .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(10.dp),

@@ -1,5 +1,6 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -122,16 +123,16 @@ private fun ReplySection(r: ReplyReport) {
 @Composable
 private fun SegmentBody(s: SegmentReport, charging: Boolean) {
     val c = Iris.colors
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12)) {
         Metric("速度", DiagnosticsText.tokPerSec(s.tokPerSec))
         Metric("CPU", "${DiagnosticsText.cpuPerToken(s.cpuMsPerToken)} · 平均 %.2f 个核在忙".format(s.busyCores))
         Metric("电流", DiagnosticsText.current(s.avgMa, s.maSamples, charging))
         Metric("推理线程所在 CPU", DiagnosticsText.cores(s.coreShare))
         if (s.coreShare.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(IrisDimens.space8))
             CoreBars(s.coreShare)
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(IrisDimens.space2))
         Text("${s.tokens} tokens · ${s.wallMs} ms", style = IrisType.labelSmall, color = c.textTertiary)
     }
 }
@@ -152,14 +153,14 @@ private fun CoreBars(share: Map<Int, Float>) {
     val n = maxOf(8, (share.keys.maxOrNull() ?: 0) + 1)
     Column {
         Canvas(Modifier.fillMaxWidth().height(36.dp)) {
-            val gap = 6.dp.toPx()
+            val gap = IrisDimens.space6.toPx()
             val w = (size.width - gap * (n - 1)) / n
             for (i in 0 until n) {
                 val x = i * (w + gap)
                 drawRoundRect(c.outline.copy(alpha = 0.35f), Offset(x, 0f), Size(w, size.height), CornerRadius(3.dp.toPx()))
                 val f = ((share[i] ?: 0f) / 100f).coerceIn(0f, 1f)
                 if (f > 0f) {
-                    val h = (size.height * f).coerceAtLeast(2.dp.toPx())
+                    val h = (size.height * f).coerceAtLeast(IrisDimens.space2.toPx())
                     drawRoundRect(c.textSecondary.copy(alpha = 0.8f), Offset(x, size.height - h), Size(w, h), CornerRadius(3.dp.toPx()))
                 }
             }

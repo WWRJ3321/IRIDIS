@@ -21,7 +21,7 @@ import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.LinkOff
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,12 +62,12 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
             .clip(com.iris.localai.ui.theme.IrisRadius.pillShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = "上下文用量 ${usage.used} / ${usage.limit}" }
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
     ) {
         val track = c.outline.copy(alpha = 0.45f)
-        Canvas(Modifier.width(28.dp).height(4.dp)) {
+        Canvas(Modifier.width(28.dp).height(IrisDimens.space4)) {
             val r = CornerRadius(size.height / 2)
             drawRoundRect(track, cornerRadius = r)
             if (frac > 0f) drawRoundRect(tint, Offset.Zero, Size(size.width * frac, size.height), r)
@@ -106,16 +106,16 @@ fun ContextSheet(
     val c = Iris.colors
     IrisSheet(onDismiss = onDismiss) {
         SheetHeader("上下文")
-        Column(Modifier.padding(horizontal = IrisDimens.pageGutter + 4.dp)) {
+        Column(Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4)) {
             Text(
                 if (usage.limit > 0) "${if (usage.exact) "已用" else "约用"} ${usage.used} / ${usage.limit} tokens（${(usage.fraction * 100).toInt()}%）"
                 else "加载模型后显示上下文上限",
                 style = IrisType.secondary, color = if (usage.nearFull) c.danger else c.textSecondary,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(IrisDimens.space6))
             val track = c.outline.copy(alpha = 0.4f)
             val fill = if (usage.nearFull) c.danger else c.textSecondary
-            Canvas(Modifier.fillMaxWidth().height(6.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(IrisDimens.space6)) {
                 val r = CornerRadius(size.height / 2)
                 drawRoundRect(track, cornerRadius = r)
                 drawRoundRect(fill, Offset.Zero, Size(size.width * usage.fraction, size.height), r)
@@ -180,7 +180,7 @@ fun ContextSheet(
 private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-            if (selected) Icon(Icons.Rounded.Check, "已选择", tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+            if (selected) Icon(Icons.Outlined.Check, "已选择", tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
         }
     }
 }
@@ -203,15 +203,15 @@ fun CompactionDivider(count: Int, onClear: () -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f).height(1.dp).padding(end = 8.dp)) {
+        Box(Modifier.weight(1f).height(1.dp).padding(end = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline.copy(alpha = 0.6f)) }
         }
         Icon(Icons.Outlined.Compress, null, tint = c.textTertiary, modifier = Modifier.size(14.dp))
         Text(
             ContextText.divider(count), style = IrisType.caption, color = c.textTertiary,
-            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
         )
-        Box(Modifier.weight(1f).height(1.dp).padding(start = 8.dp)) {
+        Box(Modifier.weight(1f).height(1.dp).padding(start = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline.copy(alpha = 0.6f)) }
         }
     }
@@ -225,14 +225,14 @@ fun ContextBreakDivider(onClear: () -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f).height(1.dp).padding(end = 8.dp)) {
+        Box(Modifier.weight(1f).height(1.dp).padding(end = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline) }
         }
         Text(
             "新上下文从这里开始 · 撤销", style = IrisType.caption, color = c.textTertiary,
-            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
         )
-        Box(Modifier.weight(1f).height(1.dp).padding(start = 8.dp)) {
+        Box(Modifier.weight(1f).height(1.dp).padding(start = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline) }
         }
     }

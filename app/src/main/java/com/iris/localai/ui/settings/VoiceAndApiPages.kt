@@ -230,7 +230,7 @@ internal fun PackRow(
         Modifier
             .fillMaxWidth()
             .then(if (installed && !selected) Modifier.clickable(role = Role.RadioButton, onClick = onUse) else Modifier)
-            .padding(start = 4.dp, end = IrisDimens.space8, top = IrisDimens.space8, bottom = IrisDimens.space8),
+            .padding(start = IrisDimens.space4, end = IrisDimens.space8, top = IrisDimens.space8, bottom = IrisDimens.space8),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             com.iris.localai.ui.components.IrisRadio(selected, Modifier.alpha(if (installed) 1f else 0.4f))
@@ -272,7 +272,7 @@ internal fun PackRow(
         ) {
             IrisProgressBar(
                 progress = if (state == PackState.Extracting) null else (state as? PackState.Downloading)?.fraction ?: 1f,
-                modifier = Modifier.padding(start = 48.dp, end = IrisDimens.space8, top = IrisDimens.space8, bottom = 4.dp),
+                modifier = Modifier.padding(start = 48.dp, end = IrisDimens.space8, top = IrisDimens.space8, bottom = IrisDimens.space4),
             )
         }
     }
@@ -309,7 +309,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                 }
                 Divider()
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).padding(start = IrisDimens.rowPadding, end = IrisDimens.space8, top = 8.dp, bottom = 8.dp),
+                    Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).padding(start = IrisDimens.rowPadding, end = IrisDimens.space8, top = IrisDimens.space8, bottom = IrisDimens.space8),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("端口", style = IrisType.row, color = c.text, modifier = Modifier.weight(1f))
@@ -341,7 +341,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
             fun applyKey() { vm.setApiKey(keyText); focus.clearFocus() }
             SettingsGroup {
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).padding(start = IrisDimens.rowPadding, end = IrisDimens.space4, top = 8.dp, bottom = 8.dp),
+                    Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).padding(start = IrisDimens.rowPadding, end = IrisDimens.space4, top = IrisDimens.space8, bottom = IrisDimens.space8),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
@@ -366,7 +366,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, bottom = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                     IrisButton("生成随机", { vm.regenerateKey(); keyVisible = true }, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Reload)
                     Spacer(Modifier.weight(1f))
                     IrisButton(
@@ -406,7 +406,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     val auth = if (s.apiKey.isNotBlank()) " \\\n  -H \"Authorization: Bearer ${s.apiKey}\"" else ""
                     val example = "curl $base/v1/chat/completions$auth \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"default\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}'"
                     CodeSurface(example, Modifier.padding(horizontal = IrisDimens.groupGutter))
-                    Row(Modifier.padding(start = IrisDimens.space8, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(start = IrisDimens.space8, top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                         IrisButton("复制示例", { clipboard.setText(AnnotatedString(example)) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.ContentCopy)
                     }
                 }

@@ -96,7 +96,7 @@ private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.grap
             Text(
                 rememberInline(block.text, c),
                 style = head.copy(color = color),
-                modifier = Modifier.padding(top = if (block.level <= 2) 6.dp else 2.dp),
+                modifier = Modifier.padding(top = if (block.level <= 2) IrisDimens.space6 else IrisDimens.space2),
             )
         }
         is MdBlock.Paragraph -> Text(rememberInline(block.text, c), style = body)
@@ -106,8 +106,8 @@ private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.grap
         }
         is MdBlock.Image -> MarkdownImage(block)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
-            Box(Modifier.width(3.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(c.outline))
-            Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.width(3.dp).fillMaxHeight().clip(RoundedCornerShape(IrisDimens.space2)).background(c.outline))
+            Column(Modifier.padding(start = IrisDimens.space12), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                 block.blocks.forEach { Block(it, c, c.textSecondary) }
             }
         }
@@ -119,13 +119,13 @@ private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.grap
                 )
                 else -> Icon(
                     if (block.checked) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank, null,
-                    tint = c.textSecondary, modifier = Modifier.padding(top = 4.dp, end = 6.dp).size(18.dp),
+                    tint = c.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4, end = IrisDimens.space6).size(18.dp),
                 )
             }
             Text(rememberInline(block.text, c), style = body, modifier = Modifier.weight(1f))
         }
         is MdBlock.Table -> TableBlock(block, c)
-        MdBlock.Rule -> Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(c.outline))
+        MdBlock.Rule -> Box(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4).height(1.dp).background(c.outline))
     }
 }
 
@@ -160,7 +160,7 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
     val shape = IrisRadius.mediumShape
     Column(Modifier.fillMaxWidth().clip(shape).background(c.codeBackground).border(IrisDimens.hairline, c.outline, shape)) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp),
+            Modifier.fillMaxWidth().padding(start = 14.dp, end = IrisDimens.space4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -169,13 +169,13 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
             )
             PressableIcon(
                 if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-                contentDescription = if (copied) "已复制" else "复制代码", size = 36.dp, iconSize = 16.dp, tint = c.textSecondary,
+                contentDescription = if (copied) "已复制" else "复制代码", size = 36.dp, iconSize = IrisDimens.space16, tint = c.textSecondary,
             ) {
                 clipboard.setText(AnnotatedString(block.code))
                 copied = true
             }
         }
-        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
+        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = IrisDimens.space12)) {
             Text(
                 block.code, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = c.text,
                 softWrap = false,
@@ -204,7 +204,7 @@ private fun TableBlock(block: MdBlock.Table, c: IrisColors) {
                             fontSize = 14.sp, lineHeight = 20.sp, color = c.text, textAlign = align,
                             fontWeight = if (r == 0) FontWeight.SemiBold else FontWeight.Normal,
                         ),
-                        modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = 12.dp, vertical = 9.dp),
+                        modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = IrisDimens.space12, vertical = 9.dp),
                     )
                 }
             }
