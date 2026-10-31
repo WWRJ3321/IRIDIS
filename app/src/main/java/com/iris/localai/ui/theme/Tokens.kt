@@ -48,7 +48,7 @@ object IrisDimens {
     val floatingButton = 44.dp
     val floatingButtonSmall = 40.dp
     /** 2.2.5: home top bar — round buttons and the model pill share one 48 dp height. */
-    val topBarControl = 48.dp
+    val topBarControl = 42.dp // 2.2.7: slimmer pill + side buttons
     /** Height reserved for the large page title under the top bar (HyperOS / iOS large title). */
     val largeTitleHeight = 64.dp
     val drawerWidth = 304.dp
@@ -147,8 +147,8 @@ object IrisType {
     val caption = TextStyle(fontSize = 12.sp, lineHeight = 17.sp)
     val micro = TextStyle(fontSize = 11.sp, lineHeight = 14.sp)
     /** 2.2.4: chat model pill — bold model name and the small engine/status line under it. */
-    val pillTitle = TextStyle(fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold)
-    val pillCaption = TextStyle(fontSize = 11.sp, lineHeight = 13.sp)
+    val pillTitle = TextStyle(fontSize = 15.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold)
+    val pillCaption = TextStyle(fontSize = 11.sp, lineHeight = 12.sp)
     /** 2.2.4: compact menu rows (model menu). */
     val menuItem = TextStyle(fontSize = 14.sp, lineHeight = 19.sp)
     val menuItemSelected = TextStyle(fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)

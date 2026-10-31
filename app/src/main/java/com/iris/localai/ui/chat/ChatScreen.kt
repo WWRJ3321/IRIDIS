@@ -81,6 +81,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -197,6 +205,10 @@ fun ChatScreen(
     /** 1.10.6: 「查看提示内容」 text (null = closed). */
     var promptView by remember { mutableStateOf<String?>(null) }
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    // 2.2.7: the model pill morphs into the model panel (container transform).
+    var modelMenu by remember { mutableStateOf(false) }
+    var pillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val modelMorph = remember { Animatable(0f) }
     var configureModel by remember { mutableStateOf<com.iris.localai.data.LocalModel?>(null) }
     var showContext by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -463,23 +475,14 @@ fun ChatScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话", size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
-                    var modelMenu by remember { mutableStateOf(false) }
                     Box(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
-                        ModelTitle(ui.engine) { hideKeyboard(); modelMenu = true }
-                        val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
-                        ModelDropdown(
-                            expanded = modelMenu,
-                            models = models,
-                            currentPath = current,
-                            onDismiss = { modelMenu = false },
-                            onPick = { m ->
-                                modelMenu = false
-                                val locked = ui.isGenerating || backgroundRunId != null
-                                if (!locked && m.path != current) vm.loadModel(m)
-                            },
-                            onTiers = { modelMenu = false; showPicker = true },
-                            onManage = { modelMenu = false; onOpenModels() },
-                        )
+                        ModelTitle(
+                            ui.engine,
+                            Modifier
+                                .onGloballyPositioned { pillBounds = it.boundsInRoot() }
+                                // hidden while the morphing surface stands in for it
+                                .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
+                        ) { hideKeyboard(); modelMenu = true }
                     }
                     com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
@@ -642,6 +645,36 @@ fun ChatScreen(
                 VoiceOverlay(vm = vm, onClose = { voiceMode = false })
             }
         }
+
+            // ---- 2.2.7: model pill → panel morph, above everything in this screen ----
+            val reduceMorph = LocalReduceMotion.current
+            LaunchedEffect(modelMenu) {
+                modelMorph.animateTo(
+                    if (modelMenu) 1f else 0f,
+                    if (reduceMorph) tween(120) else tween(300, easing = IrisMotion.ProgressEasing),
+                )
+            }
+            androidx.activity.compose.BackHandler(enabled = modelMenu) { modelMenu = false }
+            val pb = pillBounds
+            if (pb != null && (modelMenu || modelMorph.value > 0f)) {
+                val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
+                ModelMorphPanel(
+                    progress = { modelMorph.value },
+                    expanded = modelMenu,
+                    pillInRoot = pb,
+                    engine = ui.engine,
+                    models = models,
+                    currentPath = current,
+                    onDismiss = { modelMenu = false },
+                    onPick = { m ->
+                        modelMenu = false
+                        val locked = ui.isGenerating || backgroundRunId != null
+                        if (!locked && m.path != current) vm.loadModel(m)
+                    },
+                    onTiers = { modelMenu = false; showPicker = true },
+                    onManage = { modelMenu = false; onOpenModels() },
+                )
+            }
     }
     }
 
@@ -728,7 +761,18 @@ private fun engineTag(m: LocalModel): String = when (m.format) {
 }
 
 @Composable
-private fun ModelTitle(engine: EngineState, onClick: () -> Unit) {
+private fun ModelTitle(engine: EngineState, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val maxW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.6f).dp
+    com.iris.localai.ui.components.IrisPill(
+        modifier.widthIn(max = maxW),
+        height = IrisDimens.topBarControl,
+        onClick = onClick, onClickLabel = "选择模型",
+    ) { ModelPillContent(engine, chevronTurn = 0f) }
+}
+
+/** 2.2.7: the pill's row content, shared by the pill and the header of the expanded panel. */
+@Composable
+private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     val title = when (engine) {
@@ -743,40 +787,45 @@ private fun ModelTitle(engine: EngineState, onClick: () -> Unit) {
         is EngineState.Failed -> "加载失败，点按查看"
         EngineState.Idle -> "未加载"
     }
-    val maxW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.6f).dp
-    com.iris.localai.ui.components.IrisPill(
-        Modifier.widthIn(max = maxW),
-        height = IrisDimens.topBarControl,
-        onClick = onClick, onClickLabel = "选择模型",
-    ) {
-        Spacer(Modifier.width(IrisDimens.space16))
-        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.Center) {
-            AnimatedContent(
-                targetState = title,
-                transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
-                label = "modelTitle",
-            ) { t ->
-                Text(
-                    t, style = IrisType.pillTitle,
-                    color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                sub,
-                style = IrisType.pillCaption,
-                color = if (engine is EngineState.Failed) c.danger else c.textTertiary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
-            )
+    Spacer(Modifier.width(IrisDimens.space12))
+    Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.Center) {
+        AnimatedContent(
+            targetState = title,
+            transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
+            label = "modelTitle",
+        ) { t ->
+            Text(t, style = IrisType.pillTitle, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary, modifier = Modifier.padding(start = IrisDimens.space4, end = IrisDimens.space16).size(18.dp))
+        Text(
+            sub,
+            style = IrisType.pillCaption,
+            color = if (engine is EngineState.Failed) c.danger else c.textTertiary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
+        )
     }
+    Icon(
+        Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary,
+        modifier = Modifier
+            .padding(start = IrisDimens.space4, end = IrisDimens.space12)
+            .size(16.dp)
+            .graphicsLayer { rotationZ = 180f * chevronTurn },
+    )
 }
 
-/** 2.2.4: compact rounded model card anchored under the pill (order = the user's drag order). */
+/**
+ * 2.2.7: container transform from the top-bar pill into the model panel. One glass surface,
+ * anchored at the pill's top-left, grows from the pill's size to the panel's (width, height and
+ * corner radius follow [progress] 0 → 1); the pill's own row stays as the header (chevron turns
+ * 180°) and the panel content fades in below it. Collapsing plays the same path backwards.
+ * Same window as the chat, so the Haze glass keeps blurring the messages behind it.
+ */
 @Composable
-private fun ModelDropdown(
+private fun ModelMorphPanel(
+    progress: () -> Float,
     expanded: Boolean,
+    pillInRoot: androidx.compose.ui.geometry.Rect,
+    engine: EngineState,
     models: List<LocalModel>,
     currentPath: String?,
     onDismiss: () -> Unit,
@@ -785,53 +834,98 @@ private fun ModelDropdown(
     onManage: () -> Unit,
 ) {
     val c = Iris.colors
-    val reduce = LocalReduceMotion.current
-    val visible = remember { androidx.compose.animation.core.MutableTransitionState(false) }
-    visible.targetState = expanded
-    if (!visible.currentState && !visible.targetState) return
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val margin = 16.dp
-    val offset = with(density) { androidx.compose.ui.unit.IntOffset(-margin.roundToPx(), (44.dp + 6.dp - margin).roundToPx()) }
-    val maxH = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.55f).dp
-    val shape = IrisRadius.largeShape
-    androidx.compose.ui.window.Popup(
-        alignment = Alignment.TopStart, offset = offset, onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    val conf = androidx.compose.ui.platform.LocalConfiguration.current
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var areaH by remember { mutableStateOf(0) }
+    var areaW by remember { mutableStateOf(0) }
+    var contentH by remember { mutableStateOf(0) }
+    val p = progress()
+    Box(
+        Modifier.fillMaxSize().onGloballyPositioned {
+            origin = it.positionInRoot(); areaH = it.size.height; areaW = it.size.width
+        },
     ) {
-        AnimatedVisibility(
-            visibleState = visible,
-            enter = if (reduce) fadeIn(IrisMotion.Quick.float())
-            else fadeIn(IrisMotion.Quick.float()) + androidx.compose.animation.scaleIn(IrisMotion.Snappy.float(), initialScale = 0.9f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)),
-            exit = fadeOut(IrisMotion.Quick.float()),
-        ) {
-            Box(Modifier.padding(margin)) {
+        // Light dim + tap catcher (only takes touches while open).
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = progress() }
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = if (c.isDark) 0.24f else 0.12f))
+                .then(
+                    if (expanded) Modifier.pointerInput(Unit) {
+                        detectTapGestures { onDismiss() }
+                    } else Modifier,
+                ),
+        )
+        with(density) {
+            val left = pillInRoot.left - origin.x
+            val top = pillInRoot.top - origin.y
+            val pillW = pillInRoot.width
+            val pillH = pillInRoot.height
+            val margin = 12.dp.toPx()
+            val areaWidth = if (areaW > 0) areaW.toFloat() else conf.screenWidthDp.dp.toPx()
+            val panelW = maxOf(pillW, minOf(300.dp.toPx(), areaWidth - left - margin))
+            val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
+            val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.6f, avail).coerceAtLeast(pillH)
+            val targetH = if (contentH > 0) contentH.toFloat().coerceAtMost(maxH) else pillH
+            val w = pillW + (panelW - pillW) * p
+            val h = pillH + (targetH - pillH) * p
+            val corner = (pillH / 2f) + (24.dp.toPx() - pillH / 2f) * p
+            Box(
+                Modifier
+                    .offset { androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()) }
+                    .size(w.toDp(), h.toDp())
+                    .glassSurface(
+                        androidx.compose.foundation.shape.RoundedCornerShape(corner.toDp()),
+                        com.iris.localai.ui.theme.IrisElevation.menu,
+                        strong = true,
+                    )
+                    // taps on the glass itself never reach the dismiss catcher
+                    .pointerInput(Unit) { detectTapGestures { } },
+            ) {
                 Column(
                     Modifier
-                        .width(260.dp)
-                        .heightIn(max = maxH)
-                        .glassSurface(shape, com.iris.localai.ui.theme.IrisElevation.menu)
-                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                        .padding(vertical = 6.dp),
+                        .wrapContentSize(Alignment.TopStart, unbounded = true)
+                        .width(panelW.toDp())
+                        .heightIn(max = maxH.toDp())
+                        .onSizeChanged { contentH = it.height },
                 ) {
-                    models.forEach { m ->
-                        val selected = m.path == currentPath
-                        Row(
-                            Modifier.fillMaxWidth().height(44.dp).clickable { onPick(m) }.padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                m.displayName, style = if (selected) IrisType.menuItemSelected else IrisType.menuItem,
-                                color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                            )
-                            Text(engineTag(m), style = IrisType.micro, color = c.textTertiary, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
-                            Box(Modifier.padding(start = 6.dp).size(18.dp), contentAlignment = Alignment.Center) {
-                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                    Row(
+                        Modifier
+                            .width(pillW.toDp()).height(pillH.toDp())
+                            .clickable(onClickLabel = "收起") { onDismiss() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) { ModelPillContent(engine, chevronTurn = p) }
+                    Column(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .graphicsLayer { alpha = ((progress() - 0.3f) / 0.7f).coerceIn(0f, 1f) }
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                            .padding(bottom = 6.dp),
+                    ) {
+                        Box(Modifier.padding(horizontal = 14.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
+                        Spacer(Modifier.height(4.dp))
+                        models.forEach { m ->
+                            val selected = m.path == currentPath
+                            Row(
+                                Modifier.fillMaxWidth().height(44.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    m.displayName, style = if (selected) IrisType.menuItemSelected else IrisType.menuItem,
+                                    color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                )
+                                Text(engineTag(m), style = IrisType.micro, color = c.textTertiary, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                                Box(Modifier.padding(start = 6.dp).size(18.dp), contentAlignment = Alignment.Center) {
+                                    if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
+                        if (models.isNotEmpty()) Box(Modifier.padding(horizontal = 14.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
+                        CompactMenuRow("档位与加载…", Icons.Outlined.Tune) { if (expanded) onTiers() }
+                        CompactMenuRow("管理模型", Icons.Outlined.Settings) { if (expanded) onManage() }
                     }
-                    if (models.isNotEmpty()) Box(Modifier.padding(horizontal = 14.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
-                    CompactMenuRow("档位与加载…", Icons.Outlined.Tune, onTiers)
-                    CompactMenuRow("管理模型", Icons.Outlined.Settings, onManage)
                 }
             }
         }

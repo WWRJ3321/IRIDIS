@@ -59,6 +59,9 @@ object GlassTokens {
     /** Tint over the blur: light ≈ 45 % white, dark ≈ 40 % near-black. */
     val lightTint = Color.White.copy(alpha = 0.45f)
     val darkTint = Color(0xFF141416).copy(alpha = 0.40f)
+    /** 2.2.7: stronger tint for glass that carries a list (the expanded model panel). */
+    val lightTintStrong = Color.White.copy(alpha = 0.78f)
+    val darkTintStrong = Color(0xFF141416).copy(alpha = 0.72f)
     const val NOISE = 0.15f
     /** Without blur the tint must carry the contrast on its own. */
     val lightFallback = Color(0xFFFAFAFB).copy(alpha = 0.94f)
@@ -75,11 +78,13 @@ fun Modifier.glassSurface(
     shape: Shape,
     elevation: Dp = GlassTokens.elevation,
     state: HazeState? = LocalGlassHaze.current,
+    strong: Boolean = false,
 ): Modifier {
     val c = Iris.colors
     val dark = c.isDark
     val blur = state != null && LocalGlassQuality.current.blurs
-    val tint = if (dark) GlassTokens.darkTint else GlassTokens.lightTint
+    val tint = if (strong) (if (dark) GlassTokens.darkTintStrong else GlassTokens.lightTintStrong)
+        else if (dark) GlassTokens.darkTint else GlassTokens.lightTint
     val fallback = if (dark) GlassTokens.darkFallback else GlassTokens.lightFallback
     // 1 dp rim, white 70 % → 15 % from top-left to bottom-right (dimmer in dark theme).
     val rim = Brush.linearGradient(
