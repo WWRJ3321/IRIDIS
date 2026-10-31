@@ -86,17 +86,13 @@ data class RackInput(
     val toolGroup: String? = null,
     val stepsDone: Int = 0,
     val webOn: Boolean = false,
-    val shellOn: Boolean = false,
-    val shellKind: String = "",
+    /** 2.2.2: the screen tool (GUI agent) is enabled. */
+    val screenOn: Boolean = false,
     val voicePacks: Int = 0,
     val voiceActive: Boolean = false,
     val apiRunning: Boolean = false,
     val apiPort: Int = 0,
     val apiError: String? = null,
-    val schedules: Int = 0,
-    val autoSchedules: Int = 0,
-    val heartbeats: Int = 0,
-    val heartbeatOn: Boolean = true,
     val memoryOn: Boolean = false,
     val planLeft: Int = 0,
 )
@@ -119,16 +115,12 @@ object RackRules {
             ),
             RackModule("NET", "联网", if (!i.webOn) RackState.OFF else if (live("WEB")) RackState.RUN else RackState.ON,
                 if (i.webOn) "搜索与网页读取已开启" else "联网工具已关闭", listOf("搜索", "网页")),
-            RackModule("SHELL", "终端", if (!i.shellOn) RackState.OFF else if (live("SHELL")) RackState.RUN else RackState.STANDBY,
-                if (i.shellOn) "命令行 · ${i.shellKind}" else "运行命令已关闭", listOf(i.shellKind).filter { it.isNotBlank() }),
+            RackModule("SCREEN", "看屏", if (!i.screenOn) RackState.OFF else if (i.agentRunning && i.tool == com.iris.localai.agent.ScreenTool.label) RackState.RUN else RackState.STANDBY,
+                if (i.screenOn) "可操作手机屏幕" else "看屏工具已关闭", emptyList()),
             RackModule("VOICE", "语音", when { i.voiceActive -> RackState.RUN; i.voicePacks > 0 -> RackState.ON; else -> RackState.OFF },
                 if (i.voicePacks > 0) "已安装 ${i.voicePacks} 个语音包" else "未安装语音包", listOf("${i.voicePacks} 包")),
             RackModule("API", "API 服务", when { i.apiError != null -> RackState.ERROR; i.apiRunning -> RackState.ON; else -> RackState.OFF },
                 i.apiError ?: if (i.apiRunning) "运行中 · 端口 ${i.apiPort}" else "未启动", if (i.apiRunning) listOf(":${i.apiPort}") else emptyList()),
-            RackModule("CRON", "定时 / 心跳",
-                when { live("TASKS") -> RackState.RUN; i.schedules > 0 || i.heartbeats > 0 -> RackState.ON; i.heartbeatOn -> RackState.STANDBY; else -> RackState.OFF },
-                "定时任务 ${i.schedules} 个（自动 ${i.autoSchedules}）· 心跳 ${if (i.heartbeatOn) "${i.heartbeats} 个待检查" else "已关闭"}",
-                listOf("任务 ${i.schedules}", "自动 ${i.autoSchedules}", "心跳 ${i.heartbeats}")),
             RackModule("MEM", "记忆", if (!i.memoryOn) RackState.OFF else if (live("MEMORY")) RackState.RUN else RackState.ON,
                 if (i.memoryOn) "长期记忆已开启" else "长期记忆已关闭", emptyList()),
         )
@@ -597,7 +589,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
 /** 1.14.5: what a tap on the open drawer lands on. */
 private enum class DrawerHit { NONE, CONTENT, HANDLE }
 
-/** 1.14.1: list icons, same order as the rack layers (模型 智能体 联网 终端 语音 API 定时 记忆). */
+/** 1.14.1: list icons, same order as the rack layers (模型 智能体 联网 看屏 语音 API 记忆). */
 private val RACK_ICONS by lazy {
-    with(com.iris.localai.ui.icons.IrisIcons) { listOf(Chip, Agent, Globe, Terminal, Voice, Plug, Clock, Memory) }
+    with(com.iris.localai.ui.icons.IrisIcons) { listOf(Chip, Agent, Globe, Eye, Voice, Plug, Memory) }
 }

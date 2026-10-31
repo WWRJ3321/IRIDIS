@@ -11,7 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes
  * builds [Paths] from the real app directories (StorageViewModel.paths) and calls [scan] on
  * Dispatchers.IO.
  *
- * Symbolic links are never followed (the Alpine rootfs is full of absolute links such as
+ * Symbolic links are never followed (a folder may hold absolute links such as
  * `/bin/sh → /bin/busybox`, which on the phone would point into Android's own /system).
  */
 object StorageUsage {
@@ -21,7 +21,6 @@ object StorageUsage {
         MODEL_CACHE("模型缓存"),
         VOICE("语音模型"),
         WORKSPACE("技能 / 工作区文件"),
-        TERMINAL("终端环境"),
         CHATS("聊天记录"),
         CACHE_LOGS("缓存与日志"),
         OTHER("其他"),
@@ -45,7 +44,6 @@ object StorageUsage {
         const val WS_PRIVATE = "ws:private"
         const val WS_UNDO = "ws:undo"
         const val WS_MEMORY = "ws:memory"
-        const val TERMINAL = "term:alpine"
         const val CHATS = "chat:conversations"
         const val ATTACHMENTS = "chat:attachments"
         const val HISTORY_INDEX = "chat:index"
@@ -104,7 +102,6 @@ object StorageUsage {
         val privateWorkspace: File,
         val undo: File,
         val memory: File,
-        val alpine: File,
         val conversations: File,
         val attachments: File,
         val historyDb: List<File>,
@@ -277,12 +274,6 @@ object StorageUsage {
                 Entry(Ids.WS_UNDO, "撤销记录", undo.bytes, undo.files).takeIf { undo.files > 0 },
                 Entry(Ids.WS_MEMORY, "长期记忆", mem.bytes, mem.files).takeIf { mem.files > 0 },
             ))
-        }
-
-        // 终端环境 — Alpine rootfs + proot tmp.
-        run {
-            val u = usage(p.alpine)
-            groups += Group(Category.TERMINAL, listOfNotNull(Entry(Ids.TERMINAL, "Alpine Linux（PRoot）", u.bytes, u.files).takeIf { u.files > 0 }))
         }
 
         // 聊天记录 — conversation JSON files (+ index), copied attachments, the full-text history index.

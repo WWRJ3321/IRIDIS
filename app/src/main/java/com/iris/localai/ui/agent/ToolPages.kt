@@ -47,9 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.iris.localai.IrisApp
-import com.iris.localai.agent.AlpineRootfs
-import com.iris.localai.agent.CommandBackend
-import com.iris.localai.agent.TermuxBridge
 import com.iris.localai.ui.components.Divider
 import com.iris.localai.ui.components.GroupFootnote
 import com.iris.localai.ui.components.IrisButton
@@ -68,135 +65,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 1.11.0 texts of the 终端 / 浏览器 pages (unit-tested). */
+/** 1.11.0 texts of the 浏览器 pages (unit-tested). */
 object ToolPageText {
-    const val TERMINAL_NAV = "在工作区里运行命令；可接入 Termux 获得完整 Linux"
     const val BROWSER_NAV = "智能体使用的内置浏览器；可在这里查看或手动登录"
-    const val BACKEND = "命令环境"
-    const val BACKEND_NOTE = "内置：系统自带 sh + toybox，只能在工作区里操作。Termux：完整 Linux（bash、pkg、python、git…），需安装 Termux，并在 Termux 里运行一次下面的命令；智能体的「运行命令」也会改用它，每次仍会询问。"
-    const val ALPINE_NOTE = "Alpine 在 IRIDIS 内部运行（PRoot，无需 root），能用 apk 装 python、git、nodejs 等。工作区挂在 /workspace；cd 和 export 会保留到下一条命令。单条命令最长 120 秒，后台进程随命令结束。"
     const val BROWSER_NOTE = "智能体用的就是这个浏览器（Cookie 只保存在 IRIDIS 里，不影响你的其他浏览器）。需要登录的网站可以先在这里手动登录。智能体的「浏览器」工具默认关闭，开启后每次询问。"
-}
-
-@Composable
-fun TerminalPage(onBack: () -> Unit, onOpenFiles: (() -> Unit)? = null) {
-    val context = LocalContext.current
-    val agent = remember { (context.applicationContext as IrisApp).container.agent }
-    val s by agent.settings.settings.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
-    // 1.12.2: shared with the agent's run_command — its commands show here too.
-    val entries by com.iris.localai.agent.TerminalLog.entries.collectAsStateWithLifecycle()
-    var input by remember { mutableStateOf("") }
-    var running by remember { mutableStateOf(false) }
-    var termuxProblem by remember { mutableStateOf(TermuxBridge.problem(context)) }
-    val alpine by AlpineRootfs.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { AlpineRootfs.refresh(context) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { termuxProblem = TermuxBridge.problem(context) }
-    val list = rememberLazyListState()
-    val c = Iris.colors
-    val reduceMotion = com.iris.localai.ui.theme.LocalReduceMotion.current
-
-    fun run() {
-        val cmd = input.trim()
-        if (cmd.isEmpty() || running) return
-        input = ""
-        running = true
-        val id = com.iris.localai.agent.TerminalLog.start(cmd, byAgent = false)
-        scope.launch {
-            val (shell, kind) = agent.shell()
-            val out = withContext(Dispatchers.IO) {
-                runCatching {
-                    shell.run(cmd, agent.sandbox.root, if (kind == CommandBackend.BUILTIN) 30_000L else 120_000L, 128 * 1024)
-                }.getOrElse { com.iris.localai.agent.ShellOutput(-1, "错误：${it.message}", false, false) }
-            }
-            val text = buildString {
-                append(out.output.trimEnd())
-                if (out.truncated) append("\n…[输出已截断]")
-                if (out.timedOut) append("\n[超时已终止]")
-            }
-            com.iris.localai.agent.TerminalLog.finish(id, text, out.exitCode)
-            running = false
-            agent.changed()
-        }
-    }
-    LaunchedEffect(entries.size, entries.lastOrNull()?.exit) { if (entries.isNotEmpty()) list.animateScrollToItem(entries.lastIndex + 1) }
-
-    SubpageScaffold("终端", onBack, actions = {
-        if (onOpenFiles != null) PressableIcon(Icons.Outlined.Folder, "文件", onClick = onOpenFiles)
-        PressableIcon(Icons.Outlined.DeleteSweep, "清空", enabled = entries.isNotEmpty()) { com.iris.localai.agent.TerminalLog.clear() }
-    }) {
-        Column(Modifier.fillMaxSize().imePadding().navigationBarsPadding()) {
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
-                item {
-                    SettingsGroup {
-                        Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-                            SettingsRow(ToolPageText.BACKEND, subtitle = when (s.backend) {
-                                CommandBackend.TERMUX -> termuxProblem ?: "Termux 已就绪"
-                                CommandBackend.PROOT -> if (alpine == AlpineRootfs.State.Ready) "Alpine ${AlpineRootfs.VERSION} · 工作区在 /workspace" else "Alpine 未安装"
-                                CommandBackend.BUILTIN -> "工作区：" + agent.sandbox.root.path
-                            })
-                            val opts = listOf(CommandBackend.BUILTIN, CommandBackend.PROOT, CommandBackend.TERMUX)
-                            SegmentedControl(
-                                opts.map { it.short }, opts.indexOf(s.backend),
-                                { i -> agent.settings.update { it.copy(commandBackend = opts[i].name) } },
-                                Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding),
-                            )
-                        }
-                        com.iris.localai.ui.components.RevealSection(s.backend == CommandBackend.TERMUX && termuxProblem != null) {
-                            Divider()
-                            if (!TermuxBridge.isInstalled(context)) {
-                                SettingsRow("下载 Termux", subtitle = "GitHub 或 F-Droid 版（Google Play 版过旧，不支持）", onClick = {
-                                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TermuxBridge.DOWNLOAD_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                                })
-                            } else {
-                                SettingsRow("授权 IRIDIS 使用 Termux", subtitle = "系统会询问是否允许在 Termux 中运行命令", onClick = { permission.launch(TermuxBridge.PERMISSION) })
-                            }
-                        }
-                    }
-                    com.iris.localai.ui.components.RevealSection(s.backend == CommandBackend.TERMUX) {
-                        GroupFootnote("首次使用请在 Termux 里运行：\n" + TermuxBridge.SETUP, monospace = true)
-                    }
-                    com.iris.localai.ui.components.RevealSection(s.backend == CommandBackend.PROOT) { AlpineSection(alpine) }
-                    GroupFootnote(ToolPageText.BACKEND_NOTE)
-                    Spacer(Modifier.padding(top = 12.dp))
-                }
-                items(entries, key = { it.id }) { e ->
-                    SelectionContainer(if (reduceMotion) Modifier else Modifier.animateItem()) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = 4.dp)) {
-                            if (e.byAgent) Text("智能体 · " + java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.ROOT).format(java.util.Date(e.at)), style = IrisType.caption, color = c.textTertiary)
-                            Text("$ " + e.command, style = IrisType.mono, color = c.accent)
-                            val body = when {
-                                e.exit == null -> ""
-                                e.output.isEmpty() -> "(无输出)"
-                                else -> e.output
-                            }
-                            if (e.exit == null) com.iris.localai.ui.components.TypingDots(Modifier.padding(vertical = 6.dp))
-                            else Text(body, style = IrisType.monoSmall, color = c.text)
-                            if (e.exit != null && e.exit != 0) Text("[退出码 ${e.exit}]", style = IrisType.monoSmall, color = c.danger)
-                        }
-                    }
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space12, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    input, { input = it },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = IrisType.mono.copy(color = c.text),
-                    placeholder = { Text(if (s.backend != CommandBackend.BUILTIN) "命令，如 python3 -V" else "命令，如 ls -la", style = IrisType.mono) },
-                    shape = IrisRadius.mediumShape,
-                    colors = irisTextFieldColors(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
-                    keyboardActions = KeyboardActions(onSend = { run() }),
-                )
-                Spacer(Modifier.width(8.dp))
-                PressableIcon(Icons.AutoMirrored.Outlined.Send, "运行", size = 44.dp, enabled = input.isNotBlank() && !running, background = c.accent, tint = c.onAccent) { run() }
-            }
-        }
-    }
 }
 
 @Composable
@@ -242,38 +114,5 @@ fun BrowserPage(onBack: () -> Unit) {
             }
             GroupFootnote(ToolPageText.BROWSER_NOTE, modifier = Modifier.padding(bottom = 8.dp))
         }
-    }
-}
-
-
-/** 1.12.0: install / remove the Alpine rootfs for the built-in Linux terminal. */
-@Composable
-private fun AlpineSection(state: AlpineRootfs.State) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var confirmRemove by remember { mutableStateOf(false) }
-    Spacer(Modifier.padding(top = 8.dp))
-    SettingsGroup {
-        when (state) {
-            AlpineRootfs.State.Ready -> SettingsRow("删除 Alpine", subtitle = "删掉 Linux 系统和装过的软件包（工作区文件不受影响）", onClick = { confirmRemove = true })
-            is AlpineRootfs.State.Downloading -> SettingsRow("正在下载 Alpine", subtitle = "${state.done / 1024} / ${state.total / 1024} KB")
-            AlpineRootfs.State.Unpacking -> SettingsRow("正在解压…")
-            is AlpineRootfs.State.Failed -> SettingsRow("重新安装 Alpine", subtitle = "上次失败：" + state.message, onClick = {
-                scope.launch(Dispatchers.IO) { AlpineRootfs.install(context) }
-            })
-            AlpineRootfs.State.Idle -> SettingsRow(
-                if (AlpineRootfs.supported(context)) "安装 Alpine Linux" else "此设备不支持",
-                subtitle = "下载约 4 MB（Alpine ${AlpineRootfs.VERSION} 官方 minirootfs，校验 SHA-256）",
-                onClick = if (AlpineRootfs.supported(context)) ({ scope.launch(Dispatchers.IO) { AlpineRootfs.install(context) } }) else null,
-            )
-        }
-    }
-    GroupFootnote(ToolPageText.ALPINE_NOTE)
-    if (confirmRemove) {
-        com.iris.localai.ui.components.IrisDialog(
-            onDismiss = { confirmRemove = false }, title = "删除 Alpine？",
-            confirmText = "删除", destructive = true, onConfirm = { confirmRemove = false; scope.launch(Dispatchers.IO) { AlpineRootfs.uninstall(context) } },
-            dismissText = "取消", onDismissClick = { confirmRemove = false },
-        ) { Text("装过的软件包（python、git 等）会一起删除。", style = IrisType.secondary, color = Iris.colors.textSecondary) }
     }
 }

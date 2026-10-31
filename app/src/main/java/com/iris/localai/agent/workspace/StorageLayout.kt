@@ -13,7 +13,7 @@ import java.io.File
  *   skills/     user skills (SkillCatalog; built-in ones stay in the APK)
  *   knowledge/  知识库 files (KnowledgeBase; read by kb_search, never by the file tools)
  *   config/     default place for backups / exported logs
- *   workspace/  the agent sandbox: file tools, run_command cwd, the SAF view
+ *   workspace/  the agent sandbox: file tools, the SAF view
  * ```
  *
  * Before 2.1.1 the whole root was the workspace, so user files sit next to `models/`. They are moved

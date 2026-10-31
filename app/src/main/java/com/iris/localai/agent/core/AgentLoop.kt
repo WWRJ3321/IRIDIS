@@ -212,7 +212,7 @@ interface AgentCallbacks {
     fun onText(text: String) {}
     /** 总是允许 was chosen. */
     fun onAlwaysAllow(tool: AgentTool) {}
-    /** 1.12.0: 总是允许 for one call; run_command remembers the command's prefix, not the whole tool. */
+    /** 1.12.0: 总是允许 for one call (remembers the whole tool). */
     fun onAlwaysAllowCall(tool: AgentTool, call: ToolCall) = onAlwaysAllow(tool)
     /** A tool changed the workspace (write / edit / delete). */
     fun onWorkspaceChanged() {}

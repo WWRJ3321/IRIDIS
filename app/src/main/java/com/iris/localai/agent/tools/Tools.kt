@@ -15,7 +15,6 @@ import java.util.Locale
 enum class ToolGroup(val title: String, val label: String, val hint: String) {
     FILES("Files", "文件", "workspace-relative paths; read before edit"),
     WEB("Web", "联网", "you are online; never say you have no internet"),
-    SHELL("Terminal", "终端", ""),
     PHONE("Phone", "手机", "asks user first"),
     TASKS("Tasks", "定时", ""),
     MEMORY("Memory", "记忆", "use recall for older turns"),
@@ -68,14 +67,8 @@ class ToolEnv(
      * by scoped storage (Download workspace without 全部文件访问); null = no hint needed.
      */
     val accessHint: String? = null,
-    /** 1.10.6: runs run_command (null = not available, e.g. JVM tests without a shell). */
-    val shell: ShellRunner? = null,
-    /** 1.11.0: which shell [shell] is (decides run_command's refusal rules). */
-    val shellKind: CommandBackend = CommandBackend.BUILTIN,
     /** 1.11.0: the in-app WebView browser for `browser` (null = not available). */
     val browser: BrowserDriver? = null,
-    /** 1.12.0: run_command prefix rules (设置 › 智能体 › 命令规则). */
-    val commandRules: Map<String, Permission> = emptyMap(),
     /** 1.12.0: web_search provider and the SearXNG address. */
     val searchProvider: SearchProvider = SearchProvider.AUTO,
     val searxUrl: String = "",
@@ -83,8 +76,6 @@ class ToolEnv(
     val searchBrowser: SearchBrowser? = null,
     /** 1.12.0: phone actions (alarm, calendar, open app …); null = not available. */
     val phone: PhoneActions? = null,
-    /** 1.12.0: scheduled tasks; null = not available. */
-    val schedules: ScheduleStore? = null,
     /** 1.12.0: skills in the workspace's skills folder. */
     val skills: SkillCatalog? = null,
     /** 1.12.0: the loaded model for process_file (one fresh prompt per part); null = not available. */
@@ -136,7 +127,7 @@ interface AgentTool {
     /** 1.12.0: the tool group it is listed under in the prompt and the settings page. */
     val group: ToolGroup get() = ToolGroup.OTHER
     /**
-     * 1.12.0: the permission of one call, given the tool's setting [base] (run_command refines it by
+     * 1.12.0: the permission of one call, given the tool's setting [base] (a tool may refine it by
      * command prefix). Default: the tool's setting.
      */
     fun permissionFor(args: JsonObject, base: Permission, env: ToolEnv): Permission = base
@@ -621,8 +612,8 @@ object GenerateImageTool : SuspendTool {
 object AgentTools {
     val all: List<AgentTool> = listOf(
         ReadFileTool, WriteFileTool, EditFileTool, ListDirTool, SearchFilesTool, MoveFileTool, DeleteFileTool, ProcessFileTool,
-        PlanTool, CalculatorTool, DateTimeTool, RecallTool, MemoryTool, WebSearchTool, WebFetchTool, BrowserTool, RunCommandTool,
-        PhoneTool, ScreenTool, ScheduleTool, SkillTool, GenerateImageTool, ActivateTool,
+        PlanTool, CalculatorTool, DateTimeTool, RecallTool, MemoryTool, WebSearchTool, WebFetchTool, BrowserTool,
+        PhoneTool, ScreenTool, SkillTool, GenerateImageTool, ActivateTool,
     )
 
     /**

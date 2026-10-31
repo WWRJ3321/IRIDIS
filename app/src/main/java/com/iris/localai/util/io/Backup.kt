@@ -10,7 +10,7 @@ import java.util.zip.ZipOutputStream
 
 /**
  * 1.12.0 backup: conversations, memory, history index, per-model configs and settings in one zip
- * (no models, voice packs, attachments or the Alpine system — those are large and re-downloadable).
+ * (no models, voice packs, or attachments — those are large and re-downloadable).
  * Restore writes the same paths back; the app then restarts so every repository re-reads them.
  *
  * 2.1.0 (IRIDIS, applicationId com.iridis): the new package cannot read the old one's private data,
@@ -32,7 +32,7 @@ object Backup {
     /** Paths relative to the app's data dir (filesDir's parent). */
     val ITEMS = listOf(
         "files/conversations", "files/memory", "files/model_configs.json",
-        "shared_prefs/iris_settings_v2.xml", "shared_prefs/iris_agent.xml", "shared_prefs/iris_schedules.xml",
+        "shared_prefs/iris_settings_v2.xml", "shared_prefs/iris_agent.xml",
         "shared_prefs/iris_plans.xml",
         "databases/iris_history.db",
     )

@@ -332,12 +332,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         notice.value = "「" + conversation.value.title.ifBlank { "上一个对话" } + "」在后台继续运行，可在侧边栏切回查看"
     }
 
-    /** 1.13.0: a scheduled task tapped while busy runs once the reply ends. */
-    private var pendingScheduled: String? = null
-
     /** 1.12.3: the background run ended — the conversation on screen becomes the working one. */
     private fun adoptViewing() {
-        pendingScheduled?.let { p -> if (c.engine.state.value is EngineState.Ready) { pendingScheduled = null; viewModelScope.launch { kotlinx.coroutines.delay(300); runScheduled(p) } } }
         val v = viewing.value ?: return
         viewing.value = null
         conversation.value = v
@@ -357,7 +353,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         runCatching { c.conversations.load(id)?.messages?.let { com.iris.localai.data.MessageVersions.allAttachments(it) } }.getOrNull()?.let { discardAttachments(it) }
         c.conversations.delete(id)
         c.agent.plans.clear(id)
-        com.iris.localai.agent.Heartbeat.cancel(getApplication(), id)
         if (conversation.value.id == id) conversation.value = Conversation()
     }
 
@@ -1426,74 +1421,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     val plan: StateFlow<com.iris.localai.agent.Plan?> = kotlinx.coroutines.flow.combine(c.agent.plans.plans, conversation) { m, conv -> m[conv.id] }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
 
-    fun clearPlan() { c.agent.plans.clear(conversation.value.id); com.iris.localai.agent.Heartbeat.cancel(getApplication(), conversation.value.id) }
-
-    /** 1.14.0: heartbeat check number the next agent run counts as (0 = a run the user started). */
-    private var nextHeartbeatAttempt = 0
-    private var runLimitJob: Job? = null
-
-    /** Stops the run started for a background job after [minutes] (功耗限制). */
-    private fun limitRun(minutes: Int) {
-        runLimitJob?.cancel()
-        if (minutes <= 0) return
-        runLimitJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(minutes * 60_000L)
-            if (busy()) { android.util.Log.i(GEN_TAG, "background job hit its ${minutes}min limit"); stop(); notice.value = "后台任务达到 $minutes 分钟上限，已停止" }
-        }
-    }
-
-    /** 1.14.0: work from the heartbeat / an unattended schedule. False = not now (caller notifies). */
-    private fun acceptJob(job: com.iris.localai.agent.AgentBus.Job): Boolean {
-        if (busy() || c.engine.state.value !is EngineState.Ready) return false
-        viewModelScope.launch {
-            when (job.kind) {
-                com.iris.localai.agent.AgentBus.Kind.RESUME -> {
-                    val id = job.conversationId ?: return@launch
-                    if (conversation.value.id != id) { open(id); kotlinx.coroutines.delay(400) }
-                    if (conversation.value.id != id) return@launch
-                    if (!c.agent.settings.current.agentMode) setAgentMode(true)
-                    nextHeartbeatAttempt = job.attempt + 1
-                    send(job.prompt)
-                }
-                com.iris.localai.agent.AgentBus.Kind.SCHEDULED -> runScheduled(job.prompt)
-            }
-            limitRun(job.maxMinutes)
-        }
-        return true
-    }
-
-    /** 1.14.0: the 「计划还有 N 步」 notification was tapped. */
-    fun resumePlan(convId: String) {
-        _showChat.value++
-        if (busy()) { notice.value = "正在回复，稍后再继续计划"; return }
-        open(convId)
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(400)
-            if (conversation.value.id != convId) return@launch
-            if (!c.agent.settings.current.agentMode) setAgentMode(true)
-            if (c.engine.state.value !is EngineState.Ready) { notice.value = "需要先加载模型才能继续计划"; return@launch }
-            send(com.iris.localai.agent.HeartbeatRules.RESUME_PROMPT)
-        }
-    }
+    fun clearPlan() { c.agent.plans.clear(conversation.value.id) }
 
     init {
-        com.iris.localai.agent.AgentBus.runner = ::acceptJob
         // 1.14.0: live state for the 运行状态 rack in 设置.
         viewModelScope.launch { streamingId.collect { id -> com.iris.localai.util.SystemStatus.update { it.copy(generating = id != null) } } }
         viewModelScope.launch { _speakingMessageId.collect { id -> com.iris.localai.util.SystemStatus.update { it.copy(voiceActive = id != null) } } }
-    }
-
-    /**
-     * 1.12.0: a scheduled task's notification was tapped: a new 智能体 conversation runs its prompt
-     * (once a model is ready; otherwise the prompt waits in the composer's place as a notice).
-     */
-    fun runScheduled(prompt: String) {
-        _showChat.value++
-        if (busy()) { pendingScheduled = prompt; notice.value = "正在回复，完成后自动执行定时任务"; return }
-        newChat()
-        if (!c.agent.settings.current.agentMode) setAgentMode(true)
-        if (c.engine.state.value !is EngineState.Ready) { notice.value = "定时任务需要先加载模型：$prompt"; return }
-        send(prompt)
     }
 
     /** A tool call waiting for 允许一次 / 总是允许 / 拒绝 in the chat. */
@@ -1502,7 +1435,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val toolName: String,
         val preview: String,
         internal val answer: kotlinx.coroutines.CompletableDeferred<com.iris.localai.agent.UserDecision>,
-        /** 1.12.0: what 总是允许 remembers for run_command (a command prefix); null = the whole tool. */
+        /** Unused since 2.2.2 (was a command prefix); null = the whole tool. */
         val alwaysPrefix: String? = null,
     )
 
@@ -1556,7 +1489,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             "edit_file" -> "文件：$path\n查找：\n" + (com.iris.localai.agent.Args.str(a, "old", "old_string", "old_text", "search", "find") ?: "").take(200) +
                 "\n替换为：\n" + (com.iris.localai.agent.Args.str(a, "new", "new_string", "new_text", "replace", "replacement") ?: "").take(200)
             "delete_file" -> "删除：$path"
-            "run_command" -> "命令（在工作区运行，不可撤销）：\n" + (com.iris.localai.agent.Args.str(a, "command", "cmd", "shell", "script") ?: "").take(400)
             "web_fetch" -> "网址：" + (com.iris.localai.agent.Args.str(a, "url", "link", "href") ?: "")
             "memory" -> com.iris.localai.agent.memoryPreview(call)
             else -> com.iris.localai.agent.Args.summary(a, 300)
@@ -1589,7 +1521,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val sampling = c.engine.samplingFor(disableThinking).copy(maxNewTokens = maxNew, contextShift = false)
         streamingId.value = reply.id
         val timer = com.iris.localai.util.ReplyTimer().also { liveTimer = it }
-        val hbAttempt = nextHeartbeatAttempt.also { nextHeartbeatAttempt = 0 }
         var steps: List<com.iris.localai.agent.AgentStep> = emptyList()
         var agentCalls = 0
         var outcome: com.iris.localai.agent.AgentOutcome? = null
@@ -1670,9 +1601,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 }
                 val d = kotlinx.coroutines.CompletableDeferred<com.iris.localai.agent.UserDecision>()
                 _stream.value = null
-                val prefix = if (tool.name == com.iris.localai.agent.RunCommandTool.name)
-                    com.iris.localai.agent.Args.str(call.args, "command", "cmd")?.let { com.iris.localai.agent.CommandRules.prefixOf(it) }?.takeIf { it.isNotBlank() } else null
-                _permissionAsk.value = PermissionAsk(tool.label, tool.name, agentPreview(tool, call), d, prefix)
+                _permissionAsk.value = PermissionAsk(tool.label, tool.name, agentPreview(tool, call), d, null)
                 try { return d.await() } finally { if (_permissionAsk.value?.answer === d) _permissionAsk.value = null }
             }
             override fun onSteps(steps: List<com.iris.localai.agent.AgentStep>) {
@@ -1691,16 +1620,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             }
             override fun onText(text: String) { _stream.value = StreamingText(reply.id, text) }
             override fun onAlwaysAllowCall(tool: com.iris.localai.agent.AgentTool, call: com.iris.localai.agent.ToolCall) {
-                // 1.12.0: 总是允许 on run_command remembers this command's prefix ("git status"), not every command.
-                if (tool.name == com.iris.localai.agent.RunCommandTool.name) {
-                    val cmd = com.iris.localai.agent.Args.str(call.args, "command", "cmd", "shell", "script").orEmpty()
-                    val prefix = com.iris.localai.agent.CommandRules.prefixOf(cmd)
-                    if (prefix.isNotEmpty()) {
-                        c.agent.settings.update { it.copy(commandRules = it.commandRules + (prefix to com.iris.localai.agent.Permission.ALLOW.name)) }
-                        notice.value = "以后「$prefix」开头的命令不再询问（可在 设置 › 智能体 › 命令规则 修改）"
-                        return
-                    }
-                }
                 onAlwaysAllow(tool)
             }
             override fun onAlwaysAllow(tool: com.iris.localai.agent.AgentTool) {
@@ -1821,13 +1740,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (!cancelled && voiceOut == null) _replyFinished.tryEmit(err == null)
             conversation.update { it.copy(updatedAt = System.currentTimeMillis()) }
             persist()
-            runLimitJob?.cancel()
-            // 1.14.0 心跳: a plan with steps left is checked again later (done or stopped).
-            runCatching {
-                val pl = c.agent.plans.get(convId)
-                if (pl != null && !pl.finished) com.iris.localai.agent.Heartbeat.arm(getApplication(), convId, hbAttempt, c.agent.settings.current)
-                else com.iris.localai.agent.Heartbeat.cancel(getApplication(), convId)
-            }
             plan?.let { pl ->
                 // 1.13.0: the agent prompt (tool list + earlier tool results) is far bigger than the
                 // chat plan; measure what was really sent so the meter does not undercount.
@@ -2022,7 +1934,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     override fun onCleared() {
-        com.iris.localai.agent.AgentBus.runner = null
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.removeObserver(awayObserver)
         voice.stop()
         dictation.cancel()

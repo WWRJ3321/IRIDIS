@@ -36,7 +36,6 @@ object StepTitle {
                 "read" -> "浏览器 · 读取页面"
                 else -> s("url", "link", "href", "query")?.let { "打开网页 ${site(it)}" } ?: "浏览器"
             }
-            "run_command" -> s("command", "cmd", "shell", "script")?.let { "运行命令 ${clip(it)}" } ?: "运行命令"
             "calculator" -> s("expression", "expr", "input")?.let { "计算 ${clip(it)}" } ?: "计算器"
             "datetime" -> "查看时间"
             "plan", "todo" -> s("title", "goal", "name")?.let { "计划 · ${clip(it)}" } ?: "计划"
@@ -47,11 +46,6 @@ object StepTitle {
                 "replace" -> "更新记忆"
                 "remove" -> "删除记忆"
                 else -> "长期记忆"
-            }
-            "schedule" -> when (s("action", "op")?.lowercase()) {
-                "list" -> "查看定时任务"
-                "remove" -> "删除定时任务"
-                else -> s("title", "prompt")?.let { "定时任务 · ${clip(it)}" } ?: "定时任务"
             }
             else -> label(tool)
         }

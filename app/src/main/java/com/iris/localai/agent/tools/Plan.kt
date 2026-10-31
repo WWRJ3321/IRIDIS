@@ -137,7 +137,7 @@ object ActivateTool : AgentTool {
     override val risk = ToolRisk.SAFE
 
     /** Groups the prompt lists by name only when 按需载入 is on. */
-    val LAZY = setOf(ToolGroup.SHELL, ToolGroup.PHONE, ToolGroup.TASKS)
+    val LAZY = setOf(ToolGroup.PHONE)
 
     fun key(g: ToolGroup): String = g.title.lowercase()
 
@@ -158,5 +158,17 @@ object ActivateTool : AgentTool {
             append("You can call these tools now.")
         }
         return ToolResult(true, out, "已载入 ${group.label} · ${ts.size} 个")
+    }
+}
+
+/** One [PlanStore] per process, persisted in SharedPreferences (2.2.2: was part of the removed heartbeat). */
+object Plans {
+    private const val PREFS = "iris_plans"
+    @Volatile private var store: PlanStore? = null
+    fun of(ctx: android.content.Context): PlanStore = store ?: synchronized(this) {
+        store ?: run {
+            val p = ctx.applicationContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+            PlanStore({ p.getString("plans", null) }, { p.edit().putString("plans", it).apply() }).also { store = it }
+        }
     }
 }

@@ -120,8 +120,6 @@ android {
         jniLibs {
             // Compressed in the APK (≈55% smaller download); extracted once at install time.
             useLegacyPackaging = true
-            // 1.12.0: proot (Termux build, NEEDED patched) ships as-is, never re-stripped.
-            keepDebugSymbols += setOf("**/libproot.so", "**/libproot-loader.so", "**/libtalloc.so", "**/libandroid-shmem.so")
             // 2.2.0: GenieX (geniex-android 0.8.0, full flavour) ships 51 native libraries (≈ 82 MB AAR).
             // None go into the APK: the ones this phone needs are downloaded on demand from Maven
             // Central into app storage (GenieXRuntime, 设置 › 模型与后端), like the LiteRT NPU runtime.

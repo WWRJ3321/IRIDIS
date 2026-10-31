@@ -67,7 +67,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, TERMINAL, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES }
 
 class MainActivity : ComponentActivity() {
 
@@ -138,18 +138,6 @@ class MainActivity : ComponentActivity() {
 
     /** A "回复已完成 / 正在生成" notification opens its conversation. */
     private fun handleIntent(intent: android.content.Intent?) {
-        // 1.12.0: a scheduled task's notification.
-        intent?.getStringExtra(com.iris.localai.agent.ScheduleAlarms.EXTRA_PROMPT)?.let { p ->
-            intent.removeExtra(com.iris.localai.agent.ScheduleAlarms.EXTRA_PROMPT)
-            chat.runScheduled(p)
-            return
-        }
-        // 1.14.0: 「计划还有 N 步没完成」 — continue that conversation's plan.
-        intent?.getStringExtra(com.iris.localai.agent.Heartbeat.EXTRA_RESUME)?.let { conv ->
-            intent.removeExtra(com.iris.localai.agent.Heartbeat.EXTRA_RESUME)
-            chat.resumePlan(conv)
-            return
-        }
         val id = intent?.getStringExtra(com.iris.localai.service.GenerationService.EXTRA_CONVERSATION) ?: return
         intent.removeExtra(com.iris.localai.service.GenerationService.EXTRA_CONVERSATION)
         chat.openFromNotification(id)
@@ -251,7 +239,6 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpenVoiceSettings = { push(Route.VOICE) },
             onOpenApi = { push(Route.API) },
             onOpenFiles = { push(Route.APP_FILES) }, // 2.2: sidebar 文件 = the whole Download/IRIDIS
-            onOpenTerminal = { push(Route.TERMINAL) },
             onOpenImageGen = { push(Route.IMAGEGEN) },
         )
         Route.IMAGEGEN -> com.iris.localai.ui.imagegen.ImageGenScreen(onBack = pop, onSendToChat = { path -> chat.attachGeneratedImage(path); pop() })
@@ -272,9 +259,8 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.ABOUT -> AboutPage(onBack = pop, onDeveloper = { push(Route.DEVELOPER) })
         Route.DEVELOPER -> com.iris.localai.ui.settings.DeveloperPage(settingsVm, onBack = pop, onOpen = { p -> push(routeOf(p)) })
         Route.DIAGNOSTICS -> com.iris.localai.ui.settings.ResourceDiagnosticsPage(settingsVm, onBack = pop)
-        Route.AGENT -> com.iris.localai.ui.agent.AgentSettingsPage(onBack = pop, onOpenTerminal = { push(Route.TERMINAL) }, onOpenBrowser = { push(Route.BROWSER) }, onOpenFiles = { push(Route.FILES) })
-        Route.TERMINAL -> com.iris.localai.ui.agent.TerminalPage(onBack = pop, onOpenFiles = { push(Route.FILES) })
-        Route.FILES -> com.iris.localai.ui.agent.FilesPage(onBack = pop, onOpenTerminal = { push(Route.TERMINAL) })
+        Route.AGENT -> com.iris.localai.ui.agent.AgentSettingsPage(onBack = pop, onOpenBrowser = { push(Route.BROWSER) }, onOpenFiles = { push(Route.FILES) })
+        Route.FILES -> com.iris.localai.ui.agent.FilesPage(onBack = pop)
         Route.BROWSER -> com.iris.localai.ui.agent.BrowserPage(onBack = pop)
         Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage(onBack = pop)
         Route.MEMORY -> com.iris.localai.ui.settings.ContextPage(settingsVm, onBack = pop) // 2.1.3: one 记忆与上下文 page
@@ -283,7 +269,6 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpen = { p -> push(routeOf(p)) },
             onModels = { push(Route.MODELS) },
             onOpenFiles = { push(Route.FILES) },
-            onOpenTerminal = { push(Route.TERMINAL) },
         )
     }
 }

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SmartToy
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material3.Text
@@ -72,9 +71,6 @@ import java.io.File
 object AgentText {
     const val PLAN_FIRST = "多步任务先列步骤，你确认后再执行"
     const val LAZY = "工具用法用到时再载入，省上下文、首字更快"
-    const val HEARTBEAT = "计划没做完时，过一会儿回来看看"
-    const val AUTO_RESUME = "IRIDIS 开着、模型已加载且电量充足时直接继续；否则发通知"
-    fun every(min: Int): String = if (min % 60 == 0) "${min / 60} 小时" else "$min 分钟"
     const val NAV = "工具、权限与工作区"
     const val MODE = "输入框也可切换；关闭则不调用工具"
     const val STEPS = "一次回复最多调用几次工具"
@@ -101,7 +97,7 @@ object AgentText {
 private data class WsFile(val path: String, val file: File, val size: Long, val modified: Long)
 
 @Composable
-fun AgentSettingsPage(onBack: () -> Unit, onOpenTerminal: () -> Unit = {}, onOpenBrowser: () -> Unit = {}, onOpenFiles: () -> Unit = {}) {
+fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpenFiles: () -> Unit = {}) {
     val context = LocalContext.current
     val agent = remember { (context.applicationContext as IrisApp).container.agent }
     val s by agent.settings.settings.collectAsStateWithLifecycle()
@@ -163,33 +159,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenTerminal: () -> Unit = {}, onOpe
                 }
             }
 
-            // 1.14.0 心跳
-            SectionTitle("心跳")
-            SettingsGroup {
-                SwitchRow("心跳检查", s.heartbeat, subtitle = AgentText.HEARTBEAT) { on -> agent.settings.update { it.copy(heartbeat = on) } }
-                com.iris.localai.ui.components.Fold(s.heartbeat) {
-                    Column {
-                        Divider()
-                        com.iris.localai.ui.components.AdvancedFold("heartbeat", "检查间隔与自动继续") {
-                            SliderRow("结束后首次检查", s.heartbeatFirstMin.toFloat(), 1f..60f, "${s.heartbeatFirstMin} 分钟", subtitle = "任务完成或中途停止后") { v ->
-                                agent.settings.update { it.copy(heartbeatFirstMin = v.toInt()) }
-                            }
-                            Divider()
-                            SliderRow("之后每隔", s.heartbeatEveryMin.toFloat(), 15f..240f, AgentText.every(s.heartbeatEveryMin), subtitle = "系统可能合并唤醒，会有几分钟偏差") { v ->
-                                agent.settings.update { it.copy(heartbeatEveryMin = (v / 15f).toInt() * 15) }
-                            }
-                            Divider()
-                            SliderRow("最多检查", s.heartbeatMaxChecks.toFloat(), 1f..24f, "${s.heartbeatMaxChecks} 次", subtitle = "每个计划") { v ->
-                                agent.settings.update { it.copy(heartbeatMaxChecks = v.toInt()) }
-                            }
-                            Divider()
-                            SwitchRow("自动继续", s.heartbeatAutoResume, subtitle = AgentText.AUTO_RESUME) { on -> agent.settings.update { it.copy(heartbeatAutoResume = on) } }
-                        }
-                    }
-                }
-            }
-
-            // 1.12.0: tools grouped (文件 / 联网 / 终端 / 手机 / 定时 / 记忆 / 技能 / 其他).
+            // Tools grouped by kind.
             // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
             SectionTitle(AgentText.TOOLS)
             AgentTools.all.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
@@ -207,12 +177,9 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenTerminal: () -> Unit = {}, onOpe
             }
             GroupFootnote(AgentText.PERMISSION_NOTE)
 
-            // 1.11.0: 终端 (built-in / Termux) and the agent's in-app browser.
-            SectionTitle("终端与浏览器")
+            // the agent's in-app browser.
+            SectionTitle("浏览器")
             SettingsGroup {
-                SettingsRow("终端", icon = com.iris.localai.ui.icons.IrisIcons.Terminal, subtitle = ToolPageText.TERMINAL_NAV + " · 当前：" + s.backend.label,
-                    onClick = onOpenTerminal, trailing = { com.iris.localai.ui.components.Chevron() })
-                Divider()
                 SettingsRow("浏览器", icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
                     onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
             }
@@ -220,7 +187,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenTerminal: () -> Unit = {}, onOpe
             // 2.2: GUI 智能体（无障碍，形态 A）.
             GuiAgentSection()
 
-            // 1.12.0: search provider, command rules, scheduled tasks, skills, backup and logs.
+            // search provider, skills, backup and logs.
             AgentExtraSections()
 
             SectionTitle("工作区")

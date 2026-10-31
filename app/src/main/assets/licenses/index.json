@@ -1,146 +1,128 @@
 [
- {
-  "name": "IRIDIS (IRIS LocalAI)",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": ""
- },
- {
-  "name": "llama.cpp / ggml",
-  "license": "MIT",
-  "file": "mit-llama.cpp.txt",
-  "url": "https://github.com/ggml-org/llama.cpp"
- },
- {
-  "name": "nlohmann/json",
-  "license": "MIT",
-  "file": "mit-nlohmann-json.txt",
-  "url": "https://github.com/nlohmann/json"
- },
- {
-  "name": "cpp-httplib",
-  "license": "MIT",
-  "file": "mit-cpp-httplib.txt",
-  "url": "https://github.com/yhirose/cpp-httplib"
- },
- {
-  "name": "MNN (modified)",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/alibaba/MNN"
- },
- {
-  "name": "LiteRT-LM",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/google-ai-edge/LiteRT-LM"
- },
- {
-  "name": "LiteRT Dispatch (Qualcomm)",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/google-ai-edge/LiteRT"
- },
- {
-  "name": "sherpa-onnx",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/k2-fsa/sherpa-onnx"
- },
- {
-  "name": "ONNX Runtime",
-  "license": "MIT",
-  "file": "mit-onnxruntime.txt",
-  "url": "https://github.com/microsoft/onnxruntime"
- },
- {
-  "name": "Khronos OpenCL Headers",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/KhronosGroup/OpenCL-Headers"
- },
- {
-  "name": "AndroidX / Jetpack Compose / Material Icons",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://developer.android.com/jetpack/androidx"
- },
- {
-  "name": "Kotlin stdlib / kotlinx.coroutines / kotlinx.serialization",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://github.com/JetBrains/kotlin"
- },
- {
-  "name": "Apache Commons Compress 1.27.1",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://commons.apache.org/proper/commons-compress/"
- },
- {
-  "name": "Apache Commons IO",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://commons.apache.org/proper/commons-io/"
- },
- {
-  "name": "Apache Commons Lang3",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://commons.apache.org/proper/commons-lang/"
- },
- {
-  "name": "Apache Commons Codec",
-  "license": "Apache-2.0",
-  "file": "apache-2.0.txt",
-  "url": "https://commons.apache.org/proper/commons-codec/"
- },
- {
-  "name": "Apache Commons NOTICE",
-  "license": "NOTICE",
-  "file": "notice-apache-commons.txt",
-  "url": ""
- },
- {
-  "name": "PRoot (Termux, unmodified binary, patchelf only)",
-  "license": "GPL-2.0-or-later",
-  "file": "gpl-2.0.txt",
-  "url": "https://github.com/termux/proot"
- },
- {
-  "name": "talloc",
-  "license": "LGPL-3.0-or-later",
-  "file": "lgpl-3.0.txt",
-  "url": "https://www.samba.org/ftp/talloc/"
- },
- {
-  "name": "GNU GPL v3 (referenced by LGPL-3.0)",
-  "license": "GPL-3.0",
-  "file": "gpl-3.0.txt",
-  "url": "https://www.gnu.org/licenses/gpl-3.0.txt"
- },
- {
-  "name": "libandroid-shmem",
-  "license": "BSD-3-Clause",
-  "file": "libandroid-shmem.txt",
-  "url": "https://github.com/termux/libandroid-shmem"
- },
- {
-  "name": "Silero VAD",
-  "license": "MIT",
-  "file": "mit-silero-vad.txt",
-  "url": "https://github.com/snakers4/silero-vad"
- },
- {
-  "name": "Qualcomm GenieX (Kotlin SDK classes)",
-  "license": "BSD-3-Clause; native runtime: Qualcomm Terms of Use (downloaded by the user)",
-  "file": "bsd-3-geniex.txt",
-  "url": "https://github.com/qualcomm/GenieX"
- },
- {
-  "name": "RhineLabUI（设计灵感，未使用其代码）",
-  "license": "MIT",
-  "file": "mit-rhinelabui.txt",
-  "url": "https://github.com/LBEILC/RhineLabUI"
- }
+  {
+    "name": "IRIDIS (IRIS LocalAI)",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": ""
+  },
+  {
+    "name": "llama.cpp / ggml",
+    "license": "MIT",
+    "file": "mit-llama.cpp.txt",
+    "url": "https://github.com/ggml-org/llama.cpp"
+  },
+  {
+    "name": "nlohmann/json",
+    "license": "MIT",
+    "file": "mit-nlohmann-json.txt",
+    "url": "https://github.com/nlohmann/json"
+  },
+  {
+    "name": "cpp-httplib",
+    "license": "MIT",
+    "file": "mit-cpp-httplib.txt",
+    "url": "https://github.com/yhirose/cpp-httplib"
+  },
+  {
+    "name": "MNN (modified)",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/alibaba/MNN"
+  },
+  {
+    "name": "LiteRT-LM",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/google-ai-edge/LiteRT-LM"
+  },
+  {
+    "name": "LiteRT Dispatch (Qualcomm)",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/google-ai-edge/LiteRT"
+  },
+  {
+    "name": "sherpa-onnx",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/k2-fsa/sherpa-onnx"
+  },
+  {
+    "name": "ONNX Runtime",
+    "license": "MIT",
+    "file": "mit-onnxruntime.txt",
+    "url": "https://github.com/microsoft/onnxruntime"
+  },
+  {
+    "name": "Khronos OpenCL Headers",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/KhronosGroup/OpenCL-Headers"
+  },
+  {
+    "name": "AndroidX / Jetpack Compose / Material Icons",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://developer.android.com/jetpack/androidx"
+  },
+  {
+    "name": "Kotlin stdlib / kotlinx.coroutines / kotlinx.serialization",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/JetBrains/kotlin"
+  },
+  {
+    "name": "Apache Commons Compress 1.27.1",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://commons.apache.org/proper/commons-compress/"
+  },
+  {
+    "name": "Apache Commons IO",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://commons.apache.org/proper/commons-io/"
+  },
+  {
+    "name": "Apache Commons Lang3",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://commons.apache.org/proper/commons-lang/"
+  },
+  {
+    "name": "Apache Commons Codec",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://commons.apache.org/proper/commons-codec/"
+  },
+  {
+    "name": "Apache Commons NOTICE",
+    "license": "NOTICE",
+    "file": "notice-apache-commons.txt",
+    "url": ""
+  },
+  {
+    "name": "GNU GPL v3 (referenced by LGPL-3.0)",
+    "license": "GPL-3.0",
+    "file": "gpl-3.0.txt",
+    "url": "https://www.gnu.org/licenses/gpl-3.0.txt"
+  },
+  {
+    "name": "Silero VAD",
+    "license": "MIT",
+    "file": "mit-silero-vad.txt",
+    "url": "https://github.com/snakers4/silero-vad"
+  },
+  {
+    "name": "Qualcomm GenieX (Kotlin SDK classes)",
+    "license": "BSD-3-Clause; native runtime: Qualcomm Terms of Use (downloaded by the user)",
+    "file": "bsd-3-geniex.txt",
+    "url": "https://github.com/qualcomm/GenieX"
+  },
+  {
+    "name": "RhineLabUI（设计灵感，未使用其代码）",
+    "license": "MIT",
+    "file": "mit-rhinelabui.txt",
+    "url": "https://github.com/LBEILC/RhineLabUI"
+  }
 ]

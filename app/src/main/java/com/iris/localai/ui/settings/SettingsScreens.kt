@@ -612,9 +612,6 @@ internal val OPEN_SOURCE = listOf(
     "AndroidX / Jetpack Compose" to "Apache-2.0 · 界面",
     "Kotlin / kotlinx" to "Apache-2.0 · 语言与基础库",
     "Apache Commons Compress" to "Apache-2.0 · 模型包解压",
-    "PRoot" to "GPL-2.0-or-later（未修改，源码 github.com/termux/proot）· Linux 环境",
-    "talloc" to "LGPL-3.0 · PRoot 依赖",
-    "libandroid-shmem" to "BSD-3-Clause · PRoot 依赖",
     "Silero VAD" to "MIT · 人声检测",
     "SenseVoice" to "FunASR Model License · 语音识别模型",
     "Kokoro" to "Apache-2.0 · 语音合成模型",
@@ -800,7 +797,6 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
     val packs by vm.voicePacks.collectAsStateWithLifecycle()
     val ag by agent.settings.settings.collectAsStateWithLifecycle()
     val mem by agent.memorySettings.settings.collectAsStateWithLifecycle()
-    val schedules by agent.schedules.items.collectAsStateWithLifecycle()
     val plans by agent.plans.plans.collectAsStateWithLifecycle()
     val live by com.iris.localai.util.SystemStatus.live.collectAsStateWithLifecycle()
     val s by vm.settings.collectAsStateWithLifecycle()
@@ -828,11 +824,9 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
         }.orEmpty(),
         agentMode = ag.agentMode, agentRunning = live.agentRunning, tool = live.tool, toolGroup = live.toolGroup, stepsDone = live.stepsDone,
         webOn = ag.isEnabled(com.iris.localai.agent.WebSearchTool) || ag.isEnabled(com.iris.localai.agent.WebFetchTool),
-        shellOn = ag.isEnabled(com.iris.localai.agent.RunCommandTool), shellKind = ag.backend.short,
+        screenOn = ag.isEnabled(com.iris.localai.agent.ScreenTool),
         voicePacks = packs.values.count { it == com.iris.localai.voice.PackState.Installed }, voiceActive = live.voiceActive,
         apiRunning = api.running, apiPort = api.port, apiError = api.error,
-        schedules = schedules.size, autoSchedules = schedules.count { it.autoRun },
-        heartbeats = com.iris.localai.agent.Heartbeat.pending.size, heartbeatOn = ag.heartbeat,
         memoryOn = mem.enabled,
         planLeft = plans.values.filter { !it.finished }.sumOf { it.steps.size - it.done },
     )

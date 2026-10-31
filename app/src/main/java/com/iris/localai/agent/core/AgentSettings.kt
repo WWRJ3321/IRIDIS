@@ -36,10 +36,6 @@ data class AgentSettings(
     val workspace: String = WorkspaceLocation.DOWNLOADS.name,
     /** 1.10.0: persisted SAF grant of Download/IRISLocalAI (read files the app did not create); null = none. */
     val workspaceTreeUri: String? = null,
-    /** 1.11.0: [CommandBackend] name for run_command and the 终端 page (default 内置). */
-    val commandBackend: String = CommandBackend.BUILTIN.name,
-    /** 1.12.0: run_command prefix → "ALLOW" / "ASK" / "DENY" ([CommandRules]). */
-    val commandRules: Map<String, String> = emptyMap(),
     /** 1.12.0: [SearchProvider] name for web_search, and the SearXNG address. 2.0.0 default 谷歌（浏览器）. */
     val searchProvider: String = SearchProvider.DEFAULT.name,
     /** 2.0.0: true once the user picked a provider in settings (an untouched AUTO is moved to the new default). */
@@ -49,17 +45,8 @@ data class AgentSettings(
     val lazyTools: Boolean = true,
     /** 1.14.0 计划模式: multi-step tasks are planned first and wait for the user's OK. */
     val planFirst: Boolean = false,
-    /** 1.14.0 心跳: after a run ends (done or stopped) check its plan after [heartbeatFirstMin], then every [heartbeatEveryMin]. */
-    val heartbeat: Boolean = true,
-    val heartbeatFirstMin: Int = 5,
-    val heartbeatEveryMin: Int = 60,
-    /** 1.14.0: when the check finds unfinished steps and IRIS is still running, continue on its own (else a notification). */
-    val heartbeatAutoResume: Boolean = true,
-    /** Checks per plan before the heartbeat gives up. */
-    val heartbeatMaxChecks: Int = 6,
 ) {
     val search: SearchProvider get() = SearchProvider.parse(searchProvider)
-    val backend: CommandBackend get() = CommandBackend.parse(commandBackend)
     val workspaceLocation: WorkspaceLocation get() = WorkspaceLocation.parse(workspace)
 
     fun isEnabled(tool: AgentTool): Boolean = enabled[tool.name] ?: tool.defaultEnabled
@@ -74,11 +61,6 @@ data class AgentSettings(
         enabled = enabled.filterKeys { AgentTools.byName(it) != null },
         permissions = permissions.filter { (k, v) -> AgentTools.byName(k) != null && Permission.parse(v) != null },
         workspace = WorkspaceLocation.parse(workspace).name,
-        commandBackend = CommandBackend.parse(commandBackend).name,
-        commandRules = commandRules.filter { (k, v) -> k.isNotBlank() && Permission.parse(v) != null },
-        heartbeatFirstMin = heartbeatFirstMin.coerceIn(1, 120),
-        heartbeatEveryMin = heartbeatEveryMin.coerceIn(15, 24 * 60),
-        heartbeatMaxChecks = heartbeatMaxChecks.coerceIn(1, 48),
     )
 
     companion object {
@@ -304,17 +286,13 @@ class AgentContainer(context: Context) {
 
     val undo = UndoStore(java.io.File(context.filesDir, "agent-undo"))
     private val fetcher = HttpWebFetcher()
-    /** 1.11.0: full Linux through Termux, and the agent's in-app browser. */
-    val termuxShell by lazy { TermuxShell(appContextForTools) }
     val browser by lazy { WebViewBrowser(appContextForTools) }
     private val appContextForTools: Context = context.applicationContext ?: context
 
-    /** The shell the 终端 page and run_command use now. */
-    /** 1.12.0: phone intents, scheduled tasks, and skills (built-in assets + workspace/skills). */
+    /** 1.12.0: phone intents and skills (built-in assets + workspace/skills). */
     val phone: PhoneActions by lazy { AndroidPhoneActions(appContextForTools) }
-    val schedules: ScheduleStore by lazy { ScheduleAlarms.store(appContextForTools) }
-    /** 1.14.0: plans by conversation (shared with the heartbeat receiver). */
-    val plans: PlanStore by lazy { Heartbeat.plans(appContextForTools) }
+    /** 1.14.0: plans by conversation. */
+    val plans: PlanStore by lazy { Plans.of(appContextForTools) }
     val skills: SkillCatalog by lazy {
         val am = appContextForTools.assets
         val builtIn by lazy {
@@ -325,15 +303,6 @@ class AgentContainer(context: Context) {
         }
         // 2.1.1: user skills in Download/IRIDIS/skills (or filesDir/iridis/skills) — outside the sandbox.
         SkillCatalog({ builtIn }, { appRoot })
-    }
-
-    /** 1.12.0: Alpine under PRoot, with the workspace bound at /workspace. */
-    val prootShell by lazy { ProotShell(appContextForTools) { sandbox.root } }
-
-    fun shell(): Pair<ShellRunner, CommandBackend> = when (settings.current.backend) {
-        CommandBackend.TERMUX -> termuxShell to CommandBackend.TERMUX
-        CommandBackend.PROOT -> prootShell to CommandBackend.PROOT
-        CommandBackend.BUILTIN -> AndroidShell to CommandBackend.BUILTIN
     }
 
     /** Bumped after any workspace change so the file browser and the undo row refresh. */
@@ -377,15 +346,11 @@ class AgentContainer(context: Context) {
         conversationId = conversationId, recallExclude = exclude,
         external = externalFiles(),
         accessHint = accessHint(),
-        shell = shell().first,
-        shellKind = shell().second.also { RunCommandTool.kind = it },
         browser = browser,
-        commandRules = CommandRules.parse(settings.current.commandRules),
         searchProvider = settings.current.search,
         searxUrl = settings.current.searxUrl,
         searchBrowser = browser,
         phone = phone,
-        schedules = schedules,
         skills = skills,
         plans = plans,
         enabledTools = enabledTools,

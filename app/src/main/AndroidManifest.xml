@@ -17,14 +17,9 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- 1.10.13: asks once to be left running in the background while a reply generates. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- 1.11.0: optional — send commands to Termux (full Linux) for run_command and the 终端 page. -->
-    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
-    <!-- 1.12.0: phone tool (alarm / timer via the clock app) and scheduled tasks. -->
+    <!-- 1.12.0: phone tool (alarm / timer via the clock app). -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <queries>
-        <package android:name="com.termux" />
         <!-- 1.12.0: phone tool: find launchable apps and the apps that handle its intents. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -116,17 +111,6 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/iris_accessibility_service" />
         </service>
-        <!-- 1.12.0: scheduled tasks fire here (and are re-armed after a reboot / update / clock change). -->
-        <receiver
-            android:name=".agent.ScheduleReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-        </receiver>
         <!-- 2.2: shares a chat image (a copy in cache/shared) and files of Download/IRIDIS picked on the 文件 page. -->
         <provider
             android:name="androidx.core.content.FileProvider"

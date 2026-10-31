@@ -11,7 +11,7 @@ import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.LocalReduceMotion
 
 /**
- * 1.13.0: rows that appear because of another setting (a tool's permission, Termux setup, an
+ * 1.13.0: rows that appear because of another setting (a tool's permission, an
  * optional field) unfold with the app's spring instead of snapping in; instant with reduce-motion.
  */
 @Composable

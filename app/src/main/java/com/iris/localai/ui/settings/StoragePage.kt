@@ -37,7 +37,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.iris.localai.IrisApp
-import com.iris.localai.agent.AlpineRootfs
 import com.iris.localai.data.Format
 import com.iris.localai.data.LocalModel
 import com.iris.localai.engine.EngineState
@@ -82,7 +81,7 @@ import java.io.File
 /**
  * 1.14.3 设置 › 存储空间. Sizes come from [StorageUsage.scan] on Dispatchers.IO; every delete goes
  * through the code that already owns it (ModelsViewModel.delete + its dialog, ModelCache.clear,
- * SettingsViewModel.deletePack, AlpineRootfs.uninstall, ConversationRepository.deleteAll, UndoStore.clear).
+ * SettingsViewModel.deletePack, ConversationRepository.deleteAll, UndoStore.clear).
  */
 class StorageViewModel(app: Application) : AndroidViewModel(app) {
     private val c = (app as IrisApp).container
@@ -125,7 +124,6 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
             privateWorkspace = c.agent.privateRoot,
             undo = File(files, "agent-undo"),                     // AgentContainer.undo
             memory = File(files, "memory"),                       // AgentContainer.memoryDocs
-            alpine = AlpineRootfs.base(ctx),
             conversations = File(files, "conversations"),         // AppContainer.conversations
             attachments = File(files, "attachments"),             // Attachments.dir
             historyDb = listOf("", "-wal", "-shm", "-journal").map { File(db.path + it) },
@@ -177,11 +175,6 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearOpenCl() = io { freed(StorageUsage.clearChildren(File(ctx.cacheDir, "opencl")), "已清除 GPU 内核缓存") }
 
-    fun deleteAlpine() = io {
-        val b = StorageUsage.sizeOf(AlpineRootfs.base(ctx))
-        AlpineRootfs.uninstall(ctx)
-        freed(b, "已删除 Alpine Linux")
-    }
 
     fun clearUndo() = io {
         val dir = File(ctx.filesDir, "agent-undo")
@@ -270,7 +263,6 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
 private sealed interface StoragePending {
     data class Model(val model: LocalModel) : StoragePending
     data class Voice(val pack: VoicePack) : StoragePending
-    data object Alpine : StoragePending
     data object Undo : StoragePending
     data object Caches : StoragePending
     data object OrphanCaches : StoragePending
@@ -299,7 +291,6 @@ fun StoragePage(
     onOpen: (SettingsPage) -> Unit,
     onModels: () -> Unit,
     onOpenFiles: () -> Unit,
-    onOpenTerminal: () -> Unit,
 ) {
     val storage: StorageViewModel = viewModel()
     val modelsVm: ModelsViewModel = viewModel()
@@ -311,7 +302,6 @@ fun StoragePage(
     val models by storage.models.collectAsStateWithLifecycle()
     val conversations by storage.conversations.collectAsStateWithLifecycle()
     val voiceStates by vm.voicePacks.collectAsStateWithLifecycle()
-    val alpine by AlpineRootfs.state.collectAsStateWithLifecycle()
     var pending by remember { mutableStateOf<StoragePending?>(null) }
     val folder by storage.folder.collectAsStateWithLifecycle()
     val move by storage.move.collectAsStateWithLifecycle()
@@ -461,19 +451,6 @@ fun StoragePage(
             GroupFootnote("工作区文件不提供一键清空，请在「文件」中管理。")
             GroupFootnote(StorageLayoutText.SUMMARY)
 
-            // ---- 终端环境 ----
-            CategorySection(Category.TERMINAL, r) { g ->
-                val installing = alpine is AlpineRootfs.State.Downloading || alpine == AlpineRootfs.State.Unpacking
-                g.entries.forEach { e ->
-                    ActionRow(e, "删除", destructive = true, enabled = !installing, detail = if (installing) "正在安装" else "含已安装的软件包") { pending = StoragePending.Alpine }
-                    Divider()
-                }
-                SettingsRow(
-                    if (g.entries.isEmpty()) "未安装 Alpine Linux" else "终端", subtitle = "打开终端，安装或管理内置 Linux",
-                    onClick = onOpenTerminal, trailing = { Chevron() },
-                )
-            }
-
             // ---- 聊天记录 ----
             CategorySection(Category.CHATS, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -543,10 +520,6 @@ fun StoragePage(
             confirmText = "删除",
             onConfirm = { vm.deletePack(p.pack).invokeOnCompletion { storage.refresh() } },
             onDismiss = { pending = null },
-        )
-        StoragePending.Alpine -> ConfirmDialog(
-            title = "删除 Alpine？", message = "装过的软件包（python、git 等）会一起删除。",
-            confirmText = "删除", onConfirm = { storage.deleteAlpine() }, onDismiss = { pending = null },
         )
         StoragePending.Undo -> ConfirmDialog(
             title = "清除撤销记录？", message = "之后无法再撤销智能体此前对文件的修改。",
@@ -640,7 +613,6 @@ private fun categoryColor(cat: Category): Color {
         Category.MODEL_CACHE -> Color(0xFF8E7CF0)
         Category.VOICE -> Color(0xFF30B0C7)
         Category.WORKSPACE -> Color(0xFF5AC17A)
-        Category.TERMINAL -> Color(0xFFF2A93B)
         Category.CHATS -> Color(0xFFEF7C74)
         Category.CACHE_LOGS -> Color(0xFF9AA3AE)
         Category.OTHER -> c.textTertiary.copy(alpha = 0.45f)

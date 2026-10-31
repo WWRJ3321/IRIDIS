@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -122,7 +121,7 @@ object FilesOps {
  * import from the phone, new folder, rename, export, delete (backed up, undoable).
  */
 @Composable
-fun FilesPage(onBack: () -> Unit, onOpenTerminal: (() -> Unit)? = null) {
+fun FilesPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val agent = remember { (context.applicationContext as IrisApp).container.agent }
     val revision by agent.revision.collectAsStateWithLifecycle()
@@ -189,7 +188,6 @@ fun FilesPage(onBack: () -> Unit, onOpenTerminal: (() -> Unit)? = null) {
                 agent.changed()
             }
         }
-        if (onOpenTerminal != null) PressableIcon(com.iris.localai.ui.icons.IrisIcons.Terminal, "终端", onClick = onOpenTerminal)
     }) {
         LazyColumn(Modifier.fillMaxSize().navigationBarsPadding()) {
             item(key = "crumbs") {

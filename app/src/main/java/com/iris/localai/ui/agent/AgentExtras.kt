@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.iris.localai.IrisApp
 import com.iris.localai.agent.Permission
-import com.iris.localai.agent.ScheduleRules
 import com.iris.localai.agent.SearchProvider
 import com.iris.localai.ui.components.Divider
 import com.iris.localai.ui.components.GroupFootnote
@@ -53,15 +52,13 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 
 /**
- * 1.12.0 sections of 设置 › 智能体: 联网搜索 (provider), 命令规则 (run_command prefixes),
- * 定时任务, 技能, 备份与日志.
+ * Sections of 设置 › 智能体: 联网搜索 (provider), 技能, 备份与日志.
  */
 @Composable
 fun AgentExtraSections() {
     val context = LocalContext.current
     val agent = remember { (context.applicationContext as IrisApp).container.agent }
     val s by agent.settings.settings.collectAsStateWithLifecycle()
-    val schedules by agent.schedules.items.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
     var confirmRestore by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -91,66 +88,6 @@ fun AgentExtraSections() {
         }
     }
     GroupFootnote("「谷歌/必应（浏览器）」在内置浏览器里搜索，和 浏览器 页共用登录与 Cookie；遇到人机验证时请在 浏览器 页手动完成一次，本次先改用必应。其他服务只把搜索词发给所选服务。自建 SearXNG 需要公网地址（为安全起见，智能体不能访问本机和局域网）。")
-
-    // ---- 命令规则 ----
-    SectionTitle("命令规则")
-    SettingsGroup {
-        val rules = s.commandRules.entries.sortedBy { it.key }
-        if (rules.isEmpty()) SettingsRow("还没有规则", subtitle = "确认「运行命令」时选「总是允许」，会记住这条命令的开头（如 git status）")
-        rules.forEachIndexed { i, (prefix, perm) ->
-            if (i > 0) Divider()
-            val p = Permission.parse(perm) ?: Permission.ASK
-            SettingsRow(prefix, subtitle = p.label, trailing = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PressableIcon(Icons.Outlined.Close, "删除规则") { agent.settings.update { it.copy(commandRules = it.commandRules - prefix) } }
-                }
-            }, onClick = {
-                val next = when (p) { Permission.ALLOW -> Permission.ASK; Permission.ASK -> Permission.DENY; Permission.DENY -> Permission.ALLOW }
-                agent.settings.update { it.copy(commandRules = it.commandRules + (prefix to next.name)) }
-            })
-        }
-        Divider()
-        var draft by remember { mutableStateOf("") }
-        Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                draft, { draft = it }, modifier = Modifier.weight(1f), singleLine = true,
-                placeholder = { Text("命令开头，如 rm（默认设为拒绝）", style = IrisType.secondary) },
-                textStyle = IrisType.mono.copy(color = c.text), shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
-            )
-            Spacer(Modifier.width(8.dp))
-            PressableIcon(Icons.Outlined.Add, "添加规则", enabled = draft.isNotBlank()) {
-                val k = draft.trim().replace(Regex("\\s+"), " ")
-                agent.settings.update { it.copy(commandRules = it.commandRules + (k to Permission.DENY.name)) }
-                draft = ""
-            }
-        }
-    }
-    GroupFootnote("只读命令（ls、cat、grep…）自动放行；点一条规则可切换 允许 / 询问 / 拒绝。")
-
-    // ---- 定时任务 ----
-    SectionTitle("定时任务")
-    SettingsGroup {
-        if (schedules.isEmpty()) SettingsRow("没有定时任务", subtitle = "对智能体说「每天早上 8 点帮我整理新闻」即可创建")
-        schedules.forEachIndexed { i, sc ->
-            if (i > 0) Divider()
-            // 1.14.0: tap cycles 通知 → 自动执行 → 自动执行（仅充电） (功耗限制).
-            SettingsRow(sc.title, subtitle = ScheduleRules.describe(sc, ZoneId.systemDefault()).substringAfter(": ").substringBefore(" [auto") + "\n" + ScheduleRules.limits(sc), subtitleMaxLines = 3,
-                onClick = if (sc.prompt.isBlank()) null else {
-                    {
-                        agent.schedules.put(when {
-                            !sc.autoRun -> sc.copy(autoRun = true, chargingOnly = false)
-                            !sc.chargingOnly -> sc.copy(chargingOnly = true)
-                            else -> sc.copy(autoRun = false, chargingOnly = false)
-                        })
-                    }
-                },
-                trailing = {
-                PressableIcon(Icons.Outlined.Close, "删除") { agent.schedules.remove(sc.id) }
-            })
-        }
-    }
-    GroupFootnote("到点发通知，点按后在新对话里执行；点一条可改为「自动执行」（IRIDIS 开着且模型已加载时）。")
 
     // ---- 技能 ----
     SectionTitle("技能")

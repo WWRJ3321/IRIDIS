@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
@@ -98,7 +97,6 @@ fun HistoryDrawer(
     onSettings: () -> Unit,
     onApi: () -> Unit,
     onFiles: () -> Unit = {},
-    onTerminal: () -> Unit = {},
     onImageGen: () -> Unit = {},
     runningId: String? = null,
     open: Boolean = true,
@@ -243,7 +241,6 @@ fun HistoryDrawer(
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Cube, DrawerNavText.MODELS, onClick = onModels)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Image, DrawerNavText.IMAGEGEN, onClick = onImageGen)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Folder, DrawerNavText.FILES, onClick = onFiles)
-            DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Terminal, DrawerNavText.TERMINAL, onClick = onTerminal)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Plug, DrawerNavText.API, badge = apiRunning, onClick = onApi)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Settings, DrawerNavText.SETTINGS, onClick = onSettings)
         }
@@ -287,7 +284,6 @@ internal object DrawerNavText {
     /** 2.1.7 */
     const val IMAGEGEN = "生图"
     const val FILES = "文件"
-    const val TERMINAL = "终端"
     const val API = "API"
     const val SETTINGS = "设置"
     const val API_RUNNING = "API 服务运行中"

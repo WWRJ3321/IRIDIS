@@ -59,19 +59,16 @@ object IrisIcons {
     /** 联网 / 浏览器 */
     val Globe: ImageVector by lazy { icon("Globe", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M3 12h18 M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z") }
 
-    /** 终端 */
-    val Terminal: ImageVector by lazy { icon("Terminal", "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M7.5 9l3 3-3 3 M13 15h3.5") }
-
     /** API 服务 */
     val Plug: ImageVector by lazy { icon("Plug", "M9 3v4 M15 3v4 M7 7h10v3a5 5 0 0 1-10 0z M12 15v6") }
 
     /** 外观 / 主题 */
     val Contrast: ImageVector by lazy { icon("Contrast", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z", "F:M12 3a9 9 0 0 1 0 18z") }
 
-    /** 诊断 / 心跳 */
+    /** 诊断 */
     val Pulse: ImageVector by lazy { icon("Pulse", "M3 12h4l2.5-6 5 12 2.5-6h4") }
 
-    /** 定时任务 */
+    /** 时间 */
     val Clock: ImageVector by lazy { icon("Clock", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 7.5V12l3 2") }
 
     /** 对话 */
