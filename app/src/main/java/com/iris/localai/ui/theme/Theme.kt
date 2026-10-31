@@ -188,6 +188,12 @@ fun IrisTheme(
             surfaceContainer = c.surfaceElevated, surfaceContainerHigh = c.surfaceElevated, surfaceContainerLow = c.surface,
             secondaryContainer = c.accentContainer, onSecondaryContainer = c.onAccentContainer,
             outline = c.outline, outlineVariant = c.outline, error = c.danger,
+            // 2.2.5: every Material accent slot maps to the brand tokens — no baseline-purple leaks.
+            primaryContainer = c.accentContainer, onPrimaryContainer = c.onAccentContainer, inversePrimary = c.accent,
+            secondary = c.accent, onSecondary = c.onAccent,
+            tertiary = c.accent, onTertiary = c.onAccent, tertiaryContainer = c.accentContainer, onTertiaryContainer = c.onAccentContainer,
+            surfaceTint = c.accent, surfaceContainerHighest = c.surfaceElevated, surfaceContainerLowest = c.surface,
+            surfaceBright = c.surface, surfaceDim = c.surface, onError = c.onAccent,
         )
     } else {
         lightColorScheme(
@@ -196,6 +202,12 @@ fun IrisTheme(
             surfaceContainer = c.surfaceElevated, surfaceContainerHigh = c.surfaceElevated, surfaceContainerLow = c.surface,
             secondaryContainer = c.accentContainer, onSecondaryContainer = c.onAccentContainer,
             outline = c.outline, outlineVariant = c.outline, error = c.danger,
+            // 2.2.5: every Material accent slot maps to the brand tokens — no baseline-purple leaks.
+            primaryContainer = c.accentContainer, onPrimaryContainer = c.onAccentContainer, inversePrimary = c.accent,
+            secondary = c.accent, onSecondary = c.onAccent,
+            tertiary = c.accent, onTertiary = c.onAccent, tertiaryContainer = c.accentContainer, onTertiaryContainer = c.onAccentContainer,
+            surfaceTint = c.accent, surfaceContainerHighest = c.surfaceElevated, surfaceContainerLowest = c.surface,
+            surfaceBright = c.surface, surfaceDim = c.surface, onError = c.onAccent,
         )
     }
     MaterialTheme(colorScheme = scheme, typography = IrisTypography) {

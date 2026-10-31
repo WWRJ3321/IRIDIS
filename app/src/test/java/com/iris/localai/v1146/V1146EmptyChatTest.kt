@@ -14,7 +14,7 @@ class V1146EmptyChatTest {
     @Test fun noExamplePromptsOrModelSubtitle() {
         assertFalse(src.contains("EXAMPLE_PROMPTS"))
         assertFalse(src.contains("完全在本机运行"))
-        assertTrue(src.contains("点击顶部选择一个本地模型")) // no-model hint stays
+        assertFalse(src.contains("点按图标加载")) // 2.2.5: hint line under the title removed
     }
 
     @Test fun placeholdersRenamed() {

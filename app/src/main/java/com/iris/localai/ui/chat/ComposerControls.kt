@@ -78,12 +78,13 @@ object ComposerPillStyle {
     val OFF_TEXT_LIGHT = Color(0xFF3C3C43)
     val OFF_TEXT_DARK = Color(0xFFE5E5EA)
 
-    fun background(on: Boolean, dark: Boolean): Color = when {
-        on -> if (dark) ON_DARK else ON_LIGHT
+    /** 2.2.5: on = the theme's brand accent (was hard-coded blue while the send button followed the theme). */
+    fun background(on: Boolean, dark: Boolean, accent: Color? = null): Color = when {
+        on -> accent ?: if (dark) ON_DARK else ON_LIGHT
         else -> if (dark) OFF_DARK else OFF_LIGHT
     }
 
-    fun content(on: Boolean, dark: Boolean): Color = if (on) ON_TEXT else if (dark) OFF_TEXT_DARK else OFF_TEXT_LIGHT
+    fun content(on: Boolean, dark: Boolean, onAccent: Color? = null): Color = if (on) (onAccent ?: ON_TEXT) else if (dark) OFF_TEXT_DARK else OFF_TEXT_LIGHT
 }
 
 /**
@@ -108,8 +109,8 @@ internal fun ComposerPill(
     val dark = c.isDark
     val on = selected && enabled
     val interaction = remember { MutableInteractionSource() }
-    val bg by animateColorAsState(ComposerPillStyle.background(on, dark), motionSpec(IrisMotion.Color), label = "pillBg")
-    val fg by animateColorAsState(ComposerPillStyle.content(on, dark), motionSpec(IrisMotion.Color), label = "pillFg")
+    val bg by animateColorAsState(ComposerPillStyle.background(on, dark, Iris.colors.accent), motionSpec(IrisMotion.Color), label = "pillBg")
+    val fg by animateColorAsState(ComposerPillStyle.content(on, dark, Iris.colors.onAccent), motionSpec(IrisMotion.Color), label = "pillFg")
     val a = if (enabled) 1f else ComposerPillStyle.DISABLED_ALPHA
     val clickable = enabled || onDisabledClick != null
     Row(

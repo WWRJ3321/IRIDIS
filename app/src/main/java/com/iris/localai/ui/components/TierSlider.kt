@@ -67,6 +67,9 @@ object TierSliderStyle {
 
     fun start(dark: Boolean) = if (dark) DarkStart else LightStart
     fun end(dark: Boolean) = if (dark) DarkEnd else LightEnd
+    /** 2.2.5: the fill follows the theme accent (light tint of it → the accent itself). */
+    fun start(dark: Boolean, accent: Color, surface: Color) = androidx.compose.ui.graphics.lerp(surface, accent, if (dark) 0.35f else 0.28f)
+    @Suppress("UNUSED_PARAMETER") fun end(dark: Boolean, accent: Color) = accent
 
     /** Geometry of the original StepTrack (dp). */
     const val TRACK_DP = 12f
@@ -186,11 +189,11 @@ fun TierSlider(
             val top = cy - trackH / 2
             // Unselected: the original quiet light-grey track.
             drawRoundRect(c.outline.copy(alpha = 0.35f), Offset(0f, top), Size(size.width, trackH), r)
-            // Selected: muted light → deep blue, anchored to the whole track (higher = deeper).
+            // Selected: light tint of the theme accent → the accent (2.2.5), anchored to the whole track (higher = deeper).
             val fillW = (kx + trackH / 2).coerceAtMost(size.width)
             if (fillW > 0f) {
                 drawRoundRect(
-                    Brush.horizontalGradient(listOf(TierSliderStyle.start(dark), TierSliderStyle.end(dark)), startX = 0f, endX = size.width),
+                    Brush.horizontalGradient(listOf(TierSliderStyle.start(dark, c.accent, c.surface), TierSliderStyle.end(dark, c.accent)), startX = 0f, endX = size.width),
                     Offset(0f, top), Size(fillW, trackH), r,
                 )
             }

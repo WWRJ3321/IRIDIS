@@ -54,6 +54,10 @@ class ModelRepository(private val context: Context) {
             // Remove leftovers from interrupted imports (but never one that is being written right now).
             files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
             files.mapNotNull { f -> entryOf(f, mnn) }
+                // 2.2.5: projector files (mmproj) belong to their parent model; never listed as models
+                // anywhere (home menu, 档位与加载, 模型管理, GUI pickers). They stay on disk (and move
+                // with the models), they are just not entries.
+                .filterNot { isProjectorFile(it.fileName) }
         }
         val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list
@@ -380,4 +384,10 @@ object ModelFiles {
         }
         return n
     }
+}
+
+/** 2.2.5: vision projector files (mmproj etc.) — attached to their parent model, never a model themselves. */
+fun isProjectorFile(name: String): Boolean {
+    val n = name.lowercase()
+    return "mmproj" in n || "projector" in n
 }

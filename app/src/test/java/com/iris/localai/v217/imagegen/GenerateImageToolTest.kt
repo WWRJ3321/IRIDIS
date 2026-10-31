@@ -181,7 +181,7 @@ class GenerateImageToolTest {
         assertTrue(AgentTools.enabled(AgentSettings(), historyAvailable = true, memoryOn = true, imageGenOn = true).contains(GenerateImageTool))
         assertFalse(AgentTools.enabled(AgentSettings(), historyAvailable = true, memoryOn = true).contains(GenerateImageTool))
         assertFalse(AgentTools.enabled(AgentSettings(enabled = mapOf("generate_image" to false)), true, true, imageGenOn = true).contains(GenerateImageTool))
-        assertEquals("generate_image(prompt, image?): on-device picture; image=workspace path to edit", GenerateImageTool.promptLine)
+        assertEquals("generate_image(prompt, image?): on-device picture; omit image for a new picture; image ONLY to edit an existing file the user attached or named", GenerateImageTool.promptLine)
         assertTrue(AgentPrompt.build(AgentTools.all).contains(GenerateImageTool.promptLine))
     }
 

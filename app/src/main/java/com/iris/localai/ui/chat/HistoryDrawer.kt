@@ -71,6 +71,7 @@ import androidx.compose.ui.semantics.stateDescription
 import com.iris.localai.ui.components.TextInputDialog
 import com.iris.localai.ui.components.floatingSurface
 import com.iris.localai.ui.components.glassSurface
+import com.iris.localai.ui.components.largeSurface
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
@@ -133,8 +134,8 @@ fun HistoryDrawer(
         Modifier
             .fillMaxHeight()
             .width(IrisDimens.drawerWidth)
-            // 2.2.4: liquid glass over the chat (blurs the message list behind it).
-            .glassSurface(com.iris.localai.ui.theme.SmoothRoundedShape(0.dp, IrisRadius.sheet, IrisRadius.sheet, 0.dp), com.iris.localai.ui.theme.IrisElevation.menu)
+            // 2.2.5: near-opaque large surface (was see-through glass in 2.2.4).
+            .largeSurface(com.iris.localai.ui.theme.SmoothRoundedShape(0.dp, IrisRadius.sheet, IrisRadius.sheet, 0.dp), com.iris.localai.ui.theme.IrisElevation.menu)
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding(),

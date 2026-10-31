@@ -25,21 +25,15 @@ class DefaultModelTest {
         assertTrue(d.indexOf("defaultModelFile") < d.indexOf("lastModelFile"))
     }
 
-    @Test fun logoTapLoadsOnlyWhenNothingIsLoaded() {
-        val vm = src("ui/chat/ChatViewModel.kt")
-        val f = vm.substringAfter("fun loadDefaultModel() {").substringBefore("\n    }\n")
-        assertTrue(f.contains("st is EngineState.Ready || st is EngineState.Loading"))
-        assertTrue(f.contains("c.engine.defaultModel()") && f.contains("loadModel("))
-    }
-
-    @Test fun emptyStateMarkIsTappableAndShowsProgressAndSuccess() {
+    /** 2.2.5: tap-to-load on the empty-state mark removed at the user's request; the mark still breathes while loading. */
+    @Test fun emptyStateMarkIsDecorative() {
         val chat = src("ui/chat/ChatScreen.kt")
-        assertTrue(chat.contains("onLogoTap = vm::loadDefaultModel,"))
+        assertFalse(chat.contains("onLogoTap"))
+        assertFalse(src("ui/chat/ChatViewModel.kt").contains("fun loadDefaultModel("))
         val empty = chat.substringAfter("private fun ChatEmptyState(").substringBefore("fun loadingSeconds(")
         assertTrue(empty.contains(".pulse(engine is EngineState.Loading"))
-        assertTrue(empty.contains("IrisIcons.Check"))
-        assertTrue(empty.contains("modelName.orEmpty()"))
-        assertTrue(empty.contains("onLogoTap()"))
+        assertFalse(empty.contains("clickable"))
+        assertFalse(empty.contains("点按图标加载"))
         assertFalse("animations only via IrisMotion", empty.contains("tween("))
     }
 

@@ -532,7 +532,7 @@ object GenerateImageTool : SuspendTool {
     override val label = "生图"
     override val description = "用本机模型生成或修改图片（约 1 分钟），保存到工作区 images/"
     // 2.1.7: negative_prompt, seed, strength, width, height, steps, cfg are accepted but not advertised (prompt budget).
-    override val promptLine = "generate_image(prompt, image?): on-device picture; image=workspace path to edit"
+    override val promptLine = "generate_image(prompt, image?): on-device picture; omit image for a new picture; image ONLY to edit an existing file the user attached or named"
     override val risk = ToolRisk.WRITE
     /** Only ever creates a new file (never overwrites), so it runs without asking. */
     override val defaultPermission: Permission get() = Permission.ALLOW

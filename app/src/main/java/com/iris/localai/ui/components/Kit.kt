@@ -81,12 +81,13 @@ fun IrisPill(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
+    height: androidx.compose.ui.unit.Dp = IrisDimens.floatingButton,
     content: @Composable RowScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     Row(
         modifier
-            .height(IrisDimens.floatingButton)
+            .height(height)
             .then(if (onClick != null) Modifier.pressScale(interaction, GlassTokens.PRESS_SCALE) else Modifier)
             .glassSurface(IrisRadius.full)
             .then(if (onClick != null) Modifier.clickable(interaction, LocalIndication.current, onClickLabel = onClickLabel, onClick = onClick) else Modifier),

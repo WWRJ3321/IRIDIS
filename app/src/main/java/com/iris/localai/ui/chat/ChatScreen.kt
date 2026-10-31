@@ -250,7 +250,7 @@ fun ChatScreen(
     androidx.compose.runtime.CompositionLocalProvider(com.iris.localai.ui.components.LocalGlassHaze provides haze) {
     ModalNavigationDrawer(
         drawerState = drawer,
-        scrimColor = c.scrim,
+        scrimColor = com.iris.localai.ui.components.LARGE_SCRIM,
         drawerContent = {
             HistoryDrawer(
                 summaries = summaries,
@@ -363,15 +363,10 @@ fun ChatScreen(
                 // 2.1.4 外观 › 自定义背景 (inside the glass source so the composer glass blurs it too).
                 com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
                 if (messages.isEmpty()) {
+                    if (settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeAmbientGlow()
                     ChatEmptyState(
                         modelName = ui.readyModel?.displayName,
                         engine = ui.engine,
-                        // 2.1.7: tap the mark → 「默认模型」 (none set = last used).
-                        defaultModelName = remember(models, settings.defaultModelFile, settings.lastModelFile) {
-                            (models.firstOrNull { settings.defaultModelFile.isNotBlank() && it.fileName == settings.defaultModelFile }
-                                ?: models.firstOrNull { it.fileName == settings.lastModelFile })?.displayName
-                        },
-                        onLogoTap = vm::loadDefaultModel,
                         topPadding = with(density) { topBarHeight.toDp() },
                         bottomPadding = with(density) { composerHeight.toDp() },
                     ) { prompt -> input = prompt; runCatching { inputFocus.requestFocus() } }
@@ -467,14 +462,14 @@ fun ChatScreen(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.space12),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话") { hideKeyboard(); scope.launch { drawer.open() } }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话", size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
                     var modelMenu by remember { mutableStateOf(false) }
                     Box(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
                         ModelTitle(ui.engine) { hideKeyboard(); modelMenu = true }
                         val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
                         ModelDropdown(
                             expanded = modelMenu,
-                            models = models.filterNot { isProjectorFile(it.fileName) },
+                            models = models,
                             currentPath = current,
                             onDismiss = { modelMenu = false },
                             onPick = { m ->
@@ -486,7 +481,7 @@ fun ChatScreen(
                             onManage = { modelMenu = false; onOpenModels() },
                         )
                     }
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", enabled = messages.isNotEmpty()) { vm.newChat() }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.
@@ -725,12 +720,6 @@ fun ChatScreen(
     }
 }
 
-/** 2.2.4: vision projector files (mmproj etc.) belong to their parent model, never listed as models. */
-internal fun isProjectorFile(name: String): Boolean {
-    val n = name.lowercase()
-    return "mmproj" in n || "projector" in n
-}
-
 private fun engineTag(m: LocalModel): String = when (m.format) {
     ModelFormat.GGUF -> "GGUF"
     ModelFormat.MNN -> "MNN"
@@ -757,6 +746,7 @@ private fun ModelTitle(engine: EngineState, onClick: () -> Unit) {
     val maxW = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.6f).dp
     com.iris.localai.ui.components.IrisPill(
         Modifier.widthIn(max = maxW),
+        height = IrisDimens.topBarControl,
         onClick = onClick, onClickLabel = "选择模型",
     ) {
         Spacer(Modifier.width(IrisDimens.space16))
@@ -779,7 +769,7 @@ private fun ModelTitle(engine: EngineState, onClick: () -> Unit) {
                 modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
             )
         }
-        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary, modifier = Modifier.padding(start = IrisDimens.space4, end = IrisDimens.space12).size(18.dp))
+        Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary, modifier = Modifier.padding(start = IrisDimens.space4, end = IrisDimens.space16).size(18.dp))
     }
 }
 
@@ -1012,8 +1002,6 @@ private fun ChatEmptyState(
     engine: EngineState,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
-    defaultModelName: String? = null,
-    onLogoTap: () -> Unit = {},
     onPrompt: (String) -> Unit,
 ) {
     val c = Iris.colors
@@ -1034,68 +1022,17 @@ private fun ChatEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // 2.1.7: the mark loads 「默认模型」 when nothing is loaded: it breathes while loading
-        // (IrisMotion pulse), turns accent with a ✓ once ready, and the model name chip appears.
-        var logoTapped by remember { mutableStateOf(false) }
-        val ready = engine is EngineState.Ready
-        val markTint by androidx.compose.animation.animateColorAsState(
-            if (ready && logoTapped) c.accent else c.text, IrisMotion.Color.spec(), label = "logoTint",
+        // 2.2.5: the mark is decorative again (tap-to-load removed); it still breathes while a model loads.
+        Icon(
+            painterResource(R.drawable.ic_iris_mark), null,
+            tint = c.text,
+            modifier = Modifier
+                .padding(6.dp)
+                .size(44.dp)
+                .pulse(engine is EngineState.Loading, min = 0.35f, periodMs = 1100),
         )
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painterResource(R.drawable.ic_iris_mark), null,
-                tint = markTint,
-                modifier = Modifier
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .clickable(onClickLabel = if (ready) "当前模型" else "加载默认模型") { logoTapped = true; onLogoTap() }
-                    .padding(6.dp)
-                    .size(44.dp)
-                    .pulse(engine is EngineState.Loading, min = 0.35f, periodMs = 1100),
-            )
-            val badge by androidx.compose.animation.core.animateFloatAsState(
-                if (ready && logoTapped) 1f else 0f, IrisMotion.enter(), label = "logoCheck",
-            )
-            if (badge > 0.01f) {
-                Icon(
-                    com.iris.localai.ui.icons.IrisIcons.Check, "已加载",
-                    tint = c.onAccent,
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                        .graphicsLayer { alpha = badge; scaleX = 0.6f + 0.4f * badge; scaleY = 0.6f + 0.4f * badge }
-                        .size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.accent).padding(3.dp),
-                )
-            }
-        }
-        AnimatedVisibility(
-            visible = logoTapped && modelName != null,
-            enter = fadeIn(IrisMotion.enter()) + androidx.compose.animation.expandVertically(IrisMotion.enter()),
-            exit = fadeOut(IrisMotion.standard()) + androidx.compose.animation.shrinkVertically(IrisMotion.standard()),
-        ) {
-            Text(
-                modelName.orEmpty(), style = IrisType.labelSmall, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = IrisDimens.space8).clip(androidx.compose.foundation.shape.RoundedCornerShape(percent = 50))
-                    .background(c.surfaceVariant).padding(horizontal = 12.dp, vertical = 4.dp),
-            )
-        }
         Spacer(Modifier.height(IrisDimens.space20))
         Text("有什么可以帮你？", style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
-        // 1.14.5: with a model loaded the empty chat shows only the mark and the greeting
-        // (model subtitle and example prompts removed at the user's request); status hints stay.
-        val hint = when {
-            modelName != null -> null
-            // 2.0.x: the breathing mark already says it; the activity line counts the seconds.
-            engine is EngineState.Loading -> null
-            engine is EngineState.Failed -> "模型加载失败，点击顶部重新选择"
-            defaultModelName != null -> "点按图标加载 $defaultModelName，或点击顶部选择"
-            else -> "点击顶部选择一个本地模型"
-        }
-        if (hint != null) {
-            Spacer(Modifier.height(IrisDimens.space8))
-            Text(
-                hint,
-                style = IrisType.secondary, color = c.textTertiary, textAlign = TextAlign.Center,
-                maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 

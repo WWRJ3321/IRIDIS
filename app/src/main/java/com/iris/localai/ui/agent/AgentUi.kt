@@ -50,6 +50,7 @@ import com.iris.localai.ui.components.IrisButtonStyle
 import com.iris.localai.ui.components.TypingDots
 import com.iris.localai.ui.components.floatingSurface
 import com.iris.localai.ui.components.glassSurface
+import com.iris.localai.ui.components.largeSurface
 import com.iris.localai.ui.components.pulse
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
@@ -241,12 +242,11 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
     AlertDialog(
         // Dismissing (back / outside tap) counts as 拒绝: the agent must never hang on a hidden dialog.
         onDismissRequest = { onAnswer(UserDecision.DENY) },
-        modifier = Modifier.glassSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
+        modifier = Modifier.largeSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
         shape = IrisRadius.dialogShape,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
         title = {
-            com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current)
             Text("允许智能体「$toolLabel」？", style = IrisType.title, color = c.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         },
         text = {

@@ -68,14 +68,13 @@ fun IrisDialog(
     val c = Iris.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.glassSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
+        modifier = Modifier.largeSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
         shape = IrisRadius.dialogShape,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
         titleContentColor = c.text,
         textContentColor = c.textSecondary,
         title = {
-            com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current)
             Text(title, style = IrisType.title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         },
         text = content?.let { body -> { Box(Modifier.fillMaxWidth()) { body() } } },
@@ -282,15 +281,15 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        modifier = Modifier.glassSurface(
-            com.iris.localai.ui.theme.SmoothRoundedShape(IrisRadius.sheet, IrisRadius.sheet, 0.dp, 0.dp),
-            com.iris.localai.ui.theme.IrisElevation.none,
-        ),
+        // 2.2.5: opaque surface, 24 dp top corners, plain dark scrim; edge-to-edge with the
+        // navigation-bar inset as padding inside (the sheet itself reaches the bottom edge).
+        modifier = Modifier.largeSurface(com.iris.localai.ui.theme.SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp)),
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentColor = c.text,
-        scrimColor = com.iris.localai.ui.glass.sheetScrim(c.scrim, com.iris.localai.ui.glass.LocalGlassQuality.current),
+        scrimColor = LARGE_SCRIM,
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
         tonalElevation = 0.dp,
-        shape = com.iris.localai.ui.theme.SmoothRoundedShape(IrisRadius.sheet, IrisRadius.sheet, 0.dp, 0.dp),
+        shape = com.iris.localai.ui.theme.SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp),
         dragHandle = {
             Box(
                 Modifier
@@ -300,7 +299,6 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
             )
         },
     ) {
-        com.iris.localai.ui.glass.DialogWindowBlur(com.iris.localai.ui.glass.LocalGlassQuality.current, radius = IrisDimens.space16)
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = IrisDimens.space12), content = content)
     }
 }

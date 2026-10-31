@@ -145,6 +145,86 @@ object ToolCallParser {
         "read_file" to "path", "write_file" to "path", "skill" to "name",
         "web_fetch" to "url", "kb_search" to "query", "memory" to "action", "plan" to "title", "activate" to "tool",
     )
+    /**
+     * 2.2.5: registered tool names, for the tolerant fallback (a known name followed by key/value
+     * pairs in any form). The agent loop sets it per run; the default covers the built-in tools.
+     */
+    @Volatile var knownTools: Set<String> = emptySet()
+    private fun known(): Set<String> = knownTools.ifEmpty { POSITIONAL.keys + setOf("edit_file", "list_dir", "search_files", "todo", "datetime", "recall", "phone", "browser", "process_file") }
+
+    /** 2.2.5: GLM-4.5 pairs `<arg_key>k</arg_key><arg_value>v</arg_value>` (value close tag optional). */
+    private val ARG_PAIR = Regex("(?is)<arg_key>\\s*(.*?)\\s*</arg_key>\\s*(?:<arg_value>(.*?)(?:</arg_value>|(?=<arg_key>)|(?=</tool_call>)|$))?")
+    /** The tool name written right before the first `<arg_key>`: `<name`, `<name>`, `name`, `"name":`. */
+    private val GLM_NAME_TAIL = Regex("(?s)<?\\s*[\"']?([A-Za-z_][A-Za-z0-9_.\\-]*)[\"']?\\s*>?\\s*:?\\s*$")
+    private val NOT_NAMES = setOf("tool_call", "arg_key", "arg_value", "function", "parameter")
+    /** 2.2.5: markup that only ever appears in a tool call; never left as the visible answer. */
+    private val CALL_MARKUP = Regex("(?i)</?arg_key>|</?arg_value>|</?tool_call>|<function\\s*=|<parameter\\s*=")
+
+    internal fun glmArgs(s: String): JsonObject = buildJsonObject {
+        ARG_PAIR.findAll(s).forEach { m ->
+            val k = m.groupValues[1].trim()
+            if (k.isNotEmpty() && TOOL_NAME.matches(k)) put(k, JsonPrimitive(m.groupValues[2].trim()))
+        }
+    }
+
+    /** Start of `<name` + `<arg_key>` in [s] (the call's first character), with the name; null when absent. */
+    internal fun glmStart(s: String, from: Int = 0): Pair<Int, String>? {
+        val k = s.indexOf("<arg_key>", from, ignoreCase = true)
+        if (k < 0) return null
+        val head = s.substring(from, k)
+        val m = GLM_NAME_TAIL.find(head) ?: return null
+        val name = m.groupValues[1]
+        if (name.lowercase() in NOT_NAMES || name.lowercase() in ROLE_NAMES) return null
+        return (from + m.range.first) to name
+    }
+
+    /** 2.2.5: GLM-4.5 body `name<arg_key>k</arg_key><arg_value>v</arg_value>…` (also `<name<arg_key>`, `<name>`). */
+    internal fun glmCall(body: String): ToolCall? {
+        val (start, name) = glmStart(body) ?: return null
+        val args = glmArgs(body.substring(start))
+        return if (args.isEmpty()) null else ToolCall(name, args, CallFormat.QWEN_TAG)
+    }
+
+    private val KV_PAIR = Regex("^[\\s,;]*([A-Za-z_][A-Za-z0-9_]*)\\s*[=:]\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*'|[^\\s,;)}\"']+)")
+
+    /**
+     * 2.2.5: tolerant fallback — a registered tool name immediately followed by arguments as
+     * arg_key/arg_value pairs, `<parameter=k>v`, a JSON object, or `k="v"` pairs.
+     */
+    internal fun knownToolCall(text: String): Pair<ToolCall, Int>? {
+        for (name in known().sortedByDescending { it.length }) {
+            val re = Regex("(?<![A-Za-z0-9_])" + Regex.escape(name) + "(?![A-Za-z0-9_])")
+            for (m in re.findAll(text)) {
+                var i = m.range.last + 1
+                while (i < text.length && (text[i].isWhitespace() || text[i] in ">\"'`:(")) i++
+                val rest = text.substring(i)
+                val start = m.range.first.let { if (it > 0 && text[it - 1] == '<') it - 1 else it }
+                val args: JsonObject? = when {
+                    rest.startsWith("<arg_key>", ignoreCase = true) -> glmArgs(rest)
+                    rest.startsWith("<parameter", ignoreCase = true) -> buildJsonObject {
+                        XML_PARAM.findAll(rest).forEach { p -> put(p.groupValues[1], JsonPrimitive(p.groupValues[2].trim())) }
+                    }
+                    rest.startsWith("{") -> (JsonRepair.parse(JsonRepair.extractObject(rest, 0), json) as? JsonObject)?.let { o ->
+                        listOf("arguments", "args", "parameters", "input").firstNotNullOfOrNull { k -> o[k] as? JsonObject } ?: o
+                    }
+                    else -> {
+                        var r = rest
+                        val o = buildJsonObject {
+                            while (true) {
+                                val p = KV_PAIR.find(r) ?: break
+                                put(p.groupValues[1], JsonPrimitive(p.groupValues[2].trim().removeSurrounding("\"").removeSurrounding("'")))
+                                r = r.substring(p.range.last + 1)
+                            }
+                        }
+                        o
+                    }
+                }
+                if (args != null && args.isNotEmpty()) return ToolCall(name, args, CallFormat.QWEN_TAG) to start
+            }
+        }
+        return null
+    }
+
     /** 2.2.3: qwen3_coder / LFM XML form `<function=name><parameter=k>v</parameter></function>`. */
     private val XML_FN = Regex("(?is)<function\\s*=\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*>(.*?)(?:</function>|$)")
     private val XML_PARAM = Regex("(?is)<parameter\\s*=\\s*([A-Za-z_][A-Za-z0-9_\\-]*)\\s*>(.*?)(?:</parameter>|(?=<parameter\\s*=)|(?=</function>)|$)")
@@ -262,10 +342,16 @@ object ToolCallParser {
             val body = QWEN_CLOSE.find(rest)?.let { rest.substring(0, it.range.first) } ?: rest
             // 2.2.3: XML (qwen3_coder / LFM) and Python-style bodies.
             if (XML_FN.containsMatchIn(body)) xmlCall(body)?.let { return ParsedReply.Call(it, before) }
+            // 2.2.5: GLM-4.5 arg_key / arg_value body.
+            if (body.contains("<arg_key>", ignoreCase = true)) glmCall(body)?.let { return ParsedReply.Call(it, before) }
             if (!body.trimStart().startsWith("{")) pyCall(body, CallFormat.QWEN_TAG)?.let { return ParsedReply.Call(it, before) }
             return fromObjectText(body, CallFormat.QWEN_TAG, before, required = true)
         }
 
+        // 1d) 2.2.5: bare GLM call without a <tool_call> open tag: `<name<arg_key>…`, `<name>…`, `name<arg_key>…`.
+        glmStart(text)?.let { (start, _) ->
+            glmCall(text.substring(start))?.let { return ParsedReply.Call(it, text.substring(0, start).trim()) }
+        }
         // 1a) 2.2.3: bare XML function call (no <tool_call> wrapper).
         if (text.contains("<function=", ignoreCase = true)) {
             val i = text.indexOf("<function=", ignoreCase = true)
@@ -335,6 +421,13 @@ object ToolCallParser {
             }
             return ParsedReply.Malformed("LFM 工具调用的 JSON 无法解析", before)
         }
+        // 5) 2.2.5: a registered tool name followed by key/value pairs in any recognised form.
+        knownToolCall(text)?.let { (call, start) -> return ParsedReply.Call(call, text.substring(0, start).trim()) }
+        // 6) 2.2.5: call markup that could not be read is never the visible answer.
+        CALL_MARKUP.find(text)?.let { m ->
+            val cut = glmStart(text)?.first?.coerceAtMost(m.range.first) ?: m.range.first
+            return ParsedReply.Malformed("工具调用格式无法识别", text.substring(0, cut).trim())
+        }
         return ParsedReply.Final(reply.trim())
     }
 
@@ -368,6 +461,8 @@ object ToolCallParser {
             QWEN_CLOSE.find(s, open.range.last + 1)?.let { return it.range.last + 1 }
             return null
         }
+        // 2.2.5: GLM call written without its <tool_call> open tag ends at the closing tag.
+        if (!inThink) QWEN_CLOSE.find(s, noThinkStart)?.let { return it.range.last + 1 }
         for (m in FENCE_OPEN.findAll(s, noThinkStart)) {
             val lang = m.groupValues[1].lowercase()
             if (lang !in TOOL_FENCE_LANGS) continue
@@ -386,6 +481,9 @@ object ToolCallParser {
         val from = thinkEnd(streamed)
         var cut = streamed.length
         QWEN_OPEN.find(streamed, from)?.let { cut = minOf(cut, it.range.first) }
+        // 2.2.5: GLM / stray call markup (no open tag) is hidden from where the call starts.
+        glmStart(streamed, from)?.let { cut = minOf(cut, it.first) }
+        CALL_MARKUP.find(streamed, from)?.let { cut = minOf(cut, it.range.first) }
         streamed.indexOf("<|tool_call>", from).let { if (it >= 0) cut = minOf(cut, it) }
         for (m in FENCE_OPEN.findAll(streamed, from)) {
             if (m.groupValues[1].lowercase() in TOOL_FENCE_LANGS) { cut = minOf(cut, m.range.first); break }
@@ -464,6 +562,18 @@ object ToolCallParser {
         for (m in LFM_CALL.findAll(s)) {
             if (m.groupValues[1].lowercase() in ROLE_NAMES || cuts.any { m.range.first in it }) continue
             cuts += m.range.first until m.range.last + 1
+        }
+        // 2.2.5: GLM calls and any other call markup outside code blocks: from the call's start to
+        // its closing </tool_call> (or the end).
+        var gs = 0
+        while (gs < s.length) {
+            val m = CALL_MARKUP.find(s, gs) ?: break
+            if (cuts.any { m.range.first in it } || fenced.any { m.range.first in it }) { gs = m.range.last + 1; continue }
+            val start = glmStart(s, gs)?.first?.takeIf { it <= m.range.first && fenced.none { f -> it in f } } ?: m.range.first
+            val close = QWEN_CLOSE.find(s, m.range.first + (if (m.value.startsWith("</tool_call", true)) 0 else 1))
+            val end = close?.range?.last?.plus(1) ?: s.length
+            cuts += start until end
+            gs = end
         }
         if (cuts.isEmpty()) return text
         val keep = BooleanArray(s.length) { true }

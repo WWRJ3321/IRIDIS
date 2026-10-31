@@ -283,6 +283,8 @@ class AgentLoop(
         var echoRetried = false
         var nudged = false
         var toolPushed = false
+        // 2.2.5: the tolerant parser fallback recognises exactly the tools of this run.
+        ToolCallParser.knownTools = tools.map { it.name }.toSet()
         while (true) {
             currentCoroutineContext().ensureActive()
             pendingNotes()?.takeIf { it.isNotBlank() }?.let { injectNote(msgs, it) }
@@ -345,7 +347,8 @@ class AgentLoop(
                 is ParsedReply.Malformed -> {
                     if (retried) {
                         // Second unreadable call in a row: stop and show what the model wrote.
-                        return AgentOutcome(answer, steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
+                        // 2.2.5: the unreadable markup is hidden; only the prose before it stays.
+                        return AgentOutcome(ToolCallParser.stripCalls(p.before), steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
                     }
                     retried = true
                     // 1.10.8: the first unreadable call is retried silently (no red card), like an unknown tool.
@@ -370,6 +373,9 @@ class AgentLoop(
                         call = call.copy(name = SkillTool.name, args = kotlinx.serialization.json.buildJsonObject { put("name", kotlinx.serialization.json.JsonPrimitive(call.name)) })
                     }
                     val tool = tools.firstOrNull { it.name == call.name }
+                    // 2.2.5: optional input files that do not exist (generate_image image="notes/x.png"
+                    // invented by a small model) are dropped, so the call runs without them.
+                    if (tool != null) call = call.copy(args = dropMissingInputs(tool.name, call.args, env))
                     var step = AgentStep(tool = call.name, args = Args.summary(call.args), lead = ToolCallParser.visibleText(turn.text).trim(),
                         title = StepTitle.of(call.name, call.args))
                     val stepStart = System.currentTimeMillis()
@@ -438,6 +444,20 @@ class AgentLoop(
         if (i >= 0 && msgs[i].role == PromptMessage.USER) msgs[i] = msgs[i].copy(content = msgs[i].content.trimEnd() + "\n\n" + note.trim())
         else msgs += PromptMessage(PromptMessage.USER, note.trim())
         android.util.Log.i(AGENT_TAG, "user note injected (${note.length} chars)")
+    }
+
+    /** 2.2.5: optional reference-file args per tool (inputs only — never output paths). */
+    private val OPTIONAL_INPUTS = mapOf(GenerateImageTool.name to listOf("image", "init_image", "image_path", "path"))
+
+    private fun dropMissingInputs(tool: String, args: kotlinx.serialization.json.JsonObject, env: ToolEnv): kotlinx.serialization.json.JsonObject {
+        val keys = OPTIONAL_INPUTS[tool] ?: return args
+        val drop = keys.filter { k ->
+            val v = Args.primitive(args, k)?.trim() ?: return@filter false
+            v.isEmpty() || runCatching { !env.sandbox.resolve(v).isFile }.getOrDefault(true)
+        }
+        if (drop.isEmpty()) return args
+        android.util.Log.i(AGENT_TAG, "$tool: dropped missing optional input(s) $drop")
+        return kotlinx.serialization.json.JsonObject(args.filterKeys { it !in drop })
     }
 
     /** Step limit hit: one last turn without tools for a summary (a stray call in it is dropped). */

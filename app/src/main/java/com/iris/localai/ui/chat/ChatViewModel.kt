@@ -380,22 +380,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (genJob?.isActive == true) { notice.value = "正在回复，停止后再切换模型"; return@launch }
         c.engine.load(model)
     }.also { loadJob = it }
-    /**
-     * 2.1.7: tap on the chat logo → load 「默认模型」 (设置 › 模型与后端; none = the last used one).
-     * Does nothing while a model is loaded or loading (or a reply runs).
-     */
-    fun loadDefaultModel() {
-        val st = c.engine.state.value
-        if (st is EngineState.Ready || st is EngineState.Loading || genJob?.isActive == true) return
-        val m = c.engine.defaultModel()
-        if (m != null) { loadModel(m); return }
-        viewModelScope.launch {
-            c.models.refresh()
-            val again = c.engine.defaultModel()
-            if (again != null) loadModel(again) else notice.value = "还没有可用的模型，点击顶部选择或导入"
-        }
-    }
-
     fun unloadModel() = viewModelScope.launch {
         if (genJob?.isActive == true) { notice.value = "正在回复，停止后再卸载模型"; return@launch }
         c.engine.unload()
