@@ -318,7 +318,7 @@ fun SheetHeader(title: String, trailing: @Composable (() -> Unit)? = null) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(start = IrisDimens.pageGutter, end = IrisDimens.space12, top = IrisDimens.space4, bottom = IrisDimens.space8),
+            .padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space4, bottom = IrisDimens.space8),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

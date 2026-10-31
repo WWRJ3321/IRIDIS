@@ -33,7 +33,7 @@ object IrisDimens {
     /** Horizontal inset of grouped cards from the screen edge. */
     val groupGutter = 16.dp
     /** Inner horizontal padding of rows inside a group (1.8.0: 16 → 20, HyperOS). */
-    val rowPadding = 20.dp
+    val rowPadding = 16.dp
     /** Vertical padding of a row (1.8.0: 12 → 15, generous HyperOS rows). */
     val rowVerticalPadding = 13.dp
     val rowMinHeight = 56.dp

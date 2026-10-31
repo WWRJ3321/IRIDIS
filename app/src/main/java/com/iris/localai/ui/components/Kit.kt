@@ -31,6 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
@@ -65,7 +68,8 @@ fun FloatingIconButton(
             .size(size)
             .pressScale(interaction, GlassTokens.PRESS_SCALE)
             .glassSurface(CircleShape)
-            .clickable(interaction, LocalIndication.current, enabled = enabled, role = Role.Button, onClickLabel = contentDescription, onClick = onClick),
+            .pressTint(interaction, CircleShape)
+            .clickable(interaction, null, enabled = enabled, role = Role.Button, onClickLabel = contentDescription, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -90,10 +94,25 @@ fun IrisPill(
             .height(height)
             .then(if (onClick != null) Modifier.pressScale(interaction, GlassTokens.PRESS_SCALE) else Modifier)
             .glassSurface(IrisRadius.full)
-            .then(if (onClick != null) Modifier.clickable(interaction, LocalIndication.current, onClickLabel = onClickLabel, onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.pressTint(interaction, IrisRadius.full).clickable(interaction, null, onClickLabel = onClickLabel, onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
+}
+
+/**
+ * 2.2.8: press feedback for rounded glass controls without a ripple (the default indication drew
+ * a square highlight on the pill): a slight content-colour tint drawn in the control's own shape.
+ */
+@Composable
+fun Modifier.pressTint(interaction: androidx.compose.foundation.interaction.InteractionSource, shape: androidx.compose.ui.graphics.Shape): Modifier {
+    val tintColor = Iris.colors.text
+    val pressed by interaction.collectIsPressedAsState()
+    val a by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.07f else 0f, androidx.compose.animation.core.tween(120), label = "pressTint")
+    return this.drawWithContent {
+        drawContent()
+        if (a > 0f) drawOutline(shape.createOutline(size, layoutDirection, this), tintColor.copy(alpha = a))
+    }
 }
 
 /** A rounded card resting on the page: 20 dp continuous corners, soft shadow in light theme. */
@@ -133,7 +152,7 @@ fun IrisTopBar(
                 .glassSurface(androidx.compose.ui.graphics.RectangleShape, IrisElevation.none),
         )
         Box(
-            Modifier.fillMaxWidth().statusBarsPadding().height(IrisDimens.topBarHeight + IrisDimens.space8).padding(horizontal = IrisDimens.space12),
+            Modifier.fillMaxWidth().statusBarsPadding().height(IrisDimens.topBarHeight + IrisDimens.space8).padding(horizontal = IrisDimens.space16),
             contentAlignment = Alignment.Center,
         ) {
             Text(

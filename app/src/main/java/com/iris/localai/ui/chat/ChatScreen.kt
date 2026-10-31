@@ -97,6 +97,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.iris.localai.R
@@ -773,7 +774,7 @@ private fun ModelTitle(engine: EngineState, modifier: Modifier = Modifier, onCli
 
 /** 2.2.7: the pill's row content, shared by the pill and the header of the expanded panel. */
 @Composable
-private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float) {
+private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, hPad: androidx.compose.ui.unit.Dp = IrisDimens.space12) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     val title = when (engine) {
@@ -788,8 +789,8 @@ private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float) {
         is EngineState.Failed -> "加载失败，点按查看"
         EngineState.Idle -> "未加载"
     }
-    Spacer(Modifier.width(IrisDimens.space12))
-    Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.Center) {
+    Spacer(Modifier.width(hPad))
+    Column(Modifier.weight(1f, fill = chevronTurn > 0f), verticalArrangement = Arrangement.Center) {
         AnimatedContent(
             targetState = title,
             transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
@@ -808,7 +809,7 @@ private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float) {
     Icon(
         Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary,
         modifier = Modifier
-            .padding(start = IrisDimens.space4, end = IrisDimens.space12)
+            .padding(start = IrisDimens.space4, end = hPad)
             .size(16.dp)
             .graphicsLayer { rotationZ = 180f * chevronTurn },
     )
@@ -860,19 +861,23 @@ private fun ModelMorphPanel(
                 ),
         )
         with(density) {
-            val left = pillInRoot.left - origin.x
+            // 2.2.8: symmetric — the panel is centred on screen and grows from the pill's centre downward.
+            val pillLeft = pillInRoot.left - origin.x
             val top = pillInRoot.top - origin.y
             val pillW = pillInRoot.width
             val pillH = pillInRoot.height
-            val margin = 12.dp.toPx()
             val areaWidth = if (areaW > 0) areaW.toFloat() else conf.screenWidthDp.dp.toPx()
-            val panelW = maxOf(pillW, minOf(300.dp.toPx(), areaWidth - left - margin))
+            val panelW = minOf(maxOf(pillW, 248.dp.toPx()), 280.dp.toPx(), areaWidth - 32.dp.toPx()).coerceAtLeast(pillW)
+            val panelLeft = (areaWidth - panelW) / 2f
             val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
-            val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.6f, avail).coerceAtLeast(pillH)
+            val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(pillH)
+            val headerH = pillH + (52.dp.toPx() - pillH) * p
             val targetH = if (contentH > 0) contentH.toFloat().coerceAtMost(maxH) else pillH
             val w = pillW + (panelW - pillW) * p
+            val left = pillLeft + (panelLeft - pillLeft) * p
             val h = pillH + (targetH - pillH) * p
             val corner = (pillH / 2f) + (24.dp.toPx() - pillH / 2f) * p
+            val hPad = 12.dp + 4.dp * p
             Box(
                 Modifier
                     .offset { androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()) }
@@ -887,43 +892,49 @@ private fun ModelMorphPanel(
             ) {
                 Column(
                     Modifier
-                        .wrapContentSize(Alignment.TopStart, unbounded = true)
+                        .wrapContentSize(Alignment.TopCenter, unbounded = true)
                         .width(panelW.toDp())
                         .heightIn(max = maxH.toDp())
-                        .onSizeChanged { contentH = it.height },
+                        .onSizeChanged { contentH = it.height + (52.dp.toPx() - headerH).toInt() },
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Row(
                         Modifier
-                            .width(pillW.toDp()).height(pillH.toDp())
-                            .clickable(onClickLabel = "收起") { onDismiss() },
+                            .width(w.toDp()).height(headerH.toDp())
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null, onClickLabel = "收起",
+                            ) { onDismiss() },
                         verticalAlignment = Alignment.CenterVertically,
-                    ) { ModelPillContent(engine, chevronTurn = p) }
+                    ) { ModelPillContent(engine, chevronTurn = p, hPad = hPad) }
                     Column(
                         Modifier
+                            .fillMaxWidth()
                             .weight(1f, fill = false)
                             .graphicsLayer { alpha = ((progress() - 0.3f) / 0.7f).coerceIn(0f, 1f) }
                             .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                            .padding(bottom = 6.dp),
+                            .padding(bottom = 4.dp),
                     ) {
-                        Box(Modifier.padding(horizontal = 14.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
-                        Spacer(Modifier.height(4.dp))
+                        MorphHairline()
                         models.forEach { m ->
                             val selected = m.path == currentPath
                             Row(
-                                Modifier.fillMaxWidth().height(44.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 14.dp),
+                                Modifier.fillMaxWidth().height(44.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    m.displayName, style = if (selected) IrisType.menuItemSelected else IrisType.menuItem,
+                                    m.displayName,
+                                    style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
                                     color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )
-                                Text(engineTag(m), style = IrisType.micro, color = c.textTertiary, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
-                                Box(Modifier.padding(start = 6.dp).size(18.dp), contentAlignment = Alignment.Center) {
-                                    if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
-                                }
+                                Text(
+                                    engineTag(m), style = IrisType.micro.copy(fontSize = 12.sp, lineHeight = 16.sp), color = c.textSecondary,
+                                    maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.padding(start = 8.dp),
+                                )
+                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
                             }
                         }
-                        if (models.isNotEmpty()) Box(Modifier.padding(horizontal = 14.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(c.outline))
+                        if (models.isNotEmpty()) MorphHairline()
                         CompactMenuRow("档位与加载…", Icons.Outlined.Tune) { if (expanded) onTiers() }
                         CompactMenuRow("管理模型", Icons.Outlined.Settings) { if (expanded) onManage() }
                     }
@@ -933,15 +944,21 @@ private fun ModelMorphPanel(
     }
 }
 
+/** 2.2.8: section hairline on the panel grid — inset 16 dp both sides, 8 dp section gap. */
+@Composable
+private fun MorphHairline() {
+    Box(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(Iris.colors.outline))
+}
+
 @Composable
 private fun CompactMenuRow(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
-        Text(text, style = IrisType.menuItem, color = c.text, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
+        Text(text, style = IrisType.menuItem.copy(fontSize = 15.sp, lineHeight = 20.sp), color = c.text, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
     }
 }
 
