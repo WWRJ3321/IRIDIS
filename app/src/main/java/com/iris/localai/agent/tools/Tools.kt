@@ -92,6 +92,8 @@ class ToolEnv(
     val imageGen: ImageGenBackend? = null,
     /** 2.1.9: the GUI agent for `screen` (null = not available). */
     val gui: GuiTaskBackend? = null,
+    /** 2.2.3: the terminal plugin for run_command (null = plugin not installed / other signer). */
+    val terminal: CommandRunner? = null,
 )
 
 /** 1.12.0: one stand-alone model call (no chat history), used by process_file. */
@@ -629,7 +631,7 @@ object AgentTools {
      * 2.1.0: tools offered only while their backing exists (kb_search: the knowledge folder has
      * files), so they cost no prompt tokens otherwise. Not in [all] / the settings tool list.
      */
-    val onDemand: List<AgentTool> = listOf(KbSearchTool)
+    val onDemand: List<AgentTool> = listOf(KbSearchTool, RunCommandTool)
 
     fun byName(name: String): AgentTool? = all.firstOrNull { it.name == name } ?: onDemand.firstOrNull { it.name == name } ?: legacy.firstOrNull { it.name == name }
 
@@ -637,8 +639,9 @@ object AgentTools {
      * 1.12.0: the tools of one agent reply — enabled in settings, minus those whose backing is
      * missing (recall without the history database, memory while memory is off).
      */
-    fun enabled(s: AgentSettings, historyAvailable: Boolean, memoryOn: Boolean, knowledgeOn: Boolean = false, imageGenOn: Boolean = false): List<AgentTool> =
-        all.filter { s.isEnabled(it) }.filter {
+    fun enabled(s: AgentSettings, historyAvailable: Boolean, memoryOn: Boolean, knowledgeOn: Boolean = false, imageGenOn: Boolean = false, terminalOn: Boolean = false): List<AgentTool> =
+        // 2.2.3: run_command only while the same-signature terminal plugin is installed.
+        (if (terminalOn && s.isEnabled(RunCommandTool)) all + RunCommandTool else all).filter { s.isEnabled(it) }.filter {
             (it.name != MemoryTool.name || memoryOn) &&
                 // 2.1.7: generate_image only while a runnable image model is downloaded (no prompt cost otherwise).
                 (it.name != GenerateImageTool.name || imageGenOn)

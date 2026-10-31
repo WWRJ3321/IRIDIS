@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 206
-        versionName = "2.2.2"
+        versionCode = 207
+        versionName = "2.2.3"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -183,6 +183,8 @@ dependencies {
 
     // .tar.bz2 unpacking for voice packs published only as sherpa-onnx GitHub release archives (ZipVoice).
     implementation(libs.commons.compress)
+    // 2.2.3: GUI agent OCR fallback — ML Kit text recognition, Chinese, bundled model (full only).
+    "fullImplementation"("com.google.mlkit:text-recognition-chinese:16.0.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

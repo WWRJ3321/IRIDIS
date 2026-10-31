@@ -184,6 +184,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
             GuiAgentLoop(
                 model = model, device = AccessibilityGuiDevice(context), callbacks = callbacks,
                 profile = profile, maxSteps = maxSteps, today = LocalDate.now().toString(),
+                ocr = runCatching { GuiOcrProvider.get(context) }.getOrNull(),
             ).run(task)
         } catch (e: kotlinx.coroutines.CancellationException) {
             GuiOverlay.hide()

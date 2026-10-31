@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "IRISLocalAI"
 include(":app")
+include(":terminal-plugin")

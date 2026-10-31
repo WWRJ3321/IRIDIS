@@ -1489,6 +1489,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             "edit_file" -> "文件：$path\n查找：\n" + (com.iris.localai.agent.Args.str(a, "old", "old_string", "old_text", "search", "find") ?: "").take(200) +
                 "\n替换为：\n" + (com.iris.localai.agent.Args.str(a, "new", "new_string", "new_text", "replace", "replacement") ?: "").take(200)
             "delete_file" -> "删除：$path"
+            "run_command" -> "命令（终端插件 · Alpine，不可撤销）：\n" + (com.iris.localai.agent.Args.str(a, "command", "cmd", "shell", "script") ?: "").take(400)
             "web_fetch" -> "网址：" + (com.iris.localai.agent.Args.str(a, "url", "link", "href") ?: "")
             "memory" -> com.iris.localai.agent.memoryPreview(call)
             else -> com.iris.localai.agent.Args.summary(a, 300)
@@ -1515,7 +1516,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val prefix = if (details?.thinkingPrefilled == true && !disableThinking) "<think>" else ""
         val history = c.agent.history
         val memoryOn = c.agent.memorySettings.current.enabled
-        val tools = com.iris.localai.agent.AgentTools.enabled(ag, history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
+        val tools = com.iris.localai.agent.AgentTools.enabled(ag, history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached(), c.agent.terminalOn())
         val ctxTokens = details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength
         val maxNew = minOf(eff.maxNewTokens, AGENT_MAX_NEW)
         val sampling = c.engine.samplingFor(disableThinking).copy(maxNewTokens = maxNew, contextShift = false)
@@ -1794,7 +1795,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (t != null && t.convId == conv.id && conv.messages.lastOrNull()?.id == t.anchorId) return t.messages
         val ag = c.agent.settings.current
         val memoryOn = c.agent.memorySettings.current.enabled
-        val tools = com.iris.localai.agent.AgentTools.enabled(ag, c.agent.history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
+        val tools = com.iris.localai.agent.AgentTools.enabled(ag, c.agent.history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached(), c.agent.terminalOn())
         val eff = c.engine.effective()
         val maxNew = minOf(eff.maxNewTokens, AGENT_MAX_NEW)
         freezeMemory(agentMode = true)

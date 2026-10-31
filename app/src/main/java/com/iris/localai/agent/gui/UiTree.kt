@@ -75,6 +75,33 @@ object UiTreeSerializer {
         return out
     }
 
+    /** 2.2.3: fewer text-bearing elements than this → run the OCR fallback. */
+    const val OCR_MIN_TEXT = 4
+    const val MAX_OCR_LINES = 40
+
+    /** 2.2.3: true when the tree carries too little text to be a useful reference. */
+    fun needsOcr(elements: List<UiElement>): Boolean = elements.count { it.label.isNotEmpty() } < OCR_MIN_TEXT
+
+    /**
+     * 2.2.3: [elements] plus OCR text lines as `[i] OCR "text" (x,y)` on the same grid. Lines that
+     * repeat a tree label or are off screen are skipped. Reference only (no coordinate snapping).
+     */
+    fun withOcr(elements: List<UiElement>, lines: List<OcrLine>, screenW: Int, screenH: Int, scale: Float = 1000f): List<UiElement> {
+        if (lines.isEmpty() || screenW <= 0 || screenH <= 0) return elements
+        val screen = PxRect(0, 0, screenW, screenH)
+        val seen = elements.map { it.label }.filter { it.isNotEmpty() }.toMutableSet()
+        val out = ArrayList(elements)
+        for (l in lines.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))) {
+            if (out.size - elements.size >= MAX_OCR_LINES) break
+            val label = clean(l.text)
+            if (label.isEmpty() || l.bounds.isEmpty || !overlaps(l.bounds, screen) || !seen.add(label)) continue
+            val n = UiNode(cls = "OCR", text = l.text, bounds = l.bounds)
+            val i = out.size
+            out += UiElement(i, n, label, line(i, n, label, screenW, screenH, scale))
+        }
+        return out
+    }
+
     /** The prompt block, capped at [maxChars]. */
     fun render(elements: List<UiElement>, maxChars: Int = MAX_CHARS): String {
         val sb = StringBuilder()

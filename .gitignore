@@ -28,3 +28,4 @@ third_party/qnn-api/
 
 # native libs reused from a released APK (local builds without NDK)
 /prebuilt-native/
+/terminal-plugin/build/

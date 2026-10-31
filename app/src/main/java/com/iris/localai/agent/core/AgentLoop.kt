@@ -294,7 +294,7 @@ class AgentLoop(
             // 2.1.7: a call written inside unfinished thinking (the stream is cut right after it, so
             // the think block never closes) used to leave an empty answer: run that call instead.
             val answer = answerOf(turn.text).ifBlank { ToolCallParser.callInOpenThink(turn.text) ?: "" }
-            var parsed = ToolCallParser.parse(answer)
+            var parsed = ToolCallParser.fillMainArg(ToolCallParser.parse(answer), userTask)
             // 2.2.2: the user picked a tool (@screen) but the reply skips it — small local models
             // often refuse. Push once; if it still refuses, run `screen` with the user's own words.
             val missing = requiredTools.firstOrNull { r -> tools.any { it.name == r } && steps.none { it.tool == r } }

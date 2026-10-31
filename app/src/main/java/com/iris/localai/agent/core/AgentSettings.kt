@@ -359,7 +359,11 @@ class AgentContainer(context: Context) {
         knowledge = KnowledgeSearch { q, n -> knowledge.search(q, n) },
         imageGen = imageGen,
         gui = gui,
+        terminal = if (terminalOn()) TerminalPlugin.runner(appContextForTools) else null,
     )
+
+    /** 2.2.3: whether the same-signature terminal plugin (com.iridis.terminal) is installed. */
+    fun terminalOn(): Boolean = TerminalPlugin.available(appContextForTools)
 
     /**
      * 2.1.7: whether a runnable image model is downloaded (generate_image is listed only then).

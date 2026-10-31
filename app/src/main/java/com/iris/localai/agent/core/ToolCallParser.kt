@@ -132,6 +132,126 @@ object ToolCallParser {
         return prev[b.length] <= 2
     }
 
+    /**
+     * 2.2.3: the main string argument of single-argument tools: a positional `name("v")` maps to it,
+     * and when a call's args are missing / only the signature placeholders (`prompt, image?`) it is
+     * filled from the user's latest message ([fillMainArg]).
+     */
+    val MAIN_ARG = mapOf(
+        "generate_image" to "prompt", "web_search" to "query", "search_local" to "query", "screen" to "task",
+    )
+    /** 2.2.3: first positional argument of other tools in Python-style calls. */
+    private val POSITIONAL = MAIN_ARG + mapOf(
+        "read_file" to "path", "write_file" to "path", "skill" to "name", "run_command" to "command",
+        "web_fetch" to "url", "kb_search" to "query", "memory" to "action", "plan" to "title", "activate" to "tool",
+    )
+    /** 2.2.3: qwen3_coder / LFM XML form `<function=name><parameter=k>v</parameter></function>`. */
+    private val XML_FN = Regex("(?is)<function\\s*=\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*>(.*?)(?:</function>|$)")
+    private val XML_PARAM = Regex("(?is)<parameter\\s*=\\s*([A-Za-z_][A-Za-z0-9_\\-]*)\\s*>(.*?)(?:</parameter>|(?=<parameter\\s*=)|(?=</function>)|$)")
+    /** 2.2.3: Python / function-call form `name(a="v", k=1)` / `name("v")` / `name(prompt, image?)`. */
+    private val PY_CALL = Regex("(?s)^\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*\\((.*)\\)\\s*;?\\s*$")
+
+    internal fun xmlCall(body: String): ToolCall? {
+        val m = XML_FN.find(body) ?: return null
+        val name = m.groupValues[1]
+        if (name.lowercase() in ROLE_NAMES) return null
+        val args = buildJsonObject {
+            XML_PARAM.findAll(m.groupValues[2]).forEach { p ->
+                val v = p.groupValues[2].trim('\n', '\r')
+                put(p.groupValues[1], JsonPrimitive(v.trim().takeIf { it.isNotEmpty() } ?: v))
+            }
+        }
+        return ToolCall(name, args, CallFormat.QWEN_TAG)
+    }
+
+    /** Splits `a="x, y", k=[1,2]` on top-level commas (quotes and brackets respected). */
+    private fun splitTop(s: String): List<String> {
+        val out = ArrayList<String>(); val cur = StringBuilder()
+        var q: Char? = null; var depth = 0; var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (q != null) {
+                cur.append(c)
+                if (c == '\\' && i + 1 < s.length) { cur.append(s[i + 1]); i += 2; continue }
+                if (c == q) q = null
+            } else when (c) {
+                '"', '\'' -> { q = c; cur.append(c) }
+                '(', '[', '{' -> { depth++; cur.append(c) }
+                ')', ']', '}' -> { depth--; cur.append(c) }
+                ',' -> if (depth == 0) { out += cur.toString(); cur.clear() } else cur.append(c)
+                else -> cur.append(c)
+            }
+            i++
+        }
+        if (cur.isNotBlank()) out += cur.toString()
+        return out.map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    private fun pyValue(raw: String): JsonElement? {
+        val v = raw.trim()
+        if (v.length >= 2 && (v[0] == '"' || v[0] == '\'') && v.last() == v[0]) {
+            val inner = v.substring(1, v.length - 1)
+            val sb = StringBuilder(); var i = 0
+            while (i < inner.length) {
+                val c = inner[i]
+                if (c == '\\' && i + 1 < inner.length) {
+                    when (val n = inner[i + 1]) { 'n' -> sb.append('\n'); 't' -> sb.append('\t'); 'r' -> sb.append('\r'); else -> sb.append(n) }
+                    i += 2; continue
+                }
+                sb.append(c); i++
+            }
+            return JsonPrimitive(sb.toString())
+        }
+        when (v) { "True", "true" -> return JsonPrimitive(true); "False", "false" -> return JsonPrimitive(false); "None", "null" -> return JsonNull }
+        v.toLongOrNull()?.let { return JsonPrimitive(it) }
+        v.toDoubleOrNull()?.let { return JsonPrimitive(it) }
+        if (v.startsWith("{") || v.startsWith("[")) JsonRepair.parse(v, json)?.let { return it }
+        return null
+    }
+
+    /**
+     * 2.2.3: reads `name(...)`. Bare identifiers (`prompt, image?`) are the signature copied from the
+     * prompt, not values: they are dropped (the args then stay empty and [fillMainArg] may fill them).
+     */
+    internal fun pyCall(body: String, format: CallFormat): ToolCall? {
+        val m = PY_CALL.find(body.trim()) ?: return null
+        val name = m.groupValues[1]
+        if (name.lowercase() in ROLE_NAMES || !TOOL_NAME.matches(name)) return null
+        val args = LinkedHashMap<String, JsonElement>()
+        var positional = 0
+        for (part in splitTop(m.groupValues[2])) {
+            val eq = Regex("^([A-Za-z_][A-Za-z0-9_]*)\\s*[=:]\\s*(.*)$", RegexOption.DOT_MATCHES_ALL).find(part)
+            if (eq != null) {
+                val v = pyValue(eq.groupValues[2]) ?: JsonPrimitive(eq.groupValues[2].trim())
+                args[eq.groupValues[1]] = v
+            } else {
+                val v = pyValue(part) ?: continue  // a placeholder like `prompt` / `image?`
+                val key = if (positional == 0) POSITIONAL[name] ?: "arg0" else "arg$positional"
+                positional++
+                args[key] = v
+            }
+        }
+        return ToolCall(name, JsonObject(args), format)
+    }
+
+    /**
+     * 2.2.3: a call to a single-main-argument tool whose main argument is missing, blank or just the
+     * placeholder text gets the user's latest message instead of failing.
+     */
+    fun fillMainArg(parsed: ParsedReply, userText: String): ParsedReply {
+        if (parsed !is ParsedReply.Call || userText.isBlank()) return parsed
+        val key = MAIN_ARG[parsed.call.name] ?: return parsed
+        val cur = (parsed.call.args[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()
+        if (cur != null && !placeholder(key, cur)) return parsed
+        val kept = parsed.call.args.filter { (k, v) -> !(v is JsonPrimitive && v.isString && placeholder(k, v.content.trim())) }
+        return parsed.copy(call = parsed.call.copy(args = JsonObject(kept + (key to JsonPrimitive(userText.trim())))))
+    }
+    /** Blank, the key's own name, or a signature list (`prompt, image?`) — not a real value. */
+    private fun placeholder(key: String, v: String): Boolean =
+        v.isEmpty() || v.trimEnd('?').equals(key, true) || (SIGNATURE.matches(v) && (',' in v || v.endsWith('?')))
+    /** `prompt` / `prompt, image?` — the signature from the prompt line, not a value. */
+    private val SIGNATURE = Regex("^[A-Za-z_][A-Za-z0-9_]*\\??(\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*\\??)*$")
+
     fun parse(reply: String): ParsedReply {
         val text = THINK.replace(reply, "").trim()
 
@@ -140,7 +260,20 @@ object ToolCallParser {
             val before = text.substring(0, open.range.first).trim()
             val rest = text.substring(open.range.last + 1)
             val body = QWEN_CLOSE.find(rest)?.let { rest.substring(0, it.range.first) } ?: rest
+            // 2.2.3: XML (qwen3_coder / LFM) and Python-style bodies.
+            if (XML_FN.containsMatchIn(body)) xmlCall(body)?.let { return ParsedReply.Call(it, before) }
+            if (!body.trimStart().startsWith("{")) pyCall(body, CallFormat.QWEN_TAG)?.let { return ParsedReply.Call(it, before) }
             return fromObjectText(body, CallFormat.QWEN_TAG, before, required = true)
+        }
+
+        // 1a) 2.2.3: bare XML function call (no <tool_call> wrapper).
+        if (text.contains("<function=", ignoreCase = true)) {
+            val i = text.indexOf("<function=", ignoreCase = true)
+            xmlCall(text.substring(i))?.let { return ParsedReply.Call(it, text.substring(0, i).trim()) }
+        }
+        // 1c) 2.2.3: a bare Python-style call to a known tool alone on its line.
+        Regex("(?m)^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\(.*\\)\\s*;?\\s*$").findAll(text).firstOrNull { it.groupValues[1] in POSITIONAL }?.let { m ->
+            pyCall(m.value, CallFormat.PLAIN_JSON)?.let { return ParsedReply.Call(it, text.substring(0, m.range.first).trim()) }
         }
 
         // 1b) 1.13.3: Gemma 4 native call.

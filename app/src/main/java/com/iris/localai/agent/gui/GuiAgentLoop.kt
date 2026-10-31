@@ -25,6 +25,18 @@ interface GuiDevice {
     suspend fun execute(action: GuiAction, obs: GuiObservation): ExecResult
 }
 
+/** 2.2.3: one text line found by OCR, in screen pixels (same space as [UiNode.bounds]). */
+data class OcrLine(val text: String, val bounds: PxRect)
+
+/**
+ * 2.2.3: on-device OCR of a screenshot (full flavour: ML Kit Chinese, bundled). Used only when the
+ * accessibility tree has few text elements (games, WebView, Flutter); the lines are added to the
+ * UI element list as a reference, never used to snap the model's coordinates.
+ */
+fun interface GuiOcr {
+    suspend fun recognize(screenshot: String, screenW: Int, screenH: Int): List<OcrLine>
+}
+
 /** The vision model: one stand-alone completion (messages may carry the screenshot). */
 fun interface GuiModel {
     suspend fun complete(messages: List<PromptMessage>): String
@@ -93,6 +105,8 @@ class GuiAgentLoop(
     private val today: String = "",
     /** 2.2.2: 补充 the user typed during the run (read before each step). */
     private val userNotes: () -> String? = { GuiNotes.take() },
+    /** 2.2.3: OCR fallback when the tree has little text (null = none, e.g. the lite flavour). */
+    private val ocr: GuiOcr? = null,
 ) {
     private val steps = ArrayList<GuiStep>()
 
@@ -115,7 +129,12 @@ class GuiAgentLoop(
                 }
                 callbacks.onPhase(stepNo, GuiPhase.LOOK)
                 val obs = device.observe()
-                val elements = UiTreeSerializer.elements(obs.tree, obs.width, obs.height, profile.scale)
+                val treeElements = UiTreeSerializer.elements(obs.tree, obs.width, obs.height, profile.scale)
+                val shotPath = obs.screenshot
+                val elements = if (ocr != null && includeTree && shotPath != null && UiTreeSerializer.needsOcr(treeElements)) {
+                    val lines = try { ocr.recognize(shotPath, obs.width, obs.height) } catch (e: CancellationException) { throw e } catch (_: Throwable) { emptyList() }
+                    UiTreeSerializer.withOcr(treeElements, lines, obs.width, obs.height, profile.scale)
+                } else treeElements
                 val msgs = GuiPrompt.messages(profile, task, history, obs, elements, includeTree, note, today)
                 note = null
                 callbacks.onPhase(stepNo, GuiPhase.THINK)
