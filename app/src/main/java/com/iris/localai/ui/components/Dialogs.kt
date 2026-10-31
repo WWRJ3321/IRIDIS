@@ -274,6 +274,12 @@ fun IrisMenuItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
 }
 
 /** Bottom sheet with the app's surface, radius, handle and scrim. */
+@Composable
+fun sheetSurfaceColor(): androidx.compose.ui.graphics.Color {
+    val c = Iris.colors
+    return (if (c.isDark) c.surfaceElevated else c.surface).copy(alpha = 1f)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
@@ -281,10 +287,13 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        // 2.2.5: opaque surface, 24 dp top corners, plain dark scrim; edge-to-edge with the
-        // navigation-bar inset as padding inside (the sheet itself reaches the bottom edge).
-        modifier = Modifier.largeSurface(com.iris.localai.ui.theme.SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp)),
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        // 2.2.6 root-cause fix: the 2.2.5 sheet painted its surface through `modifier`
+        // (largeSurface = clip + background) with a Transparent container. ModalBottomSheet applies
+        // `modifier` OUTSIDE its anchoredDraggable offset, so that background/clip sat at the
+        // un-offset (top) position: a white wash above the sheet, a see-through sheet body (the
+        // real sheet had no colour) and the sheet clipped off before the bottom edge. Now the
+        // colour goes into containerColor (fully opaque) and nothing is drawn via `modifier`.
+        containerColor = sheetSurfaceColor(),
         contentColor = c.text,
         scrimColor = LARGE_SCRIM,
         contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },

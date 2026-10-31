@@ -134,7 +134,7 @@ fun Modifier.glassSurface(
 fun Modifier.largeSurface(shape: Shape, elevation: Dp = 0.dp): Modifier {
     val c = Iris.colors
     val dark = c.isDark
-    val fill = (if (dark) c.surfaceElevated else c.surface).copy(alpha = 0.95f)
+    val fill = (if (dark) c.surfaceElevated else c.surface).copy(alpha = 1f) // 2.2.6: fully opaque
     val rim = Brush.linearGradient(
         0f to Color.White.copy(alpha = if (dark) 0.14f else 0.70f),
         1f to Color.White.copy(alpha = if (dark) 0.03f else 0.15f),
