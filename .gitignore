@@ -25,3 +25,6 @@ third_party/qnn-api/
 
 # Kotlin compiler session data
 .kotlin/
+
+# native libs reused from a released APK (local builds without NDK)
+/prebuilt-native/

@@ -18,6 +18,9 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// iris.prebuiltNative=<dir>: skip CMake, package libiris_*.so from <dir>/arm64-v8a (no NDK needed)
+val prebuiltNative = (project.findProperty("iris.prebuiltNative") as String?)?.let { rootProject.file(it) }
+
 android {
     namespace = "com.iris.localai"
     compileSdk = 35
@@ -40,7 +43,7 @@ android {
         versionName = "2.1.9"
 
         ndk { abiFilters += "arm64-v8a" }
-        externalNativeBuild {
+        if (prebuiltNative == null) externalNativeBuild {
             cmake {
                 arguments += listOf(
                     "-DANDROID_STL=c++_static",
@@ -52,10 +55,14 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
+    if (prebuiltNative == null) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+            }
         }
+    } else {
+        sourceSets["main"].jniLibs.srcDir(prebuiltNative)
     }
 
     // lite (default): GGUF only — the small build.  full: adds Google LiteRT-LM 0.18 (+22 MB native).
@@ -71,7 +78,7 @@ android {
             versionNameSuffix = "-full"
             buildConfigField("boolean", "HAS_LITERT", "true")
             // Third engine: MNN-LLM (taobao-mnn model folders) in libiris_mnn.so.
-            externalNativeBuild { cmake { arguments += "-DIRIS_MNN=ON" } }
+            if (prebuiltNative == null) externalNativeBuild { cmake { arguments += "-DIRIS_MNN=ON" } }
         }
     }
 
