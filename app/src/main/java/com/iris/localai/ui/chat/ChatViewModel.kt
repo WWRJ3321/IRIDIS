@@ -1676,6 +1676,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             // the earlier tool calls and results.
             val runBase = continuedAgentBase(convId, reply.id, base, folded, budget) ?: base
             android.util.Log.i("IrisAgent", "base: ${if (runBase === base) "rebuilt" else "continued"} msgs=${runBase.size} prompt~${runBase.sumOf { com.iris.localai.util.TokenEstimator.message(it.content) }}tok")
+            com.iris.localai.agent.gui.GuiNotes.source = { takeAgentNotes(convId)?.replace("用户补充：", "") }
             val loop = com.iris.localai.agent.AgentLoop(
                 model = model, tools = tools,
                 permissionOf = { t -> c.agent.settings.current.permission(t) },
@@ -1687,6 +1688,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 runTool = { block -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { block() } },
                 // 2.1.7: 补充 typed during the run reach the model before its next step.
                 pendingNotes = { takeAgentNotes(convId) },
+                requiredTools = conversation.value.messages.lastOrNull { it.role == Role.USER }?.refs.orEmpty()
+                    .filter { it.kind == com.iris.localai.data.TurnRefKind.TOOL }.map { it.name },
+                userTask = conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty().trim(),
             )
             agentTranscript = null
             val o = loop.run(runBase)

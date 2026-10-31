@@ -81,7 +81,7 @@ enum class GuiFormat {
 enum class GuiProfile(val label: String, val format: GuiFormat, val scale: Float) {
     AUTOGLM("AutoGLM-Phone", GuiFormat.AUTOGLM, 1000f),
     MAI_UI("MAI-UI", GuiFormat.MOBILE_USE, 999f),
-    QWEN_VL("Qwen3-VL", GuiFormat.MOBILE_USE, 1000f);
+    QWEN_VL("通用", GuiFormat.MOBILE_USE, 1000f);
 
     companion object {
         /** By model file name; anything unknown is treated as a generic Qwen3-VL model. */

@@ -192,6 +192,11 @@ fun retryHint(error: String): String =
      * 2.1.7: added to the newest user turn when a reply came back empty (only thinking, a call
      * buried in unfinished thinking, or nothing): one more turn to give the actual answer.
      */
+    /** 2.2.2: the user picked [tool] with @ but the reply did not call it. */
+    fun mustCall(tool: String): String = if (tool == "screen")
+        "(The user picked the screen tool: you CAN operate this phone through it. Call screen now with the task in the user's words. Do not refuse or explain.)"
+    else "(The user picked the $tool tool for this request. Call $tool now.)"
+
     const val ANSWER_NOW = "(Your last reply was empty. Answer the user now in Chinese with what the tool results above show: key facts, dates, sources. No tool call; keep thinking short.)"
     const val ELIDED = "<tool_response>\n(earlier tool output removed to save context)\n</tool_response>"
 }
@@ -262,6 +267,10 @@ class AgentLoop(
      * step; it rides on the newest user-side message (not yet prefilled, so the KV prefix stays).
      */
     private val pendingNotes: () -> String? = { null },
+    /** 2.2.2: tools the user picked with @ for this turn; a reply that skips them is pushed once. */
+    private val requiredTools: List<String> = emptyList(),
+    /** 2.2.2: the user's own words, run as the `screen` task when the model still refuses. */
+    private val userTask: String = "",
 ) {
     private val steps = ArrayList<AgentStep>()
 
@@ -273,6 +282,7 @@ class AgentLoop(
         var unknownRetried = false
         var echoRetried = false
         var nudged = false
+        var toolPushed = false
         while (true) {
             currentCoroutineContext().ensureActive()
             pendingNotes()?.takeIf { it.isNotBlank() }?.let { injectNote(msgs, it) }
@@ -284,7 +294,26 @@ class AgentLoop(
             // 2.1.7: a call written inside unfinished thinking (the stream is cut right after it, so
             // the think block never closes) used to leave an empty answer: run that call instead.
             val answer = answerOf(turn.text).ifBlank { ToolCallParser.callInOpenThink(turn.text) ?: "" }
-            when (val p = ToolCallParser.parse(answer)) {
+            var parsed = ToolCallParser.parse(answer)
+            // 2.2.2: the user picked a tool (@screen) but the reply skips it — small local models
+            // often refuse. Push once; if it still refuses, run `screen` with the user's own words.
+            val missing = requiredTools.firstOrNull { r -> tools.any { it.name == r } && steps.none { it.tool == r } }
+            if (parsed is ParsedReply.Final && missing != null && calls < maxSteps) {
+                if (!toolPushed) {
+                    toolPushed = true
+                    android.util.Log.w(AGENT_TAG, "picked tool $missing not called (push once)")
+                    msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim().ifEmpty { "…" })
+                    msgs += PromptMessage(PromptMessage.USER, AgentPrompt.mustCall(missing))
+                    continue
+                }
+                if (missing == ScreenTool.name && userTask.isNotBlank()) {
+                    android.util.Log.w(AGENT_TAG, "picked tool screen refused twice: run it with the user's words")
+                    parsed = ParsedReply.Call(ToolCall(ScreenTool.name, kotlinx.serialization.json.buildJsonObject {
+                        put("task", kotlinx.serialization.json.JsonPrimitive(userTask))
+                    }, CallFormat.FENCED), "")
+                }
+            }
+            when (val p = parsed) {
                 is ParsedReply.Final -> {
                     // 1.13.0: the model wrote a fake tool log (copied from history) instead of calling.
                     if (com.iris.localai.context.ToolRollup.hasEcho(answer) && !echoRetried) {

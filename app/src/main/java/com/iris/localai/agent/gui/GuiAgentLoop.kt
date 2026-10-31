@@ -52,6 +52,12 @@ enum class GuiStop { DONE, GAVE_UP, MAX_STEPS, STOPPED, ERROR }
 
 data class GuiOutcome(val stop: GuiStop, val message: String, val steps: List<GuiStep>)
 
+/** 2.2.2: where the GUI loop reads the user's 补充; the chat sets [source] while its agent runs. */
+object GuiNotes {
+    @Volatile var source: (() -> String?)? = null
+    fun take(): String? = runCatching { source?.invoke() }.getOrNull()
+}
+
 /** Shared stop switch: the floating 停止 bar and the in-app button flip it; the loop checks it every step. */
 object GuiStopSignal {
     private val flag = AtomicBoolean(false)
@@ -85,10 +91,13 @@ class GuiAgentLoop(
     private val stop: () -> Boolean = { GuiStopSignal.requested },
     private val includeTree: Boolean = true,
     private val today: String = "",
+    /** 2.2.2: 补充 the user typed during the run (read before each step). */
+    private val userNotes: () -> String? = { GuiNotes.take() },
 ) {
     private val steps = ArrayList<GuiStep>()
 
-    suspend fun run(task: String): GuiOutcome {
+    suspend fun run(task0: String): GuiOutcome {
+        var task = task0
         val history = ArrayList<String>()
         var formatErrors = 0
         var lastKey: String? = null
@@ -100,6 +109,10 @@ class GuiAgentLoop(
                 if (stop()) return end(GuiStop.STOPPED, "已停止")
                 if (steps.count { it.status != GuiStepStatus.FORMAT_ERROR } >= maxSteps) return end(GuiStop.MAX_STEPS, "达到步数上限（$maxSteps 步）")
                 val stepNo = steps.size + 1
+                userNotes()?.takeIf { it.isNotBlank() }?.let { add ->
+                    task = task.trimEnd() + "\n用户补充：" + add.trim()
+                    note = listOfNotNull(note, "The user just added: ${add.trim()} — follow it from this step on.").joinToString("\n")
+                }
                 callbacks.onPhase(stepNo, GuiPhase.LOOK)
                 val obs = device.observe()
                 val elements = UiTreeSerializer.elements(obs.tree, obs.width, obs.height, profile.scale)
@@ -226,7 +239,7 @@ Actions:
 {"action": "wait", "time": seconds}
 {"action": "ask_user", "text": "question"}
 {"action": "terminate", "status": "success|failure", "text": "result for the user"}
-Rules: open the right app first; check the last action worked before the next; never pay, send or delete unless the task says so; finish with terminate."""
+Rules: decide from the screenshot; the UI element list (when given) is only a reference for where things are, tap the exact point you see. Open the right app first; check the last action worked before the next; never pay, send or delete unless the task says so; when the task is complete (or impossible) finish with terminate."""
         }
     }
 

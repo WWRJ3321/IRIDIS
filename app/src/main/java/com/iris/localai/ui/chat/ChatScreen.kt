@@ -1,5 +1,8 @@
 package com.iris.localai.ui.chat
 
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.snap
@@ -459,8 +462,23 @@ fun ChatScreen(
                     val capsuleBg by androidx.compose.animation.animateColorAsState(
                         if (settings.topBarCapsules) c.surfaceVariant else c.surfaceVariant.copy(alpha = 0f), IrisMotion.Color.spec(), label = "capsule")
                     PressableIcon(Icons.Outlined.Menu, "历史对话", size = 40.dp, iconSize = 21.dp, background = capsuleBg) { hideKeyboard(); scope.launch { drawer.open() } }
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        ModelTitle(ui.engine, capsule = settings.topBarCapsules) { hideKeyboard(); showPicker = true }
+                    // 2.2.2: model name sits left beside the menu key; it opens a small menu (like the
+                    // file page's) listing models in the order set in 模型管理.
+                    var modelMenu by remember { mutableStateOf(false) }
+                    Box(Modifier.weight(1f).padding(start = 4.dp), contentAlignment = Alignment.CenterStart) {
+                        ModelTitle(ui.engine, capsule = settings.topBarCapsules) { hideKeyboard(); modelMenu = true }
+                        com.iris.localai.ui.components.IrisMenu(modelMenu, { modelMenu = false }) {
+                            val current = (ui.engine as? EngineState.Ready)?.model?.path ?: (ui.engine as? EngineState.Loading)?.model?.path
+                            val locked = ui.isGenerating || backgroundRunId != null
+                            models.forEach { m ->
+                                com.iris.localai.ui.components.IrisMenuItem(m.displayName, if (m.path == current) Icons.Outlined.Check else null) {
+                                    modelMenu = false
+                                    if (!locked && m.path != current) vm.loadModel(m)
+                                }
+                            }
+                            com.iris.localai.ui.components.IrisMenuItem("档位与加载…", Icons.Outlined.Tune) { modelMenu = false; showPicker = true }
+                            com.iris.localai.ui.components.IrisMenuItem("管理模型", Icons.Outlined.Settings) { modelMenu = false; onOpenModels() }
+                        }
                     }
                     PressableIcon(Icons.Outlined.EditNote, "新对话", size = 40.dp, iconSize = 21.dp, background = capsuleBg, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
@@ -726,9 +744,9 @@ private fun ModelTitle(engine: EngineState, capsule: Boolean = false, onClick: (
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(percent = 50))
             .background(androidx.compose.animation.animateColorAsState(if (capsule) c.surfaceVariant else c.surfaceVariant.copy(alpha = 0f), IrisMotion.Color.spec(), label = "titleCapsule").value)
             .clickable(onClick = onClick, onClickLabel = "选择模型")
-            .padding(horizontal = 18.dp, vertical = 3.dp),
+            .padding(horizontal = 10.dp, vertical = 3.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.Start,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AnimatedContent(

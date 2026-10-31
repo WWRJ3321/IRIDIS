@@ -610,10 +610,19 @@ object GenerateImageTool : SuspendTool {
 
 /** Registry of the core tools (1.9.0 + 1.10.0 recall / memory), in settings / prompt order. */
 object AgentTools {
+    /**
+     * 2.2.2: the same 9 tools for local and online models (read_file, write_file, search_local,
+     * memory, plan, web_search, screen, skill, generate_image). ActivateTool is internal.
+     */
     val all: List<AgentTool> = listOf(
-        ReadFileTool, WriteFileTool, EditFileTool, ListDirTool, SearchFilesTool, MoveFileTool, DeleteFileTool, ProcessFileTool,
-        PlanTool, CalculatorTool, DateTimeTool, RecallTool, MemoryTool, WebSearchTool, WebFetchTool, BrowserTool,
-        PhoneTool, ScreenTool, SkillTool, GenerateImageTool, ActivateTool,
+        ReadFileTool, WriteFileTool, SearchLocalTool, MemoryTool, PlanTool, WebSearchTool,
+        ScreenTool, SkillTool, GenerateImageTool, ActivateTool,
+    )
+
+    /** Older tools still recognised in saved chats and by name (no longer offered to the model). */
+    private val legacy: List<AgentTool> = listOf(
+        EditFileTool, ListDirTool, SearchFilesTool, MoveFileTool, DeleteFileTool, ProcessFileTool,
+        CalculatorTool, DateTimeTool, RecallTool, WebFetchTool, BrowserTool, PhoneTool,
     )
 
     /**
@@ -622,7 +631,7 @@ object AgentTools {
      */
     val onDemand: List<AgentTool> = listOf(KbSearchTool)
 
-    fun byName(name: String): AgentTool? = all.firstOrNull { it.name == name } ?: onDemand.firstOrNull { it.name == name }
+    fun byName(name: String): AgentTool? = all.firstOrNull { it.name == name } ?: onDemand.firstOrNull { it.name == name } ?: legacy.firstOrNull { it.name == name }
 
     /**
      * 1.12.0: the tools of one agent reply — enabled in settings, minus those whose backing is
@@ -630,11 +639,10 @@ object AgentTools {
      */
     fun enabled(s: AgentSettings, historyAvailable: Boolean, memoryOn: Boolean, knowledgeOn: Boolean = false, imageGenOn: Boolean = false): List<AgentTool> =
         all.filter { s.isEnabled(it) }.filter {
-            (it.name != RecallTool.name || historyAvailable) && (it.name != MemoryTool.name || memoryOn) &&
+            (it.name != MemoryTool.name || memoryOn) &&
                 // 2.1.7: generate_image only while a runnable image model is downloaded (no prompt cost otherwise).
                 (it.name != GenerateImageTool.name || imageGenOn)
-        } +
-            (if (knowledgeOn) listOf(KbSearchTool) else emptyList())
+        }
 }
 
 /** Builds text from HTML for web_fetch (scripts, styles and tags removed, entities decoded). Pure. */

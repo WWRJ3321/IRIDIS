@@ -39,6 +39,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlinx.coroutines.flow.onCompletion
 
 /**
  * 2.2.0: Qualcomm GenieX 0.8.0 engine (full flavour).
@@ -146,7 +147,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 parameterCount = 0,
                 contextLength = if (ctx > 0) ctx else config.contextLength,
                 trainContextLength = 0,
-                supportsThinking = GenieXSampling.thinkingModel(model.fileName),
+                supportsThinking = com.iris.localai.engine.ThinkSupport.supports(File(model.path), GenieXSampling::thinkingModel),
                 supportsVision = visionOk,
                 hasChatTemplate = true,
                 backend = backendLabel,
@@ -224,11 +225,12 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 while (true) {
                 done = null
                 val flow = v?.generateStreamFlow(prompt, gen) ?: l!!.generateStreamFlow(prompt, gen)
-                flow.collect { r ->
+                val channel = com.iris.localai.engine.ChannelThink()
+                flow.onCompletion { channel.push("", final = true).takeIf { it.isNotEmpty() && !cancelled }?.let { send(GenEvent.Piece(it)) } }.collect { r ->
                     when (r) {
                         is LlmStreamResult.Token -> {
                             out.append(r.text)
-                            if (!cancelled) send(GenEvent.Piece(r.text))
+                            if (!cancelled) channel.push(r.text).takeIf { it.isNotEmpty() }?.let { send(GenEvent.Piece(it)) }
                         }
                         is LlmStreamResult.Completed -> {
                             val p = r.profile

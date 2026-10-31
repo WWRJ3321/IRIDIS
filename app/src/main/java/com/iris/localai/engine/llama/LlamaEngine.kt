@@ -106,6 +106,7 @@ class LlamaEngine : InferenceEngine {
         }
         val req = Request()
         active = req
+        val channel = com.iris.localai.engine.ChannelThink()
         // The native call blocks and cannot be interrupted; if the collector goes away (e.g. during
         // a long prefill that emits nothing), ask native code to stop this request.
         invokeOnClose { cause -> if (cause != null) cancelRequest(req) }
@@ -148,13 +149,14 @@ class LlamaEngine : InferenceEngine {
                     }
                     com.iris.localai.engine.ThermalGovernor.pace { req.cancelled }
                     // Unlimited buffer: trySend only fails once the collector is gone → stop generating.
-                    !req.cancelled && trySend(GenEvent.Piece(String(bytes, Charsets.UTF_8))).isSuccess
+                    !req.cancelled && channel.push(String(bytes, Charsets.UTF_8)).let { t -> t.isEmpty() || trySend(GenEvent.Piece(t)).isSuccess }
                 }
             }
         } finally {
             if (active === req) active = null
             runningPlan = null
         }
+        channel.push("", final = true).takeIf { it.isNotEmpty() }?.let { send(GenEvent.Piece(it)) }
         if (result == null) {
             send(GenEvent.Done(StopReason.ERROR, null, "模型未加载"))
             return@channelFlow

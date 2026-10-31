@@ -55,9 +55,26 @@ class ModelRepository(private val context: Context) {
             files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
             files.mapNotNull { f -> entryOf(f, mnn) }
         }
-        val list = ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }
+        val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list
         list
+    }
+
+    /** 2.2.2: the user's own order (模型管理 › 拖动排序); the home menu lists models in this order. */
+    private val orderPrefs by lazy { context.getSharedPreferences("iris_model_order", Context.MODE_PRIVATE) }
+
+    private fun savedOrder(): List<String> = orderPrefs.getString("order", "").orEmpty().split('\n').filter { it.isNotBlank() }
+
+    /** Moves [from] to [to] in the current list and remembers the new order. */
+    fun move(from: Int, to: Int) {
+        val cur = _models.value.toMutableList()
+        if (from !in cur.indices || to !in cur.indices || from == to) return
+        cur.add(to, cur.removeAt(from))
+        _models.value = cur
+        // Keep names of models that are not on disk right now (e.g. a removed SD card) in place.
+        val names = cur.map { it.fileName }
+        val merged = names + savedOrder().filter { it !in names }
+        orderPrefs.edit().putString("order", merged.joinToString("\n")).apply()
     }
 
     private fun entryOf(f: File, mnn: Boolean = ModelFormat.MNN in EngineFactory.supportedFormats): LocalModel? {

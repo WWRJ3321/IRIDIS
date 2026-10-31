@@ -1,5 +1,11 @@
 package com.iris.localai.ui.models
 
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
+import androidx.compose.material.icons.outlined.DragHandle
 import android.app.Application
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,6 +100,7 @@ data class ImportState(val fileName: String = "", val progress: Float = 0f, val 
 class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     private val c = (app as IrisApp).container
     val models = c.models.models
+    fun move(from: Int, to: Int) = c.models.move(from, to)
     val engine = c.engine.state
     val busy = c.engine.busy
     /** 2.2.0: "GenieX · NPU" for models GenieX runs (null = llama.cpp / the format's own engine). */
@@ -330,8 +337,29 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                         topStart = if (first) r else 0.dp, topEnd = if (first) r else 0.dp,
                         bottomEnd = if (last) r else 0.dp, bottomStart = if (last) r else 0.dp,
                     )
+                    // 2.2.2: drag the ≡ handle to reorder; the home model menu follows this order.
+                    val index by androidx.compose.runtime.rememberUpdatedState(i)
+                    var dragDy by remember(m.path) { androidx.compose.runtime.mutableFloatStateOf(0f) }
+                    var dragging by remember(m.path) { mutableStateOf(false) }
+                    var rowH by remember(m.path) { androidx.compose.runtime.mutableIntStateOf(1) }
+                    val handle = Modifier.pointerInput(m.path) {
+                        detectDragGestures(
+                            onDragStart = { dragging = true; dragDy = 0f },
+                            onDragEnd = { dragging = false; dragDy = 0f },
+                            onDragCancel = { dragging = false; dragDy = 0f },
+                        ) { change, amount ->
+                            change.consume()
+                            dragDy += amount.y
+                            val h = rowH.toFloat().coerceAtLeast(1f)
+                            if (dragDy > h / 2 && index < models.lastIndex) { vm.move(index, index + 1); dragDy -= h }
+                            else if (dragDy < -h / 2 && index > 0) { vm.move(index, index - 1); dragDy += h }
+                        }
+                    }
                     Column(
-                        (if (reduce) Modifier else Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()))
+                        (if (reduce || dragging) Modifier else Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()))
+                            .zIndex(if (dragging) 1f else 0f)
+                            .graphicsLayer { translationY = dragDy; if (dragging) { scaleX = 1.02f; scaleY = 1.02f } }
+                            .onSizeChanged { rowH = it.height }
                             .padding(horizontal = IrisDimens.groupGutter)
                             .fillMaxWidth()
                             .clip(shape)
@@ -347,6 +375,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                             onCancelLoad = { vm.cancelLoad() },
                             onDelete = { confirmDelete = m },
                             onSettings = { configure = m },
+                            dragHandle = handle,
                         )
                     }
                 }
@@ -441,7 +470,7 @@ internal fun LocalModel.pickerMeta(loadedBackend: String?, preferredBackend: Str
 internal fun LocalModel.metaLine(engineTag: String? = null): String = listOfNotNull(engineTag ?: format.label, quantization, Format.bytes(sizeBytes)).joinToString(" · ")
 
 @Composable
-private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, busy: Boolean, onLoad: () -> Unit, onDelete: () -> Unit, onSettings: () -> Unit, onCancelLoad: () -> Unit = {}) {
+private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, busy: Boolean, onLoad: () -> Unit, onDelete: () -> Unit, onSettings: () -> Unit, onCancelLoad: () -> Unit = {}, dragHandle: Modifier = Modifier) {
     val c = Iris.colors
     val loaded = (state as? EngineState.Ready)?.model?.path == m.path
     val loading = (state as? EngineState.Loading)?.model?.path == m.path
@@ -449,9 +478,13 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = IrisDimens.rowPadding, end = IrisDimens.space4, top = 8.dp, bottom = 8.dp),
+            .padding(start = IrisDimens.space4, end = IrisDimens.space4, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        androidx.compose.material3.Icon(
+            Icons.Outlined.DragHandle, "拖动排序", tint = c.textTertiary,
+            modifier = dragHandle.size(40.dp).padding(8.dp),
+        )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)

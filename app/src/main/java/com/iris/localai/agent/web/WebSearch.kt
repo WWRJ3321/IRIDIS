@@ -40,11 +40,13 @@ object WebSearchTool : AgentTool {
     override val name = "web_search"
     override val label = "联网搜索"
     override val description = "搜索网页或新闻，返回前几条结果的标题、摘要和链接"
-    override val promptLine = "web_search(query, news?: bool)"
+    override val promptLine = "web_search(query, news?: bool) | web_search(url): read one page"
     override val risk = ToolRisk.NETWORK
     override val defaultPermission: Permission = Permission.ALLOW
 
     override fun run(args: JsonObject, env: ToolEnv): ToolResult {
+        // 2.2.2: one web tool — a url reads that page (the former web_fetch).
+        if (Args.str(args, "url", "link", "href") != null && Args.str(args, "query", "q") == null) return com.iris.localai.agent.WebFetchTool.run(args, env)
         val q = query(args)?.trim()
             ?: throw IllegalArgumentException("缺少参数 query")
         if (q.isEmpty()) throw IllegalArgumentException("缺少参数 query")
