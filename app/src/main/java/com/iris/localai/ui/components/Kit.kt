@@ -132,8 +132,8 @@ fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 /**
  * Secondary-page top bar: a floating round glass back button, a centred title ([titleModifier]
  * lets the scaffold fade it in as the large title scrolls away) and the page's actions grouped in
- * one glass pill (drawn only when there are actions). Behind them, a full-width glass strip
- * (status bar included) fades in with [stripAlpha] once content scrolls underneath.
+ * one glass pill (drawn only when there are actions). No band behind them (2.2.9): content
+ * scrolls under the floating controls.
  */
 @Composable
 fun IrisTopBar(
@@ -145,12 +145,9 @@ fun IrisTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val c = Iris.colors
+    // 2.2.9: no background band behind the bar (no strip / scrim): only the floating glass back
+    // button, the title and the glass action pill sit over the content. [stripAlpha] is ignored.
     Box(modifier.fillMaxWidth()) {
-        Box(
-            Modifier.matchParentSize()
-                .graphicsLayer { alpha = stripAlpha() }
-                .glassSurface(androidx.compose.ui.graphics.RectangleShape, IrisElevation.none),
-        )
         Box(
             Modifier.fillMaxWidth().statusBarsPadding().height(IrisDimens.topBarHeight + IrisDimens.space8).padding(horizontal = IrisDimens.space16),
             contentAlignment = Alignment.Center,

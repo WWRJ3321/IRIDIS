@@ -21,6 +21,10 @@ import com.iris.localai.agent.gui.GuiAction
 import com.iris.localai.agent.gui.GuiDevice
 import com.iris.localai.agent.gui.GuiObservation
 import com.iris.localai.agent.gui.PxRect
+import com.iris.localai.agent.gui.ScreenFingerprint
+import com.iris.localai.agent.gui.ScreenState
+import com.iris.localai.agent.gui.StableWait
+import com.iris.localai.agent.gui.TypeCheck
 import com.iris.localai.agent.gui.UiNode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -162,6 +166,15 @@ class AccessibilityGuiDevice(
         }
     }
 
+    /** 2.2.9: tree fingerprint of the active window (no screenshot: those are rate-limited by the system). */
+    override suspend fun snapshot(): ScreenState? {
+        val s = IrisAccessibilityService.instance ?: return null
+        return withContext(Dispatchers.Default) { runCatching { s.rootInActiveWindow?.let { ScreenFingerprint.of(NodeCopy.copy(it)) } }.getOrNull() }
+    }
+
+    /** 2.2.9: poll every 150 ms until two samples match (min 250 ms, max 2.5 s). */
+    override suspend fun waitStable(fallbackMs: Long): ScreenState? = StableWait.await({ snapshot() })
+
     private fun screenSize(s: IrisAccessibilityService): Pair<Int, Int> {
         val wm = s.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val b = wm.maximumWindowMetrics.bounds
@@ -236,14 +249,54 @@ class AccessibilityGuiDevice(
     private fun global(s: IrisAccessibilityService, action: Int, what: String) =
         if (s.performGlobalAction(action)) ExecResult(true) else ExecResult(false, "$what 失败")
 
-    /** Replaces the focused field's text (ACTION_SET_TEXT): works with any keyboard, no IME switch. */
-    private fun typeText(s: IrisAccessibilityService, text: String): ExecResult {
+    /**
+     * Replaces the focused field's text: ACTION_SET_TEXT (any keyboard, no IME switch); when the field
+     * refuses it or does not take the text, select all + paste from the clipboard. CJK and long text ok.
+     */
+    private suspend fun typeText(s: IrisAccessibilityService, text: String): ExecResult {
         val root = s.rootInActiveWindow ?: return ExecResult(false, "读不到当前窗口")
         val field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
-            ?: return ExecResult(false, "没有聚焦的输入框，先点击输入框")
+            ?: findEditable(root) ?: return ExecResult(false, "没有聚焦的输入框，先点击输入框")
         if (field.isPassword) return ExecResult(false, "密码框由你自己输入")
         val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) }
-        return if (field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) ExecResult(true) else ExecResult(false, "输入框不接受文本")
+        if (field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+            delay(80)
+            field.refresh()
+            val now = field.text?.toString()
+            if (now == null || TypeCheck.took(now, text)) return ExecResult(true)
+        }
+        return paste(s, field, text)
+    }
+
+    /** The focused editable node, else the only editable one on screen. */
+    private fun findEditable(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val all = ArrayList<AccessibilityNodeInfo>()
+        fun walk(n: AccessibilityNodeInfo, depth: Int) {
+            if (depth > 40 || all.size > 20) return
+            if (n.isEditable) all += n
+            for (i in 0 until n.childCount) n.getChild(i)?.let { walk(it, depth + 1) }
+        }
+        walk(root, 0)
+        return all.firstOrNull { it.isFocused } ?: all.singleOrNull()
+    }
+
+    private suspend fun paste(s: IrisAccessibilityService, field: AccessibilityNodeInfo, text: String): ExecResult {
+        val cm = s.getSystemService(android.content.ClipboardManager::class.java) ?: return ExecResult(false, "输入框不接受文本")
+        val old = runCatching { cm.primaryClip }.getOrNull()
+        return try {
+            withContext(Dispatchers.Main) { cm.setPrimaryClip(android.content.ClipData.newPlainText("iridis", text)) }
+            field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            val len = field.text?.length ?: 0
+            if (len > 0) field.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
+                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
+                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, len)
+            })
+            val ok = field.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            delay(150)
+            if (ok) ExecResult(true, "已用粘贴输入") else ExecResult(false, "输入框不接受文本（设置文本和粘贴都失败）")
+        } finally {
+            if (old != null) runCatching { withContext(Dispatchers.Main) { cm.setPrimaryClip(old) } }
+        }
     }
 
     /** By app name (or package), like the `phone` tool's open_app. */

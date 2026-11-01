@@ -2,6 +2,7 @@ package com.iris.localai.ui.chat
 
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Eject
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
@@ -676,6 +677,9 @@ fun ChatScreen(
                     },
                     onTiers = { modelMenu = false; showPicker = true },
                     onManage = { modelMenu = false; onOpenModels() },
+                    // 2.2.9: free the model's memory; disabled while a reply / background run is going.
+                    unloadEnabled = !(ui.isGenerating || backgroundRunId != null),
+                    onUnload = { modelMenu = false; vm.unloadModel() },
                 )
             }
     }
@@ -834,6 +838,8 @@ private fun ModelMorphPanel(
     onPick: (LocalModel) -> Unit,
     onTiers: () -> Unit,
     onManage: () -> Unit,
+    unloadEnabled: Boolean = true,
+    onUnload: () -> Unit = {},
 ) {
     val c = Iris.colors
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -937,6 +943,9 @@ private fun ModelMorphPanel(
                         if (models.isNotEmpty()) MorphHairline()
                         CompactMenuRow("档位与加载…", Icons.Outlined.Tune) { if (expanded) onTiers() }
                         CompactMenuRow("管理模型", Icons.Outlined.Settings) { if (expanded) onManage() }
+                        if (engine is EngineState.Ready) {
+                            CompactMenuRow("卸载模型", Icons.Outlined.Eject, enabled = unloadEnabled) { if (expanded) onUnload() }
+                        }
                     }
                 }
             }
@@ -951,14 +960,15 @@ private fun MorphHairline() {
 }
 
 @Composable
-private fun CompactMenuRow(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun CompactMenuRow(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, enabled: Boolean = true, onClick: () -> Unit) {
     val c = Iris.colors
+    val a = if (enabled) 1f else 0.38f
     Row(
-        Modifier.fillMaxWidth().height(44.dp).clickable(onClick = onClick).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
-        Text(text, style = IrisType.menuItem.copy(fontSize = 15.sp, lineHeight = 20.sp), color = c.text, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
+        Icon(icon, null, tint = c.textSecondary.copy(alpha = c.textSecondary.alpha * a), modifier = Modifier.size(18.dp))
+        Text(text, style = IrisType.menuItem.copy(fontSize = 15.sp, lineHeight = 20.sp), color = c.text.copy(alpha = c.text.alpha * a), maxLines = 1, modifier = Modifier.padding(start = 10.dp))
     }
 }
 

@@ -101,8 +101,6 @@ fun SubpageScaffold(
     val haze = remember { dev.chrisbanes.haze.HazeState() }
     // Scroll-driven values are read in draw (graphicsLayer) only: no recomposition per frame.
     fun collapse() = if (state.hasLargeTitle) state.collapse else 1f
-    val under by remember(state) { derivedStateOf { LargeTitleMath.hairlineAlpha(collapse()) } }
-    val strip by animateFloatAsState(under, IrisMotion.standard(), label = "topStrip")
     val inset = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
         IrisDimens.topBarHeight + IrisDimens.space8
     CompositionLocalProvider(LocalGlassHaze provides haze) {
@@ -117,7 +115,6 @@ fun SubpageScaffold(
             }
             IrisTopBar(
                 title, onBack, actions = actions,
-                stripAlpha = { if (scrollUnder) strip else 0f },
                 titleModifier = Modifier.graphicsLayer {
                     val barAlpha = LargeTitleMath.barTitleAlpha(collapse())
                     alpha = barAlpha

@@ -23,6 +23,10 @@ data class ExecResult(val ok: Boolean, val message: String = "")
 interface GuiDevice {
     suspend fun observe(): GuiObservation
     suspend fun execute(action: GuiAction, obs: GuiObservation): ExecResult
+    /** 2.2.9: after an action, wait until the screen is stable; returns its fingerprint (null = unknown). */
+    /** 2.2.9: the screen's fingerprint right now (null = use the observation's tree). */
+    suspend fun snapshot(): ScreenState? = null
+    suspend fun waitStable(fallbackMs: Long): ScreenState? { if (fallbackMs > 0) delay(fallbackMs); return null }
 }
 
 /** 2.2.3: one text line found by OCR, in screen pixels (same space as [UiNode.bounds]). */
@@ -84,7 +88,7 @@ object GuiLimits {
     /** Same screen + same action this many times in a row → warn the model; twice that → stop. */
     const val REPEAT_WARN = 3
     const val HISTORY_STEPS = 8
-    /** Time for the UI to settle after an action before the next screenshot. */
+    /** Fixed settle time, used only by devices that cannot detect a stable screen ([GuiDevice.waitStable]). */
     const val SETTLE_MS = 800L
 }
 
@@ -114,8 +118,7 @@ class GuiAgentLoop(
         var task = task0
         val history = ArrayList<String>()
         var formatErrors = 0
-        var lastKey: String? = null
-        var repeats = 0
+        val guard = LoopGuard(warnAt = GuiLimits.REPEAT_WARN, stopAt = GuiLimits.REPEAT_WARN * 2)
         var note: String? = null
         try {
             while (true) {
@@ -170,7 +173,7 @@ class GuiAgentLoop(
                     }
                     else -> Unit
                 }
-                when (val v = GuiSafety.review(action, elements, obs.width, obs.height, obs.foregroundPkg)) {
+                when (val v = GuiSafety.review(action, elements, obs.width, obs.height, obs.foregroundPkg, parsed.thought)) {
                     is GuiVerdict.Block -> {
                         record(parsed.thought, action, GuiStepStatus.BLOCKED, v.reason)
                         if (!callbacks.takeOver(v.reason)) return end(GuiStop.STOPPED, v.reason)
@@ -178,27 +181,37 @@ class GuiAgentLoop(
                         continue
                     }
                     is GuiVerdict.Confirm -> if (!callbacks.confirm(action, v.reason)) {
+                        // 2.2.9: tell the model and let it decide (another way, ask, or finish).
                         record(parsed.thought, action, GuiStepStatus.DENIED, v.reason)
-                        return end(GuiStop.STOPPED, "你拒绝了：${v.reason}")
+                        history += line(action, CANCELLED)
+                        note = "$CANCELLED（${v.reason}）。不要重复这个操作；换别的做法、提问，或结束任务。"
+                        continue
                     }
                     GuiVerdict.Allow -> Unit
                 }
                 if (stop()) return end(GuiStop.STOPPED, "已停止")
+                val before = device.snapshot() ?: ScreenFingerprint.of(obs.tree)
                 val r = device.execute(action, obs)
-                record(parsed.thought, action, if (r.ok) GuiStepStatus.OK else GuiStepStatus.FAILED, r.message)
-                history += line(action, if (r.ok) "ok" else "failed: ${r.message}")
-                val key = "${UiTreeSerializer.signature(elements)}:$action"
-                repeats = if (key == lastKey) repeats + 1 else 1
-                lastKey = key
-                if (repeats >= GuiLimits.REPEAT_WARN * 2) return end(GuiStop.ERROR, "同一操作重复 $repeats 次没有效果，已停止")
-                if (repeats >= GuiLimits.REPEAT_WARN) note = "The same action on the same screen was repeated $repeats times without effect. Try something different."
-                if (action !is GuiAction.Wait && settleMs > 0) delay(settleMs)
+                // 2.2.9: wait for a stable screen (not a fixed delay), then report whether it changed.
+                val after = device.waitStable(if (action is GuiAction.Wait) 0 else settleMs)
+                val changed = ChangeReport.changed(before, after)
+                val change = ChangeReport.text(before, after)
+                val res = (if (r.ok) "ok" else "failed: ${r.message}") + (change?.let { "; $it" } ?: "")
+                record(parsed.thought, action, if (r.ok) GuiStepStatus.OK else GuiStepStatus.FAILED, listOfNotNull(r.message.takeIf { it.isNotEmpty() }, change).joinToString("；"))
+                history += line(action, res)
+                when (guard.record(action, changed)) {
+                    LoopGuard.Verdict.STOP -> return end(GuiStop.ERROR, "同一操作重复 ${guard.count} 次没有效果，已停止")
+                    LoopGuard.Verdict.WARN -> note = LoopGuard.hint(guard.count)
+                    LoopGuard.Verdict.OK -> Unit
+                }
             }
         } catch (e: CancellationException) {
             end(GuiStop.STOPPED, "已停止")
             throw e
         }
     }
+
+    companion object { const val CANCELLED = "用户取消了这个操作" }
 
     private fun line(a: GuiAction, result: String) = "${a.label()} → $result"
 

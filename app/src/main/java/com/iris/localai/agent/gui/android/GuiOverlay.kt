@@ -207,20 +207,26 @@ object GuiOverlay {
             val s = IrisAccessibilityService.instance ?: run { answer.complete(false); return@post }
             val wm = s.getSystemService(WindowManager::class.java)
             question?.let { runCatching { wm.removeView(it) } }
+            // 2.2.9: same frosted card + theme accent as the 停止 bar.
+            val k = look(s)
             val box = LinearLayout(s).apply {
                 orientation = LinearLayout.VERTICAL
-                background = pill(s, 0xF0202124.toInt(), radius = 16f)
+                background = GradientDrawable().apply {
+                    setColor(k.surface); cornerRadius = dp(s, 22).toFloat()
+                    setStroke(maxOf(1, dp(s, 1) / 2), k.hairline)
+                }
+                elevation = dp(s, 8).toFloat()
                 setPadding(dp(s, 16), dp(s, 14), dp(s, 16), dp(s, 12))
             }
-            val t = TextView(s).apply { setTextColor(Color.WHITE); textSize = 14f; text = message }
+            val t = TextView(s).apply { setTextColor(k.title); textSize = 14f; text = message }
             val buttons = LinearLayout(s).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
             fun done(v: Boolean) {
                 runCatching { wm.removeView(box) }
                 if (question === box) question = null
                 answer.complete(v)
             }
-            buttons.addView(button(s, no, 0xFF5F6368.toInt()) { done(false) })
-            buttons.addView(button(s, yes, 0xFF3D7BF7.toInt()) { done(true) },
+            buttons.addView(button(s, no, ColorUtils.setAlphaComponent(k.sub, 0x24), k.title) { done(false) })
+            buttons.addView(button(s, yes, k.accent, Color.WHITE) { done(true) },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(s, 10) })
             box.addView(t)
             box.addView(buttons, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(s, 12) })
@@ -239,9 +245,10 @@ object GuiOverlay {
         PixelFormat.TRANSLUCENT,
     ).apply { this.gravity = gravity; this.y = y }
 
-    private fun button(s: IrisAccessibilityService, label: String, color: Int, onClick: () -> Unit) = TextView(s).apply {
+    private fun button(s: IrisAccessibilityService, label: String, color: Int, fg: Int = Color.WHITE, onClick: () -> Unit) = TextView(s).apply {
         text = label
-        setTextColor(Color.WHITE)
+        setTextColor(fg)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         textSize = 13f
         background = pill(s, color)
         setPadding(dp(s, 14), dp(s, 6), dp(s, 14), dp(s, 6))

@@ -215,7 +215,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     }
 
     private val callbacks = object : GuiCallbacks {
-        override suspend fun confirm(action: GuiAction, reason: String) = GuiOverlay.ask("$reason\n要继续吗？", "允许", "拒绝")
+        override suspend fun confirm(action: GuiAction, reason: String) = GuiOverlay.ask("$reason\n要继续吗？", "允许", "取消")
         override suspend fun takeOver(message: String): Boolean =
             GuiOverlay.ask("需要你来操作：$message\n完成后点「我已完成」", "我已完成", "停止").also { if (!it) handOverSink() }
         // 第一阶段没有输入框：模型提问时停下，把问题带回 IRIDIS（聊天里由主智能体转述）。

@@ -26,7 +26,18 @@ object GuiSafety {
     /** Apps the agent never operates by itself (payment and banking) — the user takes over there. */
     val PROTECTED_PACKAGE_HINTS = listOf("com.eg.android.alipaygphone", "bank", "wallet", "com.unionpay")
 
-    fun review(action: GuiAction, elements: List<UiElement>, screenW: Int, screenH: Int, foregroundPkg: String?): GuiVerdict {
+    /** 2.2.9: words in the model's stated intent (its thought) that make a tap / enter need the user's OK. */
+    val INTENT_WORDS = listOf("确认支付", "支付", "付款", "转账", "购买", "下单", "发送", "删除", "pay", "send", "delete")
+
+    fun intentWord(thought: String?): String? {
+        val l = thought.orEmpty().lowercase()
+        if (l.isBlank()) return null
+        return INTENT_WORDS.firstOrNull { w ->
+            if (w.all { it in 'a'..'z' }) Regex("(?<![a-z])${Regex.escape(w)}(?![a-z])").containsMatchIn(l) else w in l
+        }
+    }
+
+    fun review(action: GuiAction, elements: List<UiElement>, screenW: Int, screenH: Int, foregroundPkg: String?, thought: String? = null): GuiVerdict {
         val pkg = foregroundPkg.orEmpty().lowercase()
         val protectedApp = pkg.isNotEmpty() && PROTECTED_PACKAGE_HINTS.any { it in pkg }
         return when (action) {
@@ -37,8 +48,10 @@ object GuiSafety {
                 val (x, y) = CoordMap.toPixels(at, screenW, screenH)
                 val hit = UiTreeSerializer.hit(elements, x, y)
                 val word = hit?.label?.let { sensitiveWord(it) }
-                if (word != null) GuiVerdict.Confirm("将点击「${hit.label}」（含「$word」）") else GuiVerdict.Allow
+                if (word != null) return GuiVerdict.Confirm("将点击「${hit.label}」（含「$word」）")
+                intentWord(thought)?.let { GuiVerdict.Confirm("将执行「${action.label()}」，意图含「$it」") } ?: GuiVerdict.Allow
             }
+            GuiAction.Enter -> intentWord(thought)?.let { GuiVerdict.Confirm("将按回车提交，意图含「$it」") } ?: GuiVerdict.Allow
             is GuiAction.Type -> {
                 if (protectedApp) return GuiVerdict.Block("支付/银行类应用由你自己操作")
                 val field = elements.firstOrNull { it.node.editable && it.node.focused }?.node
