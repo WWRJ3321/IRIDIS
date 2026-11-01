@@ -198,6 +198,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         val refs = HashSet<String>()
         // 2.0.x: stored message versions / branches keep their attachments too.
         c.conversations.forEachSaved { conv -> com.iris.localai.data.MessageVersions.allAttachments(conv.messages).forEach { refs += File(it.path).absolutePath } }
+        c.conversations.forEachTrashed { conv -> com.iris.localai.data.MessageVersions.allAttachments(conv.messages).forEach { refs += File(it.path).absolutePath } }
         return refs
     }
 
@@ -215,7 +216,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteAllHistory() = io {
         val refs = referencedAttachments()
         val before = StorageUsage.sizeOf(File(ctx.filesDir, "conversations"))
-        c.conversations.deleteAll()
+        c.conversations.deleteAll(permanent = true)
         val files = StorageUsage.removableAttachments(File(ctx.filesDir, "attachments"), refs, System.currentTimeMillis())
         freed(before + files.sumOf { StorageUsage.deleteTree(it) }, "已删除全部聊天记录")
     }

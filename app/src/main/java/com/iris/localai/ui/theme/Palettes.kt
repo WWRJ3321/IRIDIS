@@ -31,6 +31,14 @@ enum class IrisPalette(val id: String, val label: String, val light: IrisColors,
  * 2.1.4 自定义背景: cards, bubbles and chips become slightly see-through so the picture shows
  * through; sheets, dialogs and the composer field ([IrisColors.surface]) stay opaque.
  */
+/** 2.2.14 纯色背景: one page colour everywhere, every glass tint fully opaque (nothing mixes). */
+fun IrisColors.solid(): IrisColors = copy(
+    chatBackground = background,
+    glassTint = surface.copy(alpha = 1f),
+    glassTintOpaque = surface.copy(alpha = 1f),
+    glassRim = Color.Transparent,
+)
+
 fun IrisColors.overBackdrop(): IrisColors = copy(
     surfaceVariant = surfaceVariant.copy(alpha = 0.84f),
     surfaceElevated = surfaceElevated.copy(alpha = 0.88f),

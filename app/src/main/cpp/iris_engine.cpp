@@ -2,6 +2,8 @@
 #include "iris_engine.h"
 
 #include <algorithm>
+#include <atomic>
+#include <cstring>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -68,7 +70,23 @@ bool progress_trampoline(float p, void *ud) {
 LogSink g_log_sink = nullptr;
 int g_log_min_level = 3;
 
+// 2.2.14: OpenCL init/load progress for the Kotlin watchdog. ggml prints one "." (CONT) per
+// compiled kernel group and "ggml_opencl: ..." lines; the counter moving = not hung.
+std::atomic<int> g_gpu_ticks{0};
+std::mutex g_gpu_log_mu;
+std::string g_gpu_last;
+
 void log_trampoline(enum ggml_log_level level, const char *text, void *) {
+    if (text) {
+        if ((int) level == GGML_LOG_LEVEL_CONT) {
+            if (text[0] == '.') g_gpu_ticks.fetch_add(1, std::memory_order_relaxed);
+        } else if (std::strncmp(text, "ggml_opencl", 11) == 0) {
+            std::lock_guard<std::mutex> lk(g_gpu_log_mu);
+            g_gpu_last.assign(text, strnlen(text, 240));
+            while (!g_gpu_last.empty() && (g_gpu_last.back() == '\n' || g_gpu_last.back() == '\r')) g_gpu_last.pop_back();
+            g_gpu_ticks.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
     if (g_log_sink && (int) level >= g_log_min_level && (int) level != GGML_LOG_LEVEL_CONT) {
         g_log_sink((int) level, text);
     }
@@ -161,6 +179,13 @@ std::string format_k2(const std::vector<ChatMessage> &messages, bool think) {
     return out;
 }
 }  // namespace
+
+int gpu_init_ticks() { return g_gpu_ticks.load(std::memory_order_relaxed); }
+
+std::string gpu_last_log() {
+    std::lock_guard<std::mutex> lk(g_gpu_log_mu);
+    return g_gpu_last;
+}
 
 void set_log_sink(LogSink sink, int min_level) {
     g_log_sink = sink;

@@ -362,8 +362,27 @@ object ToolCallParser {
         return K2_THINK.replace(t) { "<${it.groupValues[1]}think>" }
     }
 
+    /**
+     * 2.2.14: the reply with all reasoning removed, so a call only *mentioned* while thinking is
+     * never run: closed `<think>…</think>` blocks, everything before a lone `</think>` (the
+     * template opened thinking in the prompt) and an unclosed `<think>` to the end. Gemma 4 /
+     * K2 reasoning tags are mapped to `<think>` first.
+     */
+    fun outsideThink(raw: String): String {
+        var t = k2Normalize(raw)
+        if (t.contains(ChannelThinkTags.OPEN)) t = com.iris.localai.engine.ChannelThink.convert(t)
+        t = THINK.replace(t, "")
+        val close = t.lastIndexOf("</think>", ignoreCase = true)
+        if (close >= 0) t = t.substring(close + "</think>".length)
+        val open = t.indexOf("<think>", ignoreCase = true)
+        if (open >= 0) t = t.substring(0, open)
+        return t
+    }
+
+    private object ChannelThinkTags { const val OPEN = "<|channel>" }
+
     internal fun tolerant(reply: String): Pair<ToolCall, String>? {
-        val text = THINK.replace(reply, "").replace("<think>", "").replace("</think>", "").trim()
+        val text = outsideThink(reply).trim()
         if (text.isEmpty()) return null
         val segments = ArrayList<Int>() // start offsets of candidate bodies; the whole text is offset 0
         FENCE_OPEN.findAll(text).forEach { segments += (it.range.last + 1).coerceAtMost(text.length) }
@@ -431,7 +450,7 @@ object ToolCallParser {
     }
 
     private fun parseStrict(reply: String): ParsedReply {
-        val text = THINK.replace(reply, "").trim()
+        val text = outsideThink(reply).trim()
 
         // 1) Qwen tag (trained format of Agents-A1 / Qwen3): first <tool_call> wins.
         QWEN_OPEN.find(text)?.let { open ->
@@ -535,7 +554,9 @@ object ToolCallParser {
      */
     fun callEnd(streamed: CharSequence): Int? {
         val s = streamed.toString()
-        val noThinkStart = thinkEnd(s)
+        // 2.2.14: nothing written while thinking is still open ends the turn (calls there are only mentions).
+        if (openThinkAt(k2Normalize(s)) >= 0 || s.lastIndexOf("<|channel>") > s.lastIndexOf("<channel|>")) return null
+        val noThinkStart = thinkEnd(s).let { e -> if (s.contains("ifm|think")) maxOf(e, k2ThinkEnd(s)) else e }
         // 2.2.13: K2 Horizon `<ifm|tool_call>…</ifm|tool_call>` ends at its own close tag.
         s.indexOf(K2_CALL_OPEN, noThinkStart).let { k ->
             if (k >= 0) {
@@ -727,11 +748,12 @@ object ToolCallParser {
      * ([callEnd] stops the stream right after it), or null. The answer part of such a turn is
      * empty, so without this the call was neither run nor shown.
      */
-    fun callInOpenThink(raw: String): String? {
-        val open = openThinkAt(raw)
-        if (open < 0) return null
-        val r = parse(raw.substring(open + "<think>".length))
-        return (r as? ParsedReply.Call)?.call?.canonical()
+    @Deprecated("2.2.14: calls inside thinking are never run")
+    fun callInOpenThink(@Suppress("UNUSED_PARAMETER") raw: String): String? = null
+
+    private fun k2ThinkEnd(s: String): Int {
+        val m = Regex("</ifm\\|think(?:_fast|_faster)?>").findAll(s).lastOrNull() ?: return 0
+        return m.range.last + 1
     }
 
     /** Where the answer starts: after a closed think block, or 0. An unclosed one hides nothing. */

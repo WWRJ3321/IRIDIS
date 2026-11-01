@@ -29,7 +29,7 @@ internal object GuiAgentText {
     const val RESTRICTED = "系统提示「受限设置」时：点按这里打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启"
     /** 2.1.9: 清后台 turns the service off on HyperOS. */
     const val KEEP = "清后台会让系统关掉无障碍：在最近任务里把 IRIDIS 加锁，省电策略设为无限制。" +
-        "想掉了自动重开：电脑上执行一次 adb shell pm grant com.iridis android.permission.WRITE_SECURE_SETTINGS"
+        "想掉了自动重开：设置 › 智能体 › 无障碍保活（Shizuku 一键授权或 adb 命令）"
     const val SELF_ON = "已授权：被系统关掉后会自动重新开启"
     const val NOTE = "看屏幕 → 思考 → 操作。需要能识图的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。" +
         "运行时可随时在顶部悬浮条停止；支付、发送、删除前会先问你。"
@@ -66,10 +66,6 @@ fun GuiAgentSection() {
             onClick = { IrisAccessibilityService.openSettings(context) },
             trailing = { com.iris.localai.ui.components.Chevron() },
         )
-        Divider()
-        SettingsRow("防止掉线", icon = IrisIcons.Info,
-            subtitle = if (IrisAccessibilityService.canSelfEnable(context)) GuiAgentText.SELF_ON else GuiAgentText.KEEP,
-            onClick = { IrisAccessibilityService.openAppInfo(context) })
         if (!connected) {
             Divider()
             SettingsRow("允许受限制的设置", icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
@@ -99,6 +95,7 @@ fun GuiAgentSection() {
     }
     if (run.lines.isNotEmpty()) GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true)
     GroupFootnote(GuiAgentText.NOTE)
+    A11yKeepAliveCard()
 
     if (asking) {
         TextInputDialog(

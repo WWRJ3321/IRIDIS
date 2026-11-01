@@ -51,7 +51,7 @@ data class ModelOverrides(
     fun sanitized(): ModelOverrides = copy(
         backend = Backend.parse(backend)?.name,
         contextLength = contextLength?.coerceIn(512, 131072),
-        maxNewTokens = maxNewTokens?.coerceIn(64, 16384),
+        maxNewTokens = maxNewTokens?.let { TokenLimit.sanitize(it) },
         temperature = temperature?.clampOr(0f, 2f, 0.7f),
         topP = topP?.clampOr(0.05f, 1f, 0.95f),
         topK = topK?.coerceIn(0, 200),
@@ -166,4 +166,27 @@ class ModelConfigRepository(context: Context) {
             if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         }
     }
+}
+
+
+/** 2.2.14: 「无限」 max reply length — a sentinel above the slider's range. */
+object TokenLimit {
+    const val UNLIMITED = 1_000_000
+    const val LABEL = "无限"
+
+    fun isUnlimited(n: Int): Boolean = n >= UNLIMITED
+    fun sanitize(n: Int): Int = if (isUnlimited(n)) UNLIMITED else n.coerceIn(64, 16384)
+    fun label(n: Int, unit: String = ""): String = if (isUnlimited(n)) LABEL else "$n$unit"
+
+    /** Slider position: 「无限」 sits one [step] past [max]. */
+    fun toSlider(n: Int, max: Int, step: Int): Float = if (isUnlimited(n)) (max + step).toFloat() else n.toFloat()
+    fun fromSlider(v: Float, max: Int, step: Int): Int =
+        if (v > max + step / 2f) UNLIMITED else ((v / step).toInt() * step).coerceIn(step, max)
+
+    /**
+     * What the engine gets: llama.cpp stops at the context end itself (or shifts), other engines
+     * get the context length so nothing allocates for a million tokens.
+     */
+    fun resolve(n: Int, contextLength: Int, llama: Boolean): Int =
+        if (!isUnlimited(n)) n else if (llama) UNLIMITED else contextLength.coerceAtLeast(256)
 }

@@ -96,6 +96,16 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
     return JNI_VERSION_1_6;
 }
 
+JNIEXPORT jint JNICALL
+Java_com_iris_localai_engine_llama_LlamaNative_nativeGpuTicks(JNIEnv *, jclass) {
+    return (jint) iris::gpu_init_ticks();
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_engine_llama_LlamaNative_nativeGpuLastLog(JNIEnv *env, jclass) {
+    return env->NewStringUTF(iris::gpu_last_log().c_str());
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_iris_localai_engine_llama_LlamaNative_nativeCreate(JNIEnv *, jobject) {
     return reinterpret_cast<jlong>(new iris::Engine());

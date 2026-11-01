@@ -262,6 +262,7 @@ fun ChatScreen(
     }
 
     androidx.compose.runtime.CompositionLocalProvider(com.iris.localai.ui.components.LocalGlassHaze provides haze) {
+    val trash by vm.trash.collectAsStateWithLifecycle()
     ModalNavigationDrawer(
         drawerState = drawer,
         scrimColor = com.iris.localai.ui.components.LARGE_SCRIM,
@@ -282,6 +283,10 @@ fun ChatScreen(
                 onImageGen = { scope.launch { drawer.close() }; onOpenImageGen() },
                 runningId = backgroundRunId,
                 open = drawer.targetValue == DrawerValue.Open,
+                trash = trash,
+                onRestore = vm::restoreChat,
+                onPurge = vm::purgeChat,
+                onEmptyTrash = vm::emptyTrash,
             )
         },
     ) {
@@ -375,11 +380,13 @@ fun ChatScreen(
             // ---- Message list: top-down, newest at the bottom ----
             Box(Modifier.fillMaxSize().glassBackdrop(haze).glassSource(backdrop, Iris.colors.chatBackground)) {
                 // 2.1.4 外观 › 自定义背景 (inside the glass source so the composer glass blurs it too).
-                com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
+                // 2.2.14 纯色背景: no picture, blend or glow.
+                val solidBg = settings.solidBackground
+                if (!solidBg) com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
                 // 2.2.10: 动态混色背景 (off = the 2.2.9 look exactly: static glow on the empty home only).
-                if (settings.dynamicBlend && settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeDynamicBlend()
+                if (!solidBg && settings.dynamicBlend && settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeDynamicBlend()
                 if (messages.isEmpty()) {
-                    if (settings.backgroundImage.isEmpty() && !settings.dynamicBlend) com.iris.localai.ui.components.HomeAmbientGlow()
+                    if (!solidBg && settings.backgroundImage.isEmpty() && !settings.dynamicBlend) com.iris.localai.ui.components.HomeAmbientGlow()
                     ChatEmptyState(
                         modelName = ui.readyModel?.displayName,
                         engine = ui.engine,
@@ -467,7 +474,7 @@ fun ChatScreen(
             // ---- Top bar: solid, no translucent scrim over the messages (user request, 1.5.0) ----
             // 2.1.5: with a custom background the bar (status-bar area included) is see-through like
             // the cards, so the picture runs full-bleed to the top edge instead of being cut off.
-            val hasBgImage = settings.backgroundImage.isNotEmpty()
+            val hasBgImage = settings.backgroundImage.isNotEmpty() && !settings.solidBackground
             // 2.2.4: Kimi-style floating top bar — no flat full-width bar; two round buttons and a
             // model pill float on a transparent background so the chat scrolls under them.
             Column(
@@ -804,7 +811,17 @@ private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, h
             )
             Spacer(Modifier.width(IrisDimens.space8))
         }
-        Text("模型", style = IrisType.pillTitle, color = c.text, maxLines = 1)
+        // 2.2.14: loaded (or loading) → the model's short name, ellipsized; none → 「模型」.
+        val name = when (engine) {
+            is EngineState.Ready -> engine.model
+            is EngineState.Loading -> engine.model
+            else -> null
+        }?.let { com.iris.localai.data.ModelNames.short(it.displayName) }
+        Text(
+            name ?: "模型", style = IrisType.pillTitle, color = c.text, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 168.dp),
+        )
     }
     Icon(
         Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary,

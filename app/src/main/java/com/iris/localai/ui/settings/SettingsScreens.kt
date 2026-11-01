@@ -358,7 +358,7 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
 
             SectionTitle("长度与采样")
             SettingsGroup {
-                SliderRow("最大回复长度", s.maxNewTokens.toFloat(), 256f..8192f, "${s.maxNewTokens} tokens", subtitle = SettingsText.MAX_NEW) { v -> vm.update { it.copy(maxNewTokens = (v / 256).toInt() * 256) } }
+                SliderRow("最大回复长度", com.iris.localai.data.TokenLimit.toSlider(s.maxNewTokens, 8192, 256), 256f..8448f, com.iris.localai.data.TokenLimit.label(s.maxNewTokens, " tokens"), subtitle = SettingsText.MAX_NEW) { v -> vm.update { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 256)) } }
                 Divider()
                 SliderRow("温度", s.temperature, 0f..2f, f2(s.temperature), subtitle = "越高越有创意，越低越稳定；0 为确定性输出") { v -> vm.update { it.copy(temperature = (v * 20).toInt() / 20f) } }
                 Divider()
@@ -907,8 +907,15 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
             SectionTitle("背景")
             SettingsGroup {
                 val hasBg = s.backgroundImage.isNotEmpty()
+                // 2.2.14
                 SwitchRow(
-                    "动态混色背景", s.dynamicBlend,
+                    "纯色背景", s.solidBackground,
+                    subtitle = "只用一种颜色：不用渐变、混色、毛玻璃和背景图",
+                    icon = com.iris.localai.ui.icons.IrisIcons.Image,
+                ) { on -> vm.update { it.copy(solidBackground = on) } }
+                Divider()
+                SwitchRow(
+                    "动态混色背景", s.dynamicBlend, enabled = !s.solidBackground,
                     subtitle = if (hasBg) "首页顶部颜色缓慢流动（使用自定义背景时不显示）" else "首页顶部颜色缓慢流动，跟随主题色；省电时静止",
                     icon = com.iris.localai.ui.icons.IrisIcons.Image,
                 ) { on -> vm.update { it.copy(dynamicBlend = on) } }

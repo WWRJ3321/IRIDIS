@@ -33,6 +33,13 @@ object LlamaNative {
         }
     }
 
+    /** 2.2.14: OpenCL init/compile progress ticks (changes = not hung) and the last ggml_opencl log line. */
+    @JvmStatic external fun nativeGpuTicks(): Int
+    @JvmStatic external fun nativeGpuLastLog(): String
+
+    fun gpuTicks(): Int = if (unavailableReason == null) runCatching { nativeGpuTicks() }.getOrDefault(0) else 0
+    fun gpuLastLog(): String = if (unavailableReason == null) runCatching { nativeGpuLastLog() }.getOrDefault("") else ""
+
     @JvmStatic external fun nativeCreate(): Long
     @JvmStatic external fun nativeDestroy(handle: Long)
     @JvmStatic external fun nativeLoad(

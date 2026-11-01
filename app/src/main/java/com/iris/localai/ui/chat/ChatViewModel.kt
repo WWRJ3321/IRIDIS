@@ -307,6 +307,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 scheduleWarmUp()
             }
         }
+        c.conversations.purgeHook = { conv -> discardAttachments(com.iris.localai.data.MessageVersions.allAttachments(conv.messages)) }
         viewModelScope.launch {
             c.conversations.init()
             c.models.refresh()
@@ -355,6 +356,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         viewModelScope.launch { if (v.messages.isNotEmpty()) c.conversations.load(v.id)?.let { if (viewing.value == null && conversation.value.id == it.id) conversation.value = it } }
     }
 
+    // ---- 2.2.14: 回收站 ----
+    val trash = c.conversations.trash
+    fun restoreChat(id: String) = viewModelScope.launch { deletedIds -= id; c.conversations.restore(id) }
+    fun purgeChat(id: String) = viewModelScope.launch { c.conversations.purge(id) }
+    fun emptyTrash() = viewModelScope.launch { c.conversations.emptyTrash() }
+
     fun delete(id: String) = viewModelScope.launch {
         if (viewing.value?.id == id) viewing.value = Conversation()
         if (conversation.value.id == id) {
@@ -363,9 +370,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             genJob?.let { j -> kotlinx.coroutines.withTimeoutOrNull(3000) { j.join() } ?: j.cancelAndJoin() }
             deletedIds += id
         }
-        // 1.10.12: the conversation's attachment copies go with it.
-        // 2.0.x: including those of stored message versions / branches.
-        runCatching { c.conversations.load(id)?.messages?.let { com.iris.localai.data.MessageVersions.allAttachments(it) } }.getOrNull()?.let { discardAttachments(it) }
+        // 2.2.14: to 回收站; attachment copies are discarded only when it is purged (purgeHook).
         c.conversations.delete(id)
         c.agent.plans.clear(id)
         if (conversation.value.id == id) conversation.value = Conversation()
@@ -616,6 +621,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     // ------------------------------------------------------------------ messaging
 
     /** 2.1.9: the guide to show after `screen` was blocked (无障碍 off / no vision model); null = none. */
+    // 2.2.14: the overlay's 停止 also stops this chat's agent turn.
+    private val guiStopHook: () -> Unit = { viewModelScope.launch { stop() } }
+    init { c.gui.onUserStop = guiStopHook }
     val guiSetup: StateFlow<com.iris.localai.agent.GuiBlocker?> get() = c.gui.setup
     fun dismissGuiSetup() = c.gui.dismissSetup()
 
@@ -1040,6 +1048,32 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     private fun persist() = save(conversation.value)
 
+    /** 2.2.14: after the first reply the loaded model writes a short title (first user line stays otherwise). */
+    private suspend fun autoTitle() {
+        val conv = conversation.value
+        val users = conv.messages.filter { it.role == Role.USER }
+        val answer = conv.messages.lastOrNull { it.role == Role.ASSISTANT && it.error == null && it.content.isNotBlank() }
+        if (!com.iris.localai.util.title.TitleGen.due(users.size, answer != null, conv.titled)) return
+        if (c.engine.state.value !is EngineState.Ready || viewingOther()) return
+        conversation.update { it.copy(titled = true) }
+        val out = StringBuilder()
+        val ok = runCatching {
+            kotlinx.coroutines.withTimeoutOrNull(20_000) {
+                c.engine.generate(
+                    com.iris.localai.util.title.TitleGen.messages(users.first().content, ThinkParser.parse(answer!!.content).answer),
+                    c.engine.samplingFor(disableThinking = true).copy(temperature = 0.2f, maxNewTokens = com.iris.localai.util.title.TitleGen.MAX_TOKENS, contextShift = false),
+                    Requester.CHAT, engineOwner,
+                ).collect { ev -> if (ev is GenEvent.Piece) out.append(ev.text) }
+                true
+            } == true
+        }.getOrDefault(false)
+        val title = if (ok) com.iris.localai.util.title.TitleGen.clean(ThinkParser.parse(out.toString()).answer) else null
+        if (conversation.value.id == conv.id) {
+            if (title != null) conversation.update { it.copy(title = title) }
+            persist()
+        } else if (title != null) runCatching { c.conversations.rename(conv.id, title) }
+    }
+
     private fun titleFrom(text: String): String {
         val line = text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().trim()
         return if (line.length <= 24) line else line.take(24) + "…"
@@ -1227,6 +1261,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 if (genJob === job || genJob?.isActive != true) adoptViewing()
                 // 2.1.7: answer what was queued while this reply ran.
                 if (genJob === job) drainQueue()
+                if (genJob?.isActive != true) autoTitle()
             }
         }
         // 2.1.8: watch the reply until it ends; load progress counts as a sign of life.
@@ -2048,6 +2083,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     override fun onCleared() {
+        if (c.gui.onUserStop === guiStopHook) c.gui.onUserStop = null
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.removeObserver(awayObserver)
         voice.stop()
         dictation.cancel()

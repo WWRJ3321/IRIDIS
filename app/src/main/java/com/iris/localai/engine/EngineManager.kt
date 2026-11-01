@@ -317,6 +317,16 @@ class EngineManager(
      */
     suspend fun preloadAtStart(): PreloadDecision {
         val s = settings.current
+        // 2.2.14: the previous process restarted because a GPU load hung → reload that model on CPU.
+        crashMemory.takePendingCpuReload()?.let { file ->
+            models.refresh()
+            val pm = models.find(file)
+            if (pm != null) {
+                _preloadSkipNotice.value = GpuLoadWatchdog.HANG_NOTICE
+                load(pm, reason = "GPU 卡住后改用 CPU")
+                return PreloadDecision.LOAD
+            }
+        }
         if (s.autoLoadLastModel && !s.lastModelFile.isNullOrBlank()) models.refresh()
         val m = models.find(s.lastModelFile)
         val blocked = startupGuard.blockAutoLoad()
@@ -355,7 +365,18 @@ class EngineManager(
             // 2.2.13: the previous load crashed the app → this one runs on CPU only and says so.
             val safeMode = crashMemory.takeSafeMode()
             if (safeMode) _preloadSkipNotice.value = SAFE_MODE_NOTICE
-            val preferred = if (cpuOnly || safeMode) Backend.CPU else preferredBackend(model, cfg, useTier)
+            // 2.2.14: OpenCL hung on this device before → GGUF starts on CPU (retry in model settings).
+            val clHung = model.format == ModelFormat.GGUF && crashMemory.openClHung
+            val preferred = if (cpuOnly || safeMode) Backend.CPU
+                else preferredBackend(model, cfg, useTier).let { if (clHung && it == Backend.GPU) Backend.CPU else it }
+            // 2.2.14: free RAM vs. model + context; warn (never block) before a likely OOM crash.
+            runCatching {
+                val mi = android.app.ActivityManager.MemoryInfo()
+                appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
+                val v = MemoryPreflight.check(mi.availMem, model.sizeBytes, cfg.contextLength, preferred == Backend.GPU)
+                Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)}")
+                v.message?.let { _notices.tryEmit("${model.displayName}：$it") }
+            }
             val crashed = crashMemory.crashed(model.id)
             val chain = if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed)
             val errors = StringBuilder()
@@ -379,6 +400,7 @@ class EngineManager(
                     val loadStart = System.currentTimeMillis()
                     // 1.10.3: GPU compile-cache guards — a load that never finished last time, too little space.
                     val marker = gpuLoadMarker(model, backend)
+                    val watchdog = if (model.format == ModelFormat.GGUF && backend == Backend.GPU) startGpuWatchdog(model) else null
                     try {
                         details = e.load(
                             model,
@@ -400,12 +422,14 @@ class EngineManager(
                                 _state.value = EngineState.Loading(model, p, since, applyingTier, backend)
                             }
                         }
+                        watchdog?.cancel()
                         crashMemory.disarm()
                         marker?.let { runCatching { it.delete() } }
                         recordLoad(model, backend, System.currentTimeMillis() - loadStart, details, ok = true, reason = reason)
                         guardFirstGeneration = if (backend != Backend.CPU) model.id to backend else null
                         break
                     } catch (t: Throwable) {
+                        watchdog?.cancel()
                         crashMemory.disarm()
                         marker?.let { runCatching { it.delete() } }
                         if (t !is CancellationException) recordLoad(model, backend, System.currentTimeMillis() - loadStart, null, ok = false, reason = reason)
@@ -492,6 +516,40 @@ class EngineManager(
             marker.writeText(System.currentTimeMillis().toString())
             marker
         }.getOrNull()
+    }
+
+    /**
+     * 2.2.14: watches a llama.cpp GPU load. The JNI call cannot be interrupted and holds the one
+     * native thread, so a hang (no progress for [GpuLoadWatchdog.TIMEOUT_MS]) is handled by
+     * remembering it, restarting the process and reloading the model on CPU at the next start.
+     */
+    private fun startGpuWatchdog(model: LocalModel): Job = scope.launch {
+        val wd = GpuLoadWatchdog()
+        val cacheDir = java.io.File(appContext.cacheDir, "opencl")
+        fun sig(): Long = GpuLoadWatchdog.signature(
+            (_state.value as? EngineState.Loading)?.progress ?: 0f,
+            com.iris.localai.engine.llama.LlamaNative.gpuTicks(),
+            cacheDir.list()?.size ?: 0,
+        )
+        wd.start(System.currentTimeMillis(), sig())
+        while (true) {
+            kotlinx.coroutines.delay(1000)
+            val now = System.currentTimeMillis()
+            if (!wd.observe(now, sig())) continue
+            val detail = GpuLoadWatchdog.hangDetail(
+                com.iris.localai.engine.llama.LlamaNative.gpuTicks(),
+                com.iris.localai.engine.llama.LlamaNative.gpuLastLog(), wd.stalledFor(now),
+            )
+            Log.w(LoadTelemetry.TAG, "GPU load hang: ${model.fileName}: $detail")
+            crashMemory.markOpenClHung(detail, model.fileName)
+            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                runCatching { android.widget.Toast.makeText(appContext, GpuLoadWatchdog.HANG_NOTICE, android.widget.Toast.LENGTH_LONG).show() }
+            }
+            kotlinx.coroutines.delay(1200)
+            com.iris.localai.util.AppRestart.restart(appContext)
+            break
+        }
     }
 
     /** 1.10.2: stores + logs one load (adb logcat -s IrisLoad). */
@@ -586,7 +644,7 @@ class EngineManager(
             topK = cfg.topK,
             minP = cfg.minP,
             repeatPenalty = cfg.repeatPenalty,
-            maxNewTokens = cfg.maxNewTokens,
+            maxNewTokens = com.iris.localai.data.TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF),
             disableThinking = disableThinking,
             threads = plan.threads,
             repeatLastN = cfg.repeatLastN,

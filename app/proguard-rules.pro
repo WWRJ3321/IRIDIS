@@ -59,3 +59,7 @@
 -dontwarn com.geniex.sdk.**
 # Vlm.extractMediaPaths returns a kotlin.Pair built in native code.
 -keep class kotlin.Pair { <init>(...); *; }
+
+# 2.2.14 Shizuku (newProcess is reached by reflection)
+-keep class rikka.shizuku.** { *; }
+-keep class moe.shizuku.** { *; }

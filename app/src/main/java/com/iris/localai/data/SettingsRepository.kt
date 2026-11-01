@@ -89,7 +89,7 @@ fun AppSettings.sanitized(): AppSettings {
         topK = topK.coerceIn(0, 200),
         minP = minP.clampOr(0f, 0.5f, d.minP),
         repeatPenalty = repeatPenalty.clampOr(1f, 2f, d.repeatPenalty),
-        maxNewTokens = maxNewTokens.coerceIn(64, 16384),
+        maxNewTokens = TokenLimit.sanitize(maxNewTokens),
         contextLength = contextLength.coerceIn(512, 131072),
         threads = threads.coerceIn(0, 12),
         powerMode = powerMode.coerceIn(0, 2),

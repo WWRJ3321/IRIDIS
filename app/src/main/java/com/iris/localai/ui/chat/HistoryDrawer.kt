@@ -102,6 +102,10 @@ fun HistoryDrawer(
     onImageGen: () -> Unit = {},
     runningId: String? = null,
     open: Boolean = true,
+    trash: List<com.iris.localai.data.TrashEntry> = emptyList(),
+    onRestore: (String) -> Unit = {},
+    onPurge: (String) -> Unit = {},
+    onEmptyTrash: () -> Unit = {},
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
@@ -111,6 +115,7 @@ fun HistoryDrawer(
     // 1.13.2: long press → multi-select (user: 一个一个删除太麻烦了).
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deletingMany by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
     val selecting = selected.isNotEmpty()
     // Selections of conversations that no longer exist drop out.
     LaunchedEffect(summaries) { if (selecting) selected = selected.intersect(summaries.map { it.id }.toSet()) }
@@ -235,6 +240,16 @@ fun HistoryDrawer(
             }
         }
         if (!selecting) {
+        // 2.2.14: 回收站 entry.
+        Text(
+            if (trash.isEmpty()) "回收站" else "回收站 · ${trash.size}",
+            style = IrisType.caption, color = c.textSecondary,
+            modifier = Modifier
+                .padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4)
+                .clip(IrisRadius.smallShape)
+                .clickable { showTrash = true }
+                .padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
+        )
         // 2.1: one row of icon buttons instead of five stacked rows — more room for the list.
         Row(
             Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
@@ -254,7 +269,7 @@ fun HistoryDrawer(
         val n = selected.size
         ConfirmDialog(
             title = "删除 $n 个对话？",
-            message = "选中的对话将被永久删除。" + if (runningId != null && runningId in selected) "其中正在运行的对话会先停止。" else "",
+            message = "选中的对话将移到回收站，30 天后自动删除。" + if (runningId != null && runningId in selected) "其中正在运行的对话会先停止。" else "",
             confirmText = "删除",
             onConfirm = { selected.forEach(onDelete); selected = emptySet() },
             onDismiss = { deletingMany = false },
@@ -272,12 +287,13 @@ fun HistoryDrawer(
     deleting?.let { s ->
         ConfirmDialog(
             title = "删除对话？",
-            message = "“${s.title.ifBlank { "新对话" }}”将被永久删除。",
+            message = "“${s.title.ifBlank { "新对话" }}”将移到回收站，30 天后自动删除。",
             confirmText = "删除",
             onConfirm = { onDelete(s.id) },
             onDismiss = { deleting = null },
         )
     }
+    if (showTrash) TrashSheet(trash, onRestore, onPurge, onEmptyTrash, onDismiss = { showTrash = false })
 }
 
 /** 2.1: short labels of the drawer's bottom navigation. */

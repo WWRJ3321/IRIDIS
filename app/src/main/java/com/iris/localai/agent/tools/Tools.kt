@@ -396,9 +396,10 @@ object GenerateImageTool : SuspendTool {
         else models.first()
         val backend = env.imageGen!!
         val req = request(p, model, init?.path)
-        progress("生成中…")
+        // 2.2.14: the model in use is always named.
+        progress("${model.name} 生成中…")
         val png = try {
-            backend.generate(req, model) { step, total -> progress("生成中 $step/$total") }
+            backend.generate(req, model) { step, total -> progress("${model.name} 生成中 $step/$total") }
         } catch (e: kotlinx.coroutines.CancellationException) {
             backend.cancel(); throw e
         }.getOrElse { e -> return ToolResult(false, "Error: image generation failed: ${e.message ?: e.javaClass.simpleName}", (e.message ?: "生图失败").take(40)) }
@@ -406,8 +407,8 @@ object GenerateImageTool : SuspendTool {
         val rel = if (env.sandbox.inside(file.canonicalFile)) env.sandbox.relative(file) else file.path
         return ToolResult(
             true,
-            "saved: $rel (seed ${req.seed}, ${req.width}x${req.height})",
-            "已保存 $rel",
+            "saved: $rel (model ${model.name}, seed ${req.seed}, ${req.width}x${req.height})",
+            "已用 ${model.name} 生成 $rel",
             images = listOf(rel),
         )
     }

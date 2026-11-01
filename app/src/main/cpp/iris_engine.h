@@ -101,6 +101,9 @@ using ProgressCallback = std::function<bool(float)>;
 /// `min_level` are dropped. Pass nullptr to silence everything.
 using LogSink = void (*)(int level, const char *text);
 void set_log_sink(LogSink sink, int min_level);
+// 2.2.14: OpenCL progress ticks / last ggml_opencl log line (watchdog, hang report).
+int gpu_init_ticks();
+std::string gpu_last_log();
 
 /// Returns the number of leading bytes of `s` that form complete UTF-8 sequences.
 size_t utf8_complete_prefix(std::string_view s);

@@ -131,6 +131,9 @@ internal val IrisDarkColors = IrisColors(
 
 val LocalIrisColors = staticCompositionLocalOf { IrisLightColors }
 
+/** 2.2.14 纯色背景 is on: decorative gradients / glows / top fades draw nothing. */
+val LocalSolidBackground = staticCompositionLocalOf { false }
+
 
 object Iris {
     val colors: IrisColors @Composable get() = LocalIrisColors.current
@@ -161,6 +164,8 @@ fun IrisTheme(
     palette: IrisPalette = IrisPalette.DEFAULT,
     /** 2.1.4: a custom chat background is set → cards and bubbles turn slightly see-through. */
     backdrop: Boolean = false,
+    /** 2.2.14 纯色背景. */
+    solid: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dark = when (mode) {
@@ -168,7 +173,7 @@ fun IrisTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val c = palette.colors(dark).let { if (backdrop) it.overBackdrop() else it }
+    val c = palette.colors(dark).let { if (solid) it.solid() else if (backdrop) it.overBackdrop() else it }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -213,6 +218,7 @@ fun IrisTheme(
     MaterialTheme(colorScheme = scheme, typography = IrisTypography) {
         CompositionLocalProvider(
             LocalIrisColors provides c,
+            LocalSolidBackground provides solid,
             LocalGlassQuality provides glassQuality,
             LocalReduceMotion provides reduceMotion,
             // 2.1.4: text selection follows the theme accent.

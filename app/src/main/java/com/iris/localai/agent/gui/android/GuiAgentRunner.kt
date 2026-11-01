@@ -208,10 +208,22 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     @Volatile private var lineSink: (String) -> Unit = {}
     @Volatile private var handOverSink: () -> Unit = {}
 
+    /** 2.2.14: the chat whose agent started this run; 停止 ends that agent turn too (no re-call of `screen`). */
+    @Volatile var onUserStop: (() -> Unit)? = null
+
+    /**
+     * 2.2.14: 停止 takes effect at once: flag for the loop, overlay (and any pending question)
+     * removed now, the step's generation and the run cancelled, and the chat agent turn ended.
+     */
     fun stop() {
         GuiStopSignal.request()
+        GuiOverlay.hide()
+        ticker?.cancel(); ticker = null
         job?.cancel()
         chatInner?.cancel()
+        chatRun?.cancel()
+        _state.value = _state.value.copy(running = false, result = "已停止")
+        runCatching { onUserStop?.invoke() }
     }
 
     private val callbacks = object : GuiCallbacks {

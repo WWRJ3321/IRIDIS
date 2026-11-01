@@ -175,6 +175,16 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
 
             full {
                 Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space12)) {
+                    // 2.2.14: which model this generates with (and on what), always visible.
+                    Text(
+                        (if (s.running) "正在用：" else "将使用：") + s.model.name + " · " + when (s.model.backend) {
+                            com.iris.localai.imagegen.Backend.QNN, com.iris.localai.imagegen.Backend.HEXAGON -> "NPU"
+                            com.iris.localai.imagegen.Backend.MNN_CPU -> "CPU"
+                        } +
+                            (if (s.modelId in s.downloaded) "" else "（未下载）"),
+                        style = IrisType.caption, color = Iris.colors.accent,
+                        modifier = Modifier.padding(bottom = IrisDimens.space6),
+                    )
                     if (s.running) {
                         IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
                         Spacer(Modifier.height(IrisDimens.space6))

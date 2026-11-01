@@ -146,7 +146,8 @@ object GuiActionParser {
     }
 
     private fun parseAction(raw: String, profile: GuiProfile): GuiAction? {
-        val stripped = THINK.replace(raw, "")
+        // 2.2.14: actions only outside reasoning (unclosed <think> / lone </think> too).
+        val stripped = com.iris.localai.agent.ToolCallParser.outsideThink(THINK.replace(raw, ""))
         TOOL_CALL.find(stripped)?.let { return fromMobileUse(it.groupValues[1].trim(), profile) }
         val answer = ANSWER.find(stripped)?.groupValues?.get(1)?.trim() ?: stripped
         CALL.find(answer)?.let { m -> return fromAutoGlm(answer.substring(m.range.first), profile) }

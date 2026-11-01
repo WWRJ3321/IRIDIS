@@ -109,11 +109,15 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 ) { set { it.copy(backend = null) } }
                 options.forEach { opt ->
                     Divider()
-                    val crash = opt.backend in crashed
+                    // 2.2.14: an OpenCL hang on this device moves GGUF to CPU; retry clears it.
+                    val hung = opt.backend == Backend.GPU && model.format == com.iris.localai.data.ModelFormat.GGUF &&
+                        remember(crashTick) { engine.crashMemory.openClHung }
+                    val crash = opt.backend in crashed || hung
                     BackendRow(
                         opt.backend.label,
                         when {
                             !opt.available -> opt.reason ?: "不可用"
+                            hung -> "上次 GPU 加载卡住，已默认用 CPU · 点右侧重试"
                             crash -> "上次在此后端崩溃，自动加载时会跳过 · 点右侧清除"
                             else -> opt.detail
                         },
@@ -181,8 +185,8 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 }
                 Divider()
                 OvSlider(
-                    "最大生成长度", eff.maxNewTokens.toFloat(), o.maxNewTokens == null, 128f..8192f, "${eff.maxNewTokens}",
-                    onChange = { v -> set { it.copy(maxNewTokens = (v / 128).toInt() * 128) } },
+                    "最大生成长度", com.iris.localai.data.TokenLimit.toSlider(eff.maxNewTokens, 8192, 128), o.maxNewTokens == null, 128f..8320f, com.iris.localai.data.TokenLimit.label(eff.maxNewTokens),
+                    onChange = { v -> set { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 128)) } },
                     onReset = { set { it.copy(maxNewTokens = null) } },
                 )
             }

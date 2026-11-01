@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.layout
 import com.iris.localai.files.ArchiveMath
 import com.iris.localai.files.FileEntry
 import com.iris.localai.files.FilePreview
@@ -244,7 +245,13 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                             val slot = abs(k)
                             val layer = remember { ArchiveMath.Layer() }
                             Box(
-                                Modifier.align(Alignment.Center).zIndex((ArchiveMath.MAX_HALF_WINDOW - slot).toFloat())
+                                Modifier.align(Alignment.Center)
+                                    // 2.2.14: draw order follows the live scroll position (placement only, no
+                                    // recomposition): cards no longer swap layers abruptly mid-drag (flicker).
+                                    .layout { m, cons ->
+                                        val p = m.measure(cons)
+                                        layout(p.width, p.height) { p.place(0, 0, zIndex = ArchiveMath.drawOrder(logical - pos.floatValue)) }
+                                    }
                                     .width(cardWidth).height(CARD_HEIGHT)
                                     .graphicsLayer {
                                         val d = logical - pos.floatValue

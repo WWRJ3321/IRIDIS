@@ -281,8 +281,25 @@ class BackendCrashMemory(context: Context) {
     fun crashed(modelId: String): Set<Backend> =
         Backend.entries.filter { prefs.getBoolean(BAD_PREFIX + key(modelId, it), false) }.toSet()
 
+    /** 2.2.14: an OpenCL (llama.cpp GPU) load hung on this device; GGUF defaults to CPU until retried. */
+    val openClHung: Boolean get() = prefs.getBoolean(KEY_CL_HUNG, false)
+    val openClHangDetail: String? get() = prefs.getString(KEY_CL_HANG_DETAIL, null)
+
+    /** Written before the process restarts: remember the hang and which model to reload on CPU. */
+    fun markOpenClHung(detail: String, reloadFile: String) {
+        prefs.edit().remove(KEY_ARMED).putBoolean(KEY_CL_HUNG, true).putString(KEY_CL_HANG_DETAIL, detail)
+            .putString(KEY_PENDING_CPU, reloadFile).commit()
+    }
+
+    /** The model to reload on CPU after a GPU hang restart (read once). */
+    fun takePendingCpuReload(): String? {
+        val f = prefs.getString(KEY_PENDING_CPU, null) ?: return null
+        prefs.edit().remove(KEY_PENDING_CPU).commit()
+        return f
+    }
+
     fun forget(modelId: String) {
-        val e = prefs.edit().remove(KEY_NO_OPENCL)
+        val e = prefs.edit().remove(KEY_NO_OPENCL).remove(KEY_CL_HUNG).remove(KEY_CL_HANG_DETAIL)
         Backend.entries.forEach { e.remove(BAD_PREFIX + key(modelId, it)) }
         e.apply()
     }
@@ -296,6 +313,9 @@ class BackendCrashMemory(context: Context) {
         private const val KEY_ARMED = "armed"
         private const val KEY_SAFE_MODE = "safe_mode"
         private const val KEY_NO_OPENCL = "no_opencl"
+        private const val KEY_CL_HUNG = "opencl_hung"
+        private const val KEY_CL_HANG_DETAIL = "opencl_hang_detail"
+        private const val KEY_PENDING_CPU = "pending_cpu_reload"
         private const val BAD_PREFIX = "bad:"
     }
 }

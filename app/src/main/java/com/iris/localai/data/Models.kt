@@ -110,6 +110,8 @@ data class Conversation(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val messages: List<ChatMessage> = emptyList(),
+    /** 2.2.14: title written by the model or by the user (no more auto title). */
+    val titled: Boolean = false,
     val pinned: Boolean = false,
     /** 1.7.1: [ContextStrategy] ordinal for this conversation; null = the global default. */
     val contextStrategy: Int? = null,
@@ -331,6 +333,8 @@ data class AppSettings(
     val backgroundScrim: Int = 40,
     /** 2.2.10 外观 ›「动态混色背景」: drifting theme-colour blobs at the home top. Default off. */
     val dynamicBlend: Boolean = false,
+    /** 2.2.14 外观 ›「纯色背景」: one plain colour; no gradients, glow, blend, glass or picture. */
+    val solidBackground: Boolean = false,
     /** 2.2.10 语音 › 朗读引擎: "local" (本机模型 / 克隆音色) or "system" (Android 系统 TTS). */
     val ttsEngine: String = "local",
     /** 2.2.10 性能 ›「终止温度」°C (0 = off, 40–60): stop everything and unload all models. */
@@ -389,6 +393,13 @@ object ModelNames {
         }
         val cleaned = base.replace(Regex("[_-]+"), " ").replace(Regex("\\s+"), " ").trim()
         return polish(cleaned).ifEmpty { fileName }
+    }
+
+    /** 2.2.14: the home pill's name: display name without packaging words (GGUF / MNN / Instruct / Chat). */
+    fun short(display: String): String {
+        val n = display.replace(Regex("(?i)(?<=\\s|^)(gguf|mnn|instruct|chat|hf)(?=\\s|$)"), " ")
+            .replace(Regex("\\s+"), " ").trim()
+        return n.ifEmpty { display }
     }
 
     /** "gemma 4 E2B it qualcomm sm8750" → "Gemma 4 E2B NPU": capitalised, no "it" suffix, chip tag → NPU. */

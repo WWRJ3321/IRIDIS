@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
             val streaming = generating != null
             val quality = com.iris.localai.ui.glass.GlassPolicy.resolve(
                 level = settings.visualEffects.coerceAtLeast(0),
-                glassSwitch = true,
+                glassSwitch = !settings.solidBackground,
                 powerSave = powerSave,
                 thermalStatus = thermal,
                 generating = streaming,
@@ -113,7 +113,8 @@ class MainActivity : ComponentActivity() {
                 mode = settings.themeMode, glassQuality = quality, reduceMotion = reduceMotion,
                 decorativeMotion = resumed && !streaming && !powerSave && settings.visualEffects != 0,
                 palette = com.iris.localai.ui.theme.IrisPalette.of(settings.themePalette),
-                backdrop = settings.backgroundImage.isNotEmpty(),
+                backdrop = settings.backgroundImage.isNotEmpty() && !settings.solidBackground,
+                solid = settings.solidBackground,
             ) {
                 // 1.14.7: first-launch welcome (carries the disclaimer) gates the app until accepted;
                 // fresh installs and upgrades see it once (welcomeAccepted defaults to false).

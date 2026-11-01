@@ -94,7 +94,11 @@ object ArchiveMath {
     }
 
     /** 「卡片」 fix: only the focused card shows its text; it fades out within half a card of scroll. */
-    fun contentAlpha(d: Float): Float = (1f - abs(d) * 2f).coerceIn(0f, 1f)
+    /** 2.2.14: neighbours show their text too (dimmer with distance), not only the focused card. */
+    fun contentAlpha(d: Float): Float = (1f - abs(d) * 0.35f).coerceIn(0f, 1f)
+
+    /** 2.2.14: continuous draw order (nearest to the focus on top), so overlapping cards never swap with a flash. */
+    fun drawOrder(d: Float): Float = MAX_DEPTH - abs(d).coerceAtMost(MAX_DEPTH)
 
     // ---------------------------------------------------------------- per-card depth
 
@@ -120,7 +124,8 @@ object ArchiveMath {
     private const val MAX_TILT_Y = 12f
 
     /** Vertical spacing curve: neighbours overlap more the further they are (monotonic up to [MAX_DEPTH]). */
-    fun spacing(a: Float): Float = a * 0.62f - 0.06f * a * a
+    // 2.2.14: wider (cards above / below stay readable instead of hiding under the focus).
+    fun spacing(a: Float): Float = a * 0.9f - 0.06f * a * a
 
     /**
      * Depth of a card at offset [d] from the focus. With [tilt] false (reduced motion) the stack

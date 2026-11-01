@@ -115,6 +115,7 @@ fun Modifier.glass(
     val colors = Iris.colors
     val tint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
     val rim = colors.glassRim
+    val solidBg = com.iris.localai.ui.theme.LocalSolidBackground.current
     val holder = remember { PanelState() }
     val panelLayer = rememberGraphicsLayer()
 
@@ -164,8 +165,8 @@ fun Modifier.glass(
                     }
                 }
                 // TRANSLUCENT draws only these: no offscreen work.
-                drawOutline(outline, tint)
-                if (style.sheen) drawOutline(outline, sheen)
+                drawOutline(outline, if (solidBg) tint.copy(alpha = 1f) else tint)
+                if (style.sheen && !solidBg) drawOutline(outline, sheen)
                 if (drawRim) drawOutline(outline, rimBrush, style = rimStroke, blendMode = BlendMode.SrcOver)
             }
         }

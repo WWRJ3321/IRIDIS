@@ -51,11 +51,13 @@ class IrisAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         if (instance === this) instance = null
         GuiOverlay.hide()
+        A11yKeepAlive.onDisconnected(applicationContext)
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        A11yKeepAlive.onDisconnected(applicationContext)
         super.onDestroy()
     }
 
@@ -114,6 +116,9 @@ class IrisAccessibilityService : AccessibilityService() {
 
 /** 2.1.9: the `:`-separated enabled-services list with [me] added once (unit-tested). */
 object A11yList {
+    fun remove(list: String, me: String): String =
+        list.split(':').map { it.trim() }.filter { it.isNotEmpty() && !it.equals(me, ignoreCase = true) }.joinToString(":")
+
     fun add(list: String, me: String): String {
         val items = list.split(':').map { it.trim() }.filter { it.isNotEmpty() }
         return if (items.any { it.equals(me, ignoreCase = true) }) items.joinToString(":") else (items + me).joinToString(":")

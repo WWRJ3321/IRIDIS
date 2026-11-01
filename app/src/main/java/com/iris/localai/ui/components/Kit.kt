@@ -160,7 +160,9 @@ fun IrisTopBar(
     Box(modifier.fillMaxWidth()) {
         // 2.2.13: light top fade (page background → transparent, status bar + ~56 dp) so content that
         // scrolls under the back button and title pill reads as fading out instead of colliding with them.
-        Box(
+        // 2.2.14 纯色背景: a plain bar in the page colour instead of the fade.
+        if (com.iris.localai.ui.theme.LocalSolidBackground.current) Box(Modifier.matchParentSize().background(c.background))
+        else Box(
             Modifier.matchParentSize().background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
                     0f to c.background.copy(alpha = 0.92f), 0.55f to c.background.copy(alpha = 0.6f), 1f to c.background.copy(alpha = 0f),

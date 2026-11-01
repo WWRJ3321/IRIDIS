@@ -54,6 +54,7 @@ class ConversationRepository(
             }.getOrNull()
             val list = fromIndex ?: rebuildIndexLocked()
             _summaries.value = sorted(list.filter { isSafeId(it.id) && fileOf(it.id).exists() })
+            runCatching { loadTrashLocked() }.onFailure { Log.w(TAG, "trash index failed", it) }
             initialized = true
         }
     }
@@ -67,6 +68,13 @@ class ConversationRepository(
     suspend fun save(conversation: Conversation) = withContext(io) {
         mutex.withLock { saveLocked(conversation) }
         notify { onSaved(conversation) }
+    }
+
+    /** 2.2.14: chats in 回收站, one at a time (their attachments are still referenced). */
+    suspend fun forEachTrashed(block: (Conversation) -> Unit) = withContext(io) {
+        for (t in _trash.value) mutex.withLock {
+            runCatching { json.decodeFromString<Conversation>(AtomicFile(trashFile(t.id)).readFully().decodeToString()) }.getOrNull()
+        }?.let(block)
     }
 
     /** 1.10.0: every saved conversation, one at a time (history index backfill). */
@@ -93,24 +101,120 @@ class ConversationRepository(
         publishLocked(next)
     }
 
-    suspend fun rename(id: String, title: String) = update(id) { it.copy(title = title.trim()) }
+    suspend fun rename(id: String, title: String) = update(id) { it.copy(title = title.trim(), titled = true) }
 
     suspend fun setPinned(id: String, pinned: Boolean) = update(id) { it.copy(pinned = pinned) }
 
+    // ---- 2.2.14: 回收站. Deleted chats move to a sibling folder and are purged after 30 days. ----
+
+    private val trashDir get() = File(dir.parentFile ?: dir, dir.name + "-trash")
+    private val _trash = MutableStateFlow<List<TrashEntry>>(emptyList())
+    val trash: StateFlow<List<TrashEntry>> = _trash.asStateFlow()
+
+    private fun trashFile(id: String) = File(trashDir, "$id.json")
+
+    /** Called with a chat as it leaves 回收站 for good (its attachment copies go with it). */
+    @Volatile var purgeHook: ((Conversation) -> Unit)? = null
+
+    private fun purgeFileLocked(id: String) {
+        val f = trashFile(id)
+        purgeHook?.let { h ->
+            runCatching { json.decodeFromString<Conversation>(AtomicFile(f).readFully().decodeToString()) }.getOrNull()
+                ?.let { c -> runCatching { h(c) } }
+        }
+        AtomicFile(f).delete()
+    }
+
+    private fun loadTrashLocked() {
+        val list = runCatching {
+            json.decodeFromString<List<TrashEntry>>(AtomicFile(File(trashDir, "index.json")).readFully().decodeToString())
+        }.getOrNull().orEmpty().filter { isSafeId(it.id) && trashFile(it.id).exists() }
+        val now = System.currentTimeMillis()
+        val (expired, keep) = list.partition { TrashPolicy.expired(it.deletedAt, now) }
+        expired.forEach { purgeFileLocked(it.id) }
+        publishTrashLocked(keep)
+    }
+
+    private fun publishTrashLocked(list: List<TrashEntry>) {
+        val s = list.sortedByDescending { it.deletedAt }
+        _trash.value = s
+        trashDir.mkdirs()
+        writeAtomic(File(trashDir, "index.json"), json.encodeToString(kotlinx.serialization.builtins.ListSerializer(TrashEntry.serializer()), s))
+    }
+
+    private fun moveToTrashLocked(id: String, now: Long) {
+        if (!isSafeId(id)) return
+        val src = fileOf(id)
+        val conv = loadLocked(id)
+        if (conv == null) { AtomicFile(src).delete(); return }
+        trashDir.mkdirs()
+        writeAtomic(trashFile(id), json.encodeToString(Conversation.serializer(), conv))
+        AtomicFile(src).delete()
+        _trashPending += TrashEntry(id, conv.title, now)
+    }
+
+    private val _trashPending = ArrayList<TrashEntry>()
+
+    private fun flushTrashLocked() {
+        if (_trashPending.isEmpty()) return
+        val ids = _trashPending.map { it.id }.toSet()
+        publishTrashLocked(_trash.value.filterNot { it.id in ids } + _trashPending)
+        _trashPending.clear()
+    }
+
+    /** Moves the chat to 回收站. */
     suspend fun delete(id: String) = withContext(io) {
         mutex.withLock {
-            if (isSafeId(id)) AtomicFile(fileOf(id)).delete()
+            moveToTrashLocked(id, System.currentTimeMillis())
+            flushTrashLocked()
             publishLocked(_summaries.value.filterNot { it.id == id })
         }
         notify { onDeleted(id) }
     }
 
-    suspend fun deleteAll() = withContext(io) {
+    /** [permanent] (存储页「删除全部聊天记录」) also empties 回收站; otherwise everything moves there. */
+    suspend fun deleteAll(permanent: Boolean = false) = withContext(io) {
         mutex.withLock {
-            dir.listFiles()?.forEach { it.delete() }
+            val now = System.currentTimeMillis()
+            if (permanent) {
+                _trash.value.forEach { AtomicFile(trashFile(it.id)).delete() }
+                publishTrashLocked(emptyList())
+            } else {
+                _summaries.value.forEach { moveToTrashLocked(it.id, now) }
+                flushTrashLocked()
+            }
+            dir.listFiles()?.forEach { if (it.isFile) it.delete() }
             publishLocked(emptyList())
         }
         notify { onDeletedAll() }
+    }
+
+    /** Back from 回收站 into the list (keeps its own dates). */
+    suspend fun restore(id: String): Conversation? = withContext(io) {
+        val conv = mutex.withLock {
+            if (!isSafeId(id)) return@withLock null
+            val c = runCatching { json.decodeFromString<Conversation>(AtomicFile(trashFile(id)).readFully().decodeToString()) }.getOrNull()
+            if (c != null) saveLocked(c)
+            AtomicFile(trashFile(id)).delete()
+            publishTrashLocked(_trash.value.filterNot { it.id == id })
+            c
+        }
+        conv?.let { notify { onSaved(it) } }
+        conv
+    }
+
+    suspend fun purge(id: String) = withContext(io) {
+        mutex.withLock {
+            if (isSafeId(id)) purgeFileLocked(id)
+            publishTrashLocked(_trash.value.filterNot { it.id == id })
+        }
+    }
+
+    suspend fun emptyTrash() = withContext(io) {
+        mutex.withLock {
+            _trash.value.forEach { purgeFileLocked(it.id) }
+            publishTrashLocked(emptyList())
+        }
     }
 
     /** Read-modify-write under one lock, so a rename can't overwrite a reply saved meanwhile. */
@@ -162,4 +266,15 @@ class ConversationRepository(
     private companion object {
         const val TAG = "ConversationRepo"
     }
+}
+
+/** 2.2.14: one chat in 回收站. */
+@kotlinx.serialization.Serializable
+data class TrashEntry(val id: String, val title: String, val deletedAt: Long)
+
+object TrashPolicy {
+    const val KEEP_DAYS = 30
+    fun expired(deletedAt: Long, now: Long, days: Int = KEEP_DAYS): Boolean = now - deletedAt >= days * 86_400_000L
+    fun daysLeft(deletedAt: Long, now: Long, days: Int = KEEP_DAYS): Int =
+        ((days * 86_400_000L - (now - deletedAt)) / 86_400_000L).toInt().coerceIn(0, days)
 }

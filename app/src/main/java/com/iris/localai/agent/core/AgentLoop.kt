@@ -300,7 +300,8 @@ class AgentLoop(
             if (turn.error != null) return AgentOutcome(turn.text, steps.toList(), AgentStop.ERROR, turn.error)
             // 2.1.7: a call written inside unfinished thinking (the stream is cut right after it, so
             // the think block never closes) used to leave an empty answer: run that call instead.
-            val answer = answerOf(turn.text).ifBlank { ToolCallParser.callInOpenThink(turn.text) ?: "" }
+            // 2.2.14: a call that only appears inside thinking is not run (was callInOpenThink).
+            val answer = answerOf(turn.text)
             var parsed = ToolCallParser.fillMainArg(ToolCallParser.parse(answer), userTask)
             retryStep?.let { if (parsed !is ParsedReply.Malformed) { update(it.copy(result = "已重试")); retryStep = null } }
             // 2.2.2: the user picked a tool (@screen) but the reply skips it — small local models

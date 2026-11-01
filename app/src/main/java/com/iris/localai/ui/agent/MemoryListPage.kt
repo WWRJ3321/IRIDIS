@@ -219,7 +219,12 @@ fun MemoryListPage(onBack: () -> Unit) {
             onDismiss = { adding = false; editing = null },
         ) { text, k ->
             adding = false; editing = null
-            act { if (e == null) store.add(text, k, MemoryItem.Source.USER) else store.update(e.id, text, k) }
+            // 2.2.14: saving an empty text clears the item (edit) or does nothing (add).
+            when {
+                text.isBlank() && e != null -> act { store.delete(e.id); null }
+                text.isBlank() -> Unit
+                else -> act { if (e == null) store.add(text, k, MemoryItem.Source.USER) else store.update(e.id, text, k) }
+            }
         }
     }
     deleting?.let { d ->
@@ -294,7 +299,7 @@ private fun ItemDialog(initialText: String, initialKind: MemoryItem.Kind, title:
     val over = text.trim().length > com.iris.localai.memory.MemoryStore.ITEM_MAX
     IrisDialog(
         onDismiss = onDismiss, title = title, confirmText = "保存",
-        confirmEnabled = text.isNotBlank() && !over,
+        confirmEnabled = !over,
         onConfirm = { onSave(text.trim(), k) },
     ) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
