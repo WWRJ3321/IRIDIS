@@ -110,6 +110,56 @@ std::string cpuset_to_string(const cpu_set_t &set) {
 }
 #endif
 
+// 2.2.13: native renderers for templates llama_chat_apply_template (the non-jinja path) does not know.
+bool is_gemma4_template(const std::string &t) {
+    return t.find("<|turn>") != std::string::npos && t.find("<turn|>") != std::string::npos;
+}
+bool is_k2_template(const std::string &t) { return t.find("<|ifm|im_start|>") != std::string::npos; }
+
+std::string trim_ws(const std::string &s) {
+    const size_t b = s.find_first_not_of(" \t\r\n");
+    if (b == std::string::npos) return "";
+    const size_t e = s.find_last_not_of(" \t\r\n");
+    return s.substr(b, e - b + 1);
+}
+
+// Gemma 4: <|turn>role\n…<turn|>\n, thinking switched on by <|think|> in the first system turn and
+// off by an empty <|channel>thought block after the generation prompt (google-gemma-4 jinja).
+std::string format_gemma4(const std::vector<ChatMessage> &messages, bool think) {
+    std::string out;
+    size_t i = 0;
+    const bool sys = !messages.empty() && (messages[0].role == "system" || messages[0].role == "developer");
+    if (think || sys) {
+        out += "<|turn>system\n";
+        if (think) out += "<|think|>\n";
+        if (sys) { out += trim_ws(messages[0].content); i = 1; }
+        out += "<turn|>\n";
+    }
+    for (; i < messages.size(); i++) {
+        const std::string &r = messages[i].role;
+        const std::string role = r == "assistant" ? "model" : (r == "system" || r == "user") ? r : "user";
+        out += "<|turn>" + role + "\n" + trim_ws(messages[i].content) + "<turn|>\n";
+    }
+    out += "<|turn>model\n";
+    if (!think) out += "<|channel>thought\n<channel|>";
+    return out;
+}
+
+// K2 Horizon (IFM-K2-Horizon.jinja): <|ifm|im_start|>role\n…<|ifm|im_end|>, no separator; every assistant
+// turn carries a (possibly empty) <ifm|think> block; the generation prompt opens one.
+std::string format_k2(const std::vector<ChatMessage> &messages, bool think) {
+    std::string out;
+    for (const auto &m : messages) {
+        if (m.role == "assistant") {
+            out += "<|ifm|im_start|>assistant\n<ifm|think>\n</ifm|think>" + m.content + "<|ifm|im_end|>";
+        } else {
+            out += "<|ifm|im_start|>" + m.role + "\n" + m.content + "<|ifm|im_end|>";
+        }
+    }
+    out += "<|ifm|im_start|>assistant\n<ifm|think>\n";
+    if (!think) out += "</ifm|think>";
+    return out;
+}
 }  // namespace
 
 void set_log_sink(LogSink sink, int min_level) {
@@ -250,7 +300,7 @@ bool Engine::load(const std::string &path, const LoadParams &params,
 
     // Verify that llama.cpp recognises the embedded template; otherwise use ChatML.
     use_chatml_fallback_ = template_.empty();
-    if (!use_chatml_fallback_) {
+    if (!use_chatml_fallback_ && !is_gemma4_template(template_) && !is_k2_template(template_)) {
         llama_chat_message probe[] = {{"user", "hi"}};
         if (llama_chat_apply_template(template_.c_str(), probe, 1, true, nullptr, 0) < 0) {
             use_chatml_fallback_ = true;
@@ -378,15 +428,19 @@ ModelMeta Engine::meta() const {
     m.n_ctx = n_ctx_;
     m.gpu = gpu_name_;
     m.has_chat_template = !use_chatml_fallback_;
-    m.supports_thinking = template_.find("<think>") != std::string::npos;
+    m.supports_thinking = template_.find("<think>") != std::string::npos ||
+                          is_gemma4_template(template_) || is_k2_template(template_);
     if (m.supports_thinking) {
         const std::string probe = format_prompt({{"user", "hi"}}, false);
-        m.thinking_prefilled = ends_with(probe, "<think>\n") || ends_with(probe, "<think>");
+        m.thinking_prefilled = ends_with(probe, "<think>\n") || ends_with(probe, "<think>") ||
+                               ends_with(probe, "<ifm|think>\n");
     }
     return m;
 }
 
 std::string Engine::format_prompt(const std::vector<ChatMessage> &messages, bool disable_thinking) const {
+    if (is_gemma4_template(template_)) return format_gemma4(messages, !disable_thinking);
+    if (is_k2_template(template_)) return format_k2(messages, !disable_thinking);
     std::vector<llama_chat_message> chat;
     chat.reserve(messages.size());
     for (const auto &m : messages) chat.push_back({m.role.c_str(), m.content.c_str()});

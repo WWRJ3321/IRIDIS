@@ -39,7 +39,7 @@ internal fun GenieXSection(vm: SettingsViewModel, gx: GenieXSupport) {
     SettingsGroup {
         GenieXRuntimeRow(gx, onInstall = vm::installGeniex, onCancel = vm::cancelGeniex, onDelete = vm::deleteGeniex)
     }
-    GroupFootnote("GGUF 模型选 NPU 时用 GenieX 运行。AI Hub QAIRT 包（含 genie_config.json、tokenizer.json 和 .bin 的文件夹）放进模型目录或用「导入文件夹」即可，只能在 NPU 上运行。")
+    GroupFootnote("GGUF 模型选 NPU 时用 GenieX 运行。AI Hub QAIRT 模型文件夹可直接导入，仅在 NPU 上运行。")
 }
 
 @Composable

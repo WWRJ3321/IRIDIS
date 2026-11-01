@@ -188,13 +188,3 @@ fun HomeAmbientGlow(modifier: Modifier = Modifier) {
     }
 }
 
-/** A glass container of [shape] (see [glassSurface]). */
-@Composable
-fun GlassSurface(
-    shape: Shape,
-    modifier: Modifier = Modifier,
-    elevation: Dp = GlassTokens.elevation,
-    content: @Composable BoxScope.() -> Unit,
-) {
-    Box(modifier.glassSurface(shape, elevation), content = content)
-}

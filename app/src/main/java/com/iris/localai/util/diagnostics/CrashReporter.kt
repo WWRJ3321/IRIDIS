@@ -152,7 +152,8 @@ object CrashReporter {
         val stream = info.traceInputStream ?: return "" to false
         return runCatching {
             val bytes = stream.use { it.readBytes() }
-            val sb = StringBuilder()
+            // 2.2.13: decoded "#00 pc …" backtrace (crashing thread first), then the raw printable runs.
+            val sb = StringBuilder(TombstoneText.decodeOrNull(bytes)?.takeIf { it.length < 200_000 }.orEmpty())
             val run = StringBuilder()
             fun flush() {
                 if (run.length >= 6) {
@@ -172,8 +173,9 @@ object CrashReporter {
 
     private fun shortTrace(full: String): String =
         full.lineSequence().filter { r ->
-            listOf("SIG", "abort", "Abort", "sherpa", "onnx", "litert", "llama", "ggml", "Check failed", "error", ".so", "iris").any { it in r }
-        }.distinct().take(40).joinToString("\n")
+            r.trimStart().startsWith("#") || r.startsWith("signal ") || r.startsWith("backtrace (") ||
+                listOf("SIG", "abort", "Abort", "sherpa", "onnx", "litert", "llama", "ggml", "Check failed", "error", ".so", "iris").any { it in r }
+        }.distinct().take(60).joinToString("\n")
 
     private fun header() = "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} · ${if (Build.VERSION.SDK_INT >= 31) Build.SOC_MODEL else ""}"
     private fun stamp(ms: Long) = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(ms))

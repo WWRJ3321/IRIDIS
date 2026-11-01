@@ -9,7 +9,7 @@
     "name": "llama.cpp / ggml",
     "license": "MIT",
     "file": "mit-llama.cpp.txt",
-    "url": "https://github.com/ggml-org/llama.cpp"
+    "url": "https://github.com/ggml-org/llama.cpp/tree/785322d17f2d51e5185cf996a1f4e46d87640841"
   },
   {
     "name": "nlohmann/json",

@@ -101,10 +101,12 @@ object AgentPrompt {
         append("# Tool calls\n")
         append("Call a tool with ONLY this, then stop and wait:\n")
         if (style == CallStyle.QWEN) {
-            append("<tool_call>\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"notes/todo.md\"}}\n</tool_call>\n")
+            // 2.2.13: placeholder example — small models copied the old read_file("notes/todo.md") literally.
+            append("<tool_call>\n{\"name\": \"工具名\", \"arguments\": {\"参数\": \"值\"}}\n</tool_call>\n")
         } else {
-            append("```tool\n{\"tool\": \"read_file\", \"args\": {\"path\": \"notes/todo.md\"}}\n```\n")
+            append("```tool\n{\"tool\": \"工具名\", \"args\": {\"参数\": \"值\"}}\n```\n")
         }
+        append("- 只在用户需要时调用工具，不要照抄示例。\n")
         append("- One call per reply, valid JSON. Results come in <tool_response>; never write one.\n")
         append("- Only the names below; asked about tools, reply in words.\n\n")
 

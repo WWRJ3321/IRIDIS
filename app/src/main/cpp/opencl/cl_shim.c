@@ -10,10 +10,15 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 static void *g_lib;
 static pthread_once_t g_once = PTHREAD_ONCE_INIT;
 static void load_lib(void) {
+    /* 2.2.13: crash-safe mode (previous model load killed the process) sets IRIS_NO_OPENCL=1 before the
+     * first ggml call, so the OpenCL registry finds no platform and never touches the vendor driver. */
+    const char *off = getenv("IRIS_NO_OPENCL");
+    if (off && off[0] == '1') return;
     static const char *paths[] = {"libOpenCL.so", "/vendor/lib64/libOpenCL.so", "/system/vendor/lib64/libOpenCL.so", "/system/lib64/libOpenCL.so", "libOpenCL_adreno.so"};
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]) && !g_lib; i++) g_lib = dlopen(paths[i], RTLD_NOW | RTLD_LOCAL);
 }

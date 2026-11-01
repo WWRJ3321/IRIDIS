@@ -32,7 +32,7 @@ internal object GuiAgentText {
         "想掉了自动重开：电脑上执行一次 adb shell pm grant com.iridis android.permission.WRITE_SECURE_SETTINGS"
     const val SELF_ON = "已授权：被系统关掉后会自动重新开启"
     const val NOTE = "看屏幕 → 思考 → 操作。需要能识图的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。" +
-        "运行时顶部有悬浮条可随时停止；支付、发送、删除等操作先问你，密码和支付类应用由你自己操作；最多 30 步。"
+        "运行时可随时在顶部悬浮条停止；支付、发送、删除前会先问你。"
 }
 
 /** 2.2 设置 › 智能体 › GUI 智能体: 无障碍 status and guide, 自检, and a test run (第一阶段入口). */

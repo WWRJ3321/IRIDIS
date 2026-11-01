@@ -352,9 +352,12 @@ class EngineManager(
             // 1.7.8: CPU and GPU/NPU have separate profiles; the plan follows the backend being tried.
             var plan = threadPolicy.plan(useTier, cfg.threads, Backend.CPU)
             val options = backendOptions(model)
-            val preferred = if (cpuOnly) Backend.CPU else preferredBackend(model, cfg, useTier)
+            // 2.2.13: the previous load crashed the app → this one runs on CPU only and says so.
+            val safeMode = crashMemory.takeSafeMode()
+            if (safeMode) _preloadSkipNotice.value = SAFE_MODE_NOTICE
+            val preferred = if (cpuOnly || safeMode) Backend.CPU else preferredBackend(model, cfg, useTier)
             val crashed = crashMemory.crashed(model.id)
-            val chain = BackendPlanner.chain(preferred, options, crashed)
+            val chain = if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed)
             val errors = StringBuilder()
             options.firstOrNull { it.backend == preferred && !it.available }?.let {
                 errors.append("[${preferred.label}] ${it.reason}\n")
@@ -978,6 +981,7 @@ class EngineManager(
     }
 
     private companion object {
+        const val SAFE_MODE_NOTICE = "上次加载模型时 App 崩溃，本次已自动改用 CPU 加载"
         const val TAG = "EngineManager"
         const val RES_TAG = "IrisResource"
         /** 1.7.7: end-of-reply reason + thinking / answer tokens. */

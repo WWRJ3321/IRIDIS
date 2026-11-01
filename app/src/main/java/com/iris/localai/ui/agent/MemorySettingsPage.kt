@@ -54,7 +54,7 @@ object MemoryText {
     const val MASTER = "关闭后不再注入记忆，智能体也不能使用「长期记忆」工具"
     const val INJECT_AGENT = "每个新对话开始时把记忆快照放进智能体的系统提示"
     const val INJECT_CHAT = "对话模式也带上记忆快照（会占用一些上下文）"
-    const val DOC_NOTE = "记忆只保存在这台手机里，不上传。最多 200 条，每条 300 字；对话中途修改的记忆从下一个新对话起生效。聊天里输入「记住：…」、在消息上选「记住这条」或点回复下的「记住？」即可添加。"
+    const val DOC_NOTE = "记忆只存在本机，最多 200 条。聊天里说「记住：…」或点「记住？」即可添加，新对话起生效。"
     const val LIST = "记忆"
     const val SUGGEST = "聊天时提议记住"
     const val SUGGEST_SUB = "你说到自己的情况或偏好时，在回复下方提示「记住？」，点了才保存"
@@ -63,10 +63,10 @@ object MemoryText {
     const val COMPACT_AGENT = "智能体模式超出上下文时，把较早的对话按规则压缩成摘要（不调用模型）"
     const val COMPACT_CHAT = "对话模式同样自动压缩；仅在「按 token 预算」策略下生效"
     /** 2.2.9 E: the merged switch, as seen in 开发者选项. */
-    const val COMPACT_ONE = "智能体模式超出上下文时、以及对话模式在「按 token 预算」下，把较早的对话按规则压缩成要点（不调用模型）"
+    const val COMPACT_ONE = "上下文快满时，把较早的对话整理成要点"
     fun injectBudget(contextTokens: Int): String =
         "上下文的 1/5，当前约 ${com.iris.localai.memory.MemoryPrompt.budget(contextTokens)} tokens（按 $contextTokens 计）；关于你/偏好放系统提示，相关事实每轮最多用一半"
-    const val COMPACT_NOTE = "压缩不删除任何消息：原文与工具记录保存在本机数据库，智能体可用「回忆」工具检索。聊天里点上下文用量可手动「压缩上下文」或撤销。"
+    const val COMPACT_NOTE = "整理不删除消息，原文仍保存在本机。点上下文用量可手动整理或撤销。"
     const val CLEAR = "清空记忆"
 
     fun usage(len: Int, cap: Int = MemoryOps.CAP): String = "$len / $cap 字"

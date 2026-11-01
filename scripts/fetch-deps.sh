@@ -11,8 +11,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 LLAMA_REPO="https://github.com/ggml-org/llama.cpp"
-LLAMA_TAG="v0.6.0"
-LLAMA_COMMIT="d81235049384534c167caea52b85a694f6103d14"
+LLAMA_COMMIT="785322d17f2d51e5185cf996a1f4e46d87640841"  # master 2026-11-01 (K2 Horizon #29535, LFM3)
 
 SHERPA_VERSION="1.13.8"
 SHERPA_SHA256="b22c3fc1b6a45666d28892bb2f7694beeb77a8362d7ebd77c1a5431ec9435471"
@@ -21,9 +20,11 @@ SHERPA_AAR="app/libs/sherpa-onnx-static-link-onnxruntime-${SHERPA_VERSION}.aar"
 if [ -L third_party/llama.cpp ] || [ -f third_party/llama.cpp/CMakeLists.txt ]; then
   echo "llama.cpp: present"
 else
-  echo "llama.cpp: cloning $LLAMA_TAG"
-  mkdir -p third_party
-  git clone --quiet --depth 1 --branch "$LLAMA_TAG" "$LLAMA_REPO" third_party/llama.cpp
+  echo "llama.cpp: fetching $LLAMA_COMMIT"
+  mkdir -p third_party/llama.cpp
+  git -C third_party/llama.cpp init --quiet
+  git -C third_party/llama.cpp fetch --quiet --depth 1 "$LLAMA_REPO" "$LLAMA_COMMIT"
+  git -C third_party/llama.cpp checkout --quiet FETCH_HEAD
 fi
 actual=$(git -C third_party/llama.cpp rev-parse HEAD)
 if [ "$actual" != "$LLAMA_COMMIT" ]; then

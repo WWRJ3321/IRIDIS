@@ -243,72 +243,6 @@ object WriteFileTool : AgentTool {
     }
 }
 
-object EditFileTool : AgentTool {
-    override val group = ToolGroup.FILES
-    override val name = "edit_file"
-    override val label = "修改文件"
-    override val description = "按「查找 → 替换」修改文件的一部分（修改前自动备份，可撤销）"
-    override val promptLine = "edit_file(path, old, new, all?): replace exact text"
-    override val risk = ToolRisk.WRITE
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val path = requirePath(args)
-        val old = Args.str(args, "old", "old_string", "old_text", "search", "find") ?: throw IllegalArgumentException("缺少参数 old")
-        val new = Args.str(args, "new", "new_string", "new_text", "replace", "replacement") ?: throw IllegalArgumentException("缺少参数 new")
-        val all = Args.bool(args, "all", "replace_all") ?: false
-        val f = env.sandbox.resolve(path)
-        val rel0 = env.sandbox.relative(f)
-        // 1.10.6: files the user put in the workspace (other owner) are edited through the SAF grant.
-        val direct = f.isFile && f.canRead() && f.canWrite()
-        val extBytes = if (!direct) env.external?.read(rel0, MAX_FILE_BYTES) else null
-        if (!direct && extBytes == null) return if (f.isFile) ToolResult(false, "Error: no write access to $path" + (env.accessHint?.let { " ($it)" } ?: ""), "无写入权限") else notFound(path, env)
-        if (direct && f.length() > MAX_FILE_BYTES) return ToolResult(false, "Error: file too large", "文件过大")
-        val text = if (direct) f.readText(Charsets.UTF_8) else String(extBytes!!, Charsets.UTF_8)
-        return when (val r = EditPatch.apply(text, old, new, all)) {
-            is EditPatch.Result.Err -> ToolResult(false, "Error: ${r.message}", r.message.substringBefore('；').take(40))
-            is EditPatch.Result.Ok -> {
-                if (direct) {
-                    env.undo.snapshot(env.sandbox, f, "修改", env.clock())
-                    f.writeText(r.text, Charsets.UTF_8)
-                } else {
-                    env.undo.snapshotBytes(env.sandbox, f, extBytes, "修改", env.clock())
-                    if (!env.external!!.write(rel0, r.text.toByteArray(Charsets.UTF_8)))
-                        return ToolResult(false, "Error: no write access to $rel0" + (env.accessHint?.let { " ($it)" } ?: ""), "无写入权限")
-                }
-                val rel = rel0
-                ToolResult(
-                    true,
-                    "OK: edited $rel (${r.replacements} replacement${if (r.replacements > 1) "s" else ""}${if (r.fuzzy) ", whitespace-insensitive match" else ""})",
-                    "已修改 $rel · ${r.replacements} 处",
-                )
-            }
-        }
-    }
-}
-
-object ListDirTool : AgentTool {
-    override val group = ToolGroup.FILES
-    override val name = "list_dir"
-    override val label = "列出目录"
-    override val description = "列出工作区文件夹里的文件"
-    override val promptLine = "list_dir(path?)"
-    override val risk = ToolRisk.READ
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val path = Args.str(args, "path", "dir", "folder") ?: "."
-        val d = env.sandbox.resolve(path)
-        // 1.10.0: entries only visible through the SAF grant are merged in (by name).
-        val ext = env.external?.list(env.sandbox.relative(d)).orEmpty()
-        if (!d.isDirectory && ext.isEmpty()) return ToolResult(false, "Error: not a folder: $path", "不是文件夹")
-        val own = (d.listFiles() ?: emptyArray()).map { ExternalFiles.Entry(it.name, it.isDirectory, if (it.isFile) it.length() else 0) }
-        val items = (own + ext.filter { e -> own.none { it.name == e.name } }).sortedWith(compareBy({ !it.isDir }, { it.name.lowercase() }))
-        if (items.isEmpty()) return ToolResult(true, "(empty)", "空文件夹")
-        val lines = items.take(200).map { if (it.isDir) it.name + "/" else "${it.name}  (${it.size} B)" }
-        val more = if (items.size > 200) "\n…and ${items.size - 200} more" else ""
-        return ToolResult(true, capTokens(lines.joinToString("\n") + more, env.outputTokens), "${items.size} 项")
-    }
-}
-
 object SearchFilesTool : AgentTool {
     override val group = ToolGroup.FILES
     override val name = "search_files"
@@ -350,135 +284,6 @@ object SearchFilesTool : AgentTool {
         if (hits.isEmpty()) return ToolResult(true, "No matches for \"$query\"", "无结果")
         val more = if (total > hits.size) "\n…${total - hits.size} more matches" else ""
         return ToolResult(true, capTokens(hits.joinToString("\n") + more, env.outputTokens), "$total 处匹配")
-    }
-}
-
-object DeleteFileTool : AgentTool {
-    override val group = ToolGroup.FILES
-    override val name = "delete_file"
-    override val label = "删除文件"
-    override val description = "删除文件或空文件夹（删除前自动备份，可撤销）"
-    override val promptLine = "delete_file(path)"
-    override val risk = ToolRisk.DELETE
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val path = requirePath(args)
-        val f = env.sandbox.resolve(path)
-        if (f == env.sandbox.root) return ToolResult(false, "Error: cannot delete the workspace root", "不能删除工作区根目录")
-        val rel = env.sandbox.relative(f)
-        return when {
-            f.isFile -> {
-                env.undo.snapshot(env.sandbox, f, "删除", env.clock())
-                f.delete()
-                ToolResult(true, "OK: deleted $rel", "已删除 $rel")
-            }
-            f.isDirectory -> {
-                if (!f.list().isNullOrEmpty()) ToolResult(false, "Error: folder not empty: $rel", "文件夹不为空")
-                else { f.delete(); ToolResult(true, "OK: deleted folder $rel", "已删除文件夹 $rel") }
-            }
-            // 1.10.6: a file only visible through the SAF grant.
-            else -> env.external?.read(rel, MAX_FILE_BYTES)?.let { bytes ->
-                env.undo.snapshotBytes(env.sandbox, f, bytes, "删除", env.clock())
-                if (env.external.delete(rel)) ToolResult(true, "OK: deleted $rel", "已删除 $rel")
-                else ToolResult(false, "Error: no permission to delete $rel", "无删除权限")
-            } ?: notFound(path, env)
-        }
-    }
-}
-
-/** 1.12.0: move or rename inside the workspace (undo restores both ends), so mv needs no shell. */
-object MoveFileTool : AgentTool {
-    override val group = ToolGroup.FILES
-    override val name = "move_file"
-    override val label = "移动/重命名"
-    override val description = "在工作区内移动或重命名文件（可撤销）"
-    override val promptLine = "move_file(from, to)"
-    override val risk = ToolRisk.WRITE
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val from = Args.str(args, "from", "path", "source", "src", "old") ?: throw IllegalArgumentException("缺少参数 from")
-        val to = Args.str(args, "to", "dest", "destination", "target", "new") ?: throw IllegalArgumentException("缺少参数 to")
-        val src = env.sandbox.resolve(from)
-        var dst = env.sandbox.resolve(to)
-        if (!src.isFile) return notFound(from, env)
-        if (dst.isDirectory) dst = File(dst, src.name)
-        val a = env.sandbox.relative(src); val b = env.sandbox.relative(dst)
-        if (src == dst) return ToolResult(true, "OK: $a unchanged", "未变化")
-        if (dst.exists()) return ToolResult(false, "Error: $b already exists", "目标已存在")
-        env.undo.snapshot(env.sandbox, dst, "新建", env.clock())
-        env.undo.snapshot(env.sandbox, src, "移动", env.clock())
-        dst.parentFile?.mkdirs()
-        val ok = src.renameTo(dst) || runCatching { src.copyTo(dst); src.delete() }.getOrDefault(false)
-        return if (ok) ToolResult(true, "OK: moved $a -> $b", "$a → $b") else ToolResult(false, "Error: cannot move $a", "移动失败")
-    }
-}
-
-/**
- * 1.12.0 `todo`: a short plan for multi-step work (Claude Code TodoWrite / OpenCode todowrite).
- * Small models lose track after a few tool calls; the list comes back in every result. Kept per
- * conversation in memory only.
- */
-object TodoTool : AgentTool {
-    override val name = "todo"
-    override val label = "任务清单"
-    override val description = "多步任务时列出步骤并逐项打勾"
-    override val promptLine = "todo(items?: [steps], done?: [n]): plan multi-step work, tick steps off"
-    override val risk = ToolRisk.SAFE
-    private val lists = java.util.concurrent.ConcurrentHashMap<String, MutableList<Pair<String, Boolean>>>()
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val key = env.conversationId ?: "_"
-        val items = (args["items"] ?: args["steps"] ?: args["todos"])?.let { el ->
-            (el as? kotlinx.serialization.json.JsonArray)?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.trim()?.takeIf(String::isNotEmpty) }
-                ?: (el as? kotlinx.serialization.json.JsonPrimitive)?.content?.split('\n', ';', '；')?.map { it.trim().trimStart('-', '*', ' ') }?.filter { it.isNotEmpty() }
-        }
-        val list = if (items != null) items.take(12).map { it to false }.toMutableList().also { lists[key] = it } else lists.getOrPut(key) { mutableListOf() }
-        val done = (args["done"] ?: args["check"])?.let { el ->
-            (el as? kotlinx.serialization.json.JsonArray)?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() }
-                ?: (el as? kotlinx.serialization.json.JsonPrimitive)?.content?.split(',', ' ')?.mapNotNull { it.trim().toIntOrNull() }
-        }.orEmpty()
-        done.forEach { n -> if (n in 1..list.size) list[n - 1] = list[n - 1].first to true }
-        if (list.isEmpty()) return ToolResult(true, "No plan yet. Call todo(items: [...]) first.", "暂无清单")
-        val text = list.mapIndexed { i, (t, d) -> "${i + 1}. [${if (d) "x" else " "}] $t" }.joinToString("\n")
-        val left = list.count { !it.second }
-        return ToolResult(true, text + if (left == 0) "\nAll done." else "", if (left == 0) "全部完成" else "${list.size - left}/${list.size} 完成")
-    }
-
-    fun clear(conversationId: String?) { lists.remove(conversationId ?: "_") }
-}
-
-object CalculatorTool : AgentTool {
-    override val name = "calculator"
-    override val label = "计算器"
-    override val description = "精确计算数学表达式（安全解析，不执行代码）"
-    override val promptLine = "calculator(expression): exact math"
-    override val risk = ToolRisk.SAFE
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val expr = Args.str(args, "expression", "expr", "input", "query") ?: throw IllegalArgumentException("缺少参数 expression")
-        return try {
-            val v = Calculator.format(Calculator.evaluate(expr))
-            ToolResult(true, "$expr = $v", "= $v")
-        } catch (e: CalcException) {
-            ToolResult(false, "Error: ${e.message}", e.message ?: "计算失败")
-        }
-    }
-}
-
-object DateTimeTool : AgentTool {
-    override val name = "datetime"
-    override val label = "日期时间"
-    override val description = "获取当前日期、时间与星期"
-    override val promptLine = "datetime(timezone?)"
-    override val risk = ToolRisk.SAFE
-    private val WEEK = listOf("星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日")
-
-    override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val zone = Args.str(args, "timezone", "tz", "zone")?.let { runCatching { ZoneId.of(it.trim()) }.getOrNull() } ?: env.zone()
-        val t = Instant.ofEpochMilli(env.clock()).atZone(zone)
-        val s = t.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT)) +
-            " ${WEEK[t.dayOfWeek.value - 1]} (${zone.id}, UTC${t.offset.id.replace("Z", "+00:00")})"
-        return ToolResult(true, s, s.substringBefore(" ("))
     }
 }
 
@@ -621,8 +426,7 @@ object AgentTools {
 
     /** Older tools still recognised in saved chats and by name (no longer offered to the model). */
     private val legacy: List<AgentTool> = listOf(
-        EditFileTool, ListDirTool, SearchFilesTool, MoveFileTool, DeleteFileTool, ProcessFileTool,
-        CalculatorTool, DateTimeTool, RecallTool, WebFetchTool, BrowserTool, PhoneTool,
+        SearchFilesTool, RecallTool, WebFetchTool, BrowserTool, PhoneTool,
     )
 
     /**

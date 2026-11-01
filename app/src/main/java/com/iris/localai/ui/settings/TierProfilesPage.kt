@@ -62,7 +62,7 @@ fun TierProfilesPage(vm: SettingsViewModel, onBack: () -> Unit) {
         actions = { IrisButton("恢复默认", { confirmReset = true }, style = IrisButtonStyle.Text, compact = true) },
     ) {
         ScrollBody {
-            PageDescription("每个档位用几个线程、跑在哪些核心上、优先级多高。CPU 后端和 GPU / NPU 后端各有一套；默认值按本机的核心簇生成。")
+            PageDescription("每个档位使用的线程、核心和优先级，默认值按本机芯片生成。")
             SettingsGroup {
                 SegmentedRow(
                     "后端", listOf("CPU", "GPU / NPU"), kindIndex, { kindIndex = it },

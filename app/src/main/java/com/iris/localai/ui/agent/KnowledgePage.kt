@@ -64,12 +64,12 @@ import kotlinx.coroutines.withContext
 object KnowledgeText {
     const val TITLE = "知识库"
     const val TOGGLE = "引用知识库"
-    const val TOGGLE_SUB = "对话和语音时自动找出最相关的资料一起交给模型（文件夹为空时不生效）；智能体可用「知识库」工具检索"
+    const val TOGGLE_SUB = "回答时自动参考最相关的资料"
     const val REBUILD = "重建索引"
     const val ADD = "添加文件（txt / md / csv / html…）"
     const val DELETE = "删除"
     const val EMPTY = "还没有文件。添加后，聊天里提到相关内容会自动引用。"
-    const val NOTE = "支持 .txt .md .csv .json .html 等文本文件（PDF / Word 请先另存为文本）。文件放进文件夹即可，下次提问时自动更新索引，全部在本机完成。"
+    const val NOTE = "支持 txt、md、csv、json、html 等文本文件。放进文件夹即可，自动在本机建索引。"
 
     fun status(files: Int, chunks: Int, unsupported: Int): String =
         if (files == 0) "还没有文件" else "$files 个文件 · $chunks 段" + if (unsupported > 0) " · $unsupported 个不支持" else ""

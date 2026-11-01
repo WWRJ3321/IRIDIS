@@ -68,7 +68,7 @@ import kotlinx.coroutines.withContext
 /** 1.11.0 texts of the 浏览器 pages (unit-tested). */
 object ToolPageText {
     const val BROWSER_NAV = "智能体使用的内置浏览器；可在这里查看或手动登录"
-    const val BROWSER_NOTE = "智能体用的就是这个浏览器（Cookie 只保存在 IRIDIS 里，不影响你的其他浏览器）。需要登录的网站可以先在这里手动登录。智能体的「浏览器」工具默认关闭，开启后每次询问。"
+    const val BROWSER_NOTE = "智能体使用这个浏览器，登录信息只存在 IRIDIS 里。需要登录的网站可先在这里登录。"
 }
 
 @Composable

@@ -9,5 +9,4 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
     <color name="window_background">#FFFFFFFF</color>
-    <color name="launcher_background">#FF111114</color>
 </resources>

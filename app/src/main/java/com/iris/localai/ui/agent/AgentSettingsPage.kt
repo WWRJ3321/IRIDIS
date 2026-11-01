@@ -76,13 +76,13 @@ object AgentText {
     const val STEPS = "一次回复最多调用几次工具"
     const val PERMISSION_NOTE = "点工具右侧的权限可切换：允许 = 直接执行，询问 = 每次确认，拒绝 = 不执行。"
     const val TOOLS = "工具与权限"
-    const val WORKSPACE_NOTE = "智能体只能访问这个工作区（下载/IRIDIS 里的模型、语音、技能、知识库和备份不在其中）；修改前自动备份，可逐步撤销（最多 20 步）。"
+    const val WORKSPACE_NOTE = "智能体只能访问这个工作区；修改前自动备份，可撤销最近 20 步。"
     /** 1.10.0 workspace location texts. */
     const val LOCATION = "工作区位置"
     const val LOCATION_NOTE = "默认在「下载/IRIDIS/workspace」，文件管理器可见；切换位置不会搬动已有文件。"
     const val SAF = "授权访问这个文件夹（备选）"
     const val SAF_HINT = "授权 Download/IRIDIS 一次，智能体才能读写你放进 workspace 的文件；已开「全部文件访问」时不需要。"
-    const val SAF_DONE = "已授权：智能体可以列出、读取和修改你放进去的文件（1.10.5 及更早的授权是只读的，需重新授权一次）"
+    const val SAF_DONE = "已授权：智能体可读写你放进去的文件"
     const val SAF_WRONG = "请选择 Download/IRIDIS 这个文件夹（选其他文件夹不会生效；智能体只会访问其中的 workspace）"
     fun path(p: String) = "实际路径：$p"
     val PERMISSION_OPTIONS = listOf(Permission.ALLOW, Permission.ASK, Permission.DENY)

@@ -280,7 +280,7 @@ fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> 
                         when (cur) { "CPU" -> 1; "GPU" -> 2; "NPU" -> if (withNpu) 3 else 0; else -> 0 },
                         { idx -> vm.setDefaultBackend(f, when (idx) { 1 -> "CPU"; 2 -> "GPU"; 3 -> "NPU"; else -> null }) },
                         subtitle = when (f) {
-                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) "自动 = CPU。GPU 首次加载要编译；NPU 用 GenieX" else if (vm.geniex != null) "自动 = CPU。GPU 首次加载要编译；NPU ${com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX}" else "自动 = CPU。GPU 走 Adreno OpenCL，Q4_0 / Q8_0 最快，首次加载要编译内核"
+                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) "自动 = CPU。GPU 首次加载要编译；NPU 用 GenieX" else if (vm.geniex != null) "自动 = CPU。GPU 首次加载要编译；NPU ${com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX}" else "自动 = CPU。GPU 首次加载需要较长时间"
                             com.iris.localai.data.ModelFormat.LITERT -> "自动 = GPU（Qwen3.5、Agents-A1 用 CPU）。GPU ${com.iris.localai.engine.BackendCapabilities.LITERT_GPU_WARNING}，之后会用缓存。文件名带 _sm8750 的 NPU 编译模型始终用 NPU"
                             com.iris.localai.data.ModelFormat.MNN -> "自动 = CPU。GPU 走 OpenCL"
                             com.iris.localai.data.ModelFormat.QAIRT -> "只能用 NPU"
@@ -288,7 +288,7 @@ fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> 
                     )
                 }
             }
-            GroupFootnote("资源档不会改变后端。加载失败按 NPU → GPU → CPU 回退，并在聊天页提示；某个后端曾导致崩溃会被记住并跳过。聊天页标题下方显示实际在用的后端。")
+            GroupFootnote("加载失败会自动按 NPU → GPU → CPU 回退并提示；导致过崩溃的后端会被跳过。")
 
             vm.npu?.let { npu ->
                 SectionTitle("NPU")
@@ -383,7 +383,7 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            GroupFootnote("这里是全局默认。每个模型可在模型选择或模型管理里点 ⚙ 单独设置，未设置的项跟随这里。「恢复默认」只恢复本页。")
+            GroupFootnote("全局默认值。每个模型可在模型管理里点 ⚙ 单独设置。")
         }
     }
 
@@ -442,7 +442,7 @@ fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit) {
             if (com.iris.localai.context.ContextAssembly.devTakeover(com.iris.localai.data.ContextStrategy.of(s.contextStrategy))) {
                 GroupFootnote("选了「按 token 预算」以外的策略：对话模式不再自动整理，主页面显示「${com.iris.localai.context.ContextAssembly.TAKEOVER}」。")
             }
-            GroupFootnote("每个对话可在输入框上方的上下文用量处单独改策略，或「从这里开始新上下文」。KV 上下文平移只有 GGUF（llama.cpp）支持，其他引擎按 token 预算截断。")
+            GroupFootnote("每个对话可在上下文用量处单独设置。上下文平移仅 GGUF 模型支持。")
         }
     }
 }
@@ -467,7 +467,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                 )
                 // 2.1.3: 资源档配置 moved to 关于 IRIDIS › 开发者选项.
             }
-            GroupFootnote("越低越省电，越高越快；对话、语音和 API 都按这个档位。档位只调整 CPU 资源，不会改变后端。" + com.iris.localai.engine.LiveResourcePolicy.GPU_SCOPE_NOTE + "。")
+            GroupFootnote("越低越省电，越高越快" + com.iris.localai.engine.LiveResourcePolicy.GPU_SCOPE_NOTE + "。")
 
             SectionTitle("功耗")
             SettingsGroup {
@@ -493,7 +493,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     }
                     SettingsRow(
                         "后台运行",
-                        subtitle = if (exempt) "已允许忽略电池优化。小米/HyperOS 另需在应用详情把「省电策略」设为无限制并开启「自启动」"
+                        subtitle = if (exempt) "已允许后台运行。小米/HyperOS 还需把省电策略设为「无限制」"
                         else "未允许：切到后台后系统可能暂停生成。点按允许后台运行",
                         icon = com.iris.localai.ui.icons.IrisIcons.Bolt,
                         onClick = { com.iris.localai.util.BackgroundGuard.open(context) },
@@ -619,12 +619,12 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
 }
 
 internal const val ABOUT_PRIVACY =
-    "对话、推理、语音识别与合成都在本机完成，对话内容不会上传。联网仅用于：你发起的模型/语音包/NPU 运行库/GenieX 运行库/Linux 环境下载，" +
+    "对话、推理、语音识别与合成都在本机完成，对话内容不会上传。联网仅用于：你发起的模型、语音包和运行库下载，" +
         "智能体开启联网工具时的搜索与网页读取，以及你开启的本地 API。"
 
 /** 1.14.7: every bundled / downloadable third-party component with its license. */
 internal val OPEN_SOURCE = listOf(
-    "llama.cpp" to "MIT · GGUF 推理",
+    "llama.cpp" to "MIT · GGUF 推理 · master@785322d (2026-11-01)",
     "MNN" to "Apache-2.0（已修改）· MNN 推理",
     "Google LiteRT-LM" to "Apache-2.0 · .litertlm 推理",
     "LiteRT Dispatch (Qualcomm)" to "Apache-2.0 · NPU 调度层",
@@ -963,10 +963,6 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
 }
 
 
-/** 2.2.9 F: kept for callers of the old name; the main page is now [ContextMemoryPage]. */
-@Composable
-fun ContextPage(vm: SettingsViewModel, onBack: () -> Unit) = DevContextMemoryPage(vm, onBack)
-
 /**
  * 2.1.3 关于 IRIDIS › 开发者选项: the rarely used tuning / diagnostics pages and display switches,
  * moved off the main settings list and 外观. Default values unchanged.
@@ -1044,6 +1040,6 @@ private fun VisionQualityRow(vm: SettingsViewModel, current: Int) {
     SegmentedRow(
         "识图清晰度", options.map { it.label }, com.iris.localai.util.VisionQuality.of(current).ordinal,
         { i -> vm.setVisionSide(options[i].side) },
-        subtitle = "发图片时模型看到的尺寸：快速 384 px、标准 512 px、清晰 1024 px。越清晰预填充越慢；MNN 最多 512 px",
+        subtitle = "图片送给模型的清晰度，越清晰越慢",
     )
 }

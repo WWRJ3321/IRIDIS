@@ -45,8 +45,14 @@ object DeviceProbe {
     /** Native probe, cached per runtime folder (backend init opens a DSP session). */
     @Volatile private var cached: Pair<String, QnnProbe>? = null
 
+    /** Lowest Hexagon arch any image model runs on (SD1.5 AI Hub v73). */
+    const val MIN_PROBE_ARCH = 73
+
     fun nativeProbe(context: Context, refresh: Boolean = false): QnnProbe {
-        val dir = qnnRuntimeDir(context.filesDir, htpArch(socModel()))
+        val arch = htpArch(socModel())
+        // 2.2.13: never touch libQnnHtp on a SoC the image models do not support (no DSP session on e.g. 8+ Gen 1).
+        if (arch == null || arch < MIN_PROBE_ARCH) return QnnProbe(libLoaded = false, error = "此芯片不支持 NPU 生图，已跳过 QNN 探测")
+        val dir = qnnRuntimeDir(context.filesDir, arch)
         val key = dir?.path ?: ""
         cached?.takeIf { !refresh && it.first == key }?.let { return it.second }
         val p = try {

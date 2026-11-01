@@ -327,6 +327,3 @@ fun SheetHeader(title: String, trailing: @Composable (() -> Unit)? = null) {
     }
 }
 
-/** Saveable boolean helper for "show dialog" flags so they survive rotation. */
-@Composable
-fun rememberDialogFlag(initial: Boolean = false) = rememberSaveable { mutableStateOf(initial) }

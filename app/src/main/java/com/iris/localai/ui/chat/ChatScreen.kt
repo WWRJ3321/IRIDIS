@@ -476,9 +476,8 @@ fun ChatScreen(
                     .onSizeChanged { topBarHeight = it.height }
                     .statusBarsPadding(),
             ) {
-                // 2.2.8 (HIG): strict symmetry — identical 42 dp side buttons at the same 16 dp edge
-                // inset, the model pill centred on the screen like a nav title, never closer than
-                // 8 dp to either button.
+                // Identical 42 dp side buttons at the same 16 dp edge inset; the model pill follows the
+                // menu button on the left (2.2.13), never closer than 8 dp to either button.
                 Box(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
                     contentAlignment = Alignment.Center,
@@ -487,7 +486,9 @@ fun ChatScreen(
                     ModelTitle(
                         ui.engine,
                         Modifier
-                            .padding(horizontal = IrisDimens.topBarControl + IrisDimens.space8)
+                            // 2.2.13: pill sits on the left, right after the menu button.
+                            .align(Alignment.CenterStart)
+                            .padding(start = IrisDimens.topBarControl + IrisDimens.space8, end = IrisDimens.topBarControl + IrisDimens.space8)
                             .onGloballyPositioned { pillBounds = it.boundsInRoot() }
                             // hidden while the morphing surface stands in for it
                             .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
@@ -786,34 +787,24 @@ private fun ModelTitle(engine: EngineState, modifier: Modifier = Modifier, onCli
 private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, hPad: androidx.compose.ui.unit.Dp = IrisDimens.space12) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
-    val title = when (engine) {
-        is EngineState.Ready -> engine.model.displayName
-        is EngineState.Loading -> engine.model.displayName
-        else -> "IRIDIS"
-    }
-    val sub = when (engine) {
-        // 1.7.8: the backend really in use; a fallback says so right under the title (never silent).
-        is EngineState.Ready -> engine.details.backend + if (engine.details.fallbackNote != null) " · 已回退" else ""
-        is EngineState.Loading -> com.iris.localai.engine.SlowLoadHint.subtitle(null, 0)
-        is EngineState.Failed -> "加载失败，点按查看"
-        EngineState.Idle -> "未加载"
+    // 2.2.13: the pill only says 「模型」; state is a small dot (ready = accent, loading = pulsing,
+    // failed = danger, idle = none). The model name and backend live in the panel it opens.
+    val dot = when (engine) {
+        is EngineState.Ready -> c.accent
+        is EngineState.Loading -> c.textTertiary
+        is EngineState.Failed -> c.danger
+        else -> null
     }
     Spacer(Modifier.width(hPad))
-    Column(Modifier.weight(1f, fill = chevronTurn > 0f), verticalArrangement = Arrangement.Center) {
-        AnimatedContent(
-            targetState = title,
-            transitionSpec = { motion(reduce) { IrisMotion.crossfade() } },
-            label = "modelTitle",
-        ) { t ->
-            Text(t, style = IrisType.pillTitle, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(Modifier.weight(1f, fill = chevronTurn > 0f), verticalAlignment = Alignment.CenterVertically) {
+        if (dot != null) {
+            Box(
+                Modifier.size(7.dp).pulse(engine is EngineState.Loading, min = 0.4f)
+                    .background(dot, androidx.compose.foundation.shape.CircleShape),
+            )
+            Spacer(Modifier.width(IrisDimens.space8))
         }
-        Text(
-            sub,
-            style = IrisType.pillCaption,
-            color = if (engine is EngineState.Failed) c.danger else c.textTertiary,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.pulse(engine is EngineState.Loading, min = 0.5f),
-        )
+        Text("模型", style = IrisType.pillTitle, color = c.text, maxLines = 1)
     }
     Icon(
         Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary,
@@ -872,14 +863,14 @@ private fun ModelMorphPanel(
                 ),
         )
         with(density) {
-            // 2.2.8: symmetric — the panel is centred on screen and grows from the pill's centre downward.
+            // 2.2.13: the panel grows from the pill's left edge (pill sits left of the top bar), kept on screen.
             val pillLeft = pillInRoot.left - origin.x
             val top = pillInRoot.top - origin.y
             val pillW = pillInRoot.width
             val pillH = pillInRoot.height
             val areaWidth = if (areaW > 0) areaW.toFloat() else conf.screenWidthDp.dp.toPx()
             val panelW = minOf(maxOf(pillW, 248.dp.toPx()), 280.dp.toPx(), areaWidth - 32.dp.toPx()).coerceAtLeast(pillW)
-            val panelLeft = (areaWidth - panelW) / 2f
+            val panelLeft = minOf(pillLeft, areaWidth - panelW - 16.dp.toPx()).coerceAtLeast(16.dp.toPx())
             val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
             val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(pillH)
             val headerH = pillH + (52.dp.toPx() - pillH) * p
@@ -903,11 +894,11 @@ private fun ModelMorphPanel(
             ) {
                 Column(
                     Modifier
-                        .wrapContentSize(Alignment.TopCenter, unbounded = true)
+                        .wrapContentSize(Alignment.TopStart, unbounded = true)
                         .width(panelW.toDp())
                         .heightIn(max = maxH.toDp())
                         .onSizeChanged { contentH = it.height + (52.dp.toPx() - headerH).toInt() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.Start,
                 ) {
                     Row(
                         Modifier
@@ -1211,13 +1202,6 @@ private fun RememberDialog(
         }
     }
 }
-
-/** 2.1.5: chat top bar fill — opaque page colour, or card-like translucency over a custom background. */
-internal fun chatTopBarColor(page: androidx.compose.ui.graphics.Color, backgroundImage: Boolean): androidx.compose.ui.graphics.Color =
-    if (backgroundImage) page.copy(alpha = CHAT_TOP_BAR_BACKDROP_ALPHA) else page
-
-/** Same see-through level as cards over a custom background ([com.iris.localai.ui.theme.overBackdrop] surfaceElevated). */
-internal const val CHAT_TOP_BAR_BACKDROP_ALPHA = 0.88f
 
 /** 2.1.7: a message waiting to be answered (or read by the 智能体); tap cancels it. */
 @Composable

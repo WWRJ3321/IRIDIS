@@ -52,7 +52,7 @@ object CrashDump {
                 .append("pss: ").append(e.pss).append(" kB   rss: ").append(e.rss).append(" kB\n")
                 .append("importance: ").append(e.importance).append('\n')
             val trace: String = try {
-                e.traceInputStream?.use { ins -> ins.readBytes().toString(Charsets.UTF_8) } ?: "(此记录无 trace 内容)\n"
+                e.traceInputStream?.use { ins -> TombstoneText.render(ins.readBytes()) } ?: "(此记录无 trace 内容)\n"
             } catch (ex: Exception) { "(读取 tombstone 失败: ${ex.message})\n" }
             tombstones.append(trace).append('\n')
             summary.append("trace head: ").append(trace.lineSequence().firstOrNull { it.isNotBlank() } ?: "(empty)").append('\n')

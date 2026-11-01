@@ -229,25 +229,6 @@ fun ToggleChip(
     }
 }
 
-/** Outlined suggestion chip, e.g. example prompts on the empty chat. */
-@Composable
-fun SuggestionChip(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val c = Iris.colors
-    val interaction = remember { MutableInteractionSource() }
-    Box(
-        modifier
-            .heightIn(min = 40.dp)
-            .pressScale(interaction, IrisMotion.PRESS_SCALE_BUTTON)
-            .clip(IrisRadius.largeShape)
-            .border(IrisDimens.hairline + 0.25.dp, c.outline, IrisRadius.largeShape)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
-            .padding(horizontal = IrisDimens.space16, vertical = 9.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = IrisType.secondary, color = c.textSecondary)
-    }
-}
-
 /**
  * Segmented control. 1.8.0: HyperOS look (rounded grey track, the selected segment a lighter pill
  * with blue medium text) with the iOS physics kept. The thumb springs between segments, can be grabbed and dragged

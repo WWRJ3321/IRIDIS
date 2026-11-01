@@ -54,7 +54,7 @@ data class BackendEnvironment(
             val npu = runCatching { EngineFactory.npu(context) }.getOrNull()
             val gx = runCatching { EngineFactory.geniex(context) }.getOrNull()
             return BackendEnvironment(
-                hasOpenCl = OPENCL_PATHS.any { java.io.File(it).exists() },
+                hasOpenCl = !BackendCrashMemory.openClDisabled && OPENCL_PATHS.any { java.io.File(it).exists() },
                 npuSoc = npu?.takeIf { it.chipLabel != null }?.let { socModel() },
                 npuRuntimeInstalled = npu?.state?.value is NpuState.Installed,
                 fullFlavor = ModelFormat.LITERT in EngineFactory.supportedFormats,
@@ -239,9 +239,25 @@ class BackendCrashMemory(context: Context) {
         // being swiped away or killed in the background while armed is not the backend's fault.
         prefs.getString(KEY_ARMED, null)?.let { armed ->
             val e = prefs.edit().remove(KEY_ARMED)
-            if (lastExitWasCrash(context)) e.putBoolean(BAD_PREFIX + armed, true)
+            if (lastExitWasCrash(context)) {
+                // 2.2.13: any crash during a load turns on crash-safe mode for the next load (CPU only).
+                e.putBoolean(KEY_SAFE_MODE, true)
+                // A CPU load that still crashed: the OpenCL registry probe (runs for every load) is the
+                // prime suspect on some Adreno drivers, so keep the vendor OpenCL driver out from now on.
+                if (armed.startsWith(Backend.CPU.name + "|")) e.putBoolean(KEY_NO_OPENCL, true)
+                else e.putBoolean(BAD_PREFIX + armed, true)
+            }
             e.commit()
         }
+        openClDisabled = prefs.getBoolean(KEY_NO_OPENCL, false)
+        if (openClDisabled) runCatching { android.system.Os.setenv("IRIS_NO_OPENCL", "1", true) }
+    }
+
+    /** 2.2.13: true once after a load crashed the app; that next load runs on CPU only. */
+    fun takeSafeMode(): Boolean {
+        if (!prefs.getBoolean(KEY_SAFE_MODE, false)) return false
+        prefs.edit().remove(KEY_SAFE_MODE).commit()
+        return true
     }
 
     private fun lastExitWasCrash(context: Context): Boolean {
@@ -257,7 +273,6 @@ class BackendCrashMemory(context: Context) {
     }
 
     fun arm(modelId: String, backend: Backend) {
-        if (backend == Backend.CPU) return
         prefs.edit().putString(KEY_ARMED, key(modelId, backend)).commit()
     }
 
@@ -267,16 +282,21 @@ class BackendCrashMemory(context: Context) {
         Backend.entries.filter { prefs.getBoolean(BAD_PREFIX + key(modelId, it), false) }.toSet()
 
     fun forget(modelId: String) {
-        val e = prefs.edit()
+        val e = prefs.edit().remove(KEY_NO_OPENCL)
         Backend.entries.forEach { e.remove(BAD_PREFIX + key(modelId, it)) }
         e.apply()
     }
 
     private fun key(modelId: String, b: Backend) = "${b.name}|$modelId"
 
-    private companion object {
-        const val KEY_ARMED = "armed"
-        const val BAD_PREFIX = "bad:"
+    companion object {
+        /** 2.2.13: OpenCL kept off for this process after a CPU load crashed (see init). */
+        @Volatile var openClDisabled = false
+            private set
+        private const val KEY_ARMED = "armed"
+        private const val KEY_SAFE_MODE = "safe_mode"
+        private const val KEY_NO_OPENCL = "no_opencl"
+        private const val BAD_PREFIX = "bad:"
     }
 }
 

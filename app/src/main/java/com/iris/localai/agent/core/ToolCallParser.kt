@@ -336,7 +336,8 @@ object ToolCallParser {
      * 2.2.8: strict reading first; a reply it calls malformed goes through every tolerant reader
      * ([tolerant]) before the agent loop spends a retry on it.
      */
-    fun parse(reply: String): ParsedReply {
+    fun parse(raw: String): ParsedReply {
+        val reply = k2Normalize(raw)
         val r = parseStrict(reply)
         if (r !is ParsedReply.Malformed) return r
         return tolerant(reply)?.let { (call, before) -> ParsedReply.Call(call, before) } ?: r
@@ -348,6 +349,19 @@ object ToolCallParser {
      * Python True/False/None —, `name(k="v")` function calls, `name{…}` / `name k="v"` after a
      * registered tool name, XML `<function=…>` and GLM `<arg_key>`. Returns the call and the prose before it.
      */
+    /** 2.2.13: K2 Horizon call / reasoning markup rewritten into the `<tool_call>` + GLM arg_key form read below. */
+    const val K2_CALL_OPEN = "<ifm|tool_call>"
+    const val K2_CALL_CLOSE = "</ifm|tool_call>"
+    private val K2_ARG_TYPE = Regex("(?s)<ifm\\|arg_type>.*?</ifm\\|arg_type>\\s*")
+    private val K2_THINK = Regex("<(/?)ifm\\|think(?:_fast|_faster)?>")
+
+    internal fun k2Normalize(s: String): String {
+        if (!s.contains("ifm|")) return s
+        var t = K2_ARG_TYPE.replace(s, "").replace("<ifm|tool_calls>", "").replace("</ifm|tool_calls>", "")
+        for (x in listOf("tool_call", "arg_key", "arg_value")) t = t.replace("<ifm|$x>", "<$x>").replace("</ifm|$x>", "</$x>")
+        return K2_THINK.replace(t) { "<${it.groupValues[1]}think>" }
+    }
+
     internal fun tolerant(reply: String): Pair<ToolCall, String>? {
         val text = THINK.replace(reply, "").replace("<think>", "").replace("</think>", "").trim()
         if (text.isEmpty()) return null
@@ -522,6 +536,13 @@ object ToolCallParser {
     fun callEnd(streamed: CharSequence): Int? {
         val s = streamed.toString()
         val noThinkStart = thinkEnd(s)
+        // 2.2.13: K2 Horizon `<ifm|tool_call>…</ifm|tool_call>` ends at its own close tag.
+        s.indexOf(K2_CALL_OPEN, noThinkStart).let { k ->
+            if (k >= 0) {
+                val close = s.indexOf(K2_CALL_CLOSE, k + K2_CALL_OPEN.length)
+                return if (close >= 0) close + K2_CALL_CLOSE.length else null
+            }
+        }
         // 2.1.7: inside unfinished thinking the model often *mentions* "<tool_response>" while
         // reading the results ("the <tool_response> shows…"); cutting there ended the turn with
         // an empty answer. Only a complete call ends a turn while thinking is still open.
@@ -561,7 +582,14 @@ object ToolCallParser {
     }
 
     /** Text to show while streaming: the call block (complete or still being written) is hidden. */
-    fun visibleText(streamed: String): String {
+    fun visibleText(raw: String): String {
+        var streamed = raw
+        thinkEnd(raw).let { f ->
+            // 2.2.13: hide a K2 Horizon call section (complete or still being typed) from where it starts.
+            val k = raw.indexOf("<ifm|tool_call", f)
+            if (k >= 0) streamed = raw.substring(0, k)
+            else raw.lastIndexOf('<').let { t -> if (t >= f && t > raw.length - 16 && "<ifm|tool_call".startsWith(raw.substring(t))) streamed = raw.substring(0, t) }
+        }
         val from = thinkEnd(streamed)
         var cut = streamed.length
         QWEN_OPEN.find(streamed, from)?.let { cut = minOf(cut, it.range.first) }
@@ -592,7 +620,8 @@ object ToolCallParser {
      * With [streaming], a call still being written at the end (an open ```json fence, a `{"tool"`
      * line, a half-typed fence tag) is hidden too. Ordinary code and JSON data stay. Pure.
      */
-    fun stripCalls(text: String, streaming: Boolean = false): String {
+    fun stripCalls(raw: String, streaming: Boolean = false): String {
+        val text = k2Normalize(raw)
         val from = thinkEnd(text)
         val s = text.substring(from)
         val cuts = ArrayList<IntRange>()   // half-open [first, last) as first until last

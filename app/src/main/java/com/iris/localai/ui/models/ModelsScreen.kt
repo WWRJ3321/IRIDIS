@@ -407,7 +407,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                         }
                     }
                 }
-                GroupFootnote("推荐 Gemma 4 E2B 或 Qwen3.5 4B，可在「下载模型」里获取，也能把模型文件直接拷进上面的文件夹。")
+                GroupFootnote("可在「下载模型」里获取，或把模型文件拷进上面的文件夹。")
             }
         }
     }

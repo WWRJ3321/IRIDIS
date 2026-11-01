@@ -14,15 +14,19 @@ class ChannelThink {
         var s = buf.toString()
         val out = StringBuilder()
         while (true) {
-            val open = s.indexOf(OPEN)
-            val close = s.indexOf(CLOSE)
-            val at = listOf(open, close).filter { it >= 0 }.minOrNull()
-            if (at == null) {
+            // Earliest known tag (Gemma 4 channel, or 2.2.13 K2 Horizon <ifm|think…> pairs).
+            var at = -1
+            var tag = ""
+            for (t in TAGS) {
+                val i = s.indexOf(t)
+                if (i >= 0 && (at < 0 || i < at)) { at = i; tag = t }
+            }
+            if (at < 0) {
                 var keep = 0
                 if (!final) {
-                    for (n in minOf(s.length, OPEN.length) downTo 1) {
+                    for (n in minOf(s.length, MAX_TAG) downTo 1) {
                         val tail = s.substring(s.length - n)
-                        if (OPEN.startsWith(tail) || CLOSE.startsWith(tail)) { keep = n; break }
+                        if (TAGS.any { it.startsWith(tail) }) { keep = n; break }
                     }
                 }
                 out.append(s, 0, s.length - keep)
@@ -30,9 +34,9 @@ class ChannelThink {
                 break
             }
             out.append(s, 0, at)
-            if (at == close) {
-                out.append("</think>")
-                s = s.substring(at + CLOSE.length)
+            if (tag != OPEN) {
+                out.append(if (tag.startsWith("</") || tag == CLOSE) "</think>" else "<think>")
+                s = s.substring(at + tag.length)
                 continue
             }
             val rest = s.substring(at + OPEN.length)
@@ -51,6 +55,10 @@ class ChannelThink {
     companion object {
         const val OPEN = "<|channel>"
         const val CLOSE = "<channel|>"
+        /** 2.2.13: K2 Horizon reasoning tags (high / medium / low effort). */
+        val K2_TAGS = listOf("ifm|think", "ifm|think_fast", "ifm|think_faster").flatMap { listOf("<$it>", "</$it>") }
+        val TAGS = listOf(OPEN, CLOSE) + K2_TAGS
+        private val MAX_TAG = TAGS.maxOf { it.length }
         fun convert(text: String): String = ChannelThink().push(text, final = true)
     }
 }

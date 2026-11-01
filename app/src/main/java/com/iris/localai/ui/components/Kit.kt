@@ -137,7 +137,7 @@ fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
  * Secondary-page top bar: a floating round glass back button, a centred title ([titleModifier]
  * lets the scaffold fade it in as the large title scrolls away) and the page's actions grouped in
  * one glass pill (drawn only when there are actions; a lone icon is a 44 dp circle). The title
- * sits in a matching glass pill (2.2.11). No band behind them (2.2.9): content scrolls under.
+ * sits in a matching glass pill (2.2.11). A light background fade sits behind them (2.2.13).
  */
 @Composable
 fun IrisTopBar(
@@ -158,6 +158,15 @@ fun IrisTopBar(
     var actionsWidth by remember { mutableStateOf(0.dp) }
     val sideInset = maxOf(IrisDimens.floatingButton, actionsWidth) + IrisDimens.space8
     Box(modifier.fillMaxWidth()) {
+        // 2.2.13: light top fade (page background → transparent, status bar + ~56 dp) so content that
+        // scrolls under the back button and title pill reads as fading out instead of colliding with them.
+        Box(
+            Modifier.matchParentSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0f to c.background.copy(alpha = 0.92f), 0.55f to c.background.copy(alpha = 0.6f), 1f to c.background.copy(alpha = 0f),
+                ),
+            ),
+        )
         Box(
             Modifier.fillMaxWidth().statusBarsPadding().height(IrisDimens.topBarHeight + IrisDimens.space8).padding(horizontal = IrisDimens.space16),
             contentAlignment = Alignment.Center,
