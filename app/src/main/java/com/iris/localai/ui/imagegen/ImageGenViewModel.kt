@@ -148,7 +148,14 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectModel(m: ImageModel) {
         if (m.needsHexagonRuntime) return
-        _ui.update { it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = m.fixedSize ?: it.width, height = m.fixedSize ?: it.height) }
+        _ui.update {
+            val old = it.model
+            // 2.2.12: a model's suggested prompt / negative fill fields that are empty or still the previous model's default
+            fun pick(cur: String, oldDefault: String, newDefault: String) =
+                if (cur.isBlank() || (oldDefault.isNotEmpty() && cur == oldDefault)) newDefault else cur
+            it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = m.fixedSize ?: it.width, height = m.fixedSize ?: it.height,
+                prompt = pick(it.prompt, old.defaultPrompt, m.defaultPrompt), negative = pick(it.negative, old.defaultNegative, m.defaultNegative))
+        }
     }
 
     /** Copies the picked reference image into the cache (the Uri grant does not outlive the picker). */

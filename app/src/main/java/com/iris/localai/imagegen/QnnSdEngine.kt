@@ -47,6 +47,7 @@ object TensorCodec {
                 for (x in data) buf.put(((x / q.scale).roundToInt() + q.zp).coerceIn(0, 255).toByte())
             }
             "float32" -> for (x in data) buf.putFloat(x)
+            "float16" -> for (x in data) buf.putShort(Half.fromFloat(x))
             "int32" -> for (x in data) buf.putInt(x.roundToInt())
             else -> throw IllegalArgumentException("${spec.name}: unsupported dtype ${spec.dtype}")
         }
@@ -80,9 +81,40 @@ object TensorCodec {
                 FloatArray(n) { ((b.get(it).toInt() and 0xFF) - q.zp) * q.scale }
             }
             "float32" -> FloatArray(n) { b.getFloat(it * 4) }
+            "float16" -> FloatArray(n) { Half.toFloat(b.getShort(it * 2)) }
             "int32" -> FloatArray(n) { b.getInt(it * 4).toFloat() }
             else -> throw IllegalArgumentException("${spec.name}: unsupported dtype ${spec.dtype}")
         }
+    }
+}
+
+/** IEEE 754 binary16 ⇄ float (pure Kotlin, so it runs in JVM tests; 2.2.12 for float16 graph I/O). */
+object Half {
+    fun toFloat(h: Short): Float {
+        val x = h.toInt() and 0xFFFF
+        val sign = (x ushr 15) and 1; val exp = (x ushr 10) and 0x1F; val man = x and 0x3FF
+        val v = when (exp) {
+            0 -> man / 1024f * 6.1035156e-5f
+            31 -> if (man == 0) Float.POSITIVE_INFINITY else Float.NaN
+            else -> Math.scalb(1f + man / 1024f, exp - 15)
+        }
+        return if (sign == 1) -v else v
+    }
+
+    fun fromFloat(f: Float): Short {
+        val bits = java.lang.Float.floatToIntBits(f)
+        val sign = (bits ushr 16) and 0x8000
+        val a = bits and 0x7FFFFFFF
+        if (a >= 0x7F800000) return (sign or 0x7C00 or (if (a > 0x7F800000) 0x200 else 0)).toShort()
+        if (a >= 0x477FF000) return (sign or 0x7C00).toShort() // overflow → inf
+        if (a < 0x38800000) { // subnormal / zero
+            val v = (java.lang.Float.intBitsToFloat(a) / 5.9604645e-8f).roundToInt()
+            return (sign or v).toShort()
+        }
+        val e = ((a ushr 23) - 112) shl 10
+        val m = (a ushr 13) and 0x3FF
+        val round = (a ushr 12) and 1
+        return (sign or (e + m + round)).toShort()
     }
 }
 
@@ -91,12 +123,17 @@ object TensorCodec {
  * CLIP ids (int32 [1,77]) → text encoder → [1,77,768]; Euler; latent NHWC [1,64,64,4];
  * UNet(latent, timestep, text_emb) once for the negative/empty prompt and once for the prompt,
  * noise = uncond + cfg·(cond − uncond); VAE (divides by 0.18215 itself) → [1,512,512,3] in [0,1].
+ * 2.2.12: also Local Dream's graphs (Anything V5): latent NCHW [1,4,64,64] (the loop is element-wise, so
+ * layout only matters at the VAE), VAE input = latent × [vaeInScale] (1/0.18215), output NCHW [1,3,H,W] in
+ * [-1,1] when [vaeOutSigned].
  * Pure Kotlin over [QnnGraph], so it is unit-tested with fake graphs.
  */
 class SdPipeline(
     private val textEncoder: QnnGraph,
     private val unet: QnnGraph,
     private val vae: QnnGraph,
+    private val vaeInScale: Float = 1f,
+    private val vaeOutSigned: Boolean = false,
 ) {
     val teIn: QnnTensorSpec = textEncoder.inputs.single()
     val teOut: QnnTensorSpec = textEncoder.outputs.first()
@@ -107,14 +144,17 @@ class SdPipeline(
     val vaeIn: QnnTensorSpec = vae.inputs.single()
     val vaeOut: QnnTensorSpec = vae.outputs.first()
 
-    /** Image size from the VAE output ([1,H,W,3]). */
-    val height: Int get() = vaeOut.dims.getOrElse(1) { 512 }
-    val width: Int get() = vaeOut.dims.getOrElse(2) { 512 }
+    /** VAE output channel-first ([1,3,H,W]) rather than [1,H,W,3]. */
+    val vaeNchw: Boolean get() = vaeOut.dims.size == 4 && vaeOut.dims[1] == 3 && vaeOut.dims[3] != 3
+
+    /** Image size from the VAE output. */
+    val height: Int get() = vaeOut.dims.getOrElse(if (vaeNchw) 2 else 1) { 512 }
+    val width: Int get() = vaeOut.dims.getOrElse(if (vaeNchw) 3 else 2) { 512 }
 
     init {
         require(unet.inputs.size == 3) { "UNet expects 3 inputs, binary has ${unet.inputs.size}" }
         require(unetOut.elements == LATENT_ELEMENTS && vaeIn.elements == LATENT_ELEMENTS) { "latent size mismatch" }
-        require(vaeOut.dims.lastOrNull() == 3) { "VAE output is not NHWC RGB: ${vaeOut.dims}" }
+        require(vaeOut.dims.lastOrNull() == 3 || vaeNchw) { "VAE output is not RGB: ${vaeOut.dims}" }
     }
 
     // UNet I/O buffers, reused across steps (inputs in the binary's order).
@@ -149,10 +189,12 @@ class SdPipeline(
 
     /** VAE decode of the final latent → RGB floats in [0,1], NHWC. */
     fun decode(latent: FloatArray): FloatArray {
-        val inBuf = TensorCodec.encode(vaeIn, latent, SdQuantDefaults.VAE_IN)
+        val x = if (vaeInScale == 1f) latent else FloatArray(latent.size) { latent[it] * vaeInScale }
+        val inBuf = TensorCodec.encode(vaeIn, x, SdQuantDefaults.VAE_IN)
         val out = TensorCodec.alloc(vaeOut)
         vae.execute(arrayOf(inBuf), arrayOf(out))
-        return TensorCodec.decode(vaeOut, out, SdQuantDefaults.VAE_OUT)
+        val raw = TensorCodec.decode(vaeOut, out, SdQuantDefaults.VAE_OUT)
+        return toNhwc01(raw, width, height, vaeNchw, vaeOutSigned)
     }
 
     /**
@@ -204,6 +246,16 @@ class SdPipeline(
         fun cfgCombine(uncond: FloatArray, cond: FloatArray, cfg: Float): FloatArray {
             require(uncond.size == cond.size)
             return FloatArray(cond.size) { uncond[it] + cfg * (cond[it] - uncond[it]) }
+        }
+
+        /** VAE output → NHWC RGB in [0,1] (from NCHW and/or [-1,1] when asked). */
+        fun toNhwc01(raw: FloatArray, width: Int, height: Int, nchw: Boolean, signed: Boolean): FloatArray {
+            if (!nchw && !signed) return raw
+            val px = width * height
+            return FloatArray(raw.size) { i ->
+                val v = if (nchw) raw[(i % 3) * px + i / 3] else raw[i]
+                if (signed) (v + 1f) * 0.5f else v
+            }
         }
 
         /** NHWC RGB floats in [0,1] → opaque ARGB ints. */
@@ -295,7 +347,7 @@ class QnnSdEngine(
                 if (cancelled.get()) throw SdPipeline.CancelledException()
                 opened.add(loader.open(f))
             }
-            val pipe = SdPipeline(opened[0], opened[1], opened[2])
+            val pipe = SdPipeline(opened[0], opened[1], opened[2], model.vaeInScale, model.vaeOutSigned)
             graphs = opened; pipeline = pipe; tokenizer = tok; loadedDir = dir
             return pipe to tok
         } catch (t: Throwable) {

@@ -69,6 +69,13 @@ class MnnHub(private val repo: ModelRepository) {
                 repo.releasePart(partName)
                 return@withContext downloadSingle(base, repoId, path, size)
             }
+            // 2.2.12: a GGUF repo (no MNN set) — download its one Q4 .gguf file.
+            if (!MnnModels.isModelFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())) {
+                pickGgufFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
+                    repo.releasePart(partName)
+                    return@withContext downloadSingle(base, repoId, path, size)
+                }
+            }
             val files = all.filter { it.type == "file" && MnnModels.shouldCopy(it.path) }
             if (!MnnModels.isModelFileSet(files.filter { '/' !in it.path }.map { it.path }.toSet())) {
                 throw IOException("$repoId 不是 MNN 大模型仓库（缺少 config.json / llm.mnn）。请选 taobao-mnn 下以 -MNN 结尾的仓库")
@@ -124,7 +131,8 @@ class MnnHub(private val repo: ModelRepository) {
             repo.releasePart(partName)
         }
         repo.refresh()
-        return LocalModel(target.name, target.absolutePath, target.length(), ModelFormat.LITERT)
+        val format = if (fileName.endsWith(".gguf", ignoreCase = true)) ModelFormat.GGUF else ModelFormat.LITERT
+        return LocalModel(target.name, target.absolutePath, target.length(), format)
     }
 
     private fun listFiles(base: String, repoId: String): List<TreeEntry> {
@@ -168,13 +176,60 @@ class MnnHub(private val repo: ModelRepository) {
     fun clearError() { if (!_state.value.active) _state.value = State() }
 
     companion object {
-        /** 1.12.1: the user's picks, sizes checked on huggingface.co 2026-10-17. LiteRT first (GPU). */
-        val RECOMMENDED = listOf(
-            "litert-community/gemma-4-E2B-it-litert-lm" to "LiteRT · 约 2.4 GB · 推荐先试",
-            "litert-community/gemma-4-E4B-it-litert-lm" to "LiteRT · 约 3.4 GB · 更聪明",
-            "taobao-mnn/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-MNN" to "MNN · 约 2.7 GB · 推理强",
-            "taobao-mnn/Qwen3.5-9B-MNN" to "MNN · 约 6.8 GB · 最强，需大内存",
+        /**
+         * 2.2.12: the official list in 下载模型, by category. Every repo id checked on the HF API 2026-11-01
+         * (sizes = what the download fetches). [Rec.imageModel] = a 生图 model id (downloaded by ImageGenDownloader).
+         * Left out: Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-MNN (repo empty on 2026-11-01); LFM3 (needs a newer llama.cpp).
+         */
+        data class Rec(val id: String, val title: String, val note: String, val imageModel: String? = null)
+        data class RecGroup(val title: String, val items: List<Rec>)
+
+        private fun mnn(id: String, t: String, note: String) = Rec("taobao-mnn/$id", t, note)
+        private const val OPUS = "-Claude-4.6-Opus-Reasoning-Distilled-MNN"
+        val RECOMMENDED_GROUPS: List<RecGroup> = listOf(
+            RecGroup("Qwen3（MNN）", listOf(
+                mnn("Qwen3-0.6B-MNN", "Qwen3 0.6B", "MNN · 约 0.45 GB · 最快，适合低配"),
+                mnn("Qwen3-1.7B-MNN", "Qwen3 1.7B", "MNN · 约 1.2 GB · 轻快日常"),
+                mnn("Qwen3-4B-MNN", "Qwen3 4B", "MNN · 约 2.7 GB · 均衡"),
+                mnn("Qwen3-8B-MNN", "Qwen3 8B", "MNN · 约 5.5 GB · 更强，需 12 GB 内存"),
+            )),
+            RecGroup("Qwen3.5（MNN）", listOf(
+                mnn("Qwen3.5-0.8B-MNN", "Qwen3.5 0.8B", "MNN · 约 0.55 GB · 最快"),
+                mnn("Qwen3.5-2B-MNN", "Qwen3.5 2B", "MNN · 约 1.4 GB · 轻快日常"),
+                mnn("Qwen3.5-4B-MNN", "Qwen3.5 4B", "MNN · 约 2.9 GB · 推荐，均衡"),
+                mnn("Qwen3.5-9B-MNN", "Qwen3.5 9B", "MNN · 约 7.3 GB · 最强，需大内存"),
+            )),
+            RecGroup("Qwen3.5 Opus 4.6 蒸馏（MNN）", listOf(
+                mnn("Qwen3.5-0.8B$OPUS", "Opus 蒸馏 0.8B", "MNN · 约 0.54 GB · 小而会推理"),
+                mnn("Qwen3.5-2B$OPUS", "Opus 蒸馏 2B", "MNN · 约 1.4 GB · 推理更稳"),
+                mnn("Qwen3.5-4B$OPUS", "Opus 蒸馏 4B", "MNN · 约 2.8 GB · 推理强"),
+            )),
+            RecGroup("Gemma 4（LiteRT）", listOf(
+                Rec("litert-community/gemma-4-E2B-it-litert-lm", "Gemma 4 E2B", "LiteRT · 约 2.6 GB · 推荐先试，GPU 快"),
+                Rec("litert-community/gemma-4-E4B-it-litert-lm", "Gemma 4 E4B", "LiteRT · 约 3.7 GB · 更聪明"),
+                Rec("litert-community/gemma-4-12B-it-litert-lm", "Gemma 4 12B", "LiteRT · 约 6.9 GB · 最强，需 16 GB 内存"),
+            )),
+            RecGroup("Spark 2.6（GGUF Q4）", listOf(
+                Rec("XHToken/Spark-X2.6-1.7B-GGUF", "Spark X2.6 1.7B", "GGUF · Q4_K_M · 约 1.8 GB · 轻量中文"),
+                Rec("XHToken/Spark-X2.6-4B-GGUF", "Spark X2.6 4B", "GGUF · Q4_K_M · 约 3.5 GB · 中文更强"),
+            )),
+            RecGroup("生图（NPU）", listOf(
+                Rec("sd15-qnn", "Stable Diffusion 1.5", "NPU · 约 0.71 GB · 通用写实，512×512", imageModel = "sd15-qnn"),
+                Rec("anything-v5-qnn", "Anything V5.0（动漫）", "NPU · 约 0.86 GB · 动漫风格，8 Gen 3 及以上", imageModel = "anything-v5-qnn"),
+            )),
         )
+
+        /** Flat list of the chat models (first = the dialog's preset). */
+        val RECOMMENDED: List<Pair<String, String>> =
+            RECOMMENDED_GROUPS.flatMap { g -> g.items.filter { it.imageModel == null }.map { it.id to it.note } }
+                .sortedByDescending { it.first == "litert-community/gemma-4-E2B-it-litert-lm" }
+
+        /** 2.2.12: the Q4 .gguf of a GGUF repo (Q4_K_M, else Q4_0, else any Q4); no mmproj. Pure. */
+        fun pickGgufFile(files: List<Pair<String, Long>>): Pair<String, Long>? {
+            val g = files.filter { it.first.endsWith(".gguf", ignoreCase = true) && '/' !in it.first && !it.first.contains("mmproj", ignoreCase = true) }
+            return g.firstOrNull { it.first.contains("Q4_K_M", true) } ?: g.firstOrNull { it.first.contains("Q4_0", true) }
+                ?: g.firstOrNull { it.first.contains("Q4", true) }
+        }
 
         /**
          * The generic .litertlm of a LiteRT-LM repo: not -web/-gpu/.task, not a chip-specific build

@@ -26,7 +26,8 @@ object SelfCheck {
         val problems = ArrayList<String>()
         when (m.backend) {
             Backend.QNN -> {
-                if ((f.htpArch ?: 0) < QNN_MIN_HTP) problems.add("NPU 架构不支持（需 HTP v$QNN_MIN_HTP+，当前 ${f.htpArch?.let { "v$it" } ?: "未知"}）")
+                val minArch = maxOf(QNN_MIN_HTP, m.minHtpArch)
+                if ((f.htpArch ?: 0) < minArch) problems.add("NPU 架构不支持（需 HTP v$minArch+，当前 ${f.htpArch?.let { "v$it" } ?: "未知"}）")
                 if (!f.qnnRuntimePresent) problems.add("缺少 QNN 运行库")
                 if (!f.qnnBackendOk) problems.add("QNN 后端初始化失败")
                 if (!f.unsignedPd) problems.add("不支持 unsigned PD")

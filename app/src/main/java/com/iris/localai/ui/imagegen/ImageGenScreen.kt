@@ -268,6 +268,7 @@ private fun ModelChip(
         val fg = if (selected) c.onAccentContainer else c.text
         Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha))
         Text(m.name, style = IrisType.labelSmall, color = fg.copy(alpha = alpha), maxLines = 2)
+        if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha), maxLines = 2)
         Spacer(Modifier.height(IrisDimens.space4))
         Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: "大小待定", style = IrisType.caption, color = c.textSecondary.copy(alpha = alpha))
         Spacer(Modifier.height(IrisDimens.space4))

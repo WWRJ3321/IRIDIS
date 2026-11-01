@@ -20,8 +20,17 @@ object HttpDownload {
 
     fun partFile(target: File) = File(target.path + PART)
 
+    /** 2.2.12: `url#bytes=a-b` → (url, a, b): fetch only that byte range of the remote file. */
+    fun splitRange(url: String): Triple<String, Long, Long>? {
+        val m = Regex("#bytes=(\\d+)-(\\d+)$").find(url) ?: return null
+        return Triple(url.substring(0, m.range.first), m.groupValues[1].toLong(), m.groupValues[2].toLong())
+    }
+
     /** One attempt (callers own the retry / mirror policy). [onBytes] gets the bytes on disk so far. */
-    suspend fun fetchOnce(url: String, target: File, expected: Long, onBytes: (Long) -> Unit) {
+    suspend fun fetchOnce(url0: String, target: File, expected: Long, onBytes: (Long) -> Unit) {
+        val range = splitRange(url0)
+        val url = range?.first ?: url0
+        val base = range?.second ?: 0L
         val part = partFile(target)
         if (part.exists() && part.length() > expected) part.delete()
         val offset = if (part.exists()) part.length() else 0L
@@ -30,11 +39,12 @@ object HttpDownload {
             onBytes(expected)
             return
         }
-        val conn = open(url, offset)
+        val conn = open(url, base + offset, range?.third ?: -1L)
         try {
             val code = conn.responseCode
             val resumed = code == HttpURLConnection.HTTP_PARTIAL
             if (code != HttpURLConnection.HTTP_OK && !resumed) throw IOException("HTTP $code：$url")
+            if (range != null && !resumed) throw IOException("服务器不支持分段下载：$url")
             RandomAccessFile(part, "rw").use { raf ->
                 var written = if (resumed) offset else 0L // 200 = server ignored Range: start over
                 raf.setLength(written)
@@ -61,7 +71,7 @@ object HttpDownload {
     }
 
     /** GET with manual redirect handling (so a Range header survives cross-host redirects). */
-    fun open(start: String, rangeFrom: Long, maxRedirects: Int = 8): HttpURLConnection {
+    fun open(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8): HttpURLConnection {
         var url = start
         repeat(maxRedirects) {
             val c = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -69,7 +79,8 @@ object HttpDownload {
                 connectTimeout = 15_000
                 readTimeout = 30_000
                 setRequestProperty("User-Agent", "IRIS-LocalAI/1.0")
-                if (rangeFrom > 0) setRequestProperty("Range", "bytes=$rangeFrom-")
+                if (rangeTo >= 0) setRequestProperty("Range", "bytes=$rangeFrom-$rangeTo")
+                else if (rangeFrom > 0) setRequestProperty("Range", "bytes=$rangeFrom-")
             }
             val code = try { c.responseCode } catch (e: IOException) { c.disconnect(); throw e }
             if (code in 300..399) {

@@ -94,6 +94,46 @@ object ZipExtract {
     }
 }
 
+/** 2.2.12: one zip entry cut out of a remote zip by byte range ([RemoteFile.isZipSlice]). */
+object ZipSlice {
+    /**
+     * [slice] starts with the entry's local file header; inflates (or copies, method 0) its data into [out]
+     * via `<out>.part`, then checks size and CRC-32 ([crc] < 0 skips the CRC check).
+     */
+    suspend fun extract(slice: File, out: File, size: Long, crc: Long, onProgress: (Long, Long) -> Unit = { _, _ -> }) {
+        out.parentFile?.mkdirs()
+        val part = File(out.path + ".part")
+        java.io.RandomAccessFile(slice, "r").use { raf ->
+            val h = ByteArray(30); raf.readFully(h)
+            fun u16(i: Int) = (h[i].toInt() and 0xFF) or ((h[i + 1].toInt() and 0xFF) shl 8)
+            if (u16(0) != 0x4b50 || u16(2) != 0x0403) throw IOException("压缩包片段无效：${slice.name}")
+            val method = u16(8)
+            if (method != 0 && method != 8) throw IOException("不支持的压缩方式 $method：${slice.name}")
+            raf.seek(30L + u16(26) + u16(28))
+            val raw = java.io.BufferedInputStream(java.io.FileInputStream(raf.fd), 256 * 1024)
+            val ins = if (method == 8) java.util.zip.InflaterInputStream(raw, java.util.zip.Inflater(true), 256 * 1024) else raw
+            val sum = java.util.zip.CRC32()
+            var done = 0L; var last = 0L
+            val buf = ByteArray(256 * 1024)
+            onProgress(0, size)
+            part.outputStream().use { os ->
+                while (done < size) {
+                    currentCoroutineContext().ensureActive()
+                    val n = ins.read(buf, 0, minOf(buf.size.toLong(), size - done).toInt())
+                    if (n < 0) break
+                    os.write(buf, 0, n); sum.update(buf, 0, n); done += n
+                    if (done - last >= (4L shl 20)) { last = done; onProgress(done, size) }
+                }
+            }
+            if (done != size) { part.delete(); throw IOException("解压后大小不符（$done / $size）：${out.name}") }
+            if (crc >= 0 && sum.value != crc) { part.delete(); throw IOException("校验失败：${out.name}") }
+        }
+        out.delete()
+        if (!part.renameTo(out)) throw IOException("无法写入 ${out.name}")
+        onProgress(size, size)
+    }
+}
+
 /** Pure download rules (unit-tested). */
 object ImageDownloads {
     private const val HF = "https://huggingface.co"
@@ -155,7 +195,7 @@ object ImageDownloads {
             if (!(target.isFile && target.length() == f.size)) {
                 val name = f.path.substringAfterLast('/')
                 val before = done - have(root, model, f)
-                fetchWithRetry(urlsFor(f.url, source), target, f.size, retryDelayMs, { got ->
+                fetchWithRetry(urlsFor(f.fetchUrl, source), target, f.size, retryDelayMs, { got ->
                     done = before + got
                     publish(ImageDl.Downloading(done, total, name))
                 }, fetch)
@@ -163,7 +203,8 @@ object ImageDownloads {
             }
             if (f.isArchive) {
                 publish(ImageDl.Extracting(0, f.unpacked.sumOf { it.size }))
-                ZipExtract.extract(target, dir) { d, t -> publish(ImageDl.Extracting(d, t)) }
+                if (f.isZipSlice) ZipSlice.extract(target, File(dir, f.unpacked.single().path), f.unpacked.single().size, f.crc) { d, t -> publish(ImageDl.Extracting(d, t)) }
+                else ZipExtract.extract(target, dir) { d, t -> publish(ImageDl.Extracting(d, t)) }
                 if (!unpacked(root, model, f)) throw IOException("解压后文件不完整：${target.name}")
                 target.delete()
                 publish(ImageDl.Downloading(done, total, ""))

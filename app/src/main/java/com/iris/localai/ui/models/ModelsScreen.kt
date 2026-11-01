@@ -19,6 +19,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -171,6 +172,16 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     fun downloadMnn(repoId: String) {
         c.mnnHub.start(c.scope, repoId, c.settings.current.downloadSource) { m ->
             if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+        }
+    }
+
+    /** 2.2.12: a 生图 model from the recommended list → the 生图 downloader (progress on the 生图 page). */
+    fun downloadImageModel(id: String) {
+        val m = com.iris.localai.imagegen.ImageCatalog.byId(id) ?: return
+        viewModelScope.launch {
+            val root = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.iris.localai.imagegen.ImageGenRepository(getApplication()).downloadRoot(m) }
+            c.imageGenDownloader.start(m, root, c.settings.current.downloadSource)
+            android.widget.Toast.makeText(getApplication(), "已开始下载「${m.name}」，进度见 生图 页", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -402,7 +413,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
     }
 
     if (showDownload) {
-        MnnDownloadDialog(onDismiss = { showDownload = false }, onDownload = { vm.downloadMnn(it) })
+        MnnDownloadDialog(onDismiss = { showDownload = false }, onDownload = { vm.downloadMnn(it) }, onDownloadImage = { vm.downloadImageModel(it) })
     }
 
     confirmDelete?.let { m ->
@@ -423,7 +434,7 @@ internal fun ModelDeleteDialog(m: LocalModel, onConfirm: () -> Unit, onDismiss: 
 }
 
 @Composable
-private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Unit) {
+private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Unit, onDownloadImage: (String) -> Unit = {}) {
     val c = Iris.colors
     var text by remember { mutableStateOf(com.iris.localai.data.MnnHub.RECOMMENDED.first().first) }
     val valid = com.iris.localai.data.MnnModels.parseRepoId(text) != null
@@ -432,7 +443,7 @@ private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Uni
         confirmEnabled = valid,
         onConfirm = { onDownload(text.trim()); onDismiss() },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
             Text("Hugging Face 仓库名，或点选推荐：", style = IrisType.secondary, color = c.textSecondary)
             androidx.compose.material3.OutlinedTextField(
                 text, { text = it }, singleLine = true,
@@ -442,15 +453,21 @@ private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Uni
                 colors = com.iris.localai.ui.components.irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("推荐", style = IrisType.labelSmall, color = c.textTertiary)
-            com.iris.localai.data.MnnHub.RECOMMENDED.forEach { (id, note) ->
-                Column(
-                    Modifier.fillMaxWidth().clip(IrisRadius.mediumShape)
-                        .background(if (text.trim() == id) c.surfaceVariant else Color.Transparent)
-                        .clickable { text = id }.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
-                ) {
-                    Text(id.substringAfter('/'), style = IrisType.rowStrong, color = c.text)
-                    Text(note, style = IrisType.caption, color = c.textTertiary)
+            // 2.2.12: official list by category; tap = download now (生图 models go to the 生图 downloader)
+            com.iris.localai.data.MnnHub.RECOMMENDED_GROUPS.forEach { g ->
+                Text(g.title, style = IrisType.labelSmall, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
+                g.items.forEach { r ->
+                    Column(
+                        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape)
+                            .background(if (text.trim() == r.id) c.surfaceVariant else Color.Transparent)
+                            .clickable {
+                                if (r.imageModel != null) onDownloadImage(r.imageModel) else onDownload(r.id)
+                                onDismiss()
+                            }.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
+                    ) {
+                        Text(r.title, style = IrisType.rowStrong, color = c.text)
+                        Text(r.note, style = IrisType.caption, color = c.textTertiary)
+                    }
                 }
             }
             Text("镜像失败时自动换源。", style = IrisType.caption, color = c.textTertiary)
