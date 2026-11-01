@@ -36,6 +36,10 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.iris.localai.ui.theme.Iris
@@ -132,8 +136,8 @@ fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 /**
  * Secondary-page top bar: a floating round glass back button, a centred title ([titleModifier]
  * lets the scaffold fade it in as the large title scrolls away) and the page's actions grouped in
- * one glass pill (drawn only when there are actions). No band behind them (2.2.9): content
- * scrolls under the floating controls.
+ * one glass pill (drawn only when there are actions; a lone icon is a 44 dp circle). The title
+ * sits in a matching glass pill (2.2.11). No band behind them (2.2.9): content scrolls under.
  */
 @Composable
 fun IrisTopBar(
@@ -147,27 +151,51 @@ fun IrisTopBar(
     val c = Iris.colors
     // 2.2.9: no background band behind the bar (no strip / scrim): only the floating glass back
     // button, the title and the glass action pill sit over the content. [stripAlpha] is ignored.
+    // 2.2.11: the centred title sits in a frosted glass pill (same height / glass as the back circle)
+    // so content scrolling underneath never collides with the title text. Its side inset follows
+    // the wider of the back circle and the action pill, keeping the three groups symmetric.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var actionsWidth by remember { mutableStateOf(0.dp) }
+    val sideInset = maxOf(IrisDimens.floatingButton, actionsWidth) + IrisDimens.space8
     Box(modifier.fillMaxWidth()) {
         Box(
             Modifier.fillMaxWidth().statusBarsPadding().height(IrisDimens.topBarHeight + IrisDimens.space8).padding(horizontal = IrisDimens.space16),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                title, style = IrisType.title, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = IrisDimens.floatingButton + IrisDimens.space24).then(titleModifier),
-            )
+            Box(
+                Modifier
+                    .padding(horizontal = sideInset)
+                    .then(titleModifier)
+                    .height(IrisDimens.floatingButton)
+                    .glassSurface(IrisRadius.full)
+                    .padding(horizontal = IrisDimens.space16),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    title, style = IrisType.title, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 FloatingIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "返回", onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 var hasActions by remember { mutableStateOf(false) }
-                Row(
-                    Modifier
-                        .then(if (hasActions) Modifier.glassSurface(IrisRadius.full).padding(horizontal = IrisDimens.space2) else Modifier)
-                        .onSizeChanged { hasActions = it.width > 0 && it.height > 0 },
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = actions,
-                )
+                CompositionLocalProvider(LocalPressableIconSize provides IrisDimens.floatingButton) {
+                    Row(
+                        Modifier
+                            .then(
+                                if (hasActions) Modifier.height(IrisDimens.floatingButton).widthIn(min = IrisDimens.floatingButton)
+                                    .glassSurface(IrisRadius.full) else Modifier,
+                            )
+                            .onSizeChanged {
+                                hasActions = it.width > 0 && it.height > 0
+                                actionsWidth = with(density) { it.width.toDp() }
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        content = actions,
+                    )
+                }
             }
         }
     }

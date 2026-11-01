@@ -76,12 +76,15 @@ fun Modifier.pressScale(interaction: MutableInteractionSource, pressedScale: Flo
 }
 
 /** Round icon button. [size] is the visual size; touch area is extended to 48 dp by Compose. */
+/** 2.2.11: default [PressableIcon] size; [IrisTopBar] lowers it so action icons match the 44 dp back circle. */
+val LocalPressableIconSize = androidx.compose.runtime.staticCompositionLocalOf { IrisDimens.touchTarget }
+
 @Composable
 fun PressableIcon(
     icon: ImageVector,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    size: Dp = IrisDimens.touchTarget,
+    size: Dp = LocalPressableIconSize.current,
     iconSize: Dp = IrisDimens.iconLarge,
     tint: Color = Iris.colors.text,
     background: Color = Color.Transparent,
