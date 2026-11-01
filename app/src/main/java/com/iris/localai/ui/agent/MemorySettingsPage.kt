@@ -50,7 +50,7 @@ import kotlinx.coroutines.withContext
 
 /** 1.10.0 texts of 设置 › 记忆 (unit-tested). */
 object MemoryText {
-    const val NAV = "长期记忆（USER.md / MEMORY.md）、知识库与上下文压缩"
+    const val NAV = "上下文、记忆和知识库"
     const val MASTER = "关闭后不再注入记忆，智能体也不能使用「长期记忆」工具"
     const val INJECT_AGENT = "每个新对话开始时把记忆快照放进智能体的系统提示"
     const val INJECT_CHAT = "对话模式也带上记忆快照（会占用一些上下文）"
@@ -62,6 +62,10 @@ object MemoryText {
         (if (n == 0) "还没有记住任何事" else "记得你 $n 件事") + if (pending > 0) " · $pending 条等你确认" else ""
     const val COMPACT_AGENT = "智能体模式超出上下文时，把较早的对话按规则压缩成摘要（不调用模型）"
     const val COMPACT_CHAT = "对话模式同样自动压缩；仅在「按 token 预算」策略下生效"
+    /** 2.2.9 E: the merged switch, as seen in 开发者选项. */
+    const val COMPACT_ONE = "智能体模式超出上下文时、以及对话模式在「按 token 预算」下，把较早的对话按规则压缩成要点（不调用模型）"
+    fun injectBudget(contextTokens: Int): String =
+        "上下文的 1/5，当前约 ${com.iris.localai.memory.MemoryPrompt.budget(contextTokens)} tokens（按 $contextTokens 计）；关于你/偏好放系统提示，相关事实每轮最多用一半"
     const val COMPACT_NOTE = "压缩不删除任何消息：原文与工具记录保存在本机数据库，智能体可用「回忆」工具检索。聊天里点上下文用量可手动「压缩上下文」或撤销。"
     const val CLEAR = "清空记忆"
 
@@ -82,6 +86,10 @@ fun MemorySettingsPage(
     val revision by agent.memoryRevision.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var clearing by remember { mutableStateOf(false) }
+    var rebuilding by remember { mutableStateOf(false) }
+    val app = remember { (context.applicationContext as IrisApp).container.settings }
+    val appSettings by app.settings.collectAsStateWithLifecycle()
+    val ctxTokens = appSettings.contextLength
     var showList by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     val counts by produceState(0 to 0, revision) {
@@ -147,12 +155,9 @@ fun MemorySettingsPage(
 
             SectionTitle("上下文压缩")
             SettingsGroup {
-                SwitchRow("智能体自动压缩", ms.autoCompactAgent, subtitle = MemoryText.COMPACT_AGENT, icon = Icons.Outlined.Compress) { on ->
-                    agent.memorySettings.update { it.copy(autoCompactAgent = on) }
-                }
-                Divider()
-                SwitchRow("对话自动压缩", ms.autoCompactChat, subtitle = MemoryText.COMPACT_CHAT, icon = Icons.Outlined.Compress) { on ->
-                    agent.memorySettings.update { it.copy(autoCompactChat = on) }
+                // 2.2.9 E: 智能体自动压缩 + 对话自动压缩 → one switch (= 主页面「快满时自动整理」).
+                SwitchRow("自动压缩", ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
+                    agent.memorySettings.update { it.withAutoCompact(on) }
                 }
                 Divider()
                 SettingsRow(
@@ -161,6 +166,24 @@ fun MemorySettingsPage(
                 )
             }
             GroupFootnote(MemoryText.COMPACT_NOTE)
+
+            // 2.2.9 F: index / budget details that used to sit on the normal page.
+            SectionTitle("索引与注入")
+            SettingsGroup {
+                SettingsRow(
+                    KnowledgeText.TITLE + " · " + KnowledgeText.REBUILD, icon = com.iris.localai.ui.icons.IrisIcons.Reload, enabled = !rebuilding,
+                    subtitle = if (rebuilding) "正在重建…" else "重新读取知识库全部文件，一般不需要：文件变化会自动更新",
+                    onClick = {
+                        rebuilding = true
+                        scope.launch {
+                            withContext(Dispatchers.IO) { runCatching { agent.knowledge.refresh(force = true) } }
+                            rebuilding = false
+                        }
+                    },
+                )
+                Divider()
+                SettingsRow("记忆注入预算", icon = com.iris.localai.ui.icons.IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
+            }
         }
     }
 

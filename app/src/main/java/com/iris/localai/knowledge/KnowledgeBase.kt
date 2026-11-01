@@ -9,7 +9,38 @@ import kotlinx.serialization.Serializable
 data class KbFileInfo(val path: String, val size: Long, val chunks: Int, val indexed: Boolean, val cites: Int)
 
 @Serializable
-data class KbStat(val count: Int = 0, val lastAt: Long = 0)
+data class KbStat(
+    val count: Int = 0,
+    val lastAt: Long = 0,
+    /** 2.2.9 F: citations in the week starting at [weekStart] (「本周引用 M 次」). */
+    val weekStart: Long = 0,
+    val week: Int = 0,
+)
+
+/** 2.2.9 F: calendar weeks (Monday 00:00, device zone) for 「本周引用 M 次」. */
+object KbWeek {
+    fun start(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Long =
+        java.util.Calendar.getInstance(zone).apply {
+            timeInMillis = now
+            firstDayOfWeek = java.util.Calendar.MONDAY
+            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+            val back = (get(java.util.Calendar.DAY_OF_WEEK) - java.util.Calendar.MONDAY + 7) % 7
+            add(java.util.Calendar.DAY_OF_MONTH, -back)
+        }.timeInMillis
+
+    /** One more citation of a file at [now]. */
+    fun bump(s: KbStat?, now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): KbStat {
+        val ws = start(now, zone)
+        val prev = s ?: KbStat()
+        return KbStat(prev.count + 1, now, ws, if (prev.weekStart == ws) prev.week + 1 else 1)
+    }
+
+    fun thisWeek(stats: Collection<KbStat>, now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Int {
+        val ws = start(now, zone)
+        return stats.filter { it.weekStart == ws }.sumOf { it.week }
+    }
+}
 
 @Serializable
 data class KbStats(val files: Map<String, KbStat> = emptyMap())
@@ -154,8 +185,14 @@ class KnowledgeBase(
     fun cite(files: Collection<String>, now: Long = System.currentTimeMillis()) = synchronized(lock) {
         if (files.isEmpty()) return@synchronized
         val m = loadStats()
-        files.distinct().forEach { f -> m[f] = KbStat((m[f]?.count ?: 0) + 1, now) }
+        files.distinct().forEach { f -> m[f] = KbWeek.bump(m[f], now) }
         saveStats(m)
+    }
+
+    /** 2.2.9 F: citations this week, files still in the folder only. */
+    fun citesThisWeek(now: Long = System.currentTimeMillis()): Int = synchronized(lock) {
+        val present = scan().first.map { it.path }.toSet()
+        KbWeek.thisWeek(loadStats().filterKeys { it in present }.values, now)
     }
 
     /** The files in the folder with their index state and cite counts (no reading; the index is not refreshed). */

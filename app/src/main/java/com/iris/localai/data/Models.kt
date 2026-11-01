@@ -293,6 +293,10 @@ data class AppSettings(
     val renderHtml: Boolean = true,
     /** 2.2 加载网络图片: https images in replies and previews (fetched by the app, public hosts only, no cookies). */
     val loadNetworkImages: Boolean = true,
+    /** 2.2.9 F: 开发者选项 › 开发者模式 — shows 本对话的策略 in the chat context sheet. */
+    val developerMode: Boolean = false,
+    /** 2.2.9 F: the one-time 「高级设置在开发者选项」 hint on 上下文 · 记忆 · 知识库 was shown. */
+    val contextHintShown: Boolean = false,
 
     // ---- 1.7.8 ----
     /**

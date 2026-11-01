@@ -68,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT }
 
 class MainActivity : ComponentActivity() {
 
@@ -252,7 +252,12 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         )
         Route.MODEL_BACKEND -> com.iris.localai.ui.settings.ModelBackendPage(settingsVm, onBack = pop, onModels = { push(Route.MODELS) })
         Route.GENERATION -> GenerationPage(settingsVm, onBack = pop)
-        Route.CONTEXT -> com.iris.localai.ui.settings.ContextPage(settingsVm, onBack = pop)
+        Route.CONTEXT, Route.MEMORY -> {
+            // 2.2.9 F: one 上下文 · 记忆 · 知识库 page; the old controls are under 开发者选项.
+            val ui by chat.state.collectAsStateWithLifecycle()
+            com.iris.localai.ui.settings.ContextMemoryPage(settingsVm, ui.context, onBack = pop, onDeveloper = { push(Route.DEVELOPER) })
+        }
+        Route.DEV_CONTEXT -> com.iris.localai.ui.settings.DevContextMemoryPage(settingsVm, onBack = pop)
         Route.PERFORMANCE -> com.iris.localai.ui.settings.PerformancePage(settingsVm, onBack = pop, onOpen = { p -> push(routeOf(p)) })
         Route.TIER_PROFILES -> com.iris.localai.ui.settings.TierProfilesPage(settingsVm, onBack = pop)
         Route.VOICE -> VoicePage(settingsVm, onBack = pop)
@@ -264,7 +269,6 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.FILES -> com.iris.localai.ui.agent.FilesPage(onBack = pop)
         Route.BROWSER -> com.iris.localai.ui.agent.BrowserPage(onBack = pop)
         Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage(onBack = pop)
-        Route.MEMORY -> com.iris.localai.ui.settings.ContextPage(settingsVm, onBack = pop) // 2.1.3: one 记忆与上下文 page
         Route.STORAGE -> com.iris.localai.ui.settings.StoragePage(
             settingsVm, onBack = pop,
             onOpen = { p -> push(routeOf(p)) },
@@ -290,6 +294,7 @@ private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.MEMORY -> Route.MEMORY
     SettingsPage.STORAGE -> Route.STORAGE
     SettingsPage.DEVELOPER -> Route.DEVELOPER
+    SettingsPage.DEV_CONTEXT -> Route.DEV_CONTEXT
 }
 
 /** System "remove animations" switch, re-read whenever the app comes back to the foreground. */

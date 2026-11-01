@@ -75,6 +75,8 @@ data class ContextUsage(
     val compactions: Int = 0,
     /** 1.10.0: long-term memory is part of this conversation's prompt. */
     val memoryInjected: Boolean = false,
+    /** 2.2.9 E: history messages the model sees in the next prompt (planFor). */
+    val visibleMessages: Int = 0,
 ) {
     val fraction: Float get() = if (limit > 0) (used.toFloat() / limit).coerceIn(0f, 1f) else 0f
     val nearFull: Boolean get() = limit > 0 && used >= limit * NEAR_FULL
@@ -143,7 +145,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     @Volatile var liveTimer: com.iris.localai.util.ReplyTimer? = null
         private set
 
-    @Volatile private var usageMemo: Pair<List<Any?>, Int>? = null
+    @Volatile private var usageMemo: Pair<List<Any?>, Pair<Int, Int>>? = null
 
     private fun usageFor(conv: Conversation, ready: EngineState.Ready?, measuredTokens: Int?, summ: Boolean): ContextUsage {
         val s = c.settings.current
@@ -152,11 +154,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val agentMode = c.agent.settings.current.agentMode
         // 1.13.1: memoized — this planned the whole conversation on the main thread at every state
         // change (streamingId, engine busy, notices…), which made the start of a reply stutter.
-        val used = measuredTokens ?: if (conv.messages.isEmpty()) 0 else {
+        val planned = if (conv.messages.isEmpty()) 0 to 0 else {
             val key = listOf(conv, ready, agentMode, s, c.agent.memorySettings.current.epoch)
             usageMemo?.takeIf { it.first == key }?.second
-                ?: planFor(conv, ready, voice = false, agent = agentMode).estimatedTokens.also { usageMemo = key to it }
+                ?: planFor(conv, ready, voice = false, agent = agentMode).let { it.estimatedTokens to it.visibleMessages }.also { usageMemo = key to it }
         }
+        val used = measuredTokens ?: planned.first
         val withTools = agentMode
         val compacted = com.iris.localai.context.Compactor.applicable(
             conv.compaction, com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, withTools, ready?.details?.supportsVision == true),
@@ -168,6 +171,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             shiftUnsupported = com.iris.localai.engine.BackendCapabilities.contextShiftUnsupported(ready?.model?.format),
             compactedMessages = compacted?.messages ?: 0,
             compactions = compacted?.times ?: 0,
+            visibleMessages = planned.second,
             memoryInjected = memoryInjectFor(agentMode) && !conv.memorySnapshot.isNullOrBlank() && conv.memoryEpoch == c.agent.memorySettings.current.epoch,
         )
     }
@@ -552,7 +556,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val s = c.settings.current
         val strategy = com.iris.localai.data.ContextStrategy.of(conv.contextStrategy ?: s.contextStrategy)
         val ms = c.agent.memorySettings.current
-        if (!manual && !com.iris.localai.context.ContextAssembly.autoAllowed(agentMode, strategy, ms.autoCompactAgent, ms.autoCompactChat)) return 0
+        if (!manual && !com.iris.localai.context.ContextAssembly.autoAllowed(agentMode, strategy, ms.autoCompact)) return 0
         val active = com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, agentMode, ready?.details?.supportsVision == true)
         val ctx = contextTokensFor(ready)
         val eff = c.engine.effective(ready?.model)
@@ -579,12 +583,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 「压缩上下文」 in the context sheet. */
     fun compactNow() {
         if (viewingOther()) return
-        if (busy()) { notice.value = "正在回复，稍后再压缩"; return }
+        if (busy()) { notice.value = "正在回复，稍后再整理"; return }
         val agentMode = c.agent.settings.current.agentMode
         val ready = c.engine.state.value as? EngineState.Ready
         val maxNew = if (agentMode) minOf(c.engine.effective().maxNewTokens, AGENT_MAX_NEW) else c.engine.effective().maxNewTokens
         val n = compactIfNeeded(agentMode, ready, maxNew, manual = true)
-        notice.value = if (n > 0) "已压缩较早的 $n 条消息（不调用模型；原文仍在，智能体可用「回忆」检索）" else "没有可压缩的内容：只有最近一轮对话"
+        notice.value = if (n > 0) ContextText.compactNotice(n) else "没有可整理的内容：只有最近一轮对话"
     }
 
     /** Puts the compacted messages back into the context (they were never deleted). */
@@ -1418,7 +1422,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                     val hadSnapshot = conversation.value.memorySnapshot
                     freezeMemory(agentMode = false, ready = ready)
                     val n = compactIfNeeded(agentMode = false, ready = ready, maxNew = eff0.maxNewTokens + budget, manual = false)
-                    if (n > 0) notice.value = "对话较长，已压缩较早的 $n 条消息（不调用模型）"
+                    if (n > 0) notice.value = ContextText.compactNotice(n)
                     if (n > 0 || hadSnapshot != conversation.value.memorySnapshot) plan = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { planFor(conversation.value, ready, voice = false, thinkingBudget = budget) }
                 }
                 if (plan.toSummarize.isNotEmpty() && requester == Requester.CHAT) {
@@ -1757,7 +1761,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             freezeMemory(agentMode = true, ready = ready)
             prepareTurnMemory(agentMode = true, ready = ready)
             val folded = compactIfNeeded(agentMode = true, ready = ready, maxNew = maxNew, manual = false)
-            if (folded > 0) notice.value = "对话较长，已压缩较早的 $folded 条消息（不调用模型）"
+            if (folded > 0) notice.value = ContextText.compactNotice(folded)
             val p = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew) }
             plan = p
             val history = p.messages.filter { it.role != PromptMessage.SYSTEM }

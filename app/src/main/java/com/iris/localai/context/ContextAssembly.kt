@@ -62,11 +62,15 @@ object ContextAssembly {
     const val RECALL_HINT = "需要早期原文细节时用 recall 查，别重做已完成的事。"
 
     /**
-     * Whether automatic compaction runs for this reply. 智能体: its own switch. 对话: its switch, and
-     * only under 按 token 预算 (自动摘要 / 滑动窗口 / KV 平移 keep managing the window as in 1.9.0).
+     * Whether automatic compaction runs for this reply. 2.2.9 E: one switch 「快满时自动整理」; 对话 only
+     * under 按 token 预算 (a strategy picked in 开发者选项 keeps managing the window as before).
      */
-    fun autoAllowed(agentMode: Boolean, strategy: ContextStrategy, autoAgent: Boolean, autoChat: Boolean): Boolean =
-        if (agentMode) autoAgent else autoChat && strategy == ContextStrategy.TOKEN_BUDGET
+    fun autoAllowed(agentMode: Boolean, strategy: ContextStrategy, autoCompact: Boolean): Boolean =
+        autoCompact && (agentMode || strategy == ContextStrategy.TOKEN_BUDGET)
+
+    /** 2.2.9 E: a strategy other than 按 token 预算 was chosen in 开发者选项 → 「已由开发者选项接管」. */
+    fun devTakeover(strategy: ContextStrategy): Boolean = strategy != ContextStrategy.TOKEN_BUDGET
+    const val TAKEOVER = "已由开发者选项接管"
 
     /** The memory block for a conversation: its frozen ABOUT + PREF snapshot (2.2.9), capped to the window. */
     fun memoryBlock(conv: Conversation, inject: Boolean, contextTokens: Int, epoch: Int = 0): String =

@@ -315,11 +315,12 @@ class V1100Test {
     }
 
     @Test fun autoCompactionRulesPerMode() {
-        assertTrue(ContextAssembly.autoAllowed(true, ContextStrategy.SUMMARY, autoAgent = true, autoChat = false))
-        assertFalse(ContextAssembly.autoAllowed(true, ContextStrategy.TOKEN_BUDGET, autoAgent = false, autoChat = true))
-        assertTrue(ContextAssembly.autoAllowed(false, ContextStrategy.TOKEN_BUDGET, autoAgent = false, autoChat = true))
+        // 2.2.9 E: one switch.
+        assertTrue(ContextAssembly.autoAllowed(true, ContextStrategy.SUMMARY, autoCompact = true))
+        assertFalse(ContextAssembly.autoAllowed(true, ContextStrategy.TOKEN_BUDGET, autoCompact = false))
+        assertTrue(ContextAssembly.autoAllowed(false, ContextStrategy.TOKEN_BUDGET, autoCompact = true))
         for (st in listOf(ContextStrategy.SUMMARY, ContextStrategy.SLIDING_WINDOW, ContextStrategy.KV_SHIFT))
-            assertFalse(st.name, ContextAssembly.autoAllowed(false, st, autoAgent = true, autoChat = true))
+            assertFalse(st.name, ContextAssembly.autoAllowed(false, st, autoCompact = true))
         val d = MemorySettings()
         // 2.0.x: 对话模式注入 is on by default now (was off; see v200/V200MemoryTest).
         assertTrue(d.enabled); assertTrue(d.injectAgent); assertTrue(d.injectChat)
@@ -822,11 +823,11 @@ class V1100Test {
     // ================================================================ UI texts + version
 
     @Test fun uiTextsAndVersion() {
-        assertEquals("压缩上下文", com.iris.localai.ui.chat.ContextText.COMPACT)
-        assertEquals("以上 12 条消息已压缩 · 撤销", com.iris.localai.ui.chat.ContextText.divider(12))
+        assertEquals("现在整理", com.iris.localai.ui.chat.ContextText.COMPACT)
+        assertEquals("较早的 12 条已整理成要点 · 原文仍在 · 撤销", com.iris.localai.ui.chat.ContextText.divider(12))
         val u = com.iris.localai.ui.chat.ContextUsage(compactedMessages = 8, compactions = 2)
-        assertEquals("已压缩 8 条消息（2 次）", com.iris.localai.ui.chat.ContextText.compacted(u))
-        assertEquals(" · 已压缩", com.iris.localai.ui.chat.ContextText.meterSuffix(u))
+        assertEquals("已整理 8 条消息（2 次）", com.iris.localai.ui.chat.ContextText.compacted(u))
+        assertEquals(" · 已整理", com.iris.localai.ui.chat.ContextText.meterSuffix(u))
         assertEquals("", com.iris.localai.ui.chat.ContextText.meterSuffix(com.iris.localai.ui.chat.ContextUsage()))
         assertEquals("120 / 1500 字", com.iris.localai.ui.agent.MemoryText.usage(120))
         assertTrue(com.iris.localai.ui.settings.SettingsPage.entries.any { it.name == "MEMORY" })

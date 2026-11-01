@@ -68,6 +68,8 @@ data class ContextPlan(
     val contextShift: Boolean = false,
     /** Tokens to keep at the start on a context shift (system prompt + summary + attention sink). */
     val keepTokens: Int = 4,
+    /** 2.2.9 E: history messages that really go into the prompt (for 「模型现在能看到最近 N 条」). */
+    val visibleMessages: Int = 0,
 )
 
 /**
@@ -223,6 +225,7 @@ object ContextPlanner {
             estimatedTokens = systemTokens + rounds.sumOf { rd -> rd.sumOf { it.tokens } },
             budget = budget,
             applied = applied,
+            visibleMessages = rounds.sumOf { it.size },
         )
     }
 

@@ -400,7 +400,7 @@ class V178Test {
     @Test fun settingsHomeIsGroupedByFunction() {
         assertEquals(listOf("模型与推理", "语音与服务", "界面与外观", "数据", "关于与调试"), SettingsText.HOME_GROUPS.map { it.first })
         // 2.1.3: 「上下文与记忆」 and 「记忆」 merged into one entry 「记忆与上下文」.
-        assertEquals(listOf("模型与后端", "生成", "记忆与上下文", "性能与资源"), SettingsText.HOME_GROUPS[0].second)
+        assertEquals(listOf("模型与后端", "生成", "上下文、记忆和知识库", "性能与资源"), SettingsText.HOME_GROUPS[0].second)
         val src = source("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
         for (title in SettingsText.HOME_GROUPS.map { it.first }) assertTrue(src.contains("SectionTitle(\"$title\")"))
         assertFalse(src.contains("全部资源")); assertFalse(src.contains("ResourceTier.ALL"))

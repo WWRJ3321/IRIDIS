@@ -93,7 +93,7 @@ import kotlin.math.roundToInt
  * with rarely used items folded under 「高级」. No storage key or default value changed.
  */
 /** 2.1.3: DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
-enum class SettingsPage { APPEARANCE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER }
+enum class SettingsPage { APPEARANCE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT }
 
 private val THEME_OPTIONS = listOf(ThemeMode.SYSTEM to "跟随系统", ThemeMode.LIGHT to "浅色", ThemeMode.DARK to "深色")
 
@@ -127,7 +127,7 @@ object SettingsText {
 
     /** The pages HOME links to, with their titles: the structure the 1.7.8 tests check. */
     val HOME_GROUPS: List<Pair<String, List<String>>> = listOf(
-        "模型与推理" to listOf("模型与后端", "生成", "记忆与上下文", "性能与资源"),
+        "模型与推理" to listOf("模型与后端", "生成", ContextMemoryText.NAV, "性能与资源"),
         "语音与服务" to listOf("语音", "API 服务"),
         "界面与外观" to listOf("外观"),
         "数据" to listOf("存储空间", "删除全部对话"),
@@ -192,7 +192,7 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
                 NavItem("智能体", com.iris.localai.ui.agent.AgentText.NAV, com.iris.localai.ui.icons.IrisIcons.Agent) { onOpen(SettingsPage.AGENT) }
                 Divider()
                 // 2.1.3: 「上下文与记忆」 + 「记忆」 → one entry 「记忆与上下文」 (one page, context sections first).
-                NavItem("记忆与上下文", SettingsText.MEMORY_CONTEXT, com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.MEMORY) }
+                NavItem(ContextMemoryText.NAV, ContextMemoryText.NAV_SUB, com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.MEMORY) }
             }
 
             SectionTitle("语音与服务")
@@ -407,11 +407,12 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
  * Both SettingsPage.CONTEXT and SettingsPage.MEMORY open it. 「恢复默认」 still only resets the context part.
  */
 @Composable
-fun ContextPage(vm: SettingsViewModel, onBack: () -> Unit) {
+fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
+    // 2.2.9 F: 开发者选项 › 上下文与记忆 — every control of the old 记忆与上下文 page, unchanged.
     com.iris.localai.ui.agent.MemorySettingsPage(
         onBack = onBack,
-        title = "记忆与上下文",
+        title = "上下文与记忆",
         actions = { IrisButton("恢复默认", vm::resetContext, style = IrisButtonStyle.Text, compact = true) },
     ) {
         run {
@@ -434,6 +435,12 @@ fun ContextPage(vm: SettingsViewModel, onBack: () -> Unit) {
                 SliderRow("滑动窗口保留轮数", s.contextKeepTurns.toFloat(), 1f..32f, "${s.contextKeepTurns} 轮", subtitle = "「滑动窗口」保留最近多少轮对话", steps = 30) { v -> vm.update { it.copy(contextKeepTurns = v.toInt()) } }
                 Divider()
                 SliderRow("摘要触发阈值", s.summaryTriggerPercent.toFloat(), 40f..95f, "${s.summaryTriggerPercent}%", subtitle = "「自动摘要」在历史超过上下文预算的这个比例时，先总结早期对话") { v -> vm.update { it.copy(summaryTriggerPercent = v.toInt()) } }
+                Divider()
+                // 2.2.9 E: 本对话的策略 (chat context sheet) only with this on.
+                SwitchRow("每对话策略", s.developerMode, subtitle = "在聊天的上下文菜单里显示「本对话的策略」，可为单个对话改用其他策略") { on -> vm.update { it.copy(developerMode = on) } }
+            }
+            if (com.iris.localai.context.ContextAssembly.devTakeover(com.iris.localai.data.ContextStrategy.of(s.contextStrategy))) {
+                GroupFootnote("选了「按 token 预算」以外的策略：对话模式不再自动整理，主页面显示「${com.iris.localai.context.ContextAssembly.TAKEOVER}」。")
             }
             GroupFootnote("每个对话可在输入框上方的上下文用量处单独改策略，或「从这里开始新上下文」。KV 上下文平移只有 GGUF（llama.cpp）支持，其他引擎按 token 预算截断。")
         }
@@ -934,6 +941,10 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
 }
 
 
+/** 2.2.9 F: kept for callers of the old name; the main page is now [ContextMemoryPage]. */
+@Composable
+fun ContextPage(vm: SettingsViewModel, onBack: () -> Unit) = DevContextMemoryPage(vm, onBack)
+
 /**
  * 2.1.3 关于 IRIDIS › 开发者选项: the rarely used tuning / diagnostics pages and display switches,
  * moved off the main settings list and 外观. Default values unchanged.
@@ -943,6 +954,11 @@ fun DeveloperPage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPa
     val s by vm.settings.collectAsStateWithLifecycle()
     SubpageScaffold("开发者选项", onBack) {
         ScrollBody {
+            // 2.2.9 F: every old context / memory / index control moved here.
+            SectionTitle("上下文与记忆")
+            SettingsGroup {
+                NavItem("上下文与记忆", "上下文长度、超出策略、记忆注入、历史索引、知识库索引与清空记忆", com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.DEV_CONTEXT) }
+            }
             SectionTitle("资源")
             SettingsGroup {
                 NavItem("资源档配置", SettingsText.TIER_PROFILES, com.iris.localai.ui.icons.IrisIcons.Bolt) { onOpen(SettingsPage.TIER_PROFILES) }

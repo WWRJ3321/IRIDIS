@@ -80,11 +80,7 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
     }
 }
 
-private fun short(n: Int): String = when {
-    n >= 10_000 -> "${n / 1000}k"
-    n >= 1000 -> String.format(java.util.Locale.US, "%.1fk", n / 1000f)
-    else -> "$n"
-}
+private fun short(n: Int): String = shortTokens(n)
 
 /** Per-conversation context menu: strategy override, manual break, summary. */
 @Composable
@@ -102,16 +98,16 @@ fun ContextSheet(
     compactionText: String = "",
     onCompact: () -> Unit = {},
     onClearCompaction: () -> Unit = {},
+    /** 2.2.9 E: 本对话的策略 only with 开发者选项 › 开发者模式 on. */
+    showStrategy: Boolean = false,
 ) {
     val c = Iris.colors
     IrisSheet(onDismiss = onDismiss) {
         SheetHeader("上下文")
         Column(Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4)) {
-            Text(
-                if (usage.limit > 0) "${if (usage.exact) "已用" else "约用"} ${usage.used} / ${usage.limit} tokens（${(usage.fraction * 100).toInt()}%）"
-                else "加载模型后显示上下文上限",
-                style = IrisType.secondary, color = if (usage.nearFull) c.danger else c.textSecondary,
-            )
+            Text(ContextText.usageTitle(usage), style = IrisType.body, color = if (usage.nearFull) c.danger else c.text)
+            Spacer(Modifier.height(IrisDimens.space4))
+            Text(ContextText.usageDetail(usage), style = IrisType.secondary, color = c.textSecondary)
             Spacer(Modifier.height(IrisDimens.space6))
             val track = c.outline.copy(alpha = 0.4f)
             val fill = if (usage.nearFull) c.danger else c.textSecondary
@@ -121,6 +117,7 @@ fun ContextSheet(
                 drawRoundRect(fill, Offset.Zero, Size(size.width * usage.fraction, size.height), r)
             }
         }
+        if (showStrategy || usage.overridden) {
         SectionTitle("本对话的策略")
         SettingsGroup {
             StrategyRow("跟随全局默认", "现在是「${globalStrategy.label}」", selected = !usage.overridden, enabled = true) { onStrategy(null) }
@@ -139,6 +136,7 @@ fun ContextSheet(
                 ) { onStrategy(st.ordinal) }
             }
         }
+        }
         SectionTitle("分隔与摘要")
         SettingsGroup {
             SettingsRow(
@@ -156,7 +154,7 @@ fun ContextSheet(
             }
         }
         // 1.10.0: deterministic compaction (no model call).
-        SectionTitle("压缩")
+        SectionTitle("整理")
         SettingsGroup {
             SettingsRow(
                 ContextText.COMPACT, icon = Icons.Outlined.Compress, enabled = hasMessages,
@@ -172,7 +170,7 @@ fun ContextSheet(
                 )
             }
         }
-        GroupFootnote("裁剪按整轮（提问+回答）进行，并且成段移动，尽量让模型能复用已算好的 KV 缓存。" + if (usage.memoryInjected) "\n本对话已带上长期记忆快照。" else "")
+        GroupFootnote("较早的内容只是浓缩成要点，原文都还在。" + if (usage.memoryInjected) "\n本对话已带上你的记忆。" else "")
     }
 }
 
@@ -187,12 +185,33 @@ private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enab
 
 /** 1.10.0 texts of compaction (unit-tested). */
 object ContextText {
-    const val COMPACT = "压缩上下文"
-    const val COMPACT_HINT = "把最近一轮之前的对话按规则压缩成摘要（目标、未完成事项、引用、关键信号），不调用模型，原文仍保留"
-    const val UNDO_COMPACT = "撤销压缩"
-    fun compacted(u: ContextUsage): String = "已压缩 ${u.compactedMessages} 条消息" + if (u.compactions > 1) "（${u.compactions} 次）" else ""
-    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) " · 已压缩" else ""
-    fun divider(n: Int): String = "以上 $n 条消息已压缩 · 撤销"
+    const val COMPACT = "现在整理"
+    const val COMPACT_HINT = "把最近一轮之前的对话浓缩成要点，不调用模型，原文不删，需要时能找回"
+    const val UNDO_COMPACT = "撤销整理"
+    /** 2.2.9 E: the one switch. */
+    const val AUTO = "快满时自动整理"
+    const val AUTO_SUB = "把较早内容浓缩成要点，原文不删，需要时能找回"
+    fun compacted(u: ContextUsage): String = "已整理 ${u.compactedMessages} 条消息" + if (u.compactions > 1) "（${u.compactions} 次）" else ""
+    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) " · 已整理" else ""
+    fun divider(n: Int): String = "较早的 $n 条已整理成要点 · 原文仍在 · 撤销"
+    fun compactNotice(n: Int): String = "已整理较早的 $n 条消息，原文没删，需要时能找回"
+    /** 2.2.9 E: 「这次对话用了 41%」 (no conversation / no model → 「这次对话还没开始」). */
+    fun usageTitle(u: ContextUsage): String = if (u.limit > 0 && u.used > 0) "这次对话用了 ${(u.fraction * 100).toInt()}%" else "这次对话还没开始"
+    /** 「这次对话用了 41% · 模型现在能看到最近 26 条」. */
+    fun usageLine(u: ContextUsage): String = usageTitle(u) + if (u.visibleMessages > 0) " · 模型现在能看到最近 ${u.visibleMessages} 条" else ""
+    /** Detail line under the bar: 「约 3.4k / 8k · 模型现在能看到最近 26 条」. */
+    fun usageDetail(u: ContextUsage): String = listOfNotNull(
+        if (u.limit > 0) (if (u.exact) "" else "约 ") + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else "加载模型后显示用量",
+        u.visibleMessages.takeIf { it > 0 }?.let { "模型现在能看到最近 $it 条" },
+    ).joinToString(" · ")
+}
+
+/** 「3.4k」 / 「12k」 / 「800」. */
+fun shortTokens(n: Int): String = when {
+    n >= 1024 && n % 1024 == 0 -> "${n / 1024}k" // window sizes: 8192 → 8k
+    n >= 10_000 -> "${n / 1000}k"
+    n >= 1000 -> String.format(java.util.Locale.US, "%.1fk", n / 1000f)
+    else -> "$n"
 }
 
 /** 1.10.0: thin marker after the last compacted message (tap = 撤销压缩). */

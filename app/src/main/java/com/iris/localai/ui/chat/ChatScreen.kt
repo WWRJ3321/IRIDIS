@@ -758,6 +758,7 @@ fun ChatScreen(
             compactionText = ui.conversation.compaction?.let { com.iris.localai.context.Compactor.render(it) }.orEmpty(),
             onCompact = vm::compactNow,
             onClearCompaction = vm::clearCompaction,
+            showStrategy = settings.developerMode,
         )
     }
 }

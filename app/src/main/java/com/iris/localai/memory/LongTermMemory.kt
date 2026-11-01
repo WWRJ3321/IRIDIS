@@ -290,9 +290,13 @@ data class MemorySettings(
     val injectAgent: Boolean = true,
     /** 2.0.x: on by default (was false: 对话 mode never saw the memory). */
     val injectChat: Boolean = true,
-    /** Deterministic compaction when the conversation outgrows the window. */
+    /** Deterministic compaction when the conversation outgrows the window (≤2.2.8, kept for downgrade; see [autoCompact]). */
     val autoCompactAgent: Boolean = true,
     val autoCompactChat: Boolean = true,
+    /** 2.2.9 E: the one 「快满时自动整理」 switch (智能体 and 对话). */
+    val autoCompact: Boolean = true,
+    /** 2.2.9 E: [autoCompact] was derived once from autoCompactAgent || autoCompactChat. */
+    val autoCompactMerged: Boolean = false,
     /** Bumped by 清空记忆: snapshots frozen before it are no longer injected. */
     val epoch: Int = 0,
     /**
@@ -304,8 +308,15 @@ data class MemorySettings(
     /** 2.2.9: 「聊天时提议记住」 — the 「＋ 记住？」 chip under a reply. */
     val suggest: Boolean = true,
 ) {
-    fun migrated(): MemorySettings = if (chatInjectDefaultApplied) this else copy(injectChat = true, chatInjectDefaultApplied = true)
+    fun migrated(): MemorySettings {
+        val m = if (chatInjectDefaultApplied) this else copy(injectChat = true, chatInjectDefaultApplied = true)
+        // 2.2.9 E: the two compaction switches become one; on if either was on.
+        return if (m.autoCompactMerged) m else m.copy(autoCompact = m.autoCompactAgent || m.autoCompactChat, autoCompactMerged = true)
+    }
+
+    /** 2.2.9 E: sets 「快满时自动整理」 (legacy fields follow, so a downgrade keeps the choice). */
+    fun withAutoCompact(on: Boolean): MemorySettings = copy(autoCompact = on, autoCompactAgent = on, autoCompactChat = on, autoCompactMerged = true)
 
     fun inject(agentMode: Boolean): Boolean = enabled && if (agentMode) injectAgent else injectChat
-    fun autoCompact(agentMode: Boolean): Boolean = if (agentMode) autoCompactAgent else autoCompactChat
+    @Suppress("UNUSED_PARAMETER") fun autoCompact(agentMode: Boolean): Boolean = autoCompact
 }

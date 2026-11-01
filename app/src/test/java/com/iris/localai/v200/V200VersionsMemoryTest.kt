@@ -204,7 +204,7 @@ class V200VersionsMemoryTest {
     @Test fun chatInjectionIsOnByDefaultAndMigratedOnce() {
         val d = MemorySettings()
         assertTrue(d.injectChat); assertTrue(d.inject(agentMode = false))
-        assertEquals(d.copy(chatInjectDefaultApplied = true), d.migrated())
+        assertEquals(d.copy(chatInjectDefaultApplied = true, autoCompactMerged = true), d.migrated())
         val sj = Json { ignoreUnknownKeys = true; encodeDefaults = true }
         // Stored by 1.10–2.0.0 (encodeDefaults = true): injectChat false only because it was the default.
         val old = """{"enabled":true,"injectAgent":true,"injectChat":false,"autoCompactAgent":true,"autoCompactChat":true,"epoch":2}"""

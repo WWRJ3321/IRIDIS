@@ -85,7 +85,7 @@ class V213SimplifyTest {
     @Test fun settingsEntriesMergedAndMoved() {
         val src = source("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
         val home = src.substringAfter("fun SettingsHome(").substringBefore("/** 设置 › 模型与后端. */")
-        assertTrue(home.contains("NavItem(\"记忆与上下文\""))
+        assertTrue(home.contains("NavItem(ContextMemoryText.NAV"))
         assertFalse(home.contains("NavItem(\"上下文与记忆\""))
         assertFalse(home.contains("NavItem(\"记忆\""))
         assertFalse(home.contains("RuntimeRack("))
@@ -103,7 +103,7 @@ class V213SimplifyTest {
         assertTrue(com.iris.localai.ui.settings.SettingsPage.entries.any { it.name == "DEVELOPER" })
         val main = source("src/main/java/com/iris/localai/ui/MainActivity.kt")
         assertTrue(main.contains("SettingsPage.DEVELOPER -> Route.DEVELOPER"))
-        assertTrue(main.contains("Route.MEMORY -> com.iris.localai.ui.settings.ContextPage("))
+        assertTrue(main.contains("Route.CONTEXT, Route.MEMORY -> {"))
         // defaults unchanged
         val s = AppSettings()
         assertTrue(s.showStatusRack); assertFalse(s.perfOverlay); assertFalse(s.topBarCapsules)
