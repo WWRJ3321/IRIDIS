@@ -469,27 +469,77 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      */
     private val kbBlocks = LinkedHashMap<String, String>()
 
-    /** 2.1.0: finds knowledge snippets for the newest user message (typed chat only) and marks the reply. */
-    private suspend fun prepareKnowledge(requester: Requester, replyId: String) {
-        if (requester != Requester.CHAT || !c.settings.current.knowledgeInChat) return
+    /**
+     * 2.2.9 C: user message id → its 【相关记忆】 block (FACT items relevant to it), put in front of
+     * that message like the knowledge block; kept per message so the history stays byte-stable.
+     */
+    private val memBlocks = LinkedHashMap<String, String>()
+
+    /** kbBlocks + memBlocks, memory first, for [KbChat.attachAll]. */
+    private fun turnBlocks(): Map<String, String> {
+        val kb = synchronized(kbBlocks) { HashMap(kbBlocks) }
+        val mem = memOnly()
+        if (mem.isEmpty()) return kb
+        return (mem.keys + kb.keys).associateWith { listOfNotNull(mem[it], kb[it]).joinToString("\n\n") }
+    }
+
+    /** Non-empty memory blocks ("" = looked, nothing relevant: kept so the message stays as answered). */
+    private fun memOnly(): Map<String, String> = synchronized(memBlocks) { memBlocks.filterValues { it.isNotEmpty() } }
+
+    /** 2.2.9 C: picks the FACT items relevant to the newest user message (once per message). */
+    private fun prepareTurnMemory(agentMode: Boolean, ready: EngineState.Ready?) {
         val user = conversation.value.messages.lastOrNull { it.role == Role.USER && it.content.isNotBlank() } ?: return
-        val hits = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.iris.localai.knowledge.KbChat.hits(c.agent.knowledge, user.content) }
+        if (synchronized(memBlocks) { memBlocks.containsKey(user.id) }) return
+        val block = if (!memoryInjectFor(agentMode)) "" else runCatching {
+            com.iris.localai.context.ContextAssembly.turnMemory(c.agent.memoryDocs.store.items(), user.content, contextTokensFor(ready))
+        }.getOrDefault("")
+        synchronized(memBlocks) { com.iris.localai.knowledge.KbChat.remember(memBlocks, user.id, block) }
+    }
+
+    /**
+     * 2.1.0: finds knowledge snippets for the newest user message and marks the reply.
+     * 2.2.9: also in a voice call (half the characters); a follow-up borrows the previous question's
+     * keywords and favours the files the previous reply cited; neighbouring chunks are merged.
+     */
+    private suspend fun prepareKnowledge(requester: Requester, replyId: String) {
+        if (requester == Requester.API || !c.settings.current.knowledgeInChat) return
+        val msgs = conversation.value.messages
+        val ui = msgs.indexOfLast { it.role == Role.USER && it.content.isNotBlank() }
+        if (ui < 0) return
+        val user = msgs[ui]
+        val pi = msgs.subList(0, ui).indexOfLast { it.role == Role.USER && it.content.isNotBlank() }
+        val prevUser = if (pi >= 0) msgs[pi].content else null
+        val prevFiles = if (pi >= 0) msgs.subList(pi + 1, ui).flatMap { com.iris.localai.knowledge.KbSource.files(it.kbSources) }.distinct() else emptyList()
+        val maxChars = if (requester == Requester.VOICE) com.iris.localai.knowledge.KbPrompt.INJECT_CHARS / 2 else com.iris.localai.knowledge.KbPrompt.INJECT_CHARS
+        val kb = c.agent.knowledge
+        val hits = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val q = runCatching { com.iris.localai.knowledge.KbQuery.build(user.content, prevUser, prevFiles, kb::idf) }.getOrDefault(user.content)
+            com.iris.localai.knowledge.KbChat.hits(kb, q, prevFiles, maxChars).also { h -> if (h.isNotEmpty()) runCatching { kb.cite(h.map { it.file }) } }
+        }
         synchronized(kbBlocks) {
             if (hits.isEmpty()) kbBlocks.remove(user.id)
-            else com.iris.localai.knowledge.KbChat.remember(kbBlocks, user.id, com.iris.localai.knowledge.KbPrompt.inject(hits))
+            else com.iris.localai.knowledge.KbChat.remember(kbBlocks, user.id, com.iris.localai.knowledge.KbPrompt.inject(hits, maxChars))
         }
         if (hits.isEmpty()) return
-        conversation.update { conv -> conv.copy(messages = conv.messages.map { if (it.id == replyId) it.copy(kbRefs = hits.size) else it }) }
+        val sources = hits.map { com.iris.localai.knowledge.KbSource.label(it) }
+        conversation.update { conv -> conv.copy(messages = conv.messages.map { if (it.id == replyId) it.copy(kbRefs = hits.size, kbSources = sources) else it }) }
+    }
+
+    /** 2.2.9: the snippet behind a 「出处」 chip ("" when the file or chunk is gone). */
+    suspend fun kbSnippet(label: String): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val (file, idx) = com.iris.localai.knowledge.KbSource.parse(label)
+        runCatching { c.agent.knowledge.chunksOf(file).getOrNull(idx) }.getOrNull().orEmpty()
     }
 
     /** Freezes the long-term memory for this conversation the first time it is used (stable prompt prefix). */
-    private fun freezeMemory(agentMode: Boolean) {
+    private fun freezeMemory(agentMode: Boolean, ready: EngineState.Ready? = null) {
         val ms = c.agent.memorySettings.current
         val conv = conversation.value
         // 2.0.x: until the model has replied once, the snapshot is retaken (memory saved just now counts).
         if (!com.iris.localai.memory.MemoryPrompt.needsSnapshot(conv, ms.epoch)) return
         if (!ms.inject(agentMode)) return
-        val snap = runCatching { c.agent.memoryDocs.snapshot() }.getOrDefault("")
+        // 2.2.9 C: ABOUT + PREF only, newest first within the budget; FACTs ride on each turn.
+        val snap = runCatching { c.agent.memoryDocs.snapshot(com.iris.localai.memory.MemoryPrompt.budget(contextTokensFor(ready))) }.getOrDefault("")
         conversation.update { it.copy(memorySnapshot = snap, memoryEpoch = ms.epoch) }
     }
 
@@ -997,7 +1047,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         // 2.3: every message keeps the knowledge block it was answered with, so the history the
         // engine sees next turn is the one it already holds (KV-cache reuse).
         val msgs = com.iris.localai.context.ContextAssembly.forPlanner(active, compaction, withTools = agent)
-            .let { m -> if (agent || !s.knowledgeInChat) m else synchronized(kbBlocks) { com.iris.localai.knowledge.KbChat.attachAll(m, kbBlocks) } }
+            // 2.2.9: plus each message's 【相关记忆】 (memory FACTs), both modes.
+            .let { m -> com.iris.localai.knowledge.KbChat.attachAll(m, if (agent || !s.knowledgeInChat) memOnly() else turnBlocks()) }
         return com.iris.localai.util.ContextPlanner.plan(
             com.iris.localai.util.ContextRequest(
                 system = system,
@@ -1361,11 +1412,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             }
 
             try {
-                plan = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { prepareKnowledge(requester, reply.id); planFor(conversation.value, ready, voice = requester == Requester.VOICE, thinkingBudget = budget) }
+                plan = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { prepareKnowledge(requester, reply.id); if (requester != Requester.API) prepareTurnMemory(agentMode = false, ready = ready); planFor(conversation.value, ready, voice = requester == Requester.VOICE, thinkingBudget = budget) }
                 // 1.10.0: frozen memory + deterministic compaction (typed chat only); planned again when either changed.
                 if (requester == Requester.CHAT) {
                     val hadSnapshot = conversation.value.memorySnapshot
-                    freezeMemory(agentMode = false)
+                    freezeMemory(agentMode = false, ready = ready)
                     val n = compactIfNeeded(agentMode = false, ready = ready, maxNew = eff0.maxNewTokens + budget, manual = false)
                     if (n > 0) notice.value = "对话较长，已压缩较早的 $n 条消息（不调用模型）"
                     if (n > 0 || hadSnapshot != conversation.value.memorySnapshot) plan = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { planFor(conversation.value, ready, voice = false, thinkingBudget = budget) }
@@ -1703,7 +1754,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         var plan: com.iris.localai.util.ContextPlan? = null
         try {
             awaitingEngine = false
-            freezeMemory(agentMode = true)
+            freezeMemory(agentMode = true, ready = ready)
+            prepareTurnMemory(agentMode = true, ready = ready)
             val folded = compactIfNeeded(agentMode = true, ready = ready, maxNew = maxNew, manual = false)
             if (folded > 0) notice.value = "对话较长，已压缩较早的 $folded 条消息（不调用模型）"
             val p = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew) }
@@ -1841,7 +1893,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val tools = com.iris.localai.agent.AgentTools.enabled(ag, c.agent.history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
         val eff = c.engine.effective()
         val maxNew = minOf(eff.maxNewTokens, AGENT_MAX_NEW)
-        freezeMemory(agentMode = true)
+        freezeMemory(agentMode = true, ready = ready)
         val p = planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew)
         return listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +
             p.messages.filter { it.role != PromptMessage.SYSTEM }

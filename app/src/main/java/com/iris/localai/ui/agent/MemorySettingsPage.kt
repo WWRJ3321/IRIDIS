@@ -87,6 +87,12 @@ fun MemorySettingsPage(
     val counts by produceState(0 to 0, revision) {
         value = withContext(Dispatchers.IO) { agent.memoryDocs.store.file().let { it.items.size to it.pending.size } }
     }
+    var showKb by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    if (showKb) {
+        androidx.activity.compose.BackHandler { showKb = false }
+        KnowledgePage(onBack = { showKb = false })
+        return
+    }
     if (showList) {
         androidx.activity.compose.BackHandler { showList = false }
         MemoryListPage(onBack = { showList = false })
@@ -137,7 +143,7 @@ fun MemorySettingsPage(
             }
             GroupFootnote(MemoryText.DOC_NOTE)
 
-            KnowledgeSection()
+            KnowledgeEntry(onOpen = { showKb = true })
 
             SectionTitle("上下文压缩")
             SettingsGroup {

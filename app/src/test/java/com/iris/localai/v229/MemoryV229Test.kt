@@ -50,10 +50,11 @@ class MemoryV229Test {
         assertTrue(File(dir, "memory.json").isFile)
         assertTrue(File(dir, "USER.md.bak").isFile && File(dir, "MEMORY.md.bak").isFile)
         assertFalse(File(dir, "USER.md").exists())
-        // Same snapshot shape as before (adapter).
+        // 2.2.9 part 3: the frozen snapshot is ABOUT + PREF only, newest first, plain labels; FACTs are per turn.
         val snap = docs.snapshot()
-        assertTrue(snap.startsWith("USER.md:\n- 我叫小明\n- 住在香港"))
-        assertTrue(snap.contains("MEMORY.md:\n- 项目代号 IRIDIS"))
+        assertTrue(snap, snap.startsWith("【关于用户】\n- 住在香港\n- 我叫小明"))
+        assertFalse(snap.contains("项目代号 IRIDIS"))
+        assertTrue(docs.turn("IRIDIS 项目代号是什么", 500).contains("项目代号 IRIDIS"))
         // Reloaded from json; no second migration.
         assertEquals(3, MemoryStore(dir).items().size)
         dir.deleteRecursively()

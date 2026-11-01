@@ -71,7 +71,7 @@ object KbChunker {
 }
 
 @Serializable
-data class KbChunk(val file: String, val text: String)
+data class KbChunk(val file: String, val text: String, val index: Int = 0)
 
 /** One indexed file: its path in knowledge/, and size + mtime to notice changes. */
 @Serializable
@@ -83,7 +83,8 @@ data class KbIndexData(val version: Int = 1, val files: List<KbFileEntry> = empt
 /** A file as seen in the folder (mtime 0 when unknown, e.g. through the SAF grant). */
 data class KbSourceFile(val path: String, val size: Long, val mtime: Long)
 
-data class KbHit(val file: String, val text: String, val score: Double)
+/** 2.2.9: [chunkIndex] = position of the chunk in its file (-1 unknown); 「第 chunkIndex+1 段」. */
+data class KbHit(val file: String, val text: String, val score: Double, val chunkIndex: Int = -1)
 
 object KbChanges {
     data class Plan(val keep: List<KbFileEntry>, val reindex: List<KbSourceFile>, val removed: List<String>) {
@@ -114,7 +115,15 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
 
     val size: Int get() = docs.size
 
-    fun search(query: String, limit: Int): List<KbHit> {
+    /** 2.2.9: inverse document frequency of [token] over the chunks (0 when unseen). */
+    fun idf(token: String): Double {
+        val d = df[token] ?: return 0.0
+        val n = docs.size.toDouble()
+        return ln(1 + (n - d + 0.5) / (d + 0.5))
+    }
+
+    /** 2.2.9: [boostFiles] = files the previous turn hit (a follow-up likely continues there): score ×[BOOST]. */
+    fun search(query: String, limit: Int, boostFiles: Collection<String> = emptyList()): List<KbHit> {
         val q = KbTokenizer.tokens(query).distinct()
         if (q.isEmpty() || docs.isEmpty()) return emptyList()
         val n = docs.size.toDouble()
@@ -127,7 +136,7 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
                 val idf = ln(1 + (n - df.getValue(t) + 0.5) / (df.getValue(t) + 0.5))
                 s += idf * f * (k1 + 1) / (f + k1 * (1 - b + b * len[i] / avg))
             }
-            if (s > 0) scored += KbHit(docs[i].file, docs[i].text, s)
+            if (s > 0) scored += KbHit(docs[i].file, docs[i].text, if (docs[i].file in boostFiles) s * BOOST else s, docs[i].index)
         }
         // One file may fill the list only when nothing else matches.
         val sorted = scored.sortedByDescending { it.score }
@@ -141,6 +150,91 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
         for (h in sorted) { if (out.size >= limit) break; if (h !in out) out += h }
         return out
     }
+}
+
+/** 2.2.9: score factor for files the previous turn cited. */
+const val BOOST = 1.3
+
+/** 2.2.9 D2: follow-up questions borrow the previous user question's keywords. Pure. */
+object KbQuery {
+    private val LEAD = Regex("^(?:那|这|它|第[0-9一二三四五六七八九十百]+|上面|刚才|还有)")
+    private val TAIL = Regex("(?:呢|那个|这个)[？?。！!\\s]*$")
+    /** Bigrams too common to say what a question is about. */
+    val STOP = setOf("什么", "怎么", "么时", "时候", "一下", "是不", "不是", "可以", "这个", "那个", "我们", "你们", "一个", "有没", "没有",
+        "我的", "你的", "的是", "是什", "怎样", "如何", "多少", "哪里", "请问", "还有", "上面", "刚才", "the", "a", "is", "of", "to", "and", "what")
+    const val TOP_K = 4
+
+    fun meaningful(text: String): List<String> = KbTokenizer.tokens(text).filter { it !in STOP }
+
+    fun isFollowUp(current: String): Boolean {
+        val t = current.trim()
+        return meaningful(t).distinct().size < 4 || LEAD.containsMatchIn(t) || TAIL.containsMatchIn(t)
+    }
+
+    /**
+     * [current] alone, or — when it is short or starts / ends with a pointer (那/这/它/第N/上面/刚才/还有/呢) —
+     * [current] + the top [TOP_K] keywords of [previousUser] (by [idf], highest first). [previousHitsFiles]
+     * are not part of the text: pass them to the search as boostFiles.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun build(current: String, previousUser: String?, previousHitsFiles: List<String> = emptyList(), idf: (String) -> Double = { 1.0 }): String {
+        val prev = previousUser?.trim().orEmpty()
+        if (prev.isEmpty() || !isFollowUp(current)) return current
+        val have = KbTokenizer.tokens(current).toSet()
+        val words = meaningful(prev).distinct().filter { it !in have }
+            .withIndex().sortedWith(compareByDescending<IndexedValue<String>> { idf(it.value) }.thenBy { it.index })
+            .take(TOP_K).map { it.value }
+        return if (words.isEmpty()) current else current.trim() + " " + words.joinToString(" ")
+    }
+}
+
+/** 2.2.9 D3: a hit grows into its neighbouring chunks of the same file. Pure. */
+object KbMerge {
+    /** Joins two consecutive chunks, dropping the shared overlap (≈ [KbChunker.OVERLAP] characters). */
+    fun join(a: String, b: String): String {
+        val max = minOf(a.length, b.length, KbChunker.OVERLAP + 40)
+        for (k in max downTo 8) if (a.endsWith(b.substring(0, k))) return a + b.substring(k)
+        return a + "\n" + b
+    }
+
+    /**
+     * Each hit takes chunk i-1 and/or i+1 of its file ([chunks] gives a file's chunks) while the text
+     * stays within [maxChars]; a hit already covered by an earlier (better) one is dropped.
+     */
+    fun expand(hits: List<KbHit>, chunks: (String) -> List<String>, maxChars: Int): List<KbHit> {
+        val covered = HashSet<Pair<String, Int>>()
+        val out = ArrayList<KbHit>()
+        for (h in hits) {
+            if (h.chunkIndex >= 0 && (h.file to h.chunkIndex) in covered) continue
+            val all = if (h.chunkIndex >= 0) chunks(h.file) else emptyList()
+            if (h.chunkIndex !in all.indices || all[h.chunkIndex] != h.text) { out += h; continue }
+            var text = h.text
+            var lo = h.chunkIndex; var hi = h.chunkIndex
+            covered += h.file to h.chunkIndex
+            for (step in 0 until 2) {
+                val next = hi + 1
+                if (next in all.indices && (h.file to next) !in covered) {
+                    val j = join(text, all[next]); if (j.length <= maxChars) { text = j; hi = next; covered += h.file to next }
+                }
+                val prev = lo - 1
+                if (prev in all.indices && (h.file to prev) !in covered) {
+                    val j = join(all[prev], text); if (j.length <= maxChars) { text = j; lo = prev; covered += h.file to prev }
+                }
+            }
+            out += h.copy(text = text)
+        }
+        return out
+    }
+}
+
+/** 2.2.9 D4: 「租房合同.md · 第 3 段」 labels kept on a reply (ChatMessage.kbSources). Pure. */
+object KbSource {
+    private val RE = Regex("^(.+) · 第 (\\d+) 段$")
+    fun label(h: KbHit): String = if (h.chunkIndex >= 0) "${h.file} · 第 ${h.chunkIndex + 1} 段" else h.file
+    /** file + 0-based chunk index (-1 when the label has none). */
+    fun parse(label: String): Pair<String, Int> = RE.find(label)?.let { it.groupValues[1] to it.groupValues[2].toInt() - 1 } ?: (label to -1)
+    fun chip(label: String): String = "出处：$label"
+    fun files(labels: List<String>): List<String> = labels.map { parse(it).first }.distinct()
 }
 
 /** What the model reads. Pure. */
@@ -191,13 +285,21 @@ object KbFormats {
 /** 2.1.0 引用知识库 in 对话 mode. */
 object KbChat {
     /** Snippets for [question], or none when the folder is empty or nothing matches well enough. */
-    fun hits(kb: KnowledgeBase, question: String): List<KbHit> = runCatching {
+    fun hits(kb: KnowledgeBase, question: String, boostFiles: List<String> = emptyList(), maxChars: Int = KbPrompt.INJECT_CHARS): List<KbHit> = runCatching {
         if (!kb.hasFiles()) return emptyList()
-        kb.search(question, KbPrompt.INJECT_SNIPPETS).filter { it.score >= MIN_SCORE }
+        val found = keep(kb.search(question, KbPrompt.INJECT_SNIPPETS, boostFiles))
+        KbMerge.expand(found, kb::chunksOf, maxChars / found.size.coerceAtLeast(1))
     }.getOrDefault(emptyList())
 
     /** Below this BM25 score a snippet shares only a common word or two with the question. */
-    const val MIN_SCORE = 1.0
+    const val MIN_SCORE = 0.6
+    /** 2.2.9 D5: a hit is kept when it scores at least this share of the best one. */
+    const val REL_SCORE = 0.35
+
+    fun threshold(hits: List<KbHit>): Double = maxOf(MIN_SCORE, (hits.maxOfOrNull { it.score } ?: 0.0) * REL_SCORE)
+
+    /** 2.2.9 D5: adaptive cut: max(0.6, top1 × 0.35). Pure. */
+    fun keep(hits: List<KbHit>): List<KbHit> { val t = threshold(hits); return hits.filter { it.score >= t } }
 
     /** Puts [block] in front of the message [id]'s text (prompt only; the stored message is untouched). Pure. */
     fun attach(msgs: List<com.iris.localai.util.CtxMessage>, id: String, block: String): List<com.iris.localai.util.CtxMessage> =

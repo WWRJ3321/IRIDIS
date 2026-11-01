@@ -60,6 +60,8 @@ data class ChatMessage(
     val activeVersion: Int = 0,
     /** 2.1.0: knowledge-base snippets this reply was given (shown as 「引用 n 段知识库」). */
     val kbRefs: Int = 0,
+    /** 2.2.9: where those snippets came from, 「租房合同.md · 第 3 段」 (see KbSource); empty in older chats. */
+    val kbSources: List<String> = emptyList(),
     /** 2.2.9: 「＋ 记住？」 suggestion shown under this reply (null = none / handled). */
     val memorySuggestion: String? = null,
 )

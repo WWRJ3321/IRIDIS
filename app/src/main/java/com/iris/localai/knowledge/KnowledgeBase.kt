@@ -3,6 +3,16 @@ package com.iris.localai.knowledge
 import com.iris.localai.agent.ExternalFiles
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlinx.serialization.Serializable
+
+/** 2.2.9: a file of the 知识库 page. [indexed] = the index holds its current version. */
+data class KbFileInfo(val path: String, val size: Long, val chunks: Int, val indexed: Boolean, val cites: Int)
+
+@Serializable
+data class KbStat(val count: Int = 0, val lastAt: Long = 0)
+
+@Serializable
+data class KbStats(val files: Map<String, KbStat> = emptyMap())
 
 /**
  * 2.1.0 知识库: `knowledge/` in the app's resource root (2.1.1: Download/IRIDIS/knowledge, beside — not inside —
@@ -109,12 +119,75 @@ class KnowledgeBase(
     @Volatile private var lastEmptyCheck = 0L
 
     /** Top [limit] chunks for [query]; refreshes the index first (at most every few seconds). */
-    fun search(query: String, limit: Int): List<KbHit> {
-        val r = synchronized(lock) {
+    fun search(query: String, limit: Int, boostFiles: Collection<String> = emptyList()): List<KbHit> = ranker().search(query, limit, boostFiles)
+
+    /** 2.2.9: idf of a token over the current index (for KbQuery.build). */
+    fun idf(token: String): Double = ranker().idf(token)
+
+    /** 2.2.9: a file's chunks as indexed (empty when unknown). */
+    fun chunksOf(path: String): List<String> = synchronized(lock) { load().files.firstOrNull { it.path == path }?.chunks.orEmpty() }
+
+    private fun ranker(): KbRanker {
+        return synchronized(lock) {
             if (System.currentTimeMillis() - lastScan > RESCAN_MS) refresh()
-            ranker ?: KbRanker(load().files.flatMap { f -> f.chunks.map { KbChunk(f.path, it) } }).also { ranker = it }
+            ranker ?: KbRanker(load().files.flatMap { f -> f.chunks.mapIndexed { i, t -> KbChunk(f.path, t, i) } }).also { ranker = it }
         }
-        return r.search(query, limit)
+    }
+
+    // ---- 2.2.9 D1: file list, delete, cite counts (kb_stats.json beside the index) ----
+
+    private val statsFile: File get() = File(indexFile.parentFile ?: File("."), STATS)
+    private var stats: MutableMap<String, KbStat>? = null
+
+    private fun loadStats(): MutableMap<String, KbStat> = stats ?: runCatching {
+        json.decodeFromString(KbStats.serializer(), statsFile.readText()).files.toMutableMap()
+    }.getOrElse { HashMap() }.also { stats = it }
+
+    private fun saveStats(m: Map<String, KbStat>) = runCatching {
+        statsFile.parentFile?.mkdirs()
+        val tmp = File(statsFile.path + ".tmp")
+        tmp.writeText(json.encodeToString(KbStats.serializer(), KbStats(m.toMap())))
+        if (!tmp.renameTo(statsFile)) { statsFile.delete(); tmp.renameTo(statsFile) }
+    }
+
+    /** Counts one citation for each distinct file of [files] (a reply was given its snippets). */
+    fun cite(files: Collection<String>, now: Long = System.currentTimeMillis()) = synchronized(lock) {
+        if (files.isEmpty()) return@synchronized
+        val m = loadStats()
+        files.distinct().forEach { f -> m[f] = KbStat((m[f]?.count ?: 0) + 1, now) }
+        saveStats(m)
+    }
+
+    /** The files in the folder with their index state and cite counts (no reading; the index is not refreshed). */
+    fun files(): List<KbFileInfo> = synchronized(lock) {
+        val idx = load().files.associateBy { it.path }
+        val st = loadStats()
+        scan().first.map { f ->
+            val e = idx[f.path]
+            KbFileInfo(f.path, f.size, e?.chunks?.size ?: 0, e != null && e.size == f.size && (f.mtime == 0L || e.mtime == f.mtime), st[f.path]?.count ?: 0)
+        }
+    }
+
+    /** Deletes [path] from knowledge/, drops it from the index and the stats. */
+    fun delete(path: String): Boolean = synchronized(lock) {
+        if (path.contains("..")) return@synchronized false
+        val f = File(dir(), path)
+        val gone = (f.isFile && f.delete()) || external()?.delete("$FOLDER/$path") == true || !f.exists()
+        if (!gone) return@synchronized false
+        val d = load()
+        if (d.files.any { it.path == path }) {
+            val next = d.copy(files = d.files.filterNot { it.path == path })
+            data = next
+            runCatching {
+                val tmp = File(indexFile.path + ".tmp")
+                tmp.writeText(json.encodeToString(KbIndexData.serializer(), next))
+                if (!tmp.renameTo(indexFile)) { indexFile.delete(); tmp.renameTo(indexFile) }
+            }
+            nonEmpty = next.files.any { it.chunks.isNotEmpty() }
+        }
+        ranker = null
+        loadStats().let { m -> if (m.remove(path) != null) saveStats(m) }
+        true
     }
 
     /** Copies a picked file into knowledge/ (a free name when it exists). Returns its relative path. */
@@ -136,6 +209,7 @@ class KnowledgeBase(
     companion object {
         const val FOLDER = "knowledge"
         const val MAX_BYTES = 4_000_000L
+        const val STATS = "kb_stats.json"
         private const val RESCAN_MS = 5_000L
     }
 }

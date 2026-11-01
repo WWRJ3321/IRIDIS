@@ -68,9 +68,16 @@ object ContextAssembly {
     fun autoAllowed(agentMode: Boolean, strategy: ContextStrategy, autoAgent: Boolean, autoChat: Boolean): Boolean =
         if (agentMode) autoAgent else autoChat && strategy == ContextStrategy.TOKEN_BUDGET
 
-    /** The memory block for a conversation: its frozen snapshot, capped to the window. */
+    /** The memory block for a conversation: its frozen ABOUT + PREF snapshot (2.2.9), capped to the window. */
     fun memoryBlock(conv: Conversation, inject: Boolean, contextTokens: Int, epoch: Int = 0): String =
-        if (!inject || conv.memoryEpoch != epoch) "" else MemoryPrompt.block(conv.memorySnapshot.orEmpty(), MemoryPrompt.budget(contextTokens))
+        if (!inject || conv.memoryEpoch != epoch) "" else MemoryPrompt.frozen(conv.memorySnapshot.orEmpty(), MemoryPrompt.budget(contextTokens))
+
+    /**
+     * 2.2.9 C: the relevant FACT items for the user message [query], put in front of that message
+     * (not the system prompt). Half the memory budget; "" when nothing matches.
+     */
+    fun turnMemory(items: List<com.iris.localai.memory.MemoryItem>, query: String, contextTokens: Int): String =
+        com.iris.localai.memory.MemoryRecall.turnBlock(items, query, MemoryPrompt.budget(contextTokens) / 2)
 
     /** Prompt messages of the base system + planner output, for tests and the agent prompt. */
     fun prompt(system: String, history: List<CtxMessage>, lead: String = ""): List<PromptMessage> =

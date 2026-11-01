@@ -164,14 +164,43 @@ class MemoryDocs(dir: File) {
     /** Read-modify-write of the item list under one lock. */
     fun edit(op: (List<MemoryItem>) -> ItemsEdit): ItemsEdit = store.editItems(op)
 
-    /** The frozen snapshot for a new conversation ("" when there is nothing saved). */
-    fun snapshot(): String = MemoryPrompt.snapshot(read(MemoryTarget.USER), read(MemoryTarget.MEMORY))
+    /**
+     * 2.2.9 C: the frozen block for a new conversation: ABOUT + PREF only (newest first, within
+     * [maxTokens]); FACTs are recalled per turn ([turn]). "" when there is nothing saved.
+     */
+    fun snapshot(maxTokens: Int = Int.MAX_VALUE / 2): String = MemoryRecall.block(MemoryRecall.fixed(store.items(), maxTokens))
+
+    /** 2.2.9 C: the FACT block for the user message [query] ("" when nothing is relevant). */
+    fun turn(query: String, maxTokens: Int): String = MemoryRecall.turnBlock(store.items(), query, maxTokens)
 }
 
 /** How the snapshot enters the system prompt. Pure. */
 object MemoryPrompt {
     /** 2.3: shorter (was 35 estimated tokens); same meaning. */
     const val HEADER = "【长期记忆】（可能过时，以用户当前说法为准）"
+
+    /** 2.2.9: line under the frozen ABOUT/PREF block, and under a turn's 【相关记忆】. */
+    const val NOTE = "（以上记忆可能过时，以用户当前说法为准）"
+    const val TURN_NOTE = "（相关记忆，可能过时，以用户当前说法为准；无关就忽略）"
+
+    /**
+     * 2.2.9: the system-prompt block for a frozen [snapshot]. New snapshots carry their own plain
+     * labels (【关于用户】/【用户偏好】); an older one taken as USER.md / MEMORY.md text is relabelled.
+     * Over [maxTokens] whole lines go from the end (the snapshot is newest first per section).
+     */
+    fun frozen(snapshot: String, maxTokens: Int): String {
+        if (snapshot.isBlank()) return ""
+        if (!snapshot.trimStart().startsWith("【")) {
+            val relabelled = snapshot.replace("USER.md:", MemoryRecall.ABOUT).replace("MEMORY.md:", MemoryRecall.FACTS)
+            return block(relabelled, maxTokens)
+        }
+        val full = snapshot.trim() + "\n" + NOTE
+        if (TokenEstimator.estimate(full) <= maxTokens) return full
+        val lines = snapshot.trim().lines().toMutableList()
+        while (lines.size > 1 && TokenEstimator.estimate(lines.joinToString("\n") + "\n" + NOTE) > maxTokens) lines.removeAt(lines.size - 1)
+        if (lines.lastOrNull()?.startsWith("【") == true) lines.removeAt(lines.size - 1)
+        return if (lines.isEmpty()) "" else lines.joinToString("\n") + "\n" + NOTE
+    }
 
     fun snapshot(user: String, memory: String): String = buildString {
         if (user.isNotBlank()) append("USER.md:\n").append(user.trim())

@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -217,6 +218,7 @@ fun AssistantMessage(
             Column {
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
+                if (message.kbSources.isNotEmpty()) KbSourceChips(message.kbSources)
                 val suggestion = message.memorySuggestion
                 if (suggestion != null && onAcceptMemory != null) {
                     MemorySuggestionChip(suggestion, onAcceptMemory, onDismissMemory ?: {})
@@ -319,7 +321,7 @@ private fun ActionRow(
     val meta = remember(message.outputChars, message.outputMs, message.totalMs, message.interrupted, message.stats, message.edited, message.kbRefs) {
         buildList {
             if (message.edited) add(VersionText.EDITED)
-            if (message.kbRefs > 0) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
+            if (message.kbRefs > 0 && message.kbSources.isEmpty()) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
             if (message.interrupted) add("已停止")
             // Measured for this reply on the device: output speed (first char → end) and total time.
             com.iris.localai.util.ReplySpeed.format(message.outputChars, message.outputMs, message.totalMs,
@@ -522,5 +524,50 @@ private fun MemorySuggestionChip(text: String, onAccept: () -> Unit, onDismiss: 
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
         )
         PressableIcon(Icons.Outlined.Close, MemoryChipText.DISMISS, size = 32.dp, iconSize = 16.dp, tint = c.onAccentContainer, onClick = onDismiss)
+    }
+}
+
+/** 2.2.9 D4: 「出处：租房合同.md · 第 3 段」 chips; a tap shows the snippet. */
+@Composable
+private fun KbSourceChips(sources: List<String>) {
+    val c = Iris.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var open by remember { mutableStateOf<String?>(null) }
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier.padding(top = IrisDimens.space4),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(IrisDimens.space8),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(IrisDimens.space8),
+    ) {
+        sources.forEach { label ->
+            Text(
+                com.iris.localai.knowledge.KbSource.chip(label), style = IrisType.caption, color = c.textSecondary, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .clip(IrisRadius.pillShape)
+                    .background(c.surfaceVariant)
+                    .clickable { open = label }
+                    .heightIn(min = 32.dp)
+                    .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space8),
+            )
+        }
+    }
+    open?.let { label ->
+        val text by androidx.compose.runtime.produceState<String?>(null, label) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val (file, idx) = com.iris.localai.knowledge.KbSource.parse(label)
+                runCatching { (context.applicationContext as com.iris.localai.IrisApp).container.agent.knowledge.chunksOf(file).getOrNull(idx) }.getOrNull().orEmpty()
+            }
+        }
+        com.iris.localai.ui.components.IrisDialog(
+            onDismiss = { open = null }, title = label, confirmText = "关闭", onConfirm = { open = null }, dismissText = null,
+        ) {
+            androidx.compose.foundation.layout.Box(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                Text(
+                    when (val t = text) { null -> "正在读取…"; "" -> "原文已不在知识库里（文件可能已删除或更改）"; else -> t },
+                    style = IrisType.body, color = c.text,
+                )
+            }
+        }
     }
 }
