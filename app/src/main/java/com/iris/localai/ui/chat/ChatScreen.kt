@@ -437,6 +437,8 @@ fun ChatScreen(
                                         },
                                         onRemember = { remembering = m },
                                         onSwitchVersion = { v -> vm.switchVersion(m.id, v) },
+                                        onAcceptMemory = { vm.acceptMemorySuggestion(m.id) },
+                                        onDismissMemory = { vm.dismissMemorySuggestion(m.id) },
                                     )
                                 }
                                 if (ui.context.compactedMessages > 0 && m.id == ui.conversation.compaction?.upToId) {
@@ -1200,7 +1202,7 @@ private fun RememberDialog(
                 ) {
                     com.iris.localai.ui.components.IrisRadio(selected = target == t)
                     Spacer(Modifier.width(10.dp))
-                    Text("${t.label}（${t.fileName}）", style = com.iris.localai.ui.theme.IrisType.body, color = com.iris.localai.ui.theme.Iris.colors.text)
+                    Text(t.label, style = com.iris.localai.ui.theme.IrisType.body, color = com.iris.localai.ui.theme.Iris.colors.text)
                 }
             }
         }

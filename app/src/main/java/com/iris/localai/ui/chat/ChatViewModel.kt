@@ -5,6 +5,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.iris.localai.IrisApp
+import com.iris.localai.memory.kindFor
 import com.iris.localai.data.ChatMessage
 import com.iris.localai.data.Conversation
 import com.iris.localai.data.LocalModel
@@ -789,11 +790,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     /** Writes through [com.iris.localai.memory.MemoryDocs.edit] and returns the line to show the user. */
     private fun saveMemory(text: String, target: com.iris.localai.memory.MemoryTarget): String {
-        if (!c.agent.memorySettings.current.enabled) return com.iris.localai.memory.MemoryCommand.DISABLED
         val entry = com.iris.localai.memory.MemoryCommand.entryFrom(text)
-        val r = runCatching { c.agent.memoryDocs.edit(target) { doc -> com.iris.localai.memory.MemoryOps.add(doc, entry) } }
-            .getOrElse { com.iris.localai.memory.MemoryEdit.Err(it.message ?: "write failed") }
-        if (r is com.iris.localai.memory.MemoryEdit.Ok) {
+        return saveMemoryItem(entry, target.kindFor(entry), target)
+    }
+
+    private fun saveMemoryItem(entry: String, kind: com.iris.localai.memory.MemoryItem.Kind, target: com.iris.localai.memory.MemoryTarget): String {
+        if (!c.agent.memorySettings.current.enabled) return com.iris.localai.memory.MemoryCommand.DISABLED
+        val r = runCatching { c.agent.memoryDocs.store.add(entry, kind, com.iris.localai.memory.MemoryItem.Source.USER) }
+            .getOrElse { com.iris.localai.memory.ItemsEdit.Err(it.message ?: "write failed") }
+        if (r is com.iris.localai.memory.ItemsEdit.Ok) {
             c.agent.memoryChanged()
             // A conversation the model has not answered yet picks the new memory up right away.
             if (com.iris.localai.memory.MemoryPrompt.needsSnapshot(conversation.value, c.agent.memorySettings.current.epoch)) {
@@ -801,6 +806,58 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             }
         }
         return com.iris.localai.memory.MemoryCommand.userMessage(r, entry, target)
+    }
+
+    // ------------------------------------------------------------------ 2.2.9 「记住？」 suggestions
+
+    /** Conversation id → keys the user dismissed (✕ / long press) in that conversation. */
+    private val ignoredSuggestions = HashMap<String, MutableSet<String>>()
+
+    /** After a reply completes: one rule-based suggestion from the user's message, shown under [replyId]. */
+    private fun suggestMemory(convId: String, replyId: String) {
+        val ms = c.agent.memorySettings.current
+        if (!ms.enabled || !ms.suggest) return
+        val conv = conversation.value
+        if (conv.id != convId) return
+        val idx = conv.messages.indexOfFirst { it.id == replyId }
+        if (idx <= 0) return
+        val user = conv.messages.subList(0, idx).lastOrNull { it.role == Role.USER } ?: return
+        if (user.content.isBlank() || com.iris.localai.memory.MemoryCommand.parse(user.content) != null) return
+        val ignored = synchronized(ignoredSuggestions) { ignoredSuggestions[convId]?.toSet().orEmpty() }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val store = c.agent.memoryDocs.store
+            val s = runCatching { com.iris.localai.memory.MemorySuggest.detect(user.content, store.items(), ignored).firstOrNull() }.getOrNull() ?: return@launch
+            runCatching { store.addPending(s.text, s.kind) }
+            c.agent.memoryChanged()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (conversation.value.id != convId) return@withContext
+                conversation.update { cv -> cv.copy(messages = cv.messages.map { if (it.id == replyId) it.copy(memorySuggestion = s.text) else it }) }
+                persist()
+            }
+        }
+    }
+
+    private fun clearSuggestion(messageId: String): String? {
+        val text = conversation.value.messages.firstOrNull { it.id == messageId }?.memorySuggestion ?: return null
+        conversation.update { cv -> cv.copy(messages = cv.messages.map { if (it.id == messageId) it.copy(memorySuggestion = null) else it }) }
+        persist()
+        return text
+    }
+
+    /** 「＋ 记住？」 tapped: saved as said by the user (and removed from 「等你确认」). */
+    fun acceptMemorySuggestion(messageId: String) {
+        val text = clearSuggestion(messageId) ?: return
+        val kind = com.iris.localai.memory.MemorySuggest.kindOf(text) ?: com.iris.localai.memory.MemoryItem.Kind.ABOUT
+        val target = if (kind == com.iris.localai.memory.MemoryItem.Kind.FACT) com.iris.localai.memory.MemoryTarget.MEMORY else com.iris.localai.memory.MemoryTarget.USER
+        notice.value = saveMemoryItem(text, kind, target)
+    }
+
+    /** ✕ / long press: not suggested again in this conversation, and dropped from 「等你确认」. */
+    fun dismissMemorySuggestion(messageId: String) {
+        val text = clearSuggestion(messageId) ?: return
+        val convId = conversation.value.id
+        synchronized(ignoredSuggestions) { ignoredSuggestions.getOrPut(convId) { HashSet() }.add(com.iris.localai.memory.MemoryMerge.key(text)) }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.agent.memoryDocs.store.dismissPendingText(text) }; c.agent.memoryChanged() }
     }
 
     /** 2.1.9: launches an installed app for a pure 「打开X」; false = not handled (no such app / phone tool off). */
@@ -1357,6 +1414,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                     ?.let { _replyFinished.tryEmit(it.reason != StopReason.ERROR && it.error == null) }
                 conversation.update { it.copy(updatedAt = System.currentTimeMillis()) }
                 persist()
+                // 2.2.9: 「记住？」 after the reply is complete (never before the first token).
+                if (requester == Requester.CHAT && raw.isNotBlank() && result?.reason != StopReason.CANCELLED && result?.reason != StopReason.ERROR) suggestMemory(convId, reply.id)
                 if (requester == Requester.CHAT && c.settings.current.autoSpeak && raw.isNotBlank()) {
                     speak(reply.id)
                 }
@@ -1728,6 +1787,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (!cancelled && voiceOut == null) _replyFinished.tryEmit(err == null)
             conversation.update { it.copy(updatedAt = System.currentTimeMillis()) }
             persist()
+            if (!cancelled && voiceOut == null && err == null && finalText.isNotBlank()) suggestMemory(convId, reply.id)
             plan?.let { pl ->
                 // 1.13.0: the agent prompt (tool list + earlier tool results) is far bigger than the
                 // chat plan; measure what was really sent so the meter does not undercount.

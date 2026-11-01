@@ -1,9 +1,12 @@
 package com.iris.localai.agent
 
+import com.iris.localai.memory.ItemsEdit
 import com.iris.localai.memory.MemoryDocs
-import com.iris.localai.memory.MemoryEdit
+import com.iris.localai.memory.MemoryItem
 import com.iris.localai.memory.MemoryOps
 import com.iris.localai.memory.MemoryTarget
+import com.iris.localai.memory.kindFor
+import com.iris.localai.memory.kinds
 import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -58,7 +61,7 @@ object MemoryTool : AgentTool {
     override val group = ToolGroup.MEMORY
     override val name = "memory"
     override val label = "长期记忆"
-    override val description = "增删改长期记忆（USER.md 关于你 / MEMORY.md 记住的事，各约 1500 字上限）"
+    override val description = "增删改长期记忆（关于你 / 记住的事，最多 200 条，每条 300 字）"
     override val promptLine = "memory(action: add|replace|remove, target: user|memory, content?, old?): lasting facts"
     override val risk = ToolRisk.MEMORY
 
@@ -70,16 +73,24 @@ object MemoryTool : AgentTool {
         val content = Args.str(args, "content", "text", "new", "new_text", "entry", "value")
         val old = Args.str(args, "old", "old_text", "match", "find", "entry_to_replace")
         val r = when (action) {
-            "add", "append", "save" -> docs.edit(target) { MemoryOps.add(it, content ?: throw IllegalArgumentException("缺少参数 content"), docs.cap) }
-            "replace", "update", "edit" -> docs.edit(target) {
-                MemoryOps.replace(it, old ?: throw IllegalArgumentException("缺少参数 old"), content ?: throw IllegalArgumentException("缺少参数 content"), docs.cap)
+            "add", "append", "save" -> {
+                val c = content ?: throw IllegalArgumentException("缺少参数 content")
+                docs.edit { MemoryOps.add(it, target.kindFor(c), c, MemoryItem.Source.AGENT) }
             }
-            "remove", "delete", "forget" -> docs.edit(target) { MemoryOps.remove(it, old ?: content ?: throw IllegalArgumentException("缺少参数 old")) }
+            "replace", "update", "edit" -> {
+                val o = old ?: throw IllegalArgumentException("缺少参数 old")
+                val c = content ?: throw IllegalArgumentException("缺少参数 content")
+                docs.edit { MemoryOps.replace(it, target.kinds, o, c) }
+            }
+            "remove", "delete", "forget" -> {
+                val o = old ?: content ?: throw IllegalArgumentException("缺少参数 old")
+                docs.edit { MemoryOps.remove(it, target.kinds, o) }
+            }
             else -> return ToolResult(false, "Error: action must be add, replace or remove", "操作无效")
         }
         return when (r) {
-            is MemoryEdit.Ok -> ToolResult(true, "OK: ${target.fileName} ${r.message}. Saved for future chats.", "${target.fileName} 已${verb(action)}")
-            is MemoryEdit.Err -> ToolResult(false, "Error: ${r.message}", r.message.take(40))
+            is ItemsEdit.Ok -> ToolResult(true, "OK: ${target.fileName} ${r.message}. Saved for future chats.", "${target.fileName} 已${verb(action)}")
+            is ItemsEdit.Err -> ToolResult(false, "Error: ${r.message}", r.message.take(40))
         }
     }
 
@@ -105,6 +116,6 @@ fun memoryPreview(call: ToolCall): String {
     }
 }
 
-/** For the settings page / tests: does this document fit? */
-fun MemoryDocs.usage(t: MemoryTarget): Pair<Int, Int> = read(t).length to cap
+/** For the settings page / tests: saved entries and the cap. */
+fun MemoryDocs.usage(): Pair<Int, Int> = store.items().size to cap
 

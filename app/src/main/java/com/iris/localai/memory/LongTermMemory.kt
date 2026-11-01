@@ -86,6 +86,57 @@ object MemoryOps {
         return if (n > 1) "old text matches $n entries; quote more of the entry" else "no entry contains \"${o.take(60)}\""
     }
 
+    // ---- 2.2.9: the same operations on the item list (memory.json); error texts unchanged. ----
+
+    private fun countMsg(n: Int, max: Int) = "$n/$max entries"
+
+    fun add(items: List<MemoryItem>, kind: MemoryItem.Kind, entry: String, source: MemoryItem.Source,
+            now: Long = System.currentTimeMillis(), max: Int = MemoryStore.MAX_ITEMS): ItemsEdit {
+        val e = clean(entry)
+        if (e.isEmpty()) return ItemsEdit.Err("content is empty")
+        if (e.length > ENTRY_MAX) return ItemsEdit.Err("entry too long (${e.length} chars, max $ENTRY_MAX); keep it to one short fact")
+        return when (val m = MemoryMerge.merge(items, MemoryItem(text = e, kind = kind, source = source, createdAt = now), now)) {
+            is MemoryMerge.Duplicate -> ItemsEdit.Err("already saved: nothing changed")
+            is MemoryMerge.Replaced -> ItemsEdit.Ok(m.items, "replaced outdated entry \"${m.old.text.take(60)}\" (${countMsg(m.items.size, max)})", replaced = m.old.text)
+            is MemoryMerge.Added ->
+                if (m.items.size > max) ItemsEdit.Err("memory is full (${items.size}/$max entries). Use replace to merge entries or remove an outdated one first")
+                else ItemsEdit.Ok(m.items, "added (${countMsg(m.items.size, max)})")
+        }
+    }
+
+    /** [kinds] = the legacy target; when nothing there matches, every item is searched. */
+    fun replace(items: List<MemoryItem>, kinds: Set<MemoryItem.Kind>, old: String, new: String,
+                now: Long = System.currentTimeMillis(), max: Int = MemoryStore.MAX_ITEMS): ItemsEdit {
+        val e = clean(new)
+        if (e.isEmpty()) return ItemsEdit.Err("new content is empty; use remove to delete an entry")
+        if (e.length > ENTRY_MAX) return ItemsEdit.Err("entry too long (${e.length} chars, max $ENTRY_MAX)")
+        val hit = findItem(items, kinds, old) ?: return ItemsEdit.Err(notFoundItems(items, kinds, old))
+        val next = items.map { if (it.id == hit.id) it.copy(text = e, updatedAt = now) else it }
+        return ItemsEdit.Ok(next, "replaced (${countMsg(next.size, max)})")
+    }
+
+    fun remove(items: List<MemoryItem>, kinds: Set<MemoryItem.Kind>, old: String, max: Int = MemoryStore.MAX_ITEMS): ItemsEdit {
+        val hit = findItem(items, kinds, old) ?: return ItemsEdit.Err(notFoundItems(items, kinds, old))
+        val next = items.filterNot { it.id == hit.id }
+        return ItemsEdit.Ok(next, "removed (${countMsg(next.size, max)})")
+    }
+
+    private fun scope(items: List<MemoryItem>, kinds: Set<MemoryItem.Kind>, old: String): List<String> {
+        val inTarget = items.filter { it.kind in kinds }
+        val o = old.trim().removePrefix("- ").trim()
+        return (if (o.isNotEmpty() && inTarget.any { it.text.contains(o, ignoreCase = true) }) inTarget else items).map { it.text }
+    }
+
+    private fun findItem(items: List<MemoryItem>, kinds: Set<MemoryItem.Kind>, old: String): MemoryItem? {
+        val texts = scope(items, kinds, old)
+        val i = find(texts, old) ?: return null
+        val inTarget = items.filter { it.kind in kinds }
+        val pool = if (inTarget.map { it.text } == texts) inTarget else items
+        return pool[i]
+    }
+
+    private fun notFoundItems(items: List<MemoryItem>, kinds: Set<MemoryItem.Kind>, old: String) = notFound(scope(items, kinds, old), old)
+
     /** Text the user typed in settings: trimmed to the cap at a line boundary when possible. */
     fun capUserText(text: String, cap: Int = CAP): String {
         val t = text.trim()
@@ -96,37 +147,24 @@ object MemoryOps {
     }
 }
 
-/** USER.md + MEMORY.md in app-private storage, outside the agent workspace (file tools can't reach it). */
-class MemoryDocs(private val dir: File, val cap: Int = MemoryOps.CAP) {
-    private val lock = Any()
-    private val cache = HashMap<MemoryTarget, String>()
+/**
+ * 2.2.9: adapter over [MemoryStore] (memory.json in the same directory). The items are rendered
+ * back into the old USER.md / MEMORY.md text so the snapshot / injection is unchanged.
+ */
+class MemoryDocs(dir: File) {
+    val store = MemoryStore(dir)
+    val cap: Int get() = MemoryStore.MAX_ITEMS
 
-    fun read(t: MemoryTarget): String = synchronized(lock) {
-        cache.getOrPut(t) { File(dir, t.fileName).takeIf { it.isFile }?.readText(Charsets.UTF_8)?.trim() ?: "" }
-    }
+    fun read(t: MemoryTarget): String = MemoryRender.doc(store.items(), t)
 
-    /** Both documents empty (cached after the first read). */
-    fun isEmpty(): Boolean = MemoryTarget.entries.all { read(it).isBlank() }
+    fun isEmpty(): Boolean = store.items().isEmpty()
 
-    fun write(t: MemoryTarget, text: String) = synchronized(lock) {
-        cache.remove(t)
-        dir.mkdirs()
-        val f = File(dir, t.fileName)
-        val tmp = File(dir, t.fileName + ".tmp")
-        tmp.writeText(MemoryOps.capUserText(text, cap), Charsets.UTF_8)
-        if (!tmp.renameTo(f)) { f.writeText(tmp.readText(Charsets.UTF_8), Charsets.UTF_8); tmp.delete() }
-    }
+    fun clear() = store.clear()
 
-    fun clear() = synchronized(lock) { cache.clear(); MemoryTarget.entries.forEach { File(dir, it.fileName).delete() } }
+    /** Read-modify-write of the item list under one lock. */
+    fun edit(op: (List<MemoryItem>) -> ItemsEdit): ItemsEdit = store.editItems(op)
 
-    /** Read-modify-write under one lock. */
-    fun edit(t: MemoryTarget, op: (String) -> MemoryEdit): MemoryEdit = synchronized(lock) {
-        val r = op(read(t))
-        if (r is MemoryEdit.Ok) write(t, r.text)
-        r
-    }
-
-    /** The frozen snapshot for a new conversation ("" when both documents are empty). */
+    /** The frozen snapshot for a new conversation ("" when there is nothing saved). */
     fun snapshot(): String = MemoryPrompt.snapshot(read(MemoryTarget.USER), read(MemoryTarget.MEMORY))
 }
 
@@ -200,14 +238,14 @@ object MemoryCommand {
         return if (t.startsWith("我") || t.startsWith("用户") || t.startsWith("i ") || t.startsWith("i'm") || t.startsWith("my ")) MemoryTarget.USER else MemoryTarget.MEMORY
     }
 
-    const val DISABLED = "长期记忆已关闭（设置 › 长期记忆），没有保存"
+    const val DISABLED = "长期记忆已关闭，没有保存"
 
     /** What the user sees after a save ([MemoryOps] messages are written for the model, in English). */
-    fun userMessage(r: MemoryEdit, entry: String, target: MemoryTarget): String = when (r) {
-        is MemoryEdit.Ok -> "已记住：$entry（写入「${target.label}」${target.fileName}，之后的新对话都会参考）"
-        is MemoryEdit.Err -> when {
+    fun userMessage(r: ItemsEdit, entry: String, target: MemoryTarget): String = when (r) {
+        is ItemsEdit.Ok -> if (r.replaced != null) "已更新：$entry（原：${r.replaced}）" else "已记住：$entry（「${target.label}」，之后的新对话都会参考）"
+        is ItemsEdit.Err -> when {
             r.message.startsWith("already") -> "这条已经记过了：$entry"
-            r.message.startsWith("memory is full") -> "「${target.label}」已满（上限 ${MemoryOps.CAP} 字），请先在 设置 › 长期记忆 中删减"
+            r.message.startsWith("memory is full") -> "记忆已满（最多 ${MemoryStore.MAX_ITEMS} 条），请先在记忆列表里删掉一些"
             r.message.startsWith("entry too long") -> "这条太长了（每条最多 $ENTRY_MAX 字），请精简后再试"
             r.message.startsWith("content is empty") -> "没有可记住的内容"
             else -> "没有保存：${r.message}"
@@ -234,6 +272,8 @@ data class MemorySettings(
      * then turns it off keeps it off.
      */
     val chatInjectDefaultApplied: Boolean = false,
+    /** 2.2.9: 「聊天时提议记住」 — the 「＋ 记住？」 chip under a reply. */
+    val suggest: Boolean = true,
 ) {
     fun migrated(): MemorySettings = if (chatInjectDefaultApplied) this else copy(injectChat = true, chatInjectDefaultApplied = true)
 

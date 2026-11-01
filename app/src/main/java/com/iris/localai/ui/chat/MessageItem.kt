@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
@@ -153,6 +154,9 @@ fun AssistantMessage(
     onRemember: (() -> Unit)? = null,
     /** 2.0.x: ‹ › between the versions of this reply. */
     onSwitchVersion: (Int) -> Unit = {},
+    /** 2.2.9: 「＋ 记住？」 chip (shown when [ChatMessage.memorySuggestion] is set). */
+    onAcceptMemory: (() -> Unit)? = null,
+    onDismissMemory: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
     val cache = remember(message.id) { ThinkParseCache() }
@@ -213,6 +217,10 @@ fun AssistantMessage(
             Column {
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
+                val suggestion = message.memorySuggestion
+                if (suggestion != null && onAcceptMemory != null) {
+                    MemorySuggestionChip(suggestion, onAcceptMemory, onDismissMemory ?: {})
+                }
             }
         }
     }
@@ -485,5 +493,34 @@ fun VersionSwitcher(message: ChatMessage, onSwitch: (Int) -> Unit, modifier: Mod
             com.iris.localai.ui.icons.IrisIcons.ChevronRight, VersionText.NEXT, size = IrisDimens.space32, iconSize = IrisDimens.space16,
             tint = c.textSecondary, enabled = i < n - 1, haptic = true,
         ) { onSwitch(i + 1) }
+    }
+}
+
+/** 2.2.9 texts of the 「记住？」 chip. */
+internal object MemoryChipText {
+    const val DISMISS = "忽略"
+    fun label(text: String): String = "＋ 记住？「${if (text.length > 24) text.take(23) + "…" else text}」"
+}
+
+/** 2.2.9: 「＋ 记住？「…」」 under a finished reply: tap saves, ✕ / long press ignores. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun MemorySuggestionChip(text: String, onAccept: () -> Unit, onDismiss: () -> Unit) {
+    val c = Iris.colors
+    Row(
+        Modifier
+            .padding(top = IrisDimens.space4)
+            .clip(IrisRadius.pillShape)
+            .background(c.accentContainer)
+            .combinedClickable(onClick = onAccept, onLongClick = onDismiss)
+            .heightIn(min = 32.dp)
+            .padding(start = IrisDimens.space12, end = IrisDimens.space4),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            MemoryChipText.label(text), style = IrisType.secondary, color = c.onAccentContainer, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+        )
+        PressableIcon(Icons.Outlined.Close, MemoryChipText.DISMISS, size = 32.dp, iconSize = 16.dp, tint = c.onAccentContainer, onClick = onDismiss)
     }
 }
