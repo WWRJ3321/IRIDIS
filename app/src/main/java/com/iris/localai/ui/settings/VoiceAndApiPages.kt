@@ -67,6 +67,7 @@ import com.iris.localai.ui.components.SegmentedControl
 import com.iris.localai.ui.components.SegmentedRow
 import com.iris.localai.ui.components.SettingsGroup
 import com.iris.localai.ui.components.SettingsRow
+import com.iris.localai.ui.components.Chevron
 import com.iris.localai.ui.components.SliderRow
 import com.iris.localai.ui.components.SubpageScaffold
 import com.iris.localai.ui.components.SwitchRow
@@ -99,8 +100,27 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
             // ones (音色编号, 打断, 下载源) fold away.
             SectionTitle("朗读")
             SettingsGroup {
+                // 2.2.10: 朗读引擎 — 本机模型（含克隆音色）or Android 系统 TTS.
+                val sys = s.ttsEngine == com.iris.localai.voice.TTS_ENGINE_SYSTEM
+                SegmentedRow(
+                    "朗读引擎", listOf("本机模型", "系统 TTS"), if (sys) 1 else 0,
+                    { i -> vm.stopPreview(); vm.update { it.copy(ttsEngine = if (i == 1) com.iris.localai.voice.TTS_ENGINE_SYSTEM else com.iris.localai.voice.TTS_ENGINE_LOCAL) } },
+                    subtitle = if (sys) "使用系统默认的语音引擎和音色，无需下载模型" else "使用下方下载的语音合成模型或克隆音色",
+                )
+                Divider()
+                if (sys) {
+                    val hasEngine = remember(s.ttsEngine) { vm.systemTtsAvailable() }
+                    SettingsRow(
+                        if (hasEngine) "系统 TTS 设置" else "未找到系统 TTS 引擎",
+                        subtitle = if (hasEngine) "在系统设置中更换引擎、音色或下载中文语音包" else "请在系统设置中安装或启用文字转语音引擎（如 Google 语音服务、厂商自带引擎）",
+                        titleColor = if (hasEngine) c.text else c.danger,
+                        onClick = vm::openSystemTtsSettings,
+                        trailing = { Chevron() },
+                    )
+                    Divider()
+                }
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
-                if (ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
+                if (!sys && ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
                     val female = s.ttsSpeakerId in 3..57
                     val male = s.ttsSpeakerId >= 58
                     SettingsRow(

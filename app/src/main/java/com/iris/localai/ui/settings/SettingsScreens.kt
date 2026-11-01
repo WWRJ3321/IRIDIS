@@ -517,6 +517,22 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     ) { v -> vm.update { it.copy(thermalLimitC = v.toInt().coerceIn(35, 50)) } }
                 }
                 Divider()
+                // 2.2.10: 终止温度 — hard stop + unload everything (no auto reload).
+                SwitchRow(
+                    "终止温度", s.thermalCutoffC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Power,
+                    subtitle = if (s.thermalCutoffC == 0) "手机过热时立即停止生成并卸载所有模型（$nowText）"
+                    else "达到 ${s.thermalCutoffC}°C 或系统报告严重过热时停止并卸载全部模型，需手动重新加载",
+                ) { on -> vm.update { it.copy(thermalCutoffC = if (on) com.iris.localai.engine.ThermalCutoff.DEFAULT_C else 0) } }
+                if (s.thermalCutoffC > 0) {
+                    SliderRow(
+                        "终止于", s.thermalCutoffC.toFloat(),
+                        com.iris.localai.engine.ThermalCutoff.MIN_C.toFloat()..com.iris.localai.engine.ThermalCutoff.MAX_C.toFloat(),
+                        "${s.thermalCutoffC}°C",
+                        subtitle = "按电池温度判断；停止对话、GUI 智能体和生图，卸载语言/视觉、语音和生图模型",
+                        steps = com.iris.localai.engine.ThermalCutoff.MAX_C - com.iris.localai.engine.ThermalCutoff.MIN_C - 1,
+                    ) { v -> vm.update { it.copy(thermalCutoffC = com.iris.localai.engine.ThermalCutoff.sanitize(kotlin.math.round(v).toInt())) } }
+                }
+                Divider()
                 SwitchRow("生成时保持屏幕常亮", s.keepScreenOn, icon = Icons.Outlined.ScreenLockPortrait, subtitle = "回复没写完时屏幕不熄灭") { on -> vm.update { it.copy(keepScreenOn = on) } }
                 Divider()
                 AdvancedFold("perf", SettingsText.ADVANCED) {
@@ -891,6 +907,12 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
             SectionTitle("背景")
             SettingsGroup {
                 val hasBg = s.backgroundImage.isNotEmpty()
+                SwitchRow(
+                    "动态混色背景", s.dynamicBlend,
+                    subtitle = if (hasBg) "首页顶部颜色缓慢流动（使用自定义背景时不显示）" else "首页顶部颜色缓慢流动，跟随主题色；省电时静止",
+                    icon = com.iris.localai.ui.icons.IrisIcons.Image,
+                ) { on -> vm.update { it.copy(dynamicBlend = on) } }
+                Divider()
                 SettingsRow(
                     "自定义背景",
                     subtitle = when { bgFailed -> AppearanceText.BACKGROUND_FAILED; hasBg -> AppearanceText.BACKGROUND_SET; else -> AppearanceText.BACKGROUND_NONE },

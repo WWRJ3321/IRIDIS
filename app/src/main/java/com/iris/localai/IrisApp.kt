@@ -42,7 +42,7 @@ class AppContainer(app: Application) {
     val voiceStore = VoiceModelStore(app)
     val recognizer = SpeechRecognizer(app, voiceStore, settings)
     val cloneVoices = com.iris.localai.voice.CloneVoiceStore(app)
-    val synthesizer = SpeechSynthesizer(voiceStore, settings, cloneVoices)
+    val synthesizer = SpeechSynthesizer(voiceStore, settings, cloneVoices, app)
 }
 
 class IrisApp : Application() {
@@ -93,12 +93,30 @@ class IrisApp : Application() {
                 override fun onReceive(c: android.content.Context, i: android.content.Intent) {
                     val t = i.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
                     if (t != Int.MIN_VALUE) com.iris.localai.engine.ThermalGovernor.onTemperature(t / 10f)
+                    if (t != Int.MIN_VALUE) checkThermalCutoff(t / 10f)
                 }
             }
             registerReceiver(r, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))?.let { r.onReceive(this, it) }
         }
         container.scope.launch {
-            container.settings.settings.collect { com.iris.localai.engine.ThermalGovernor.setLimit(it.thermalLimitC) }
+            container.settings.settings.collect {
+                com.iris.localai.engine.ThermalGovernor.setLimit(it.thermalLimitC)
+                com.iris.localai.engine.ThermalCutoff.setCutoff(it.thermalCutoffC)
+            }
+        }
+        // 2.2.10 终止温度: battery broadcasts can be sparse, so also poll (cheap: sticky intent +
+        // thermal status / headroom) every 8 s, only while the cutoff is on and something is loaded.
+        container.scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(8_000)
+                if (com.iris.localai.engine.ThermalCutoff.cutoffC > 0 && thermalActive()) {
+                    val t = runCatching {
+                        registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                            ?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+                    }.getOrNull()
+                    checkThermalCutoff(if (t == null || t == Int.MIN_VALUE) Float.NaN else t / 10f)
+                }
+            }
         }
         // 1.6.0 removed the per-level speed estimates; drop their old store.
         runCatching { deleteSharedPreferences("speed_stats") }
@@ -142,6 +160,35 @@ class IrisApp : Application() {
                     store.markBackfilled()
                 }.onFailure { android.util.Log.w("IrisHistory", "backfill failed", it) }
             }
+        }
+    }
+
+    /** 2.2.10 终止温度: a model is loaded, a reply / GUI task / image is generating. */
+    private fun thermalActive(): Boolean =
+        container.engine.state.value !is com.iris.localai.engine.EngineState.Idle ||
+            container.engine.readyModel != null ||
+            com.iris.localai.imagegen.ImageGenEngines.get(this).busy
+
+    private fun checkThermalCutoff(tempC: Float) {
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        val status = runCatching { pm?.currentThermalStatus ?: 0 }.getOrDefault(0)
+        val headroom = if (android.os.Build.VERSION.SDK_INT >= 30) runCatching { pm?.getThermalHeadroom(10) ?: Float.NaN }.getOrDefault(Float.NaN) else Float.NaN
+        if (!com.iris.localai.engine.ThermalCutoff.check(tempC, status, headroom, thermalActive())) return
+        val msg = com.iris.localai.engine.ThermalCutoff.notice(tempC)
+        android.util.Log.w("IrisThermal", msg)
+        container.scope.launch {
+            // Stop everything first (GUI agent, every engine generation, image gen), then unload.
+            runCatching { container.gui.stop() }
+            runCatching { container.engine.cancelAll() }
+            val img = com.iris.localai.imagegen.ImageGenEngines.get(this@IrisApp)
+            runCatching { img.cancel() }
+            runCatching { container.engine.unload("温度过高") }
+            runCatching { container.recognizer.release() }
+            runCatching { container.synthesizer.release() }
+            launch(Dispatchers.IO) { runCatching { img.release() } }
+        }
+        android.os.Handler(mainLooper).post {
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

@@ -177,7 +177,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             if (same) return
         }
         previewTarget.value = clone?.id ?: ""
-        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed("请先下载并选用一个朗读模型"); return }
+        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) "没有可用的系统 TTS 引擎" else "请先下载并选用一个朗读模型"); return }
         // Stops a running voice conversation or read-aloud instead of talking over it.
         c.synthesizer.claim(this) { stopPreview() }
         previewJob = viewModelScope.launch {
@@ -188,7 +188,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 val out = PcmPlayer(c.synthesizer.sampleRate).also { previewPlayer = it }
                 player = out
                 val s = c.settings.current
-                val text = if (c.synthesizer.speakingWithClone || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
+                val text = if (c.synthesizer.usingSystem || c.synthesizer.speakingWithClone || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
                     "你好，我是 IRIDIS，一个完全运行在你手机上的智能助手。" else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
                 val job = kotlin.coroutines.coroutineContext[Job]
                 c.synthesizer.speak(text, s.ttsSpeakerId, s.ttsSpeed) { chunk ->
@@ -342,6 +342,14 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Which voice the 试听 button is playing ("" = the selected voice). */
     val previewTarget = kotlinx.coroutines.flow.MutableStateFlow("")
+
+    /** 2.2.10: an Android TTS engine is installed (朗读引擎「系统 TTS」). */
+    fun systemTtsAvailable(): Boolean = c.synthesizer.system?.hasEngine() == true
+    fun openSystemTtsSettings() {
+        val ctx = getApplication<Application>()
+        runCatching { ctx.startActivity(com.iris.localai.voice.SystemTts.settingsIntent()) }
+            .onFailure { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+    }
 
     fun stopPreview() {
         previewPlayer?.stop()

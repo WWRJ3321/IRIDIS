@@ -186,7 +186,14 @@ class SpeechSynthesizer(
     private val store: VoiceModelStore,
     private val settings: SettingsRepository,
     private val clones: CloneVoiceStore,
+    context: Context? = null,
 ) {
+    /** 2.2.10: 朗读引擎「系统 TTS」 (null in host tests). */
+    val system: SystemTts? = context?.let { SystemTts(it.applicationContext) }
+    /** True while prepare() chose the system engine (cleared when a cloned voice is previewed). */
+    @Volatile var usingSystem = false
+        private set
+    fun systemSelected(): Boolean = settings.current.ttsEngine == TTS_ENGINE_SYSTEM && system != null
 
     // Synthesis competes with the LLM for CPU while the reply is still being written; run it
     // (and the ONNX threads it spawns, which inherit this) at audio priority so speech keeps up.
@@ -203,7 +210,7 @@ class SpeechSynthesizer(
     private var clone: ClonedVoice? = null
     private var cloneAudio: FloatArray? = null
 
-    val isAvailable: Boolean get() = activeClone() != null || activePack() != null
+    val isAvailable: Boolean get() = (systemSelected() && system?.hasEngine() == true) || activeClone() != null || activePack() != null
     fun activePack(): VoicePack? = store.active(VoiceKind.TTS, settings.current.ttsPack)
     /** The selected cloned voice, if it and the ZipVoice model are both present. */
     fun activeClone(): ClonedVoice? = settings.current.cloneVoiceId.takeIf { it.isNotEmpty() }
@@ -244,6 +251,15 @@ class SpeechSynthesizer(
      * the selected cloned voice, else the selected fixed-voice pack.
      */
     suspend fun prepare(override: ClonedVoice? = null) = withContext(worker) {
+        usingSystem = false
+        if (override == null && systemSelected()) {
+            if (system?.prepare() != true) throw IllegalStateException("没有可用的系统 TTS 引擎，请在系统设置中安装或启用")
+            // Free the built-in voice model while the system engine speaks.
+            tts?.release(); tts = null; loadedPack = null; clone = null; cloneAudio = null
+            usingSystem = true
+            return@withContext
+        }
+        system?.release() // no-op unless the system engine was in use
         val wantClone = override ?: activeClone()
         if (wantClone != null) { prepareClone(wantClone); return@withContext }
         val pack = activePack() ?: return@withContext
@@ -391,6 +407,16 @@ class SpeechSynthesizer(
      */
     suspend fun speak(text: String, speakerId: Int, speed: Float, onAudio: (FloatArray) -> Boolean) =
         withContext(worker) {
+            if (usingSystem) {
+                val pcm = system?.synthesize(text, speed, sampleRate) ?: return@withContext
+                var i = 0
+                while (i < pcm.size) {
+                    val end = minOf(pcm.size, i + 4800)
+                    if (!onAudio(pcm.copyOfRange(i, end))) break
+                    i = end
+                }
+                return@withContext
+            }
             val engine = tts ?: return@withContext
             val sid = if (loadedPack?.singleSpeaker != false) 0 else speakerId
             com.iris.localai.util.CrashReporter.breadcrumb("语音合成 ${loadedPack?.id} 音色$sid：${text.take(40)}")
@@ -407,6 +433,8 @@ class SpeechSynthesizer(
         }
 
     suspend fun release() = withContext(worker) {
+        system?.release()
+        usingSystem = false
         tts?.release()
         tts = null
         loadedPack = null
@@ -428,3 +456,7 @@ class TtsChunkCallback(private val onAudio: (FloatArray) -> Boolean) : (FloatArr
     override fun invoke(samples: FloatArray): Int =
         try { if (onAudio(samples)) 1 else 0 } catch (t: Throwable) { 0 }
 }
+
+/** 2.2.10 AppSettings.ttsEngine values. */
+const val TTS_ENGINE_LOCAL = "local"
+const val TTS_ENGINE_SYSTEM = "system"

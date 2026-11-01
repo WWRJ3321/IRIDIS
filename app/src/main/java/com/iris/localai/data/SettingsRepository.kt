@@ -95,6 +95,7 @@ fun AppSettings.sanitized(): AppSettings {
         powerMode = powerMode.coerceIn(0, 2),
         targetTps = targetTps.coerceIn(0, 60),
         thermalLimitC = com.iris.localai.engine.ThermalGovernor.sanitize(thermalLimitC),
+        thermalCutoffC = com.iris.localai.engine.ThermalCutoff.sanitize(thermalCutoffC),
         liteRtBackend = liteRtBackend.coerceIn(0, 2),
         mnnBackend = mnnBackend.coerceIn(0, 1),
         idleUnloadMinutes = idleUnloadMinutes.coerceIn(0, 240),

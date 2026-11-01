@@ -199,6 +199,9 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     override fun cancel() { active?.cancel() }
 
+    /** 2.2.10 终止温度: a generation is running, or NPU graphs are held. */
+    val busy: Boolean get() = active != null
+
     /** Frees the NPU graphs (≈1.1 GB) now, until the next generation. */
     fun release() { qnn?.release() }
 

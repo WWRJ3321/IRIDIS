@@ -376,8 +376,10 @@ fun ChatScreen(
             Box(Modifier.fillMaxSize().glassBackdrop(haze).glassSource(backdrop, Iris.colors.chatBackground)) {
                 // 2.1.4 外观 › 自定义背景 (inside the glass source so the composer glass blurs it too).
                 com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
+                // 2.2.10: 动态混色背景 (off = the 2.2.9 look exactly: static glow on the empty home only).
+                if (settings.dynamicBlend && settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeDynamicBlend()
                 if (messages.isEmpty()) {
-                    if (settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeAmbientGlow()
+                    if (settings.backgroundImage.isEmpty() && !settings.dynamicBlend) com.iris.localai.ui.components.HomeAmbientGlow()
                     ChatEmptyState(
                         modelName = ui.readyModel?.displayName,
                         engine = ui.engine,

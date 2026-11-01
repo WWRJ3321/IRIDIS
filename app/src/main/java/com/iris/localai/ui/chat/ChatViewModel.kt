@@ -240,6 +240,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         }
     }
     init { androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(awayObserver) }
+    // 2.2.10 终止温度: stop the reply / agent run (online ones too) and read-aloud; IrisApp unloads models.
+    init {
+        viewModelScope.launch {
+            com.iris.localai.engine.ThermalCutoff.trips.collect { t ->
+                runCatching { stop() }
+                runCatching { stopSpeaking() }
+                notice.value = com.iris.localai.engine.ThermalCutoff.notice(t)
+            }
+        }
+    }
 
     // ---- voice ----
     val voice = VoiceController(viewModelScope, c.recognizer, c.synthesizer, c.settings, this)
@@ -1991,7 +2001,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         stopSpeaking()
         val msg = (viewing.value ?: conversation.value).messages.firstOrNull { it.id == messageId } ?: return
         if (!c.synthesizer.isAvailable) {
-            notice.value = "朗读需要先在 设置 › 语音 中下载语音合成模型"
+            notice.value = if (c.synthesizer.systemSelected()) "没有可用的系统 TTS 引擎：在 设置 › 语音 中打开系统 TTS 设置安装或启用" else "朗读需要先在 设置 › 语音 中下载语音合成模型"
             return
         }
         val text = ThinkParser.parse(msg.content).answer

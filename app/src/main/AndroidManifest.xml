@@ -36,6 +36,8 @@
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="text/plain" />
         </intent>
+        <!-- 2.2.10: 朗读引擎「系统 TTS」 -->
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
     <!-- 1.10.6: optional 「全部文件访问」 so 智能体 can read and edit files the user put in
          Download/IRISLocalAI (scoped storage hides files created by other apps). Asked from 设置›智能体. -->
