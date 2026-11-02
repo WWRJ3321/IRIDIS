@@ -107,6 +107,13 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
     val legacyHint by agent.legacyFolderHint.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
+    // 2.3.0 ②: MCP 服务 subpage.
+    var showMcp by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    if (showMcp) {
+        androidx.activity.compose.BackHandler { showMcp = false }
+        McpPage(onBack = { showMcp = false })
+        return
+    }
     val treeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         if (!WorkspaceResolver.isWorkspaceTree(SafWorkspaceFiles.treeDocId(uri))) {
@@ -176,6 +183,15 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             }
             }
             GroupFootnote(AgentText.PERMISSION_NOTE)
+
+            // 2.3.0 ②: remote MCP servers (tools join the built-in ones).
+            SectionTitle(McpText.TITLE)
+            SettingsGroup {
+                val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
+                SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
+                    subtitle = if (mcpServers.isEmpty()) McpText.NAV else "${mcpServers.count { it.enabled }} / ${mcpServers.size} 个服务已启用",
+                    onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
+            }
 
             // the agent's in-app browser.
             SectionTitle("浏览器")

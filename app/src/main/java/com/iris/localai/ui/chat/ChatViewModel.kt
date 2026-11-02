@@ -1637,7 +1637,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             "delete_file" -> "删除：$path"
             "web_fetch" -> "网址：" + (com.iris.localai.agent.Args.str(a, "url", "link", "href") ?: "")
             "memory" -> com.iris.localai.agent.memoryPreview(call)
-            else -> com.iris.localai.agent.Args.summary(a, 300)
+            else -> if (tool is com.iris.localai.agent.mcp.McpTool) "首次调用 MCP 服务「${tool.server.name}」\n地址：${tool.server.url}\n工具：${tool.info.name}\n参数：" +
+                com.iris.localai.agent.Args.summary(a, 300) + "\n选「总是允许」后这个服务的工具不再询问。" else com.iris.localai.agent.Args.summary(a, 300)
         }
     }
 
@@ -1766,7 +1767,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             }
             override fun onText(text: String) { _stream.value = StreamingText(reply.id, text) }
             override fun onAlwaysAllowCall(tool: com.iris.localai.agent.AgentTool, call: com.iris.localai.agent.ToolCall) {
-                onAlwaysAllow(tool)
+                // 2.3.0 ②: 总是允许 on an MCP tool trusts its whole server.
+                if (tool is com.iris.localai.agent.mcp.McpTool) c.agent.mcp.allowAlways(tool.server.id) else onAlwaysAllow(tool)
             }
             override fun onAlwaysAllow(tool: com.iris.localai.agent.AgentTool) {
                 c.agent.settings.update { com.iris.localai.agent.PermissionPolicy.afterDecision(it, tool, com.iris.localai.agent.UserDecision.ALWAYS_ALLOW) }

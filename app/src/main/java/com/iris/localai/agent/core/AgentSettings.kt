@@ -120,6 +120,8 @@ class AgentSettingsRepository(context: Context) {
 /** App-wide agent state: settings, the sandboxed workspace and its undo history. */
 class AgentContainer(context: Context) {
     val settings = AgentSettingsRepository(context)
+    /** 2.3.0 ②: remote MCP servers; their enabled tools join the 9 built-in ones (capped). */
+    val mcp = com.iris.localai.agent.mcp.McpManager(context).also { m -> AgentTools.mcp = { m.injected().injected } }
     /** 1.9.0 location; since 1.10.0 used when 应用私有目录 is chosen or Download is unavailable. */
     val privateRoot = java.io.File(context.filesDir, "workspace")
     private val ctx = context.applicationContext ?: context
