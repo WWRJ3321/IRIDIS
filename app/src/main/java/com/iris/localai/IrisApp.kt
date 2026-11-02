@@ -192,6 +192,7 @@ class IrisApp : Application() {
             runCatching { container.synthesizer.release() }
             launch(Dispatchers.IO) { runCatching { img.release() } }
         }
+        com.iris.localai.util.HintLog.add(msg, com.iris.localai.util.HintLog.Source.SYSTEM)
         android.os.Handler(mainLooper).post {
             android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
         }

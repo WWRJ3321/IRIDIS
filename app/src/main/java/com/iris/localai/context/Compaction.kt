@@ -19,6 +19,12 @@ data class CompactMsg(
     val role: String,
     val text: String,
     val steps: List<AgentStep> = emptyList(),
+    /**
+     * 2.2.17 D: tokens the planner adds to this message on top of [text] (its 【相关记忆】 /
+     * knowledge block). Without it the estimate stayed below the trigger while the planner already
+     * had to drop the oldest messages, so auto-compaction never ran near the limit.
+     */
+    val extraTokens: Int = 0,
 ) {
     val isUser: Boolean get() = role == USER
 
@@ -27,7 +33,7 @@ data class CompactMsg(
         if (!withTools || steps.isEmpty() || isUser) text
         else ToolRollup.block(steps) + if (text.isBlank()) "" else "\n" + text
 
-    fun tokens(withTools: Boolean): Int = TokenEstimator.message(promptText(withTools))
+    fun tokens(withTools: Boolean): Int = TokenEstimator.message(promptText(withTools)) + extraTokens
 
     companion object { const val USER = "user"; const val ASSISTANT = "assistant" }
 }
@@ -91,8 +97,12 @@ data class CompactPolicy(val contextTokens: Int, val hardBudget: Int = Int.MAX_V
     val keepRecent: Int get() = (ctx * 1200L / 4096).toInt().coerceAtLeast(160)
     /** Ceiling on the rendered summary (≈600 of 4096). */
     val summaryCap: Int get() = (ctx * 600L / 4096).toInt().coerceAtLeast(120)
-    /** Compact when the prompt estimate passes this. */
-    val trigger: Int get() = minOf(ctx - reserve, hardBudget.coerceAtLeast(ctx / 4))
+    /**
+     * Compact when the prompt estimate passes this. 2.2.17 D: at most 90% of the hard budget (the
+     * planner's prompt budget): the estimate is approximate, and at exactly the budget the planner
+     * had already started trimming the oldest rounds before compaction got a chance.
+     */
+    val trigger: Int get() = minOf(ctx - reserve, hardBudget.coerceAtLeast(ctx / 4) * 9 / 10)
 }
 
 object Compactor {

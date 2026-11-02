@@ -308,6 +308,7 @@ class MnnHub(private val repo: ModelRepository) {
         return if (t is kotlinx.coroutines.CancellationException) {
             if (pausing) { pausing = false; State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
         } else State(repoId = repoId, error = t.message ?: "下载失败", source = cur.source)
+            .also { com.iris.localai.util.HintLog.add(repoId + " 下载失败：" + it.error, com.iris.localai.util.HintLog.Source.DOWNLOAD) }
     }
 
     fun clearError() { if (!_state.value.active) _state.value = State() }

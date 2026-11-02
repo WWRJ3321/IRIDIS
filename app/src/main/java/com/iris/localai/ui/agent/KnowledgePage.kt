@@ -68,6 +68,22 @@ object KnowledgeText {
     const val REBUILD = "重建索引"
     const val ADD = "添加文件（txt / md / csv / html…）"
     const val DELETE = "删除"
+    const val PASTE = "粘贴文字"
+    const val PASTE_TITLE = "标题"
+    const val PASTE_BODY = "内容"
+    const val MAX_TITLE = 40
+
+    /** 2.2.17 D: a pasted entry's title — its first non-blank line (markdown #/-/> stripped), short. */
+    fun titleFrom(text: String): String {
+        val line = text.lineSequence().map { it.trim().trimStart('#', '>', '-', '*', ' ').trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
+        return if (line.length > MAX_TITLE) line.take(MAX_TITLE).trimEnd() else line.ifEmpty { "粘贴的文字" }
+    }
+
+    /** File name for a pasted entry: the title, made safe, as .md (indexed like an imported file). */
+    fun fileName(title: String): String {
+        val t = title.trim().replace(Regex("[/\\\\:*?\"<>|\\u0000\\n\\r\\t]"), " ").replace(Regex(" +"), " ").trim().take(MAX_TITLE).trimEnd('.', ' ')
+        return t.ifEmpty { "粘贴的文字" } + ".md"
+    }
     const val EMPTY = "还没有文件。添加后，聊天里提到相关内容会自动引用。"
     const val NOTE = "支持 txt、md、csv、json、html 等文本文件。放进文件夹即可，自动在本机建索引。"
 
@@ -120,6 +136,7 @@ fun KnowledgePage(onBack: () -> Unit) {
     var tick by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<KbFileInfo?>(null) }
+    var pasting by remember { mutableStateOf(false) }
     val c = Iris.colors
 
     // Listed first (unread files show 「正在读取…」), then the index is brought up to date and listed again.
@@ -158,6 +175,13 @@ fun KnowledgePage(onBack: () -> Unit) {
                 icon = Icons.Outlined.Add, enabled = !busy,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
             )
+            Spacer(Modifier.height(IrisDimens.space8))
+            // 2.2.17 D: paste text straight in (saved as a .md file and indexed like any import).
+            IrisButton(
+                KnowledgeText.PASTE, { pasting = true }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
+                icon = IrisIcons.Copy, enabled = !busy,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
+            )
             Spacer(Modifier.height(IrisDimens.space16))
             val list = files
             if (list == null) {
@@ -190,6 +214,18 @@ fun KnowledgePage(onBack: () -> Unit) {
                 )
             }
             GroupFootnote(KnowledgeText.NOTE)
+        }
+    }
+
+    if (pasting) PasteTextDialog(onDismiss = { pasting = false }) { title, body ->
+        busy = true
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching { agent.knowledge.add(KnowledgeText.fileName(title), body.toByteArray(Charsets.UTF_8)) != null && run { agent.knowledge.refresh(); true } }.getOrDefault(false)
+            }
+            busy = false
+            tick++
+            Toast.makeText(context, if (ok) "已添加「${title.trim()}」" else "添加失败", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -233,6 +269,42 @@ private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit) {
             IrisMenu(menu, { menu = false }) {
                 IrisMenuItem(KnowledgeText.DELETE, null, destructive = true) { menu = false; onDelete() }
             }
+        }
+    }
+}
+
+/** 2.2.17 D 「粘贴文字」: content (prefilled from the clipboard) + a title taken from its first line, editable. */
+@Composable
+private fun PasteTextDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    val c = Iris.colors
+    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+    val initial = remember { clip.getText()?.text.orEmpty().take((KnowledgeBase.MAX_BYTES / 4).toInt()) }
+    var body by remember { mutableStateOf(initial) }
+    var title by remember { mutableStateOf(KnowledgeText.titleFrom(initial).takeIf { initial.isNotBlank() }.orEmpty()) }
+    var titleEdited by remember { mutableStateOf(false) }
+    com.iris.localai.ui.components.IrisDialog(
+        onDismiss = onDismiss, title = KnowledgeText.PASTE, confirmText = "保存",
+        confirmEnabled = body.isNotBlank(),
+        onConfirm = { onSave(title.ifBlank { KnowledgeText.titleFrom(body) }, body); onDismiss() },
+    ) {
+        androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(IrisDimens.space8)) {
+            androidx.compose.material3.OutlinedTextField(
+                title, { title = it; titleEdited = true }, singleLine = true,
+                textStyle = IrisType.body.copy(color = c.text),
+                placeholder = { Text(KnowledgeText.PASTE_TITLE, style = IrisType.body, color = c.textTertiary) },
+                shape = com.iris.localai.ui.theme.IrisRadius.mediumShape,
+                colors = com.iris.localai.ui.components.irisTextFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            androidx.compose.material3.OutlinedTextField(
+                body, { body = it; if (!titleEdited) title = if (it.isBlank()) "" else KnowledgeText.titleFrom(it) },
+                minLines = 5, maxLines = 10,
+                textStyle = IrisType.body.copy(color = c.text),
+                placeholder = { Text(KnowledgeText.PASTE_BODY, style = IrisType.body, color = c.textTertiary) },
+                shape = com.iris.localai.ui.theme.IrisRadius.mediumShape,
+                colors = com.iris.localai.ui.components.irisTextFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

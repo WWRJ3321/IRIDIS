@@ -247,7 +247,7 @@ object SearchText {
     fun render(q: String, hits: List<SearchHit>): String = buildString {
         // 2.1.7: tells the model to answer from the snippets (it used to read "read a page for
         // details" as the next step and kept fetching until the step limit).
-        append("Search results for \"").append(q).append("\" (answer from these; web_fetch a url only if more detail is needed):\n")
+        append("Search results for \"").append(q).append("\" (answer from these, citing them inline as [1], [2]; web_fetch a url only if more detail is needed):\n")
         hits.forEachIndexed { i, h ->
             append(i + 1).append(". ").append(h.title)
             val meta = listOf(h.source, h.date).filter { it.isNotBlank() }.joinToString(", ")

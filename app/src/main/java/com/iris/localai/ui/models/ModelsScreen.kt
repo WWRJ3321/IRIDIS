@@ -54,6 +54,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -489,6 +490,11 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             Divider()
                             ValueRow("深度思考", "支持")
                         }
+                        // 2.2.17 D: the GPU→CPU / mmproj note stays readable on the loaded model.
+                        d.fallbackNote?.let { note ->
+                            Divider()
+                            SettingsRow("加载提示", subtitle = note, icon = com.iris.localai.ui.icons.IrisIcons.Info)
+                        }
                         Divider()
                         SettingsRow("卸载模型并释放内存", titleColor = c.danger, enabled = busy == null, onClick = { vm.unload() })
                     }
@@ -500,6 +506,15 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                 }
             }
 
+            item(key = "hints", contentType = "hints") {
+                // 2.2.17 D 「最近提示」: banners / toasts that already went away, readable again.
+                val hints by com.iris.localai.util.HintLog.items.collectAsState()
+                var open by remember { mutableStateOf(false) }
+                SettingsGroup {
+                    SettingsRow("最近提示", subtitle = com.iris.localai.ui.hints.RecentHints.subtitle(hints), subtitleMaxLines = 1, icon = com.iris.localai.ui.icons.IrisIcons.Info, onClick = { open = true })
+                }
+                if (open) com.iris.localai.ui.hints.RecentHintsSheet(onDismiss = { open = false })
+            }
             item(key = "local-title", contentType = "title") { SectionTitle("本机模型（${models.size}）") }
             if (models.isEmpty()) {
                 item(key = "empty", contentType = "empty") {

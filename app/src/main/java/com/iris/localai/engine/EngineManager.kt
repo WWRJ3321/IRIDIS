@@ -560,6 +560,7 @@ class EngineManager(
             crashMemory.markOpenClHung(detail, model.fileName)
             com.iris.localai.util.CrashReporter.breadcrumb(null)
             withContext(kotlinx.coroutines.Dispatchers.Main) {
+                com.iris.localai.util.HintLog.add(GpuLoadWatchdog.HANG_NOTICE, com.iris.localai.util.HintLog.Source.MODEL)
                 runCatching { android.widget.Toast.makeText(appContext, GpuLoadWatchdog.HANG_NOTICE, android.widget.Toast.LENGTH_LONG).show() }
             }
             kotlinx.coroutines.delay(1200)

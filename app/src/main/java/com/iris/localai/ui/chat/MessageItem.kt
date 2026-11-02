@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -174,6 +176,8 @@ fun AssistantMessage(
         derivedStateOf { parts.value.hasThinking || (streaming && !stepActive && expectThinking && parts.value.answer.isEmpty()) }
     }
     val hasAnswer by remember(parts) { derivedStateOf { parts.value.answer.isNotEmpty() } }
+    // 2.2.17 D 引用链接: web_search sources of this reply (inline [n] links + 来源 row).
+    val sources = remember(message.agentSteps, streaming) { if (streaming) emptyList() else com.iris.localai.agent.Citations.fromSteps(message.agentSteps) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
         // 1.9.0 智能体: tool steps of this reply, above the reasoning and the answer.
         com.iris.localai.ui.agent.AgentSteps(message.agentSteps, streaming) { st ->
@@ -192,7 +196,7 @@ fun AssistantMessage(
             )
         }
         when {
-            hasAnswer -> AnswerBody(text = { parts.value.answer }, streaming = streaming)
+            hasAnswer -> AnswerBody(text = { parts.value.answer }, streaming = streaming, sources = sources)
             stepActive -> {}
             streaming && !hasThinking && status != null -> Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -219,6 +223,7 @@ fun AssistantMessage(
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
                 if (message.kbSources.isNotEmpty()) KbSourceChips(message.kbSources)
+                if (sources.isNotEmpty()) WebSourceChips(sources)
                 val suggestion = message.memorySuggestion
                 if (suggestion != null && onAcceptMemory != null) {
                     MemorySuggestionChip(suggestion, onAcceptMemory, onDismissMemory ?: {})
@@ -230,8 +235,9 @@ fun AssistantMessage(
 
 /** The visible answer: smooth reveal + incremental Markdown while streaming. */
 @Composable
-private fun AnswerBody(text: () -> String, streaming: Boolean) {
-    val shown by rememberRevealedText(text, animate = streaming)
+private fun AnswerBody(text: () -> String, streaming: Boolean, sources: List<com.iris.localai.agent.Citations.Source> = emptyList()) {
+    val revealed by rememberRevealedText(text, animate = streaming)
+    val shown = if (streaming || sources.isEmpty()) revealed else remember(revealed, sources) { com.iris.localai.agent.Citations.linkify(revealed, sources) }
     // 1.12.0: a finished reply is selectable — long-press, drag the handles, copy just a part.
     // (Not while streaming: the text changes under the selection.)
     if (streaming) Markdown(shown, streaming = true)
@@ -528,6 +534,33 @@ private fun MemorySuggestionChip(text: String, onAccept: () -> Unit, onDismiss: 
 }
 
 /** 2.2.9 D4: 「出处：租房合同.md · 第 3 段」 chips; a tap shows the snippet. */
+/** 2.2.17 D: 「来源」 under a web_search answer — number + title + domain, tap opens the page. */
+@Composable
+private fun WebSourceChips(sources: List<com.iris.localai.agent.Citations.Source>) {
+    val c = Iris.colors
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    Row(
+        Modifier.fillMaxWidth().padding(top = IrisDimens.space4).horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+    ) {
+        Text("来源", style = IrisType.caption, color = c.textTertiary)
+        sources.forEach { s ->
+            Text(
+                "${s.n} · ${s.title.take(18)}${if (s.title.length > 18) "…" else ""} · ${s.domain}",
+                style = IrisType.caption, color = c.textSecondary, maxLines = 1,
+                modifier = Modifier
+                    .widthIn(max = 260.dp)
+                    .clip(IrisRadius.pillShape)
+                    .background(c.surfaceVariant)
+                    .clickable { runCatching { uri.openUri(s.url) } }
+                    .heightIn(min = 32.dp)
+                    .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space8),
+            )
+        }
+    }
+}
+
 @Composable
 private fun KbSourceChips(sources: List<String>) {
     val c = Iris.colors

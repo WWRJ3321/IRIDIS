@@ -275,6 +275,17 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     init {
         // 1.7.7: reload failures / GPU→CPU fallbacks from the engine are shown, never swallowed.
         viewModelScope.launch { c.engine.notices.collect { notice.value = it } }
+        // 2.2.17 D 「最近提示」: every banner, plus load failures / fallback notes, can be read again later.
+        viewModelScope.launch { notice.collect { n -> com.iris.localai.util.HintLog.add(n, com.iris.localai.util.HintLog.Source.CHAT) } }
+        viewModelScope.launch {
+            c.engine.state.collect { st ->
+                when (st) {
+                    is EngineState.Failed -> com.iris.localai.util.HintLog.add("加载失败：" + st.message, com.iris.localai.util.HintLog.Source.MODEL)
+                    is EngineState.Ready -> st.details.fallbackNote?.let { com.iris.localai.util.HintLog.add(st.model.displayName + "：" + it, com.iris.localai.util.HintLog.Source.MODEL) }
+                    else -> {}
+                }
+            }
+        }
         // Held in a StateFlow: preload can decide to skip before this collector exists.
         viewModelScope.launch {
             c.engine.preloadSkipNotice.collect { text ->
@@ -574,7 +585,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val strategy = com.iris.localai.data.ContextStrategy.of(conv.contextStrategy ?: s.contextStrategy)
         val ms = c.agent.memorySettings.current
         if (!manual && !com.iris.localai.context.ContextAssembly.autoAllowed(agentMode, strategy, ms.autoCompact)) return 0
-        val active = com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, agentMode, ready?.details?.supportsVision == true)
+        // 2.2.17 D: count each message's memory/knowledge block, as planFor sends it.
+        val blocks = if (agentMode || !s.knowledgeInChat) memOnly() else turnBlocks()
+        val active = com.iris.localai.context.ContextAssembly.withExtras(
+            com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, agentMode, ready?.details?.supportsVision == true), blocks)
         val ctx = contextTokensFor(ready)
         val eff = c.engine.effective(ready?.model)
         val baseSystem = if (agentMode) {

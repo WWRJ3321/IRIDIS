@@ -113,6 +113,25 @@ object VoiceCapsule {
     fun slideUpPx(startFingerY: Float, startOriginY: Float, fingerY: Float, originY: Float): Float =
         (startOriginY + startFingerY) - (originY + fingerY)
 
+    /**
+     * 2.2.17 D: a dictation shorter than this (finger lifted right after the long-press fired)
+     * records nothing useful — discard it instead of sending an empty transcript.
+     */
+    const val MIN_HOLD_MS = 350L
+
+    enum class HoldEnd { SEND, CANCEL }
+
+    /** How a hold ends: slid up (armed) or too short = cancel, otherwise finish and send. */
+    fun holdEnd(armed: Boolean, heldMs: Long): HoldEnd =
+        if (armed || heldMs < MIN_HOLD_MS) HoldEnd.CANCEL else HoldEnd.SEND
+
+    /**
+     * 2.2.17 D: whether the hold is over after an event. Only the finger that started it counts
+     * (a second finger landing or lifting no longer ends or cancels it); its change missing from
+     * the event means the system took the pointer away (cancel), which also ends the hold.
+     */
+    fun trackedLifted(trackedPresent: Boolean, trackedPressed: Boolean): Boolean = !trackedPresent || !trackedPressed
+
     /** [slideUpPx] + [cancelArmed]: the decision the long-press loop makes on every pointer event. */
     fun cancelArmed(startFingerY: Float, startOriginY: Float, fingerY: Float, originY: Float, density: Float): Boolean =
         cancelArmed(slideUpPx(startFingerY, startOriginY, fingerY, originY), density)
@@ -157,6 +176,8 @@ internal fun VoiceCapsuleButton(
     val end by rememberUpdatedState(onHoldEnd)
     val cancel by rememberUpdatedState(onHoldCancel)
     val armed by rememberUpdatedState(onCancelArmed)
+    val actionNow by rememberUpdatedState(action)
+    val canInterruptNow by rememberUpdatedState(canInterrupt)
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         when { holding -> VoiceCapsule.HOLD_SCALE; pressed -> IrisMotion.PRESS_SCALE_BUTTON; else -> 1f },
@@ -203,10 +224,15 @@ internal fun VoiceCapsuleButton(
                 contentDescription = VoiceCapsule.label(action)
                 onClick(VoiceCapsule.label(action)) { tapNow(); true }
             }
-            .pointerInput(action, canInterrupt) {
+            .pointerInput(Unit) {
+                // 2.2.17 D: keyed on Unit — a partial transcript turning the capsule into 发送 mid-hold
+                // used to restart this detector, which ended (and sent) the dictation under the finger.
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    val downOrigin = originY[0]
                     pressed = true
+                    val action = actionNow
+                    val canInterrupt = canInterruptNow
                     if (canInterrupt) {
                         // 2.1.7: tap = 发送 (补充 / 「停…」), hold = the 「打断并发送」 menu.
                         var up = false
@@ -236,24 +262,33 @@ internal fun VoiceCapsuleButton(
                     com.iris.localai.ui.feedback.FeedbackVoice.dictating = true
                     haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_START)
                     start()
-                    val startOrigin = originY[0]
+                    val heldFrom = System.currentTimeMillis()
                     var isArmed = false
                     var done = false
                     try {
+                        // 2.2.17 D: the pointer stays routed to this node wherever it goes on screen
+                        // (Main pass, outside the capsule too); positions are turned into window
+                        // coordinates, so leaving the button or a layout shift is not a slide.
                         while (true) {
-                            val e = awaitPointerEvent()
+                            val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Main)
                             e.changes.forEach { it.consume() }
-                            val ch = e.changes.firstOrNull { it.id == down.id } ?: e.changes.first()
-                            // 2.1.7: window coordinates — the keyboard closing (layout drops) is not a slide.
-                            val now = VoiceCapsule.cancelArmed(down.position.y, startOrigin, ch.position.y, originY[0], density)
-                            if (now != isArmed) { isArmed = now; armed(now) }
-                            if (e.changes.none { it.pressed }) break
+                            val ch = e.changes.firstOrNull { it.id == down.id }
+                            if (ch != null) {
+                                // 2.1.7: window coordinates — the keyboard closing (layout drops) is not a slide.
+                                val now = VoiceCapsule.cancelArmed(down.position.y, downOrigin, ch.position.y, originY[0], density)
+                                if (now != isArmed) { isArmed = now; armed(now) }
+                            }
+                            if (VoiceCapsule.trackedLifted(ch != null, ch?.pressed == true)) break
                         }
                     } finally {
                         if (!done) {
                             done = true
                             pressed = false
-                            if (isArmed) { armed(false); cancel() } else end()
+                            if (isArmed) armed(false)
+                            when (VoiceCapsule.holdEnd(isArmed, System.currentTimeMillis() - heldFrom)) {
+                                VoiceCapsule.HoldEnd.CANCEL -> cancel()
+                                VoiceCapsule.HoldEnd.SEND -> end()
+                            }
                             haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_STOP)
                             com.iris.localai.ui.feedback.FeedbackVoice.dictating = false
                         }

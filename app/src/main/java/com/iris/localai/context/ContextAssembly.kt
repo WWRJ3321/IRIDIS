@@ -40,6 +40,12 @@ object ContextAssembly {
             .filterNot { !it.isUser && it.text.isBlank() && (!withTools || it.steps.isEmpty()) }
     }
 
+    /** 2.2.17 D: [blocks] (message id → block the planner attaches) counted into each message's estimate. */
+    fun withExtras(active: List<CompactMsg>, blocks: Map<String, String>): List<CompactMsg> =
+        if (blocks.isEmpty()) active else active.map { m ->
+            blocks[m.id]?.takeIf { it.isNotBlank() }?.let { m.copy(extraTokens = com.iris.localai.util.TokenEstimator.estimate(it) + 2) } ?: m
+        }
+
     /** Messages the planner still sees (the compacted part left out). */
     fun forPlanner(active: List<CompactMsg>, state: CompactState?, withTools: Boolean): List<CtxMessage> =
         Compactor.remaining(state, active).map { CtxMessage(it.id, it.role, it.promptText(withTools)) }
