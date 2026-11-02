@@ -176,6 +176,8 @@ fun ChatScreen(
     val haze = remember { dev.chrisbanes.haze.HazeState() }
 
     var input by rememberSaveable { mutableStateOf("") }
+    val draft by vm.draft.collectAsStateWithLifecycle()
+    LaunchedEffect(draft) { draft?.let { input = it; vm.setDraft(null) } }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     // 2.0.x: 「记住这条」 dialog for this message (null = closed).
     var remembering by remember { mutableStateOf<com.iris.localai.data.ChatMessage?>(null) }

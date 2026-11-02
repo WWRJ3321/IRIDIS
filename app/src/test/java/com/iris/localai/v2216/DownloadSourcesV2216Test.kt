@@ -136,7 +136,7 @@ class DownloadSourcesV2216Test {
     }
 
     @Test fun everyRecommendedChatModelHasModelScope() {
-        val chat = MnnHub.RECOMMENDED_GROUPS.flatMap { it.items }.filter { it.imageModel == null }
+        val chat = com.iris.localai.data.RecommendedCatalog.section(com.iris.localai.data.RecommendedCatalog.Section.CHAT)
         assertEquals(16, chat.size)
         chat.forEach { assertTrue(it.id, DownloadSources.MODELSCOPE.containsKey(it.id)) }
         // generic taobao-mnn → official MNN org; others none

@@ -144,7 +144,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     val import = _import.asStateFlow()
     private var importJob: Job? = null
 
-    init { refresh() }
+    init { refresh(); refreshImageModels() }
 
     fun refresh() = viewModelScope.launch { refreshFolder(); c.models.refresh() }
     fun load(m: LocalModel) = viewModelScope.launch { c.engine.load(m) }
@@ -196,15 +196,66 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 2.2.12: a 生图 model from the recommended list → the 生图 downloader (progress on the 生图 page). */
-    fun downloadImageModel(id: String) {
+    /** 2.2.12: a 生图 model from the recommended list → the 生图 downloader (2.2.17 C: progress on its card). */
+    fun downloadImageModel(id: String, retry: Boolean = false) {
         val m = com.iris.localai.imagegen.ImageCatalog.byId(id) ?: return
         viewModelScope.launch {
             val root = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.iris.localai.imagegen.ImageGenRepository(getApplication()).downloadRoot(m) }
-            c.imageGenDownloader.start(m, root, c.settings.current.downloadSource)
-            android.widget.Toast.makeText(getApplication(), "已开始下载「${m.name}」，进度见 生图 页", android.widget.Toast.LENGTH_SHORT).show()
+            val done: () -> Unit = { refreshImageModels() }
+            if (retry) c.imageGenDownloader.retryOtherSource(m, root, c.settings.current.downloadSource, done)
+            else c.imageGenDownloader.start(m, root, c.settings.current.downloadSource, onDone = done)
         }
     }
+    fun cancelImageDownload(id: String) = c.imageGenDownloader.cancel(id)
+    val imageStates = c.imageGenDownloader.states
+    private val _imageDownloaded = MutableStateFlow<Set<String>>(emptySet())
+    val imageDownloaded = _imageDownloaded.asStateFlow()
+    fun refreshImageModels() = viewModelScope.launch {
+        _imageDownloaded.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.iris.localai.imagegen.ImageGenRepository(getApplication()).downloaded() }.getOrDefault(emptySet())
+        }
+    }
+
+    // ---- 2.2.17 C: voice packs from the 推荐 › 语音 section (same store as the 语音 page) ----
+    val voiceStates = c.voiceStore.states
+    private val voiceJobs = java.util.concurrent.ConcurrentHashMap<com.iris.localai.voice.VoicePack, Job>()
+    fun voiceBytes(p: com.iris.localai.voice.VoicePack): Long = runCatching { c.voiceStore.totalBytes(p) }.getOrDefault(0L)
+    fun downloadVoice(p: com.iris.localai.voice.VoicePack) {
+        if (voiceJobs[p]?.isActive == true) return
+        voiceJobs[p] = c.scope.launch { runCatching { c.voiceStore.download(p, c.settings.current.downloadSource) } }
+    }
+    fun cancelVoice(p: com.iris.localai.voice.VoicePack) { voiceJobs.remove(p)?.cancel() }
+    fun useVoice(p: com.iris.localai.voice.VoicePack) = c.settings.update {
+        if (p.kind == com.iris.localai.voice.VoiceKind.ASR) it.copy(asrPack = p.id) else it.copy(ttsPack = p.id)
+    }
+    fun voiceInUse(p: com.iris.localai.voice.VoicePack): Boolean = p.kind != com.iris.localai.voice.VoiceKind.CLONE &&
+        c.voiceStore.active(p.kind, if (p.kind == com.iris.localai.voice.VoiceKind.ASR) c.settings.current.asrPack else c.settings.current.ttsPack) == p
+
+    // ---- 2.2.17 C: recommended chat / 特色 models ----
+    /** The local model this entry downloaded (null = not on disk). */
+    fun localFor(item: com.iris.localai.data.RecommendedCatalog.Item, list: List<LocalModel>): LocalModel? {
+        val repo = item.repoId ?: return null
+        val k = item.kind
+        if (k is com.iris.localai.data.RecommendedCatalog.Kind.Gguf) return list.firstOrNull { it.fileName == com.iris.localai.data.ModelFiles.sanitizeFileName(k.file) }
+        return list.firstOrNull { com.iris.localai.data.RecommendedCatalog.matchesLocal(repo, it.fileName) }
+    }
+
+    fun downloadCatalog(item: com.iris.localai.data.RecommendedCatalog.Item, withVision: Boolean = false) {
+        when (val k = item.kind) {
+            is com.iris.localai.data.RecommendedCatalog.Kind.Hub -> downloadMnn(k.repoId)
+            is com.iris.localai.data.RecommendedCatalog.Kind.Gguf -> {
+                val hit = com.iris.localai.data.GgufSearch.RepoHit(k.repoId, com.iris.localai.data.GgufSearch.Site.HF, license = item.licence)
+                val main = com.iris.localai.data.GgufSearch.GgufFile(k.file, k.size)
+                val proj = k.mmproj?.takeIf { withVision }?.let { com.iris.localai.data.GgufSearch.GgufFile(it, k.mmprojSize) }
+                startGguf(hit, com.iris.localai.data.GgufSearch.Choice(listOf(main)), proj)
+            }
+            is com.iris.localai.data.RecommendedCatalog.Kind.Image -> downloadImageModel(k.modelId)
+            is com.iris.localai.data.RecommendedCatalog.Kind.Voice -> com.iris.localai.voice.VoicePack.byId(k.packId)?.let(::downloadVoice)
+        }
+    }
+
+    fun pauseDownload() = c.mnnHub.pause()
+    fun resumeDownload() = c.mnnHub.resume()
 
     /** 2.2.16 「换源重试」 for the failed model download. */
     fun retryOtherSource() = c.mnnHub.retryOtherSource(c.scope) { m ->
@@ -296,7 +347,10 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     }.getOrDefault(0L)
 
     fun downloadGguf(choice: com.iris.localai.data.GgufSearch.Choice, projector: com.iris.localai.data.GgufSearch.GgufFile?) {
-        val hit = _search.value.repo ?: return
+        startGguf(_search.value.repo ?: return, choice, projector)
+    }
+
+    private fun startGguf(hit: com.iris.localai.data.GgufSearch.RepoHit, choice: com.iris.localai.data.GgufSearch.Choice, projector: com.iris.localai.data.GgufSearch.GgufFile?) {
         val mainLocal = com.iris.localai.data.ModelFiles.sanitizeFileName(choice.main.name)
         val files = choice.parts.map { Triple(it.path, it.size, com.iris.localai.data.ModelFiles.sanitizeFileName(it.name)) } +
             listOfNotNull(projector?.let { Triple(it.path, it.size, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it.name)) })
@@ -310,7 +364,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, vm: ModelsViewModel = viewModel()) {
+fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, onOpenDownload: () -> Unit = {}, vm: ModelsViewModel = viewModel()) {
     val c = Iris.colors
     val models by vm.models.collectAsStateWithLifecycle()
     val engine by vm.engine.collectAsStateWithLifecycle()
@@ -327,8 +381,6 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::import) }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::importFolder) }
     val hub by vm.hub.collectAsStateWithLifecycle()
-    var showDownload by remember { mutableStateOf(false) }
-    var showSearch by remember { mutableStateOf(false) }
     val folder by vm.folder.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -380,36 +432,17 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                                 modifier = Modifier.weight(1f),
                             )
                             IrisButton(
-                                "下载模型", onClick = { vm.clearDownloadError(); showDownload = true },
-                                enabled = !hub.active, style = IrisButtonStyle.Tonal, icon = Icons.Outlined.CloudDownload,
+                                DownloadText.TITLE, onClick = onOpenDownload,
+                                style = IrisButtonStyle.Tonal, icon = Icons.Outlined.CloudDownload,
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        if (hub.active) {
-                            Column(Modifier.padding(top = IrisDimens.space16)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        "正在下载 ${hub.repoId} · ${hub.file}" + (if (hub.source.isNotEmpty()) " · ${hub.source}" else ""),
-                                        style = IrisType.labelSmall, color = c.textSecondary,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                                    )
-                                    Text(
-                                        if (hub.totalBytes > 0) "${Format.bytes(hub.doneBytes)} / ${Format.bytes(hub.totalBytes)}" else "",
-                                        style = IrisType.labelSmall, color = c.textSecondary,
-                                    )
-                                }
-                                Spacer(Modifier.height(IrisDimens.space8))
-                                IrisProgressBar(progress = hub.progress.takeIf { hub.totalBytes > 0 })
-                                hub.notice?.let { Text(it, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4)) }
-                                IrisButton("取消下载", vm::cancelDownload, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
-                            }
-                        }
-                        hub.error?.let { err ->
-                            Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8))
-                            // 2.2.16: per-download 换源重试 (resumes what is already downloaded) + import as the way out
-                            Row(Modifier.padding(top = IrisDimens.space4), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                                IrisButton(SourceText.RETRY_OTHER, vm::retryOtherSource, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Refresh)
-                                IrisButton(SourceText.IMPORT, { picker.launch(arrayOf("*/*")) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.Add)
+                        // 2.2.17 C: one status line; progress / pause / 换源重试 live on the card in 下载模型
+                        DownloadText.statusLine(hub)?.let { line ->
+                            Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8), verticalAlignment = Alignment.CenterVertically) {
+                                Text(line, style = IrisType.caption, color = if (hub.error != null) c.danger else c.textSecondary,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
+                                IrisButton("查看", onOpenDownload, style = IrisButtonStyle.Text, compact = true)
                             }
                         }
                     }
@@ -567,19 +600,6 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
         }
     }
 
-    if (showDownload) {
-        MnnDownloadDialog(
-            onDismiss = { showDownload = false }, onDownload = { vm.downloadMnn(it) }, onDownloadImage = { vm.downloadImageModel(it) },
-            source = appSettings.downloadSource, onSource = vm::setDownloadSource,
-            onImport = { showDownload = false; picker.launch(arrayOf("*/*")) },
-            onImportFolder = { showDownload = false; folderPicker.launch(null) },
-            onSearch = { showDownload = false; showSearch = true },
-        )
-    }
-    if (showSearch) {
-        GgufSearchSheet(vm, hubActive = hub.active, onDismiss = { showSearch = false })
-    }
-
     confirmDelete?.let { m ->
         ModelDeleteDialog(m, onConfirm = { vm.delete(m) }, onDismiss = { confirmDelete = null })
     }
@@ -595,77 +615,6 @@ internal fun ModelDeleteDialog(m: LocalModel, onConfirm: () -> Unit, onDismiss: 
         onConfirm = onConfirm,
         onDismiss = onDismiss,
     )
-}
-
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-private fun MnnDownloadDialog(
-    onDismiss: () -> Unit, onDownload: (String) -> Unit, onDownloadImage: (String) -> Unit = {},
-    source: com.iris.localai.data.DownloadSource = com.iris.localai.data.DownloadSource.AUTO,
-    onSource: (com.iris.localai.data.DownloadSource) -> Unit = {},
-    onImport: () -> Unit = {}, onImportFolder: () -> Unit = {},
-    onSearch: () -> Unit = {},
-) {
-    val c = Iris.colors
-    var text by remember { mutableStateOf(com.iris.localai.data.MnnHub.RECOMMENDED.first().first) }
-    val valid = com.iris.localai.data.MnnModels.parseRepoId(text) != null
-    com.iris.localai.ui.components.IrisDialog(
-        onDismiss = onDismiss, title = "下载模型", confirmText = "下载",
-        confirmEnabled = valid,
-        onConfirm = { onDownload(text.trim()); onDismiss() },
-    ) {
-        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-            // 2.2.16: 下载源, visible right here (国内选 自动 或 魔搭)
-            Text(SourceText.TITLE, style = IrisType.labelSmall, color = c.textTertiary)
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
-                verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
-            ) {
-                com.iris.localai.data.DownloadSource.entries.forEach { src ->
-                    androidx.compose.material3.FilterChip(
-                        selected = source == src, onClick = { onSource(src) },
-                        label = { Text(src.short, style = IrisType.labelSmall) },
-                    )
-                }
-            }
-            Text(SourceText.hint(source), style = IrisType.caption, color = c.textTertiary)
-            // 2.2.16: search any GGUF on HuggingFace / 魔搭
-            IrisButton(SearchText.OPEN, onSearch, style = IrisButtonStyle.Tonal, icon = Icons.Outlined.Search, modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space4))
-            Text("Hugging Face 仓库名，或点选推荐：", style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4))
-            androidx.compose.material3.OutlinedTextField(
-                text, { text = it }, singleLine = true,
-                textStyle = IrisType.body.copy(color = c.text),
-                placeholder = { Text("作者/仓库名", style = IrisType.body, color = c.textTertiary) },
-                shape = IrisRadius.mediumShape,
-                colors = com.iris.localai.ui.components.irisTextFieldColors(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            // 2.2.12: official list by category; tap = download now (生图 models go to the 生图 downloader)
-            com.iris.localai.data.MnnHub.RECOMMENDED_GROUPS.forEach { g ->
-                Text(g.title, style = IrisType.labelSmall, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
-                g.items.forEach { r ->
-                    Column(
-                        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape)
-                            .background(if (text.trim() == r.id) c.surfaceVariant else Color.Transparent)
-                            .clickable {
-                                if (r.imageModel != null) onDownloadImage(r.imageModel) else onDownload(r.id)
-                                onDismiss()
-                            }.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
-                    ) {
-                        Text(r.title, style = IrisType.rowStrong, color = c.text)
-                        Text(r.note, style = IrisType.caption, color = c.textTertiary)
-                    }
-                }
-            }
-            Text(SourceText.AUTO_SWITCH, style = IrisType.caption, color = c.textTertiary)
-            // 2.2.16: models obtained elsewhere (网盘、电脑) → the existing import, reachable from here
-            Text(SourceText.IMPORT_HINT, style = IrisType.labelSmall, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
-            Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                IrisButton(SourceText.IMPORT, onImport, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add)
-                IrisButton("导入文件夹", onImportFolder, style = IrisButtonStyle.Text, compact = true, icon = com.iris.localai.ui.icons.IrisIcons.Folder)
-            }
-        }
-    }
 }
 
 /** Picker line with the backend: the real one once loaded, otherwise the one a load would start with. */

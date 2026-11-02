@@ -255,6 +255,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     val voice = VoiceController(viewModelScope, c.recognizer, c.synthesizer, c.settings, this)
     val dictation = Dictation(viewModelScope, c.recognizer)
     val voiceStore = c.voiceStore
+    /** 2.2.17 C: text to put into the chat input (下载模型 › 「试一试」); the screen takes it and clears it. */
+    private val _draft = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val draft = _draft.asStateFlow()
+    fun setDraft(text: String?) { _draft.value = text }
     /**
      * 2.1.0: a chat reply finished (true) or failed (false); stopped replies emit nothing. Not
      * replayed: the UI collects it only while resumed, so a reply finishing in the background

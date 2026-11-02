@@ -36,6 +36,8 @@ class MnnHub(private val repo: ModelRepository) {
         /** 2.2.16: source in use (「魔搭 ModelScope」…) and the last switch notice. */
         val source: String = "",
         val notice: String? = null,
+        /** 2.2.17 C: stopped by 「暂停」; the .part files stay and 「继续」 resumes them. */
+        val paused: Boolean = false,
     ) {
         val progress: Float get() = if (totalBytes > 0) (doneBytes.toDouble() / totalBytes).toFloat().coerceIn(0f, 1f) else 0f
     }
@@ -107,7 +109,7 @@ class MnnHub(private val repo: ModelRepository) {
             if (!part.renameTo(target)) throw IOException("无法写入模型目录")
             _state.value = State()
         } catch (t: Throwable) {
-            _state.value = State(repoId = repoId, error = if (t is kotlinx.coroutines.CancellationException) null else (t.message ?: "下载失败"), source = _state.value.source)
+            _state.value = stopped(repoId, t)
             throw t
         } finally {
             repo.releasePart(partName)
@@ -226,7 +228,7 @@ class MnnHub(private val repo: ModelRepository) {
         retry?.invoke(failed ?: DownloadSource.HF_MIRROR)
     }
 
-    @Volatile private var retry: ((DownloadSource) -> Unit)? = null
+    @Volatile private var retry: ((DownloadSource?) -> Unit)? = null
 
     /**
      * 2.2.16 「在线搜索模型」: one GGUF (all parts of a split one) plus an optional vision projector, from a
@@ -279,7 +281,7 @@ class MnnHub(private val repo: ModelRepository) {
             }
             _state.value = State()
         } catch (t: Throwable) {
-            _state.value = State(repoId = hit.id, error = if (t is kotlinx.coroutines.CancellationException) null else (t.message ?: "下载失败"), source = _state.value.source)
+            _state.value = stopped(hit.id, t)
             throw t
         } finally {
             claimed.forEach { repo.releasePart(it) }
@@ -291,60 +293,27 @@ class MnnHub(private val repo: ModelRepository) {
 
     val canRetry: Boolean get() = retry != null
 
-    fun cancel() { job?.cancel() }
+    /** User 「取消」: stop and clear the card (the .part files stay, a later download of the same model resumes). */
+    fun cancel() { pausing = false; job?.cancel() }
+
+    /** 2.2.17 C 「暂停」: stop, keep the progress; [resume] continues from the .part files on the same sources. */
+    fun pause() { if (job?.isActive == true) { pausing = true; job?.cancel() } }
+    fun resume() { if (job?.isActive != true) retry?.invoke(null) }
+
+    @Volatile private var pausing = false
+
+    /** State after a download ended with [t]: paused, cancelled (cleared) or failed. */
+    private fun stopped(repoId: String, t: Throwable): State {
+        val cur = _state.value
+        return if (t is kotlinx.coroutines.CancellationException) {
+            if (pausing) { pausing = false; State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
+        } else State(repoId = repoId, error = t.message ?: "下载失败", source = cur.source)
+    }
 
     fun clearError() { if (!_state.value.active) _state.value = State() }
 
     companion object {
         const val GATED = "这个仓库需要登录或申请访问权限，IRIDIS 暂不支持下载。请换一个仓库（例如 unsloth、bartowski、lmstudio-community 的同名模型）"
-
-        /**
-         * 2.2.12: the official list in 下载模型, by category. Every repo id checked on the HF API 2026-11-01
-         * (sizes = what the download fetches). [Rec.imageModel] = a 生图 model id (downloaded by ImageGenDownloader).
-         * Left out: Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-MNN (repo empty on 2026-11-01); LFM3 (needs a newer llama.cpp).
-         */
-        data class Rec(val id: String, val title: String, val note: String, val imageModel: String? = null)
-        data class RecGroup(val title: String, val items: List<Rec>)
-
-        private fun mnn(id: String, t: String, note: String) = Rec("taobao-mnn/$id", t, note)
-        private const val OPUS = "-Claude-4.6-Opus-Reasoning-Distilled-MNN"
-        val RECOMMENDED_GROUPS: List<RecGroup> = listOf(
-            RecGroup("Qwen3（MNN）", listOf(
-                mnn("Qwen3-0.6B-MNN", "Qwen3 0.6B", "MNN · 约 0.45 GB · 最快，适合低配"),
-                mnn("Qwen3-1.7B-MNN", "Qwen3 1.7B", "MNN · 约 1.2 GB · 轻快日常"),
-                mnn("Qwen3-4B-MNN", "Qwen3 4B", "MNN · 约 2.7 GB · 均衡"),
-                mnn("Qwen3-8B-MNN", "Qwen3 8B", "MNN · 约 5.5 GB · 更强，需 12 GB 内存"),
-            )),
-            RecGroup("Qwen3.5（MNN）", listOf(
-                mnn("Qwen3.5-0.8B-MNN", "Qwen3.5 0.8B", "MNN · 约 0.55 GB · 最快"),
-                mnn("Qwen3.5-2B-MNN", "Qwen3.5 2B", "MNN · 约 1.4 GB · 轻快日常"),
-                mnn("Qwen3.5-4B-MNN", "Qwen3.5 4B", "MNN · 约 2.9 GB · 推荐，均衡"),
-                mnn("Qwen3.5-9B-MNN", "Qwen3.5 9B", "MNN · 约 7.3 GB · 最强，需大内存"),
-            )),
-            RecGroup("Qwen3.5 Opus 4.6 蒸馏（MNN）", listOf(
-                mnn("Qwen3.5-0.8B$OPUS", "Opus 蒸馏 0.8B", "MNN · 约 0.54 GB · 小而会推理"),
-                mnn("Qwen3.5-2B$OPUS", "Opus 蒸馏 2B", "MNN · 约 1.4 GB · 推理更稳"),
-                mnn("Qwen3.5-4B$OPUS", "Opus 蒸馏 4B", "MNN · 约 2.8 GB · 推理强"),
-            )),
-            RecGroup("Gemma 4（LiteRT）", listOf(
-                Rec("litert-community/gemma-4-E2B-it-litert-lm", "Gemma 4 E2B", "LiteRT · 约 2.6 GB · 推荐先试，GPU 快"),
-                Rec("litert-community/gemma-4-E4B-it-litert-lm", "Gemma 4 E4B", "LiteRT · 约 3.7 GB · 更聪明"),
-                Rec("litert-community/gemma-4-12B-it-litert-lm", "Gemma 4 12B", "LiteRT · 约 6.9 GB · 最强，需 16 GB 内存"),
-            )),
-            RecGroup("Spark 2.6（GGUF Q4）", listOf(
-                Rec("XHToken/Spark-X2.6-1.7B-GGUF", "Spark X2.6 1.7B", "GGUF · Q4_K_M · 约 1.8 GB · 轻量中文"),
-                Rec("XHToken/Spark-X2.6-4B-GGUF", "Spark X2.6 4B", "GGUF · Q4_K_M · 约 3.5 GB · 中文更强"),
-            )),
-            RecGroup("生图（NPU）", listOf(
-                Rec("sd15-qnn", "Stable Diffusion 1.5", "NPU · 约 0.71 GB · 通用写实，512×512", imageModel = "sd15-qnn"),
-                Rec("anything-v5-qnn", "Anything V5.0（动漫）", "NPU · 约 0.86 GB · 动漫风格，8 Gen 3 及以上", imageModel = "anything-v5-qnn"),
-            )),
-        )
-
-        /** Flat list of the chat models (first = the dialog's preset). */
-        val RECOMMENDED: List<Pair<String, String>> =
-            RECOMMENDED_GROUPS.flatMap { g -> g.items.filter { it.imageModel == null }.map { it.id to it.note } }
-                .sortedByDescending { it.first == "litert-community/gemma-4-E2B-it-litert-lm" }
 
         /** 2.2.12: the Q4 .gguf of a GGUF repo (Q4_K_M, else Q4_0, else any Q4); no mmproj. Pure. */
         fun pickGgufFile(files: List<Pair<String, Long>>): Pair<String, Long>? {

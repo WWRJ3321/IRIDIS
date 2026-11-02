@@ -68,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS }
 
 class MainActivity : ComponentActivity() {
 
@@ -225,14 +225,14 @@ private fun AppNavigation(chat: ChatViewModel) {
                 clip = p > 0f
             } else Modifier
             androidx.compose.foundation.layout.Box(gestureModifier) {
-                Screen(r, chat, settingsVm, push = ::push, pop = ::pop)
+                Screen(r, chat, settingsVm, push = ::push, pop = ::pop, home = { stack = listOf(Route.CHAT.name) })
             }
         }
     }
 }
 
 @Composable
-private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel, push: (Route) -> Unit, pop: () -> Unit) {
+private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel, push: (Route) -> Unit, pop: () -> Unit, home: () -> Unit = {}) {
     when (r) {
         Route.CHAT -> ChatScreen(
             vm = chat,
@@ -245,7 +245,9 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         )
         Route.IMAGEGEN -> com.iris.localai.ui.imagegen.ImageGenScreen(onBack = pop, onSendToChat = { path -> chat.attachGeneratedImage(path); pop() })
         // 2.2.16: one 「模型与加载」 page (models + 档位 + load settings); 设置 › 模型与加载 opens it too
-        Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm)
+        Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm, onOpenDownload = { push(Route.DOWNLOAD_MODELS) })
+        // 2.2.17 C: full 下载模型 page; 「试一试」 puts the demo prompt into the chat input
+        Route.DOWNLOAD_MODELS -> com.iris.localai.ui.models.DownloadModelsScreen(onBack = pop, onTryPrompt = { p -> chat.setDraft(p); home() })
         Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)
         Route.SETTINGS -> SettingsHome(
             settingsVm, onBack = pop,

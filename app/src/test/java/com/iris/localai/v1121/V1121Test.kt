@@ -8,14 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class V1121Test {
-    @Test fun recommendedAreTheUsersFour() {
-        val ids = MnnHub.RECOMMENDED.map { it.first }
-        assertEquals(listOf(
-            "litert-community/gemma-4-E2B-it-litert-lm", "litert-community/gemma-4-E4B-it-litert-lm",
-            "taobao-mnn/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-MNN", "taobao-mnn/Qwen3.5-9B-MNN"), ids)
-        assertTrue(ids.all { MnnModels.parseRepoId(it) == it })
-    }
-
     @Test fun picksTheGenericLiteRtFile() {
         val e2b = listOf(
             "README.md" to 1L, "gemma-4-E2B-it-gpu.litertlm" to 2008432640L, "gemma-4-E2B-it-web.litertlm" to 2008432640L,
