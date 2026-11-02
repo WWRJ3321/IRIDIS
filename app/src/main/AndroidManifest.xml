@@ -63,6 +63,8 @@
         <!-- Vendor OpenCL driver (Adreno). Optional: loaded with dlopen, CPU is used when absent. -->
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <uses-native-library android:name="libOpenCL_adreno.so" android:required="false" />
+        <!-- 2.2.15: FastRPC for the built-in llama.cpp Hexagon (NPU) runtime -->
+        <uses-native-library android:name="libcdsprpc.so" android:required="false" />
 
         <activity
             android:name=".ui.MainActivity"

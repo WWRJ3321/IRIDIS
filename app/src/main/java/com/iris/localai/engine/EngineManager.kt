@@ -156,7 +156,7 @@ class EngineManager(
             val opts = options ?: backendOptions(model)
             val b = backend ?: BackendCapabilities.preferred(cfg.backend, model.format, model.fileName, opts)
             com.iris.localai.engine.geniex.GgufEngineRule.engineFor(
-                b, hasGeniex && opts.any { it.backend == Backend.NPU && it.available },
+                b, hasGeniex && environment().geniexBlock == null && opts.any { it.backend == Backend.NPU && it.available },
             )
         }
         else -> com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA
@@ -391,10 +391,18 @@ class EngineManager(
             try {
                 if (chain.isEmpty()) throw EngineException("没有可用的后端：\n" + options.joinToString("\n") { "${it.backend.label}：${it.reason ?: "可用"}" })
                 var details: ModelDetails? = null
-                for (backend in chain) {
+                // 2.2.15: a GGUF on the NPU may get two tries — GenieX, then the built-in llama.cpp Hexagon runtime.
+                val env = environment()
+                val attempts = chain.flatMap { b ->
+                    if (model.format == ModelFormat.GGUF && b == Backend.NPU)
+                        com.iris.localai.engine.geniex.GgufEngineRule.npuEngines(hasGeniex && env.geniexBlock == null, env.htpReady)
+                            .ifEmpty { listOf(engineFor(model, cfg, b, options)) }.map { b to it }
+                    else listOf(b to engineFor(model, cfg, b, options))
+                }
+                for ((backend, engineId) in attempts) {
                     if (abandoned()) break
                     plan = threadPolicy.plan(useTier, cfg.threads, backend)
-                    e = EngineFactory.create(appContext, model.format, engineFor(model, cfg, backend, options))
+                    e = EngineFactory.create(appContext, model.format, engineId)
                     crashMemory.arm(model.id, backend)
                     if (!abandoned()) _state.value = EngineState.Loading(model, (_state.value as? EngineState.Loading)?.progress ?: 0f, since, applyingTier, backend)
                     val loadStart = System.currentTimeMillis()

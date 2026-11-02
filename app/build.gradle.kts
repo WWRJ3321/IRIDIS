@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 218
-        versionName = "2.2.14"
+        versionCode = 219
+        versionName = "2.2.15"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -81,6 +81,9 @@ android {
             if (prebuiltNative == null) externalNativeBuild { cmake { arguments += "-DIRIS_MNN=ON" } }
         }
     }
+
+    // 2.2.15: built-in llama.cpp Hexagon (NPU) runtime, full flavour only, as assets (scripts/build-llama-htp.sh).
+    rootProject.file("prebuilt-assets").takeIf { it.isDirectory }?.let { sourceSets["full"].assets.srcDir(it) }
 
     signingConfigs {
         if (keystoreProps.isNotEmpty()) {

@@ -54,6 +54,20 @@ endif ()
 
 add_subdirectory(${LLAMA_DIR} llama.cpp EXCLUDE_FROM_ALL)
 
+# 2.2.15: -DIRIS_HTP=ON builds libiris_lhtp.so instead (CPU + Hexagon NPU, JNI class LlamaHtpNative).
+# ggml-base is linked whole-archive and exported: the upstream release libggml-hexagon.so (same
+# llama.cpp commit, built with the Hexagon SDK) is patched to NEED libiris_lhtp.so instead of
+# libggml-base.so (scripts/build-llama-htp.sh). Configure with IRIS_OPENCL=OFF IRIS_LTO=OFF.
+option(IRIS_HTP "Build libiris_lhtp.so (Hexagon NPU variant)" OFF)
+if (IRIS_HTP)
+    add_library(iris_lhtp SHARED iris_engine.cpp jni_bridge.cpp)
+    target_compile_features(iris_lhtp PRIVATE cxx_std_17)
+    target_compile_definitions(iris_lhtp PRIVATE IRIS_HTP=1)
+    target_compile_options(iris_lhtp PRIVATE -Wall -Wextra -O3)
+    target_link_libraries(iris_lhtp PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,ggml-base>" llama ggml android log dl)
+    target_link_options(iris_lhtp PRIVATE -Wl,--gc-sections -Wl,-z,max-page-size=16384)
+endif ()
+
 add_library(iris_llama SHARED
         iris_engine.cpp
         jni_bridge.cpp)

@@ -39,6 +39,8 @@ data class BackendEnvironment(
     val geniexBlock: String? = com.iris.localai.engine.geniex.GenieX.NOT_IN_BUILD,
     /** 2.2.0: this chip can run AI Hub QAIRT bundles through GenieX. */
     val geniexQairt: Boolean = false,
+    /** 2.2.15: the built-in llama.cpp Hexagon runtime (libiris_lhtp + upstream ggml-hexagon) can run GGUF on this chip's NPU. */
+    val htpReady: Boolean = false,
 ) {
     companion object {
         private val OPENCL_PATHS = listOf(
@@ -60,6 +62,7 @@ data class BackendEnvironment(
                 fullFlavor = ModelFormat.LITERT in EngineFactory.supportedFormats,
                 geniexBlock = com.iris.localai.engine.geniex.GenieXRules.block(gx?.state?.value),
                 geniexQairt = gx?.qairtSupported == true,
+                htpReady = runCatching { com.iris.localai.engine.llama.LlamaHtpRuntime.available(context) }.getOrDefault(false),
             )
         }
     }

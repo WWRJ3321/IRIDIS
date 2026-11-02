@@ -23,7 +23,7 @@ object EngineFactory {
     fun geniex(context: Context): GenieXSupport = GenieXRuntime.get(context)
 
     fun create(context: Context, format: ModelFormat, engine: String = GenieX.ENGINE_LLAMA): InferenceEngine = when (format) {
-        ModelFormat.GGUF -> if (engine == GenieX.ENGINE_GENIEX) GenieXEngine(context) else LlamaEngine()
+        ModelFormat.GGUF -> if (engine == GenieX.ENGINE_GENIEX) GenieXEngine(context) else com.iris.localai.engine.llama.LlamaEngine(context)
         ModelFormat.LITERT -> LiteRtEngine(context)
         ModelFormat.MNN -> MnnEngine(context)
         ModelFormat.QAIRT -> GenieXEngine(context)

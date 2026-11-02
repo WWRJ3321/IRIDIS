@@ -9,6 +9,10 @@
 #include <thread>
 
 #include "ggml-backend.h"
+#ifdef IRIS_HTP
+#include <dlfcn.h>
+#include <android/log.h>
+#endif
 #include "llama.h"
 
 #if defined(__linux__)
@@ -38,6 +42,20 @@ void backend_init_once() {
     static std::once_flag flag;
     std::call_once(flag, [] {
         llama_backend_init();
+#ifdef IRIS_HTP
+        // 2.2.15: ggml-hexagon (upstream llama.cpp release build, same commit) is a separate shared
+        // library loaded by the app right after this one (soname renamed to libiris-hexagon.so, its
+        // libggml-base.so dependency pointed at us). Register its devices (HTP0 = type GPU).
+        void *h = dlopen("libiris-hexagon.so", RTLD_NOW | RTLD_NOLOAD);
+        if (!h) h = dlopen("libiris-hexagon.so", RTLD_NOW);
+        auto reg_fn = h ? reinterpret_cast<ggml_backend_reg_t (*)()>(dlsym(h, "ggml_backend_hexagon_reg")) : nullptr;
+        if (reg_fn) {
+            ggml_backend_reg_t reg = reg_fn();
+            if (reg) ggml_backend_register(reg);
+        }
+        __android_log_print(ANDROID_LOG_INFO, "IrisNative", "hexagon backend: %s (%zu devices)",
+                            reg_fn ? "registered" : "not found", ggml_backend_dev_count());
+#endif
     });
 }
 

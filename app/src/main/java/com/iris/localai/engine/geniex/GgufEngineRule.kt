@@ -19,8 +19,18 @@ object GgufEngineRule {
     fun engineFor(backend: Backend, geniexReady: Boolean): String =
         if (backend == Backend.NPU && geniexReady) GenieX.ENGINE_GENIEX else GenieX.ENGINE_LLAMA
 
-    /** Why the NPU option is greyed out (null = GenieX ready). */
-    fun npuReason(env: BackendEnvironment): String? = when (val b = env.geniexBlock) {
+    /**
+     * 2.2.15: when GenieX cannot load a GGUF on the NPU (e.g. an architecture its older bundled
+     * llama.cpp lacks, like K2 Horizon / LFM3), the built-in llama.cpp Hexagon runtime retries on the
+     * NPU before any GPU/CPU fallback. Without GenieX the built-in runtime is the NPU engine.
+     */
+    fun npuEngines(geniexReady: Boolean, htpReady: Boolean): List<String> = buildList {
+        if (geniexReady) add(GenieX.ENGINE_GENIEX)
+        if (htpReady) add(GenieX.ENGINE_LLAMA)
+    }
+
+    /** Why the NPU option is greyed out (null = GenieX or the built-in Hexagon runtime is ready). */
+    fun npuReason(env: BackendEnvironment): String? = if (env.htpReady) null else when (val b = env.geniexBlock) {
         null -> null
         GenieX.NEED_RUNTIME -> NEED_GENIEX
         else -> b
@@ -33,7 +43,8 @@ object GgufEngineRule {
         return listOf(
             BackendOption(Backend.CPU, true, detail = "内置 llama.cpp · 最稳"),
             BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "Adreno · OpenCL（Q4_0 / Q8_0 最快）"),
-            BackendOption(Backend.NPU, npu == null, npu, "GenieX · 最快，Q4_0 模型效果最好"),
+            BackendOption(Backend.NPU, npu == null, npu,
+                if (env.geniexBlock == null) "GenieX（不支持的模型改用内置 llama.cpp Hexagon）· Q4_0 最快" else "内置 llama.cpp · Hexagon · Q4_0 / Q8_0 最快"),
         )
     }
 

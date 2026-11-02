@@ -18,6 +18,14 @@
 
 #define LOG_TAG "IrisNative"
 
+// 2.2.15: the same JNI surface is built twice: libiris_llama.so (CPU + OpenCL, LlamaNative) and
+// libiris_lhtp.so (CPU + Hexagon NPU, LlamaHtpNative; -DIRIS_HTP).
+#ifdef IRIS_HTP
+#define IRIS_JNI(n) Java_com_iris_localai_engine_llama_LlamaHtpNative_##n
+#else
+#define IRIS_JNI(n) Java_com_iris_localai_engine_llama_LlamaNative_##n
+#endif
+
 namespace {
 
 JavaVM *g_vm = nullptr;
@@ -97,28 +105,28 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
 }
 
 JNIEXPORT jint JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeGpuTicks(JNIEnv *, jclass) {
+IRIS_JNI(nativeGpuTicks)(JNIEnv *, jclass) {
     return (jint) iris::gpu_init_ticks();
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeGpuLastLog(JNIEnv *env, jclass) {
+IRIS_JNI(nativeGpuLastLog)(JNIEnv *env, jclass) {
     return env->NewStringUTF(iris::gpu_last_log().c_str());
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeCreate(JNIEnv *, jobject) {
+IRIS_JNI(nativeCreate)(JNIEnv *, jobject) {
     return reinterpret_cast<jlong>(new iris::Engine());
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeDestroy(JNIEnv *, jobject, jlong h) {
+IRIS_JNI(nativeDestroy)(JNIEnv *, jobject, jlong h) {
     delete engine(h);
 }
 
 /** Returns null on success, an error message otherwise. */
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeLoad(
+IRIS_JNI(nativeLoad)(
         JNIEnv *env, jobject, jlong h, jbyteArray jpath, jint n_ctx, jint n_threads,
         jint n_batch, jboolean flash_attn, jint n_gpu_layers, jint kv_type, jboolean use_mmap, jobject listener) {
     auto *e = engine(h);
@@ -159,28 +167,28 @@ Java_com_iris_localai_engine_llama_LlamaNative_nativeLoad(
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeUnload(JNIEnv *, jobject, jlong h) {
+IRIS_JNI(nativeUnload)(JNIEnv *, jobject, jlong h) {
     if (auto *e = engine(h)) e->unload();
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeCancel(JNIEnv *, jobject, jlong h) {
+IRIS_JNI(nativeCancel)(JNIEnv *, jobject, jlong h) {
     if (auto *e = engine(h)) e->cancel();
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeClearCancel(JNIEnv *, jobject, jlong h) {
+IRIS_JNI(nativeClearCancel)(JNIEnv *, jobject, jlong h) {
     if (auto *e = engine(h)) e->clear_cancel();
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeSetThreads(JNIEnv *, jobject, jlong h, jint n) {
+IRIS_JNI(nativeSetThreads)(JNIEnv *, jobject, jlong h, jint n) {
     if (auto *e = engine(h)) e->set_threads(n);
 }
 
 // 1.7.2: records a mid-generation tier switch; the decoding thread applies it between two decodes.
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeRequestLivePolicy(
+IRIS_JNI(nativeRequestLivePolicy)(
         JNIEnv *env, jobject, jlong h, jint threads, jintArray jcpus, jint nice) {
     auto *e = engine(h);
     if (!e) return;
@@ -195,12 +203,12 @@ Java_com_iris_localai_engine_llama_LlamaNative_nativeRequestLivePolicy(
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeReset(JNIEnv *, jobject, jlong h) {
+IRIS_JNI(nativeReset)(JNIEnv *, jobject, jlong h) {
     if (auto *e = engine(h)) e->reset();
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeMeta(JNIEnv *env, jobject, jlong h) {
+IRIS_JNI(nativeMeta)(JNIEnv *env, jobject, jlong h) {
     auto *e = engine(h);
     iris::ModelMeta m = e ? e->meta() : iris::ModelMeta{};
     std::string j = "{";
@@ -224,7 +232,7 @@ Java_com_iris_localai_engine_llama_LlamaNative_nativeMeta(JNIEnv *env, jobject, 
  * Streams UTF-8 deltas to sink.onPiece(byte[]): Boolean and returns a JSON stats object.
  */
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeGenerate(
+IRIS_JNI(nativeGenerate)(
         JNIEnv *env, jobject, jlong h, jobjectArray roles, jobjectArray contents,
         jfloatArray jf, jintArray ji, jobject sink) {
     auto *e = engine(h);
@@ -322,7 +330,7 @@ Java_com_iris_localai_engine_llama_LlamaNative_nativeGenerate(
 // calling this on the engine's own thread before load / decode applies the tier to inference.
 // Returns a bit mask: 1 = affinity applied, 2 = priority applied.
 extern "C" JNIEXPORT jint JNICALL
-Java_com_iris_localai_engine_llama_LlamaNative_nativeSetThreadPolicy(
+IRIS_JNI(nativeSetThreadPolicy)(
         JNIEnv *env, jobject, jintArray jcpus, jint nice) {
     // 1.7.4: the body moved to thread_policy.h so libiris_mnn.so applies exactly the same policy.
     std::vector<int> cpus;

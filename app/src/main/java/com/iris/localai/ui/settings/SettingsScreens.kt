@@ -274,13 +274,14 @@ fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> 
                     if (i > 0) Divider()
                     val cur = s.defaultBackends[f.name]
                     // 2.1.3: GGUF can pick NPU (= GenieX) in the full build; the backend decides the engine.
-                    val withNpu = f == com.iris.localai.data.ModelFormat.GGUF && vm.geniex != null && (gxReady || cur == "NPU")
+                    val htpOk = f == com.iris.localai.data.ModelFormat.GGUF && com.iris.localai.engine.llama.LlamaHtpRuntime.available(androidx.compose.ui.platform.LocalContext.current)
+                    val withNpu = f == com.iris.localai.data.ModelFormat.GGUF && (htpOk || vm.geniex != null && (gxReady || cur == "NPU"))
                     SegmentedRow(
                         f.label, if (withNpu) listOf("自动", "CPU", "GPU", "NPU") else listOf("自动", "CPU", "GPU"),
                         when (cur) { "CPU" -> 1; "GPU" -> 2; "NPU" -> if (withNpu) 3 else 0; else -> 0 },
                         { idx -> vm.setDefaultBackend(f, when (idx) { 1 -> "CPU"; 2 -> "GPU"; 3 -> "NPU"; else -> null }) },
                         subtitle = when (f) {
-                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) "自动 = CPU。GPU 首次加载要编译；NPU 用 GenieX" else if (vm.geniex != null) "自动 = CPU。GPU 首次加载要编译；NPU ${com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX}" else "自动 = CPU。GPU 首次加载需要较长时间"
+                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) (if (gxReady) "自动 = CPU。GPU 首次加载要编译；NPU 用 GenieX（不支持的模型改用内置 Hexagon）" else "自动 = CPU。GPU 首次加载要编译；NPU 用内置 llama.cpp Hexagon") else if (vm.geniex != null) "自动 = CPU。GPU 首次加载要编译；NPU ${com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX}" else "自动 = CPU。GPU 首次加载需要较长时间"
                             com.iris.localai.data.ModelFormat.LITERT -> "自动 = GPU（Qwen3.5、Agents-A1 用 CPU）。GPU ${com.iris.localai.engine.BackendCapabilities.LITERT_GPU_WARNING}，之后会用缓存。文件名带 _sm8750 的 NPU 编译模型始终用 NPU"
                             com.iris.localai.data.ModelFormat.MNN -> "自动 = CPU。GPU 走 OpenCL"
                             com.iris.localai.data.ModelFormat.QAIRT -> "只能用 NPU"

@@ -29,7 +29,10 @@ import java.util.concurrent.Executors
  * generation, or before the native call started) is never lost, and a stale stop can never
  * cancel the *next* request.
  */
-class LlamaEngine : InferenceEngine {
+class LlamaEngine(private val context: android.content.Context? = null) : InferenceEngine {
+
+    /** 2.2.15: which native library this engine drives (switched to [LlamaJnis.htp] for an NPU load). */
+    @Volatile private var jni: LlamaJni = LlamaJnis.cpuGpu
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -51,39 +54,48 @@ class LlamaEngine : InferenceEngine {
         @Volatile var cancelled = false
     }
 
-    private fun ensureHandle(): Long {
+    private fun ensureHandle(npu: Boolean = false): Long {
         LlamaNative.unavailableReason?.let { throw EngineException(it) }
+        val want = if (npu) {
+            val ctx = context ?: throw EngineException("此版本不含内置 NPU 运行库")
+            LlamaHtpRuntime.ensureLoaded(ctx)?.let { throw EngineException(it) }
+            LlamaJnis.htp
+        } else LlamaJnis.cpuGpu
         synchronized(handleLock) {
-            if (handle == 0L) handle = LlamaNative.nativeCreate()
+            if (handle != 0L && jni !== want) { runCatching { jni.unload(handle); jni.destroy(handle) }; handle = 0L }
+            jni = want
+            if (handle == 0L) handle = jni.create()
             return handle
         }
     }
 
     override suspend fun load(model: LocalModel, config: LoadConfig, onProgress: (Float) -> Unit): ModelDetails =
         withContext(nativeThread) {
-            val h = ensureHandle()
+            val npu = config.backend == com.iris.localai.engine.Backend.NPU
+            val h = ensureHandle(npu)
             loaded = false
             com.iris.localai.engine.NativeThreadPolicy.apply(config.resources)
-            val gpu = config.backend == com.iris.localai.engine.Backend.GPU
-            if (config.backend == com.iris.localai.engine.Backend.NPU) throw EngineException("llama.cpp 不支持 NPU")
+            // 2.2.15: NPU = libiris_lhtp.so, where the only offload device is the Hexagon HTP ("GPU" type in ggml).
+            val gpu = config.backend == com.iris.localai.engine.Backend.GPU || npu
             val path = model.path.toByteArray(Charsets.UTF_8)
             val listener = LoadProgressListener { p -> onProgress(p); true }
-            val err = LlamaNative.nativeLoad(
+            val err = jni.load(
                 h, path, config.contextLength, config.threads, config.batchSize.coerceIn(32, 2048),
                 config.flashAttention, if (gpu) GPU_ALL_LAYERS else 0,
                 if (config.flashAttention) config.kvCacheType.coerceIn(0, 2) else 0, config.useMmap, listener,
             )
             if (err != null) throw EngineException(err)
             loaded = true
-            activeBackend = if (gpu) com.iris.localai.engine.Backend.GPU else com.iris.localai.engine.Backend.CPU
-            val m = runCatching { json.decodeFromString(NativeMeta.serializer(), LlamaNative.nativeMeta(h)) }
+            val accel = if (npu) com.iris.localai.engine.Backend.NPU else com.iris.localai.engine.Backend.GPU
+            activeBackend = if (gpu) accel else com.iris.localai.engine.Backend.CPU
+            val m = runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }
                 .getOrDefault(NativeMeta())
             // No OpenCL device: llama.cpp silently stays on the CPU. Report it as a GPU failure so
             // the manager's fallback chain (and the UI's "实际后端") tell the truth.
             if (gpu && m.gpu.isBlank()) {
                 loaded = false
-                LlamaNative.nativeUnload(h)
-                throw EngineException("没有找到可用的 OpenCL GPU 设备")
+                jni.unload(h)
+                throw EngineException(if (npu) "没有找到可用的 Hexagon NPU 设备" else "没有找到可用的 OpenCL GPU 设备")
             }
             ModelDetails(
                 description = m.description,
@@ -93,8 +105,12 @@ class LlamaEngine : InferenceEngine {
                 supportsThinking = m.supportsThinking,
                 thinkingPrefilled = m.thinkingPrefilled,
                 hasChatTemplate = m.hasChatTemplate,
-                backend = if (m.gpu.isNotBlank()) "GPU · ${m.gpu} · OpenCL" else "CPU · llama.cpp",
-                activeBackend = if (m.gpu.isNotBlank()) com.iris.localai.engine.Backend.GPU else com.iris.localai.engine.Backend.CPU,
+                backend = when {
+                    m.gpu.isBlank() -> "CPU · llama.cpp"
+                    npu -> "NPU · ${m.gpu} · llama.cpp Hexagon"
+                    else -> "GPU · ${m.gpu} · OpenCL"
+                },
+                activeBackend = if (m.gpu.isNotBlank()) accel else com.iris.localai.engine.Backend.CPU,
             )
         }
 
@@ -128,16 +144,16 @@ class LlamaEngine : InferenceEngine {
                 if (h == 0L || !loaded) return@withContext null
                 // Order matters (see cancelRequest): clear the native flag first, then look at
                 // our own flag. A cancel that lands after the check sets the native flag again.
-                LlamaNative.nativeClearCancel(h)
+                jni.clearCancel(h)
                 if (req.cancelled) return@withContext CANCELLED_JSON
-                if (params.threads > 0) LlamaNative.nativeSetThreads(h, params.threads)
+                if (params.threads > 0) jni.setThreads(h, params.threads)
                 // ggml creates its worker threads per graph from this thread: they inherit the
                 // tier's cores and priority, so a tier change applies from the next reply on.
                 com.iris.localai.engine.NativeThreadPolicy.apply(params.resources)
                 pendingPriority.clear()
                 runningPlan = params.resources
                 com.iris.localai.engine.ThermalGovernor.beginReply()
-                LlamaNative.nativeGenerate(h, roles, contents, floats, ints) { bytes ->
+                jni.generate(h, roles, contents, floats, ints) { bytes ->
                     // Runs on this (decoding) thread between two llama_decode calls: the native side
                     // applies threads / cores / nice right before the next decode; the Java priority
                     // call additionally moves Android's task profile (background ↔ foreground).
@@ -199,7 +215,7 @@ class LlamaEngine : InferenceEngine {
     private fun nativeCancel() {
         synchronized(handleLock) {
             val h = handle
-            if (h != 0L) LlamaNative.nativeCancel(h)
+            if (h != 0L) jni.cancel(h)
         }
     }
 
@@ -218,7 +234,7 @@ class LlamaEngine : InferenceEngine {
             val h = handle
             if (h == 0L) return false
             pendingPriority.offer(change.nice)
-            LlamaNative.nativeRequestLivePolicy(h, change.threads, change.cpus.toIntArray(), change.nice)
+            jni.requestLivePolicy(h, change.threads, change.cpus.toIntArray(), change.nice)
         }
         android.util.Log.i(LOG_TAG, "live switch requested: ${plan.tier.label} threads=${change.threads} " +
             "cpus=${if (change.cpus.isEmpty()) "all" else change.cpus.joinToString(",")} nice=${change.nice}" +
@@ -238,7 +254,7 @@ class LlamaEngine : InferenceEngine {
 
     override suspend fun resetContext() = withContext(nativeThread) {
         val h = handle
-        if (h != 0L) LlamaNative.nativeReset(h)
+        if (h != 0L) jni.reset(h)
     }
 
     /** Frees the model *and* the native engine object; a later [load] creates a fresh one. */
@@ -248,10 +264,10 @@ class LlamaEngine : InferenceEngine {
             loaded = false
             val h = handle
             if (h != 0L) {
-                LlamaNative.nativeUnload(h)
+                jni.unload(h)
                 synchronized(handleLock) {
                     handle = 0L
-                    LlamaNative.nativeDestroy(h)
+                    jni.destroy(h)
                 }
             }
         }

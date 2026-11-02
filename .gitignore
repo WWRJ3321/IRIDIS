@@ -30,3 +30,7 @@ third_party/qnn-api/
 /prebuilt-native/
 /terminal-plugin/build/
 /build-native/
+
+# 2.2.15: built-in Hexagon runtime assets (scripts/build-llama-htp.sh)
+/prebuilt-assets/
+/build-native-htp/
