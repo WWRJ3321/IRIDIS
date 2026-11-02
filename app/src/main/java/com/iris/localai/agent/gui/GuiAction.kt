@@ -24,9 +24,15 @@ enum class SwipeDir { UP, DOWN, LEFT, RIGHT }
 sealed interface GuiAction {
     /** [note] = the model flagged the tap as sensitive (AutoGLM `message="重要操作"`). */
     data class Tap(val at: NPoint, val note: String? = null) : GuiAction
-    data class LongPress(val at: NPoint) : GuiAction
+    data class LongPress(val at: NPoint, val durationMs: Long = DEFAULT_LONG_PRESS_MS) : GuiAction
     data class DoubleTap(val at: NPoint) : GuiAction
     data class Swipe(val from: NPoint, val to: NPoint, val durationMs: Long = DEFAULT_SWIPE_MS) : GuiAction
+    /**
+     * 2.3.0 (after Mika's scroll tool): scroll the list under [at] (null = the main list) so the content
+     * in [dir] comes into view (DOWN = further down the page). The device tries the list's own
+     * accessibility scroll first, then a swipe. [until] = keep scrolling until a text shows up (or the end).
+     */
+    data class Scroll(val dir: SwipeDir, val at: NPoint? = null, val until: String? = null) : GuiAction
     /** Types into the focused field, replacing what it holds. */
     data class Type(val text: String) : GuiAction
     data object Back : GuiAction
@@ -43,6 +49,7 @@ sealed interface GuiAction {
 
     companion object {
         const val DEFAULT_SWIPE_MS = 400L
+        const val DEFAULT_LONG_PRESS_MS = 800L
         const val MAX_WAIT_MS = 10_000L
     }
 }
@@ -50,7 +57,8 @@ sealed interface GuiAction {
 /** One line for the step card / history (Chinese). */
 fun GuiAction.label(): String = when (this) {
     is GuiAction.Tap -> "点击 ${pt(at)}" + (note?.let { "（$it）" } ?: "")
-    is GuiAction.LongPress -> "长按 ${pt(at)}"
+    is GuiAction.LongPress -> "长按 ${pt(at)}" + (if (durationMs != GuiAction.DEFAULT_LONG_PRESS_MS) " ${durationMs}ms" else "")
+    is GuiAction.Scroll -> "滚动看${DIR_ZH[dir]}" + (at?.let { " ${pt(it)}" } ?: "") + (until?.let { "，找「${it.take(20)}」" } ?: "")
     is GuiAction.DoubleTap -> "双击 ${pt(at)}"
     is GuiAction.Swipe -> "滑动 ${pt(from)} → ${pt(to)}"
     is GuiAction.Type -> "输入「${text.take(40)}」"
@@ -63,6 +71,8 @@ fun GuiAction.label(): String = when (this) {
     is GuiAction.TakeOver -> "请你接管：$message"
     is GuiAction.Ask -> "询问：$question"
 }
+
+private val DIR_ZH = mapOf(SwipeDir.UP to "上面", SwipeDir.DOWN to "下面", SwipeDir.LEFT to "左边", SwipeDir.RIGHT to "右边")
 
 private fun pt(p: NPoint) = "(${(p.x * 1000).toInt()},${(p.y * 1000).toInt()})"
 
@@ -111,6 +121,11 @@ object CoordMap {
         if (x < -slack || y < -slack || x > scale + slack || y > scale + slack) throw IllegalArgumentException("坐标超出范围：[$x,$y]（0–${scale.toInt()}）")
         return NPoint((x / scale).toFloat().coerceIn(0f, 1f), (y / scale).toFloat().coerceIn(0f, 1f))
     }
+
+    /** 2.3.0: the finger swipe that shows the content in [dir] (content down = finger up). */
+    fun scrollSwipe(dir: SwipeDir, at: NPoint? = null): GuiAction.Swipe = swipe(
+        when (dir) { SwipeDir.UP -> SwipeDir.DOWN; SwipeDir.DOWN -> SwipeDir.UP; SwipeDir.LEFT -> SwipeDir.RIGHT; SwipeDir.RIGHT -> SwipeDir.LEFT }, at,
+    )
 
     /** A swipe in [dir] across [at] (default: screen centre), covering about 40 % of the screen. */
     fun swipe(dir: SwipeDir, at: NPoint? = null): GuiAction.Swipe {
@@ -171,9 +186,10 @@ object GuiActionParser {
         }
         return when (action.lowercase().replace(' ', '_')) {
             "tap", "click" -> GuiAction.Tap(point("element"), args.str("message"))
-            "long_press" -> GuiAction.LongPress(point("element"))
+            "long_press" -> GuiAction.LongPress(point("element"), args.str("duration")?.let { pressMs(it) } ?: GuiAction.DEFAULT_LONG_PRESS_MS)
             "double_tap" -> GuiAction.DoubleTap(point("element"))
-            "swipe" -> GuiAction.Swipe(point("start"), point("end"))
+            "swipe" -> GuiAction.Swipe(point("start"), point("end"), args.str("duration")?.let { pressMs(it) } ?: GuiAction.DEFAULT_SWIPE_MS)
+            "scroll" -> GuiAction.Scroll(dir(args.str("direction")), args.nums("element")?.takeIf { it.size >= 2 }?.let { CoordMap.fromGrid(it[0], it[1], profile.scale) }, args.str("until")?.takeIf { it.isNotBlank() })
             "type", "type_name" -> GuiAction.Type(args.str("text") ?: throw IllegalArgumentException("Type 缺少 text"))
             "back" -> GuiAction.Back
             "home" -> GuiAction.Home
@@ -194,6 +210,16 @@ object GuiActionParser {
             when (c) { '"' -> inStr = true; '(', '[' -> depth++; ']' -> depth--; ')' -> if (depth == 0) return s.substring(0, i) else depth-- }
         }
         return s
+    }
+
+    private fun dir(s: String?): SwipeDir = SwipeDir.entries.firstOrNull { it.name.equals(s?.trim(), true) }
+        ?: throw IllegalArgumentException("scroll 需要 direction=up|down|left|right")
+
+    /** "1.5 seconds" / "1500ms" / "1500" → ms (gesture length, 100 ms – 5 s). */
+    internal fun pressMs(s: String): Long {
+        val n = Regex("[0-9]+(\\.[0-9]+)?").find(s)?.value?.toDoubleOrNull() ?: return GuiAction.DEFAULT_LONG_PRESS_MS
+        val ms = if ("ms" in s.lowercase() || n > 20) n else n * 1000
+        return ms.toLong().coerceIn(100L, 5000L)
     }
 
     private fun seconds(s: String?): Long {
@@ -219,7 +245,8 @@ object GuiActionParser {
         fun need(vararg keys: String) = point(*keys) ?: throw IllegalArgumentException("$action 缺少 ${keys.first()}")
         return when (action.lowercase()) {
             "click", "tap" -> GuiAction.Tap(need("coordinate"))
-            "long_press" -> GuiAction.LongPress(need("coordinate"))
+            "long_press" -> GuiAction.LongPress(need("coordinate"), ((a["time"] ?: a["duration"]) as? JsonPrimitive)?.contentOrNull?.let { pressMs(it) } ?: GuiAction.DEFAULT_LONG_PRESS_MS)
+            "scroll" -> GuiAction.Scroll(dir(a.s("direction")), point("coordinate"), a.s("until")?.takeIf { it.isNotBlank() })
             "double_click", "double_tap" -> GuiAction.DoubleTap(need("coordinate"))
             "swipe", "drag" -> {
                 val to = point("coordinate2", "end_coordinate")

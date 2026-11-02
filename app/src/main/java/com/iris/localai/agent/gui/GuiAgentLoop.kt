@@ -27,6 +27,8 @@ interface GuiDevice {
     /** 2.2.9: the screen's fingerprint right now (null = use the observation's tree). */
     suspend fun snapshot(): ScreenState? = null
     suspend fun waitStable(fallbackMs: Long): ScreenState? { if (fallbackMs > 0) delay(fallbackMs); return null }
+    /** 2.3.0: the node tree only (no screenshot), for scroll-until-found; null = use [observe]. */
+    suspend fun tree(): UiNode? = observe().tree
 }
 
 /** 2.2.3: one text line found by OCR, in screen pixels (same space as [UiNode.bounds]). */
@@ -90,6 +92,10 @@ object GuiLimits {
     const val HISTORY_STEPS = 8
     /** Fixed settle time, used only by devices that cannot detect a stable screen ([GuiDevice.waitStable]). */
     const val SETTLE_MS = 800L
+    /** 2.3.0: scroll-until-found gives up after this many scrolls. */
+    const val MAX_FIND_SCROLLS = 8
+    /** 2.3.0: system ANR / crash dialogs cleared by the loop itself at most this often per run. */
+    const val MAX_AUTO_DISMISS = 2
 }
 
 /**
@@ -120,6 +126,14 @@ class GuiAgentLoop(
         var formatErrors = 0
         val guard = LoopGuard(warnAt = GuiLimits.REPEAT_WARN, stopAt = GuiLimits.REPEAT_WARN * 2)
         var note: String? = null
+        // 2.3.0 (Mika ideas): stuck advice, step memory, ANR/crash dialogs, done check.
+        val stuck = StuckTracker()
+        val memory = StepMemory()
+        var autoDismiss = 0
+        var finishChecks = 0
+        var lastOk: Boolean? = null
+        var lastChanged: Boolean? = null
+        var lastLabel = ""
         try {
             while (true) {
                 currentCoroutineContext().ensureActive()
@@ -138,7 +152,25 @@ class GuiAgentLoop(
                     val lines = try { ocr.recognize(shotPath, obs.width, obs.height) } catch (e: CancellationException) { throw e } catch (_: Throwable) { emptyList() }
                     UiTreeSerializer.withOcr(treeElements, lines, obs.width, obs.height, profile.scale)
                 } else treeElements
-                val msgs = GuiPrompt.messages(profile, task, history, obs, elements, includeTree, note, today)
+                val check = ScreenDiagnosis.classify(treeElements, obs.foregroundPkg)
+                val sysButton = check.button
+                if (sysButton != null && autoDismiss < GuiLimits.MAX_AUTO_DISMISS &&
+                    (check.kind == ScreenKind.APP_NOT_RESPONDING || check.kind == ScreenKind.APP_CRASHED)) {
+                    // A system dialog, not part of the task: press its button without a model step.
+                    autoDismiss++
+                    val (gx, gy) = UiTreeSerializer.gridCentre(sysButton, obs.width, obs.height, profile.scale)
+                    val press = GuiAction.Tap(CoordMap.fromGrid(gx.toDouble(), gy.toDouble(), profile.scale))
+                    val r = device.execute(press, obs)
+                    device.waitStable(settleMs)
+                    val what = if (check.kind == ScreenKind.APP_NOT_RESPONDING) "应用无响应" else "应用已崩溃"
+                    record("", press, if (r.ok) GuiStepStatus.OK else GuiStepStatus.FAILED, "系统提示$what，已自动点「${sysButton.label}」")
+                    history += "（系统提示$what，已自动点「${sysButton.label}」）"
+                    if (check.kind == ScreenKind.APP_CRASHED) note = listOfNotNull(note, "应用刚才崩溃了，需要时用 Launch 重新打开。").joinToString("\n")
+                    continue
+                }
+                ScreenDiagnosis.hint(check)?.let { h -> note = listOfNotNull(note, h).joinToString("\n") }
+                val msgs = GuiPrompt.messages(profile, task, history, obs, elements, includeTree, note, today,
+                    earlier = memory.summary(history.size - GuiLimits.HISTORY_STEPS))
                 note = null
                 callbacks.onPhase(stepNo, GuiPhase.THINK)
                 val raw = model.complete(msgs)
@@ -155,6 +187,13 @@ class GuiAgentLoop(
                 formatErrors = 0
                 when (action) {
                     is GuiAction.Finish -> {
+                        if (action.success && FinishCheck.needsCheck(lastOk, lastChanged, finishChecks)) {
+                            finishChecks++
+                            record(parsed.thought, action, GuiStepStatus.DENIED, "先确认是否真的完成")
+                            note = FinishCheck.note(lastLabel)
+                            lastOk = null; lastChanged = null
+                            continue
+                        }
                         record(parsed.thought, action, GuiStepStatus.OK)
                         return end(if (action.success) GuiStop.DONE else GuiStop.GAVE_UP, action.message)
                     }
@@ -191,6 +230,19 @@ class GuiAgentLoop(
                 }
                 if (stop()) return end(GuiStop.STOPPED, "已停止")
                 val before = device.snapshot() ?: ScreenFingerprint.of(obs.tree)
+                if (action is GuiAction.Scroll && !action.until.isNullOrBlank()) {
+                    val (ok, msg, moved) = scrollUntil(action, obs, elements)
+                    record(parsed.thought, action, if (ok) GuiStepStatus.OK else GuiStepStatus.FAILED, msg)
+                    history += line(action, msg)
+                    memory.record(action, obs.foregroundPkg, ok, moved)
+                    lastOk = ok; lastChanged = moved; lastLabel = action.label()
+                    when (guard.record(action, moved || ok)) {
+                        LoopGuard.Verdict.STOP -> return end(GuiStop.ERROR, "同一操作重复 ${guard.count} 次没有效果，已停止")
+                        LoopGuard.Verdict.WARN -> note = LoopGuard.hint(guard.count)
+                        LoopGuard.Verdict.OK -> Unit
+                    }
+                    continue
+                }
                 val r = device.execute(action, obs)
                 // 2.2.9: wait for a stable screen (not a fixed delay), then report whether it changed.
                 val after = device.waitStable(if (action is GuiAction.Wait) 0 else settleMs)
@@ -199,16 +251,55 @@ class GuiAgentLoop(
                 val res = (if (r.ok) "ok" else "failed: ${r.message}") + (change?.let { "; $it" } ?: "")
                 record(parsed.thought, action, if (r.ok) GuiStepStatus.OK else GuiStepStatus.FAILED, listOfNotNull(r.message.takeIf { it.isNotEmpty() }, change).joinToString("；"))
                 history += line(action, res)
-                when (guard.record(action, changed)) {
+                memory.record(action, after?.pkg, r.ok, changed)
+                lastOk = r.ok; lastChanged = if (action is GuiAction.Wait) null else changed; lastLabel = action.label()
+                val verdict = guard.record(action, changed)
+                when (verdict) {
                     LoopGuard.Verdict.STOP -> return end(GuiStop.ERROR, "同一操作重复 ${guard.count} 次没有效果，已停止")
                     LoopGuard.Verdict.WARN -> note = LoopGuard.hint(guard.count)
                     LoopGuard.Verdict.OK -> Unit
                 }
+                val extra = listOfNotNull(
+                    stuck.record(action, after?.pkg ?: obs.foregroundPkg, verdict == LoopGuard.Verdict.WARN, changed),
+                    AppJump.note(action, obs.foregroundPkg, after?.pkg),
+                    if (action is GuiAction.Scroll && changed == false) "滚动没有让画面变化：可能已经到头了。" else null,
+                )
+                if (extra.isNotEmpty()) note = (listOfNotNull(note) + extra).joinToString("\n")
             }
         } catch (e: CancellationException) {
             end(GuiStop.STOPPED, "已停止")
             throw e
         }
+    }
+
+    /**
+     * 2.3.0 scroll-until-found: scrolls [a] without a model step per scroll until an element whose
+     * text contains [GuiAction.Scroll.until] is on screen, the list stops moving, or
+     * [GuiLimits.MAX_FIND_SCROLLS]. Reports where the text is (reference only; the model taps).
+     * Returns (found, message for the model, whether the screen moved).
+     */
+    private suspend fun scrollUntil(a: GuiAction.Scroll, obs: GuiObservation, current: List<UiElement>): Triple<Boolean, String, Boolean> {
+        val text = a.until!!.trim()
+        fun at(e: UiElement): String { val (x, y) = UiTreeSerializer.gridCentre(e, obs.width, obs.height, profile.scale); return "($x,$y)" }
+        UiTreeSerializer.find(current, text)?.let { return Triple(true, "「$text」已在屏幕上 ${at(it)}，不用滚动", false) }
+        val step = a.copy(until = null)
+        var moved = false
+        var prev = device.snapshot() ?: ScreenFingerprint.of(obs.tree)
+        for (i in 1..GuiLimits.MAX_FIND_SCROLLS) {
+            currentCoroutineContext().ensureActive()
+            if (stop()) break
+            val r = device.execute(step, obs)
+            if (!r.ok) return Triple(false, "滚动失败：${r.message}", moved)
+            val after = device.waitStable(settleMs)
+            val changed = ChangeReport.changed(prev, after)
+            if (changed == true) moved = true
+            val tree = device.tree()
+            val els = UiTreeSerializer.elements(tree, obs.width, obs.height, profile.scale)
+            UiTreeSerializer.find(els, text)?.let { return Triple(true, "滚动 $i 次后找到「$text」${at(it)}", true) }
+            if (changed == false) return Triple(false, "滚动 $i 次已到尽头，没找到「$text」（可能只在截图里，或要换个说法/入口）", moved)
+            prev = after
+        }
+        return Triple(false, "滚动 ${GuiLimits.MAX_FIND_SCROLLS} 次没找到「$text」", moved)
     }
 
     companion object { const val CANCELLED = "用户取消了这个操作" }
@@ -240,7 +331,9 @@ object GuiPrompt {
 - do(action="Tap", element=[x,y], message="重要操作")  涉及支付、隐私等敏感按钮时使用
 - do(action="Type", text="xxx")  先点击输入框
 - do(action="Swipe", start=[x1,y1], end=[x2,y2])
-- do(action="Long Press", element=[x,y])
+- do(action="Scroll", direction="down")  滚动列表看下面的内容（up/down/left/right，可加 element=[x,y] 指定列表）
+- do(action="Scroll", direction="down", until="xxx")  一直滚到出现文字 xxx 或到底，返回它的位置
+- do(action="Long Press", element=[x,y])  可加 duration="2 seconds"
 - do(action="Double Tap", element=[x,y])
 - do(action="Back")
 - do(action="Home")
@@ -248,7 +341,7 @@ object GuiPrompt {
 - do(action="Take_over", message="xxx")  登录、验证码等需要用户操作时
 - do(action="Interact")  有多个符合条件的选项、需要用户选择时
 - finish(message="xxx")  任务完成
-规则：先确认当前应用是否正确，不是就直接 Launch；进入无关页面先 Back；页面没加载最多 Wait 三次；操作前检查上一步是否生效；结束前确认任务完整完成。"""
+规则：先确认当前应用是否正确，不是就直接 Launch；进入无关页面先 Back；页面没加载最多 Wait 三次；操作前检查上一步是否生效；找列表里的东西用 Scroll until；卡住时 Back 或重新 Launch；结束前看截图确认任务完整完成。"""
             )
         }
         GuiFormat.MOBILE_USE -> {
@@ -262,22 +355,26 @@ Output:
 Coordinates are relative on a ${max}x$max grid (0,0 top-left).
 Actions:
 {"action": "click", "coordinate": [x, y]}
-{"action": "long_press", "coordinate": [x, y]}
+{"action": "long_press", "coordinate": [x, y], "time": seconds}  (time optional)
 {"action": "swipe", "coordinate": [x1, y1], "coordinate2": [x2, y2]}
 {"action": "swipe", "direction": "up|down|left|right"}
+{"action": "scroll", "direction": "up|down|left|right"}  (content you want to see: down = further down; optional "coordinate" = which list)
+{"action": "scroll", "direction": "down", "until": "text"}  (keeps scrolling until the text shows up or the end; tells you where it is)
 {"action": "type", "text": "..."}  (click the input first)
 {"action": "system_button", "button": "back|home|enter"}
 {"action": "open", "text": "app name"}  (launches the app directly; no need to find its icon)
 {"action": "wait", "time": seconds}
 {"action": "ask_user", "text": "question"}
 {"action": "terminate", "status": "success|failure", "text": "result for the user"}
-Rules: decide from the screenshot; the UI element list (when given) is only a reference for where things are, tap the exact point you see. Open the right app first; check the last action worked before the next; never pay, send or delete unless the task says so; when the task is complete (or impossible) finish with terminate."""
+Rules: decide from the screenshot; the UI element list (when given) is only a reference for where things are, tap the exact point you see. Open the right app first; check the last action worked before the next; to find something in a list use scroll with until; when stuck go back or reopen the app; never pay, send or delete unless the task says so; when the task is complete (check the screenshot shows it) or impossible, finish with terminate."""
         }
     }
 
     fun messages(
         profile: GuiProfile, task: String, history: List<String>, obs: GuiObservation, elements: List<UiElement>,
         includeTree: Boolean, note: String?, today: String = "",
+        /** 2.3.0: one line summing up the steps that left the history window. */
+        earlier: String? = null,
     ): List<PromptMessage> {
         val user = buildString {
             append(if (profile.format == GuiFormat.AUTOGLM) "任务：" else "Task: ").append(task.trim()).append('\n')
@@ -285,6 +382,7 @@ Rules: decide from the screenshot; the UI element list (when given) is only a re
             if (recent.isNotEmpty()) {
                 append(if (profile.format == GuiFormat.AUTOGLM) "操作历史：\n" else "History:\n")
                 val skipped = history.size - recent.size
+                if (skipped > 0) earlier?.let { append(it).append('\n') }
                 recent.forEachIndexed { i, h -> append(skipped + i + 1).append(". ").append(h).append('\n') }
             }
             obs.foregroundPkg?.let { append(if (profile.format == GuiFormat.AUTOGLM) "当前应用：" else "Foreground app: ").append(it).append('\n') }

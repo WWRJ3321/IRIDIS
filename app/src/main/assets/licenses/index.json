@@ -142,5 +142,11 @@
     "license": "MIT",
     "file": "mit-three.js.txt",
     "url": "https://github.com/mrdoob/three.js/tree/r170"
+  },
+  {
+    "name": "Mika (GUI agent ideas and code, modified)",
+    "license": "Apache-2.0",
+    "file": "notice-mika.txt",
+    "url": "https://github.com/wangzan101/mika"
   }
 ]

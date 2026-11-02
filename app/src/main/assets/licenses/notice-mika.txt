@@ -1,0 +1,9 @@
+Mika
+Copyright 2026 wangzan101
+
+Licensed under the Apache License, Version 2.0 (see apache-2.0.txt).
+https://github.com/wangzan101/mika (commit 688f59d, version 0.1.13)
+
+IRIDIS 2.3.0 adapts parts of Mika's screen diagnosis, stuck advice, tree
+adequacy check and accessibility scroll (agent/gui/GuiRecovery.kt,
+UiTree.kt, IrisAccessibilityService.kt). These files were modified.

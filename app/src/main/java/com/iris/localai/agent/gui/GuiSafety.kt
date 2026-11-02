@@ -57,7 +57,7 @@ object GuiSafety {
                 val field = elements.firstOrNull { it.node.editable && it.node.focused }?.node
                 if (field?.password == true) GuiVerdict.Block("密码由你自己输入") else GuiVerdict.Allow
             }
-            is GuiAction.Swipe -> if (protectedApp) GuiVerdict.Block("支付/银行类应用由你自己操作") else GuiVerdict.Allow
+            is GuiAction.Swipe, is GuiAction.Scroll -> if (protectedApp) GuiVerdict.Block("支付/银行类应用由你自己操作") else GuiVerdict.Allow
             is GuiAction.Launch -> if (PROTECTED_PACKAGE_HINTS.any { it in action.app.lowercase() }) GuiVerdict.Block("支付/银行类应用由你自己操作") else GuiVerdict.Allow
             else -> GuiVerdict.Allow
         }

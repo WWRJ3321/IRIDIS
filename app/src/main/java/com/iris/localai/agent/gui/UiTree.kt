@@ -1,3 +1,8 @@
+/*
+ * 2.3.0: parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
+ * are adapted from Mika (https://github.com/wangzan101/mika), Copyright 2026 wangzan101,
+ * Apache License 2.0. Modified for IRIDIS.
+ */
 package com.iris.localai.agent.gui
 
 /** Screen rectangle in pixels. */
@@ -30,6 +35,9 @@ data class UiNode(
     val enabled: Boolean = true,
     val visible: Boolean = true,
     val pkg: String = "",
+    /** 2.3.0: an empty field's placeholder (AccessibilityNodeInfo.hintText). */
+    val hint: String = "",
+    val selected: Boolean = false,
     val children: List<UiNode> = emptyList(),
 ) {
     val shortClass get() = cls.substringAfterLast('.')
@@ -50,21 +58,25 @@ object UiTreeSerializer {
     const val MAX_CHARS = 2400
     private const val LABEL_CHARS = 40
 
+    /** 2.3.0: candidates collected before the cap is applied (actionable ones are kept first). */
+    private const val MAX_CANDIDATES = 200
+
     fun elements(root: UiNode?, screenW: Int, screenH: Int, scale: Float = 1000f, maxElements: Int = MAX_ELEMENTS): List<UiElement> {
         if (root == null || screenW <= 0 || screenH <= 0) return emptyList()
         val screen = PxRect(0, 0, screenW, screenH)
-        val out = ArrayList<UiElement>()
+        val cand = ArrayList<Pair<UiNode, String>>()
         fun visit(n: UiNode) {
-            if (out.size >= maxElements) return
+            if (cand.size >= MAX_CANDIDATES) return
             if (!n.visible || n.bounds.isEmpty || !overlaps(n.bounds, screen)) return
-            val actionable = n.clickable || n.longClickable || n.editable || n.scrollable || n.checkable
+            val actionable = isActionable(n)
             val own = ownLabel(n)
             if (actionable || own.isNotEmpty()) {
                 val label = own.ifEmpty { if (actionable) childText(n) else "" }
                 // Plain text that only repeats an actionable parent's borrowed label adds nothing.
                 if (label.isNotEmpty() || n.editable || n.scrollable) {
-                    val i = out.size
-                    out += UiElement(i, n, label, line(i, n, label, screenW, screenH, scale))
+                    // 2.3.0 compaction: the same label at (almost) the same place is shown once.
+                    val dup = label.isNotEmpty() && cand.any { (m, l) -> l == label && near(m.bounds, n.bounds, screenW, screenH) }
+                    if (!dup) cand += n to label
                 }
                 // An actionable row's children are already summed up in its label.
                 if (actionable && own.isEmpty() && !n.scrollable && label.isNotEmpty()) return
@@ -72,7 +84,34 @@ object UiTreeSerializer {
             n.children.forEach(::visit)
         }
         visit(root)
-        return out
+        // 2.3.0 (Mika-style compaction): over the cap, keep what can be acted on first, then plain text, in screen order.
+        val keep: List<Pair<UiNode, String>> = if (cand.size <= maxElements) cand else {
+            val pri = cand.indices.sortedWith(compareBy({ if (isActionable(cand[it].first)) 0 else 1 }, { it })).take(maxElements).toSet()
+            cand.filterIndexed { i, _ -> i in pri }
+        }
+        return keep.mapIndexed { i, (n, label) -> UiElement(i, n, label, line(i, n, label, screenW, screenH, scale)) }
+    }
+
+    private fun isActionable(n: UiNode) = n.clickable || n.longClickable || n.editable || n.scrollable || n.checkable
+
+    private fun near(a: PxRect, b: PxRect, w: Int, h: Int): Boolean =
+        kotlin.math.abs((a.left + a.right) - (b.left + b.right)) / 2.0 <= w * 0.02 &&
+            kotlin.math.abs((a.top + a.bottom) - (b.top + b.bottom)) / 2.0 <= h * 0.02
+
+    /** 2.3.0: the first element whose label contains [text] (case and spaces ignored); for scroll-until-found. */
+    fun find(elements: List<UiElement>, text: String): UiElement? {
+        val t = text.lowercase().filterNot { it.isWhitespace() }
+        if (t.isEmpty()) return null
+        fun hit(e: UiElement) = t in e.label.lowercase().filterNot { c -> c.isWhitespace() } || t in e.node.hint.lowercase().filterNot { c -> c.isWhitespace() }
+        // A list borrows its children's text; point at the item itself, not the whole list.
+        return elements.firstOrNull { !it.node.scrollable && hit(it) } ?: elements.firstOrNull { hit(it) }
+    }
+
+    /** 2.3.0: grid centre of an element, as shown in its line. */
+    fun gridCentre(e: UiElement, w: Int, h: Int, scale: Float = 1000f): Pair<Int, Int> {
+        val cx = ((e.node.bounds.left + e.node.bounds.right) / 2.0).coerceIn(0.0, w.toDouble())
+        val cy = ((e.node.bounds.top + e.node.bounds.bottom) / 2.0).coerceIn(0.0, h.toDouble())
+        return (cx / w * scale).toInt().coerceAtMost(scale.toInt()) to (cy / h * scale).toInt().coerceAtMost(scale.toInt())
     }
 
     /** 2.2.3: fewer text-bearing elements than this → run the OCR fallback. */
@@ -80,7 +119,27 @@ object UiTreeSerializer {
     const val MAX_OCR_LINES = 40
 
     /** 2.2.3: true when the tree carries too little text to be a useful reference. */
-    fun needsOcr(elements: List<UiElement>): Boolean = elements.count { it.label.isNotEmpty() } < OCR_MIN_TEXT
+    fun needsOcr(elements: List<UiElement>, root: UiNode? = null): Boolean =
+        elements.count { it.label.isNotEmpty() } < OCR_MIN_TEXT || unlabeledControls(root)
+
+    /**
+     * 2.3.0, from Mika's TreeAdequacy ("unlabeled_controls"): at least 4 visible controls and no more
+     * than a third of them carry any text → the tree misses what the controls say; read the screen.
+     */
+    fun unlabeledControls(root: UiNode?): Boolean {
+        root ?: return false
+        var controls = 0; var named = 0
+        fun walk(n: UiNode) {
+            if (!n.visible || n.bounds.isEmpty) return
+            if (n.clickable || n.editable) {
+                controls++
+                if (ownLabel(n).isNotEmpty() || childText(n).isNotEmpty() || n.hint.isNotBlank()) named++
+            }
+            n.children.forEach(::walk)
+        }
+        walk(root)
+        return controls >= 4 && named * 3 <= controls
+    }
 
     /**
      * 2.2.3: [elements] plus OCR text lines as `[i] OCR "text" (x,y)` on the same grid. Lines that
@@ -160,6 +219,8 @@ object UiTreeSerializer {
             if (n.clickable) add("click")
             if (n.longClickable) add("long")
             if (n.editable) add(if (n.password) "input(password)" else "input")
+            if (n.editable && n.text.isBlank() && n.hint.isNotBlank()) add("hint=\"" + clean(n.hint).replace("\"", "'") + "\"")
+            if (n.selected) add("selected")
             if (n.scrollable) add("scroll")
             if (n.checkable) add(if (n.checked) "checked" else "unchecked")
             if (n.focused) add("focused")

@@ -1,3 +1,8 @@
+/*
+ * 2.3.0: parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
+ * are adapted from Mika (https://github.com/wangzan101/mika), Copyright 2026 wangzan101,
+ * Apache License 2.0. Modified for IRIDIS.
+ */
 package com.iris.localai.agent.gui.android
 
 import android.accessibilityservice.AccessibilityService
@@ -151,7 +156,8 @@ class AccessibilityGuiDevice(
         fun px(p: com.iris.localai.agent.gui.NPoint) = CoordMap.toPixels(p, w, h)
         return when (action) {
             is GuiAction.Tap -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, 60)) }
-            is GuiAction.LongPress -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, 800)) }
+            is GuiAction.LongPress -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, action.durationMs.coerceIn(100, 5000))) }
+            is GuiAction.Scroll -> scroll(s, action, w, h)
             is GuiAction.DoubleTap -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, 50), stroke(x, y, x, y, 160, 50)) }
             is GuiAction.Swipe -> {
                 val (x1, y1) = px(action.from); val (x2, y2) = px(action.to)
@@ -169,6 +175,51 @@ class AccessibilityGuiDevice(
             is GuiAction.Wait -> { delay(action.ms); ExecResult(true) }
             is GuiAction.Finish, is GuiAction.TakeOver, is GuiAction.Ask -> ExecResult(true)
         }
+    }
+
+    /** 2.3.0: node tree only (no screenshot) for scroll-until-found. */
+    override suspend fun tree(): UiNode? {
+        val s = IrisAccessibilityService.instance ?: return null
+        return withContext(Dispatchers.Default) { runCatching { s.rootInActiveWindow?.let { NodeCopy.copy(it) } }.getOrNull() }
+    }
+
+    /**
+     * 2.3.0 (after Mika's AndroidScreen.scroll): the list's own accessibility scroll first (exact,
+     * no fling), the swipe gesture when no scrollable node is found or it refuses.
+     */
+    private suspend fun scroll(s: IrisAccessibilityService, a: GuiAction.Scroll, w: Int, h: Int): ExecResult {
+        val root = s.rootInActiveWindow
+        val target = root?.let { r ->
+            val at = a.at?.let { CoordMap.toPixels(it, w, h) }
+            val all = ArrayList<Pair<AccessibilityNodeInfo, Rect>>()
+            fun walk(n: AccessibilityNodeInfo, depth: Int) {
+                if (depth > 40 || all.size > 40) return
+                if (n.isScrollable && n.isVisibleToUser) all += n to Rect().also { n.getBoundsInScreen(it) }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { walk(it, depth + 1) }
+            }
+            walk(r, 0)
+            if (at != null) all.filter { it.second.contains(at.first, at.second) }.minByOrNull { it.second.width().toLong() * it.second.height() }?.first
+            else all.maxByOrNull { it.second.width().toLong() * it.second.height() }?.first
+        }
+        if (target != null) {
+            val wanted = when (a.dir) {
+                com.iris.localai.agent.gui.SwipeDir.DOWN -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
+                com.iris.localai.agent.gui.SwipeDir.UP -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
+                com.iris.localai.agent.gui.SwipeDir.LEFT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
+                com.iris.localai.agent.gui.SwipeDir.RIGHT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
+            }
+            val ids = target.actionList.map { it.id }
+            val id = when {
+                wanted.id in ids -> wanted.id
+                a.dir == com.iris.localai.agent.gui.SwipeDir.DOWN || a.dir == com.iris.localai.agent.gui.SwipeDir.RIGHT ->
+                    AccessibilityNodeInfo.ACTION_SCROLL_FORWARD.takeIf { it in ids }
+                else -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD.takeIf { it in ids }
+            }
+            if (id != null && target.performAction(id)) return ExecResult(true)
+        }
+        val sw = CoordMap.scrollSwipe(a.dir, a.at)
+        val (x1, y1) = CoordMap.toPixels(sw.from, w, h); val (x2, y2) = CoordMap.toPixels(sw.to, w, h)
+        return gesture(s, stroke(x1, y1, x2, y2, 0, sw.durationMs))
     }
 
     /** 2.2.9: tree fingerprint of the active window (no screenshot: those are rate-limited by the system). */
@@ -355,6 +406,8 @@ internal object NodeCopy {
                 enabled = n.isEnabled,
                 visible = n.isVisibleToUser,
                 pkg = n.packageName?.toString().orEmpty(),
+                hint = n.hintText?.toString().orEmpty(),
+                selected = n.isSelected,
                 children = kids,
             )
         }
