@@ -230,6 +230,11 @@ data class AppSettings(
     val ttsSpeed: Float = 1.0f,
     /** Read assistant replies aloud in normal chat (voice mode always speaks). */
     val autoSpeak: Boolean = false,
+    // ---- 2.3.0 ③ 本地翻译 ----
+    /** "auto" = 中↔英 by detection, else a TransLang code ("zh" / "en"). */
+    val translateTarget: String = "auto",
+    /** "auto" (loaded model, else offline) / "model" / "offline". */
+    val translateEngine: String = "auto",
     val downloadSource: DownloadSource = DownloadSource.AUTO,
     /** 2.2.16: old default HF_MIRROR → 自动 once; [lastGoodSource] = DownloadSource name that last worked. */
     val downloadSourceMigrated: Boolean = false,

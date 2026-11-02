@@ -40,6 +40,8 @@ class AppContainer(app: Application) {
         override suspend fun run(task: String, progress: (String) -> Unit) = gui.run(task, progress)
     } }
     val voiceStore = VoiceModelStore(app)
+    /** 2.3.0 ③ 本地翻译. */
+    val translator by lazy { com.iris.localai.translate.Translator(engine, settings, com.iris.localai.translate.TranslatePackStore(app), scope) }
     val recognizer = SpeechRecognizer(app, voiceStore, settings)
     val cloneVoices = com.iris.localai.voice.CloneVoiceStore(app)
     val synthesizer = SpeechSynthesizer(voiceStore, settings, cloneVoices, app)
@@ -206,6 +208,7 @@ class IrisApp : Application() {
             container.scope.launch {
                 container.recognizer.release()
                 container.synthesizer.release()
+                container.translator.release()
             }
         }
     }

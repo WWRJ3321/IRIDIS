@@ -96,6 +96,7 @@ fun UserMessage(
     val clipboard = LocalClipboardManager.current
     var menu by remember { mutableStateOf(false) }
     val haptics = com.iris.localai.ui.feedback.rememberIrisFeedback()
+    val translator = rememberTranslator()
     Box(Modifier.fillMaxWidth().padding(start = 52.dp), contentAlignment = Alignment.CenterEnd) {
       Column(horizontalAlignment = Alignment.End) {
         // 1.10.12: attached pictures / files above the bubble.
@@ -121,10 +122,12 @@ fun UserMessage(
         ) {
             Text(message.content, style = IrisType.message, color = c.text)
         }
+        TranslationBlock(message.id)
         VersionSwitcher(message, onSwitchVersion)
       }
         com.iris.localai.ui.components.IrisMenu(menu, { menu = false }) {
             com.iris.localai.ui.components.IrisMenuItem("复制", Icons.Outlined.ContentCopy) { clipboard.setText(AnnotatedString(message.content)); menu = false }
+            com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { menu = false; translator.translateMessage(message.id, message.content) }
             com.iris.localai.ui.components.IrisMenuItem("编辑后重新发送", Icons.Outlined.Edit) { menu = false; onEdit() }
             if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { menu = false; onRemember() }
         }
@@ -220,6 +223,7 @@ fun AssistantMessage(
             exit = fadeOut(IrisMotion.standard()),
         ) {
             Column {
+                TranslationBlock(message.id)
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
                 if (message.kbSources.isNotEmpty()) KbSourceChips(message.kbSources)
@@ -353,11 +357,14 @@ private fun ActionRow(
             onClick = if (speaking) onStopSpeaking else onSpeak,
         )
         // 2.1: low-frequency actions live behind ⋯ so the bar stays short.
-        if (onShowPrompt != null || onEdit != null || onRemember != null) {
+        run {
             var overflow by remember { mutableStateOf(false) }
+            val translator = rememberTranslator()
             Box {
                 PressableIcon(com.iris.localai.ui.icons.IrisIcons.More, ActionRowText.MORE, size = 40.dp, iconSize = iconSize, tint = c.textSecondary) { overflow = true }
                 com.iris.localai.ui.components.IrisMenu(overflow, { overflow = false }) {
+                    // 2.3.0 ③: translate the answer (thinking excluded), shown under the reply.
+                    if (answer.isNotBlank()) com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { overflow = false; translator.translateMessage(message.id, answer) }
                     if (onEdit != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.EDIT_REPLY, com.iris.localai.ui.icons.IrisIcons.Edit) { overflow = false; onEdit() }
                     if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { overflow = false; onRemember() }
                     if (onShowPrompt != null) com.iris.localai.ui.components.IrisMenuItem(ActionRowText.SHOW_PROMPT, com.iris.localai.ui.icons.IrisIcons.Prompt) { overflow = false; onShowPrompt() }

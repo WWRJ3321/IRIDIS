@@ -7,8 +7,8 @@ package com.iris.localai.data
  * Chat repo ids checked on the HF API 2026-11-01; ccore/Qwen3.5-4B-3D-Coder files/sizes/licence on 2026-11-03.
  */
 object RecommendedCatalog {
-    enum class Section(val title: String) { CHAT("对话"), FEATURED("特色模型"), IMAGE("生图"), SPEECH("语音") }
-    enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX") }
+    enum class Section(val title: String) { CHAT("对话"), FEATURED("特色模型"), IMAGE("生图"), SPEECH("语音"), TRANSLATE("翻译") }
+    enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot") }
 
     sealed interface Kind {
         /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically). */
@@ -19,6 +19,8 @@ object RecommendedCatalog {
         data class Image(val modelId: String) : Kind
         /** A voice pack (VoiceModelStore); size comes from its bundled manifest. */
         data class Voice(val packId: String) : Kind
+        /** 2.3.0 ③: an offline translation pack (TranslatePackStore). */
+        data class Translate(val packId: String) : Kind
     }
 
     data class Item(
@@ -86,7 +88,7 @@ object RecommendedCatalog {
         // ---- 生图 ----
         Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", "通用写实风格，512×512", 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
         Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", "动漫风格，骁龙 8 Gen 3 及以上", gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),
-    ) + voiceItems()
+    ) + voiceItems() + translateItems()
 
     /** 语音: every downloadable voice pack (识别 / 朗读 / 音色克隆), same order as the 语音 page. */
     private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.map { p ->
@@ -99,6 +101,11 @@ object RecommendedCatalog {
             "voice:" + p.id, Section.SPEECH, p.title, "$kind · ${p.blurb}", 0L, Engine.ONNX, Kind.Voice(p.id),
             top = p == com.iris.localai.voice.VoicePack.ASR_SENSEVOICE || p == com.iris.localai.voice.VoicePack.TTS_KOKORO,
         )
+    }
+
+    /** 2.3.0 ③ 翻译: the offline Bergamot packs (one per direction), same as 设置 › 语音与翻译. */
+    private fun translateItems(): List<Item> = com.iris.localai.translate.TranslatePack.entries.map { p ->
+        Item("translate:" + p.id, Section.TRANSLATE, "离线翻译 ${p.title}", "${p.blurb} · 没加载模型时也能翻译", p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
     }
 
     fun section(s: Section): List<Item> = ITEMS.filter { it.section == s }
@@ -174,7 +181,7 @@ sealed interface RecStatus {
             is Installed -> when (section) {
                 RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) "使用中" else "加载"
                 RecommendedCatalog.Section.SPEECH -> if (s.loaded) "使用中" else "使用"
-                RecommendedCatalog.Section.IMAGE -> "已下载"
+                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE -> "已下载"
             }
         }
     }

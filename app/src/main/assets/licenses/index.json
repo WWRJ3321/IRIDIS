@@ -148,5 +148,47 @@
     "license": "Apache-2.0",
     "file": "notice-mika.txt",
     "url": "https://github.com/wangzan101/mika"
+  },
+  {
+    "name": "bergamot-translator (offline translation engine)",
+    "license": "MPL-2.0",
+    "file": "mpl-2.0-bergamot.txt",
+    "url": "https://github.com/browsermt/bergamot-translator/tree/9271618ebbdc5d21ac4dc4df9e72beb7ce644774"
+  },
+  {
+    "name": "Marian NMT (browsermt fork)",
+    "license": "MIT",
+    "file": "mit-marian.txt",
+    "url": "https://github.com/browsermt/marian-dev/tree/2781d735d4a10dca876d61be587afdab2726293c"
+  },
+  {
+    "name": "ruy / SentencePiece / ssplit-cpp",
+    "license": "Apache-2.0",
+    "file": "apache-2.0.txt",
+    "url": "https://github.com/google/ruy"
+  },
+  {
+    "name": "PCRE2",
+    "license": "BSD-3-Clause",
+    "file": "bsd-pcre2.txt",
+    "url": "https://github.com/PCRE2Project/pcre2"
+  },
+  {
+    "name": "yaml-cpp",
+    "license": "MIT",
+    "file": "mit-yaml-cpp.txt",
+    "url": "https://github.com/jbeder/yaml-cpp"
+  },
+  {
+    "name": "zlib",
+    "license": "Zlib",
+    "file": "zlib-notice.txt",
+    "url": "https://zlib.net"
+  },
+  {
+    "name": "Firefox Translations models (zh↔en, downloaded on demand)",
+    "license": "MPL-2.0",
+    "file": "translation-models-notice.txt",
+    "url": "https://github.com/mozilla/firefox-translations-models"
   }
 ]

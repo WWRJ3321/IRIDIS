@@ -1,0 +1,9 @@
+Offline translation models (downloaded on demand, not bundled)
+
+zh→en (tiny) and en→zh (base) Bergamot/Marian models trained by Mozilla for Firefox Translations
+(https://github.com/mozilla/firefox-translations-models), published by Mozilla under the
+Mozilla Public License 2.0. Downloaded from the Hugging Face copy
+https://huggingface.co/TiberiuCristianLeon/Bergamot (revision 18008da9d292, listed as CC-BY-4.0).
+The model files are used unmodified.
+
+The MPL-2.0 text is in mpl-2.0-bergamot.txt.

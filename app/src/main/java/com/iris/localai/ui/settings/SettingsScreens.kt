@@ -108,7 +108,7 @@ object SettingsText {
     /** 2.1.3: 关于 IRIDIS › 开发者选项. */
     const val DEVELOPER = "资源档配置、资源诊断与调试显示"
     const val PERFORMANCE = "资源档与功耗"
-    const val VOICE = "识别与朗读"
+    const val VOICE = "识别、朗读与翻译"
     const val API_OFF = "供其他 App 调用（未开启）"
     const val THEME = "浅色、深色或跟随系统"
     const val APPEARANCE = "主题、视觉效果、触感与音效"
@@ -129,7 +129,7 @@ object SettingsText {
     /** The pages HOME links to, with their titles: the structure the 1.7.8 tests check. */
     val HOME_GROUPS: List<Pair<String, List<String>>> = listOf(
         "模型与推理" to listOf("模型与加载", "生成", ContextMemoryText.NAV, "性能与资源"),
-        "语音与服务" to listOf("语音", "API 服务"),
+        "语音与服务" to listOf("语音与翻译", "API 服务"),
         "界面与外观" to listOf("外观"),
         "数据" to listOf("存储空间", "删除全部对话"),
         "关于与调试" to listOf("关于 IRIDIS"), // 2.1.3: 资源诊断 moved to 关于 IRIDIS › 开发者选项
@@ -198,7 +198,7 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
 
             SectionTitle("语音与服务")
             SettingsGroup {
-                NavItem("语音", SettingsText.VOICE, com.iris.localai.ui.icons.IrisIcons.Voice) { onOpen(SettingsPage.VOICE) }
+                NavItem("语音与翻译", SettingsText.VOICE, com.iris.localai.ui.icons.IrisIcons.Voice) { onOpen(SettingsPage.VOICE) }
                 Divider()
                 NavItem("API 服务", if (api.running) "运行中 · 端口 ${api.port}" else SettingsText.API_OFF, com.iris.localai.ui.icons.IrisIcons.Plug) { onOpen(SettingsPage.API) }
             }

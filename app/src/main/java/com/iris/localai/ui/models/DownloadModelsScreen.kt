@@ -128,7 +128,8 @@ object DownloadText {
             else -> "自动选 Q4_K_M 的 .gguf 文件"
         }
         is RecommendedCatalog.Kind.Image -> "模型文件包（下载后在 生图 页使用）"
-        is RecommendedCatalog.Kind.Voice -> "语音模型文件包（在 设置 › 语音 里切换）"
+        is RecommendedCatalog.Kind.Voice -> "语音模型文件包（在 设置 › 语音与翻译 里切换）"
+        is RecommendedCatalog.Kind.Translate -> "离线翻译模型（模型、词表、词汇短表）"
     }
 }
 
@@ -143,6 +144,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     val imageStates by vm.imageStates.collectAsStateWithLifecycle()
     val imageDone by vm.imageDownloaded.collectAsStateWithLifecycle()
     val voiceStates by vm.voiceStates.collectAsStateWithLifecycle()
+    val translateStates by vm.translateStates.collectAsStateWithLifecycle()
     val ram = remember { vm.availRam() }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf(search.query) }
@@ -183,10 +185,16 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 else -> RecStatus.Idle
             }
         }
+        is RecommendedCatalog.Kind.Translate -> when (val s = com.iris.localai.translate.TranslatePack.entries.firstOrNull { it.id == k.packId }?.let { translateStates[it] }) {
+            is PackState.Downloading -> RecStatus.Downloading(s.downloaded, s.total, pausable = false)
+            is PackState.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
+            PackState.Installed -> RecStatus.Installed()
+            else -> RecStatus.Idle
+        }
     }
     fun size(item: RecommendedCatalog.Item): Long = (item.kind as? RecommendedCatalog.Kind.Voice)?.let { k -> VoicePack.byId(k.packId)?.let(vm::voiceBytes) } ?: item.sizeBytes
     fun ramHint(item: RecommendedCatalog.Item): String? =
-        if (ram > 0 && item.section != Section.SPEECH && item.sizeBytes > 0) GgufSearch.fitHint(item.sizeBytes, ram) else null
+        if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(item.sizeBytes, ram) else null
     val actions = object : RecActions {
         override fun primary(item: RecommendedCatalog.Item, s: RecStatus, withVision: Boolean) {
             when (s) {
@@ -194,7 +202,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 is RecStatus.Paused -> vm.resumeDownload()
                 is RecStatus.Installed -> when (val k = item.kind) {
                     is RecommendedCatalog.Kind.Voice -> VoicePack.byId(k.packId)?.let(vm::useVoice)
-                    is RecommendedCatalog.Kind.Image -> Unit
+                    is RecommendedCatalog.Kind.Image, is RecommendedCatalog.Kind.Translate -> Unit
                     else -> if (!s.loaded) local(item)?.let(vm::load)
                 }
                 else -> detailId = item.id
@@ -205,6 +213,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             when (val k = item.kind) {
                 is RecommendedCatalog.Kind.Image -> vm.downloadImageModel(k.modelId, retry = true)
                 is RecommendedCatalog.Kind.Voice -> VoicePack.byId(k.packId)?.let(vm::downloadVoice)
+                is RecommendedCatalog.Kind.Translate -> vm.downloadTranslate(k.packId)
                 else -> vm.retryOtherSource()
             }
         }
@@ -212,6 +221,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             when (val k = item.kind) {
                 is RecommendedCatalog.Kind.Image -> vm.cancelImageDownload(k.modelId)
                 is RecommendedCatalog.Kind.Voice -> VoicePack.byId(k.packId)?.let(vm::cancelVoice)
+                is RecommendedCatalog.Kind.Translate -> vm.cancelTranslate(k.packId)
                 else -> vm.cancelDownload()
             }
         }
@@ -497,6 +507,7 @@ private fun RecDetailSheet(
         item.licence?.let { ValueRow("许可证", it) }
         ValueRow("来源", item.repoId ?: when (val k = item.kind) {
             is RecommendedCatalog.Kind.Image -> com.iris.localai.imagegen.ImageCatalog.byId(k.modelId)?.hfRepo ?: "Qualcomm AI Hub"
+            is RecommendedCatalog.Kind.Translate -> "Mozilla Firefox Translations（${com.iris.localai.translate.TranslatePack.REPO}）"
             else -> "sherpa-onnx（k2-fsa）"
         })
         val g = item.kind as? RecommendedCatalog.Kind.Gguf

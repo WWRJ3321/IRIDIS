@@ -217,6 +217,16 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- 2.3.0 ③: offline translation packs from the 推荐 › 翻译 section ----
+    val translateStates = c.translator.packs.states
+    private val translateJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
+    fun downloadTranslate(id: String) {
+        val p = com.iris.localai.translate.TranslatePack.entries.firstOrNull { it.id == id } ?: return
+        if (translateJobs[id]?.isActive == true) return
+        translateJobs[id] = c.scope.launch { runCatching { c.translator.packs.download(p, c.settings.current.downloadSource) } }
+    }
+    fun cancelTranslate(id: String) { translateJobs.remove(id)?.cancel() }
+
     // ---- 2.2.17 C: voice packs from the 推荐 › 语音 section (same store as the 语音 page) ----
     val voiceStates = c.voiceStore.states
     private val voiceJobs = java.util.concurrent.ConcurrentHashMap<com.iris.localai.voice.VoicePack, Job>()
@@ -252,6 +262,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
             }
             is com.iris.localai.data.RecommendedCatalog.Kind.Image -> downloadImageModel(k.modelId)
             is com.iris.localai.data.RecommendedCatalog.Kind.Voice -> com.iris.localai.voice.VoicePack.byId(k.packId)?.let(::downloadVoice)
+            is com.iris.localai.data.RecommendedCatalog.Kind.Translate -> downloadTranslate(k.packId)
         }
     }
 

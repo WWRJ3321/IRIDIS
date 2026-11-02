@@ -159,6 +159,17 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun activePack(kind: com.iris.localai.voice.VoiceKind): VoicePack? =
         c.voiceStore.active(kind, if (kind == com.iris.localai.voice.VoiceKind.ASR) c.settings.current.asrPack else c.settings.current.ttsPack)
 
+    // ---- 2.3.0 ③ offline translation packs ----
+    val translatePacks get() = c.translator.packs.states
+    private val trDownloads = HashMap<com.iris.localai.translate.TranslatePack, Job>()
+    fun downloadTranslate(pack: com.iris.localai.translate.TranslatePack) {
+        if (trDownloads[pack]?.isActive == true) return
+        trDownloads[pack] = c.scope.launch { runCatching { c.translator.packs.download(pack, c.settings.current.downloadSource) } }
+    }
+    fun cancelTranslate(pack: com.iris.localai.translate.TranslatePack) { trDownloads.remove(pack)?.cancel() }
+    fun deleteTranslate(pack: com.iris.localai.translate.TranslatePack) { c.translator.release(); c.translator.packs.delete(pack) }
+    val offlineEngineAvailable: Boolean get() = com.iris.localai.translate.BergamotNative.available
+
     fun deletePack(pack: VoicePack) = viewModelScope.launch {
         if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) c.recognizer.release() else c.synthesizer.release()
         c.voiceStore.delete(pack)

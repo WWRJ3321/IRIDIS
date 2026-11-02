@@ -34,6 +34,8 @@ object IrisIcons {
     val Think: ImageVector by lazy { icon("Think", "M9.5 18h5 M10.5 21h3 M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z") }
 
     /** 长期记忆 */
+    /** 2.3.0 ③ 翻译: 文 + A with a swap arc. */
+    val Translate: ImageVector by lazy { icon("Translate", "M4 5h8 M8 3v2 M10 5c-.6 3-2.6 5.6-5.5 7 M6.5 8.5c1 1.6 2.4 2.8 4 3.5", "M12.5 21l4-10 4 10 M14 17.5h5", "M3 16c0 2.8 2.2 5 5 5") }
     val Memory: ImageVector by lazy { icon("Memory", "M5 5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2V5z M5 19a2 2 0 0 0 2 2h12v-4 M10 3v6.5l2-1.5 2 1.5V3") }
 
     /** 语音 */

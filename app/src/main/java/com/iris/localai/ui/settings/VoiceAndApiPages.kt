@@ -93,9 +93,9 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
     val packs by vm.voicePacks.collectAsStateWithLifecycle()
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.stopPreview() } }
 
-    SubpageScaffold("语音", onBack) {
+    SubpageScaffold("语音与翻译", onBack) {
         ScrollBody {
-            PageDescription("语音识别与合成都在本机运行，首次使用需下载模型。")
+            PageDescription("语音识别、合成与翻译都在本机运行，首次使用需下载模型。")
             // 2.0.x: everyday settings first (朗读, 识别), then the model packs; the rarely touched
             // ones (音色编号, 打断, 下载源) fold away.
             SectionTitle("朗读")
@@ -188,6 +188,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 }
             }
             CloneVoiceSection(vm)
+            TranslateSection(vm, s)
 
             com.iris.localai.ui.components.SectionFold("voice-adv", "高级：音色编号、打断与下载源") {
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
@@ -243,6 +244,53 @@ internal val VoicePack.licenseTag: String?
 internal fun PackRow(
     pack: VoicePack, state: PackState, bytes: Long, selected: Boolean,
     onUse: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
+) = PackRow(pack.title, pack.licenseTag?.let { "${pack.blurb} · $it" } ?: pack.blurb, state, bytes, selected, onUse, onDownload, onCancel, onDelete)
+
+/** 2.3.0 ③: 翻译 — target language, engine, and the offline Bergamot packs (one per direction). */
+@Composable
+private fun TranslateSection(vm: SettingsViewModel, s: com.iris.localai.data.AppSettings) {
+    val packs by vm.translatePacks.collectAsStateWithLifecycle()
+    SectionTitle("翻译")
+    SettingsGroup {
+        val targets = com.iris.localai.translate.TranslateSettings.TARGETS
+        SegmentedRow(
+            "译成", targets.map { it.second.substringBefore("（") }, targets.indexOfFirst { it.first == s.translateTarget }.coerceAtLeast(0),
+            { i -> vm.update { it.copy(translateTarget = targets[i].first) } },
+            subtitle = "自动：中文译成英文，其他语言译成中文。长按消息或在输入框「+」里翻译",
+        )
+        Divider()
+        val engines = com.iris.localai.translate.TranslateSettings.ENGINES
+        SegmentedRow(
+            "翻译引擎", engines.map { it.second }, engines.indexOfFirst { it.first == s.translateEngine }.coerceAtLeast(0),
+            { i -> vm.update { it.copy(translateEngine = engines[i].first) } },
+            subtitle = when (s.translateEngine) {
+                com.iris.localai.translate.TranslateSettings.ENGINE_MODEL -> "只用已加载的模型翻译（不带工具、记忆和上下文，关闭思考）"
+                com.iris.localai.translate.TranslateSettings.ENGINE_OFFLINE -> "只用下方的离线翻译包，不占用对话模型"
+                else -> "已加载模型时用模型翻译，否则用离线翻译包"
+            },
+        )
+    }
+    SectionTitle("离线翻译包")
+    SettingsGroup {
+        com.iris.localai.translate.TranslatePack.entries.forEachIndexed { i, pack ->
+            if (i > 0) Divider()
+            val st = packs[pack] ?: PackState.NotInstalled
+            PackRow(
+                pack.title, "${pack.blurb} · MPL-2.0", st, pack.totalBytes, selected = st == PackState.Installed,
+                onUse = {}, onDownload = { vm.downloadTranslate(pack) }, onCancel = { vm.cancelTranslate(pack) }, onDelete = { vm.deleteTranslate(pack) },
+            )
+        }
+    }
+    GroupFootnote(
+        if (vm.offlineEngineAvailable) "离线引擎为 Mozilla Bergamot（Firefox 翻译同款），中英各一个方向，没加载模型时也能翻译。"
+        else "本机未能加载离线翻译引擎，只能用已加载的模型翻译。",
+    )
+}
+
+@Composable
+internal fun PackRow(
+    title: String, blurb: String, state: PackState, bytes: Long, selected: Boolean,
+    onUse: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
 ) {
     val c = Iris.colors
     val installed = state == PackState.Installed
@@ -255,11 +303,8 @@ internal fun PackRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             com.iris.localai.ui.components.IrisRadio(selected, Modifier.alpha(if (installed) 1f else 0.4f))
             Column(Modifier.weight(1f)) {
-                Text(pack.title, style = IrisType.rowStrong, color = c.text)
-                Text(
-                    pack.licenseTag?.let { "${pack.blurb} · $it" } ?: pack.blurb,
-                    style = IrisType.caption, color = c.textSecondary,
-                )
+                Text(title, style = IrisType.rowStrong, color = c.text)
+                Text(blurb, style = IrisType.caption, color = c.textSecondary)
                 Text(
                     when (state) {
                         PackState.Installed -> if (selected) "使用中 · ${Format.bytes(bytes)}" else "已安装 · 点按切换"

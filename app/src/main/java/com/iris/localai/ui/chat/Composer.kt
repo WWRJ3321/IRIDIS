@@ -107,6 +107,10 @@ data class ComposerState(
     val attachments: List<com.iris.localai.data.Attachment> = emptyList(),
     /** 2.2 「技能」: skills / tools picked for the next message (chips above the text). */
     val refs: List<com.iris.localai.data.TurnRef> = emptyList(),
+    /** 2.3.0 ③: the draft is being translated (streams into [text]). */
+    val translating: Boolean = false,
+    /** 2.3.0 ③: the draft before 「翻译」 (non-null = 撤销翻译 shows). */
+    val draftOriginal: String? = null,
 )
 
 /** 1.10.2: the round action (empty input = 语音对话). 2.2: the face of the one voice capsule ([VoiceCapsule]). */
@@ -192,6 +196,9 @@ fun Composer(
     refCatalog: () -> RefCatalog = { RefCatalog.EMPTY },
     onAddRef: (com.iris.localai.data.TurnRef) -> Unit = {},
     onRemoveRef: (com.iris.localai.data.TurnRef) -> Unit = {},
+    /** 2.3.0 ③ 「翻译」 the draft: target setting ("auto" / "zh" / "en"), and 撤销翻译. */
+    onTranslateDraft: (String) -> Unit = {},
+    onUndoTranslate: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val c = Iris.colors
@@ -222,6 +229,20 @@ fun Composer(
                 Spacer(Modifier.width(6.dp))
                 Text("编辑消息", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
                 PressableIcon(Icons.Outlined.Close, "取消编辑", size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onCancelEdit)
+            }
+        }
+
+        AnimatedVisibility(
+            visible = state.translating || state.draftOriginal != null,
+            enter = fadeIn(IrisMotion.enter()),
+            exit = fadeOut(IrisMotion.standard()),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(com.iris.localai.ui.icons.IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (state.translating) TranslateText.TRANSLATING else "已翻译", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
+                if (state.translating) com.iris.localai.ui.components.TypingDots()
+                PressableIcon(Icons.Outlined.Close, TranslateText.UNDO, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onUndoTranslate)
             }
         }
 
@@ -261,6 +282,12 @@ fun Composer(
                 com.iris.localai.ui.components.IrisMenu(attachMenu, { attachMenu = false }) {
                     com.iris.localai.ui.components.IrisMenuItem(ComposerText.ATTACH_PHOTOS, com.iris.localai.ui.icons.IrisIcons.Image) { attachMenu = false; onPickPhotos() }
                     com.iris.localai.ui.components.IrisMenuItem(ComposerText.ATTACH_FILES, com.iris.localai.ui.icons.IrisIcons.Folder) { attachMenu = false; onPickFiles() }
+                    // 2.3.0 ③: translate the draft before sending (default 中↔英 by detection).
+                    if (state.text.isNotBlank() && !state.translating) {
+                        for ((target, label) in listOf("auto" to TranslateText.DRAFT_AUTO, "zh" to TranslateText.DRAFT_ZH, "en" to TranslateText.DRAFT_EN)) {
+                            com.iris.localai.ui.components.IrisMenuItem(label, com.iris.localai.ui.icons.IrisIcons.Translate) { attachMenu = false; onTranslateDraft(target) }
+                        }
+                    }
                 }
             }
         }

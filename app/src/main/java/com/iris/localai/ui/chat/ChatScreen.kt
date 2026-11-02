@@ -176,6 +176,10 @@ fun ChatScreen(
     val haze = remember { dev.chrisbanes.haze.HazeState() }
 
     var input by rememberSaveable { mutableStateOf("") }
+    // 2.3.0 ③ 「翻译」 the draft: the text before it (撤销翻译) and the running job.
+    var draftOriginal by remember { mutableStateOf<String?>(null) }
+    var draftJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val translator = rememberTranslator()
     val draft by vm.draft.collectAsStateWithLifecycle()
     LaunchedEffect(draft) { draft?.let { input = it; vm.setDraft(null) } }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -586,6 +590,8 @@ fun ChatScreen(
                         agentMode = agentSettings.agentMode,
                         attachments = pending,
                         refs = refs,
+                        translating = draftJob != null,
+                        draftOriginal = draftOriginal,
                     ),
                     refCatalog = vm::refCatalog,
                     onAddRef = { r -> refs = com.iris.localai.data.TurnRefs.add(refs, r) },
@@ -603,7 +609,18 @@ fun ChatScreen(
                     onThinkingUnsupported = { vm.showNotice(ComposerText.THINK_UNSUPPORTED) },
                     backdrop = backdrop,
                     onResourceTier = vm::setResourceTier,
-                    onTextChange = { input = it; vm.onUserActivity() },
+                    onTextChange = { input = it; vm.onUserActivity(); if (draftJob == null) draftOriginal = null },
+                    onTranslateDraft = { target ->
+                        val original = input
+                        draftOriginal = original
+                        draftJob = scope.launch {
+                            try { translator.translate(original, target).collect { if (it.isNotEmpty()) input = it } }
+                            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                            catch (e: Throwable) { input = original; draftOriginal = null; vm.showNotice(e.message ?: "翻译失败") }
+                            finally { draftJob = null }
+                        }
+                    },
+                    onUndoTranslate = { draftJob?.cancel(); draftJob = null; draftOriginal?.let { input = it }; draftOriginal = null },
                     onSend = {
                         val askedBefore = settings.askedNotificationPermission || android.os.Build.VERSION.SDK_INT < 33
                         maybeAskNotifications()
@@ -615,6 +632,7 @@ fun ChatScreen(
                         else { vm.send(input, pending, refs); pending = emptyList(); refs = emptyList() }
                         feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.SEND)
                         hideKeyboard()
+                        draftJob?.cancel(); draftJob = null; draftOriginal = null
                         input = ""
                         editingId = null
                     },
