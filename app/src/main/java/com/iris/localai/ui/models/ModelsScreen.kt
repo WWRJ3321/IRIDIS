@@ -145,7 +145,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     val import = _import.asStateFlow()
     private var importJob: Job? = null
 
-    init { refresh(); refreshImageModels() }
+    // 2.3.0: init moved to end of class (crash: refreshImageModels touched _imageDownloaded before it was initialised)
 
     fun refresh() = viewModelScope.launch { refreshFolder(); c.models.refresh() }
     fun load(m: LocalModel) = viewModelScope.launch { c.engine.load(m) }
@@ -362,6 +362,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun cancelDownload() = c.mnnHub.cancel()
     fun clearDownloadError() = c.mnnHub.clearError()
+    init { refresh(); refreshImageModels() }
 }
 
 @Composable
