@@ -198,7 +198,7 @@ private fun WebPreview(doc: String, allowImages: Boolean) {
                 AndroidView(
                     factory = { ctx ->
                         sandboxWebView(ctx, allowImages, onHeight = { contentHeight = it }, onGone = { crashed = true })
-                            .also { it.loadDataWithBaseURL(null, doc, "text/html", "utf-8", null) }
+                            .also { it.loadDataWithBaseURL(ThreeAssets.BASE, doc, "text/html", "utf-8", null) }
                     },
                     onRelease = { destroyWebView(it) },
                     modifier = Modifier.fillMaxSize(),
@@ -224,7 +224,7 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
                 if (showSource) SourceText(source, Modifier.fillMaxSize().padding(top = IrisDimens.space8))
                 else key(doc) {
                     AndroidView(
-                        factory = { ctx -> sandboxWebView(ctx, allowImages, onHeight = null, onGone = onDismiss).also { it.loadDataWithBaseURL(null, doc, "text/html", "utf-8", null) } },
+                        factory = { ctx -> sandboxWebView(ctx, allowImages, onHeight = null, onGone = onDismiss).also { it.loadDataWithBaseURL(ThreeAssets.BASE, doc, "text/html", "utf-8", null) } },
                         onRelease = { destroyWebView(it) },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -263,6 +263,12 @@ private fun sandboxWebView(ctx: Context, allowImages: Boolean, onHeight: ((Int) 
     webViewClient = object : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val url = request.url.toString()
+            // 2.2.17: bundled Three.js for any CDN `three` URL (any version), with CORS for module scripts.
+            ThreeAssets.assetFor(url)?.let { asset ->
+                return runCatching {
+                    WebResourceResponse(ThreeAssets.MIME, "utf-8", 200, "OK", ThreeAssets.HEADERS, view.context.assets.open(asset))
+                }.getOrElse { blocked() }
+            }
             val image = HtmlSandbox.looksLikeImage(url, request.requestHeaders["Accept"])
             if (!HtmlSandbox.allowRequest(url, allowImages, image)) return blocked()
             if (url.startsWith("https://", ignoreCase = true)) {

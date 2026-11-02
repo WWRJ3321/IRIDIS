@@ -136,5 +136,11 @@
     "license": "CreativeML OpenRAIL-M",
     "file": "creativeml-openrail-m.txt",
     "url": "https://aihub.qualcomm.com/models/stable_diffusion_v1_5"
+  },
+  {
+    "name": "three.js (r170)",
+    "license": "MIT",
+    "file": "mit-three.js.txt",
+    "url": "https://github.com/mrdoob/three.js/tree/r170"
   }
 ]

@@ -44,25 +44,28 @@ object HtmlSandbox {
      * Network images only when [allowImages] (and they are fetched by the app, without cookies).
      */
     fun csp(allowImages: Boolean): String =
-        "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline' data:; " +
+        "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'self' ${ThreeAssets.HOST} ${ThreeAssets.CDN_HOSTS.joinToString(" ")}; style-src 'unsafe-inline' data:; " +
             "img-src data: blob:" + (if (allowImages) " https:" else "") + "; font-src data:; media-src data: blob:; " +
             "connect-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
 
-    private fun head(allowImages: Boolean) =
+    private fun head(allowImages: Boolean, importMap: String? = null) =
         "<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"${csp(allowImages)}\">" +
-            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" + (importMap ?: "")
 
     private val HEAD_TAG = Regex("<head(?:\\s[^>]*)?>", RegexOption.IGNORE_CASE)
     private val HTML_TAG = Regex("<html(?:\\s[^>]*)?>", RegexOption.IGNORE_CASE)
     private val DOCTYPE = Regex("^\\s*<!doctype[^>]*>", RegexOption.IGNORE_CASE)
 
     /** The document loaded into the WebView: the CSP goes first inside <head>, so it covers everything after it. */
-    fun document(source: String, kind: HtmlBlocks.Kind, allowImages: Boolean): String {
-        val h = head(allowImages)
+    fun document(source0: String, kind: HtmlBlocks.Kind, allowImages: Boolean): String {
         if (kind == HtmlBlocks.Kind.SVG) {
+            val h = head(allowImages)
             return "<!DOCTYPE html><html><head>$h<style>html,body{margin:0;padding:8px;background:#fff}" +
-                "svg{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body>${source.trim()}</body></html>"
+                "svg{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body>${source0.trim()}</body></html>"
         }
+        // 2.2.17: CDN Three.js → bundled copy; import map entries for "three" / "three/addons/".
+        val (source, importMap) = ThreeAssets.prepare(source0)
+        val h = head(allowImages, importMap)
         HEAD_TAG.find(source)?.let { m -> return source.substring(0, m.range.last + 1) + h + source.substring(m.range.last + 1) }
         HTML_TAG.find(source)?.let { m -> return source.substring(0, m.range.last + 1) + "<head>$h</head>" + source.substring(m.range.last + 1) }
         // A fragment: wrap it (a leading doctype is kept first).
@@ -97,6 +100,7 @@ object HtmlSandbox {
     /** A tapped link leaves the preview only to the external browser, and only for http(s) / mailto / tel. */
     fun externalLink(url: String): Boolean {
         val u = url.trim().lowercase()
+        if (u.startsWith(ThreeAssets.BASE) || u.startsWith("http://${ThreeAssets.HOST}")) return false // relative link inside the preview
         return u.startsWith("https://") || u.startsWith("http://") || u.startsWith("mailto:") || u.startsWith("tel:")
     }
 }
