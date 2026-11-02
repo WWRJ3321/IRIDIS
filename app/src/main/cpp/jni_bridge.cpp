@@ -221,7 +221,9 @@ IRIS_JNI(nativeMeta)(JNIEnv *env, jobject, jlong h) {
     j += std::string("\"hasChatTemplate\":") + (m.has_chat_template ? "true" : "false") + ",";
     j += std::string("\"supportsThinking\":") + (m.supports_thinking ? "true" : "false") + ",";
     j += std::string("\"thinkingPrefilled\":") + (m.thinking_prefilled ? "true" : "false") + ",";
-    j += "\"gpu\":\"" + json_escape(m.gpu) + "\"";
+    j += "\"gpu\":\"" + json_escape(m.gpu) + "\",";
+    j += std::string("\"vision\":") + (e && e->has_vision() ? "true" : "false") + ",";
+    j += std::string("\"visionGpu\":") + (e && e->vision_on_gpu() ? "true" : "false");
     j += "}";
     return utf8_to_jstring(env, j);
 }
@@ -231,10 +233,9 @@ IRIS_JNI(nativeMeta)(JNIEnv *env, jobject, jlong h) {
  * i = [topK, repeatLastN, maxNewTokens, seed, disableThinking(, honorPriorCancel)].
  * Streams UTF-8 deltas to sink.onPiece(byte[]): Boolean and returns a JSON stats object.
  */
-JNIEXPORT jstring JNICALL
-IRIS_JNI(nativeGenerate)(
-        JNIEnv *env, jobject, jlong h, jobjectArray roles, jobjectArray contents,
-        jfloatArray jf, jintArray ji, jobject sink) {
+static jstring run_generate(JNIEnv *env, jlong h, jobjectArray roles, jobjectArray contents,
+                            jfloatArray jf, jintArray ji, jobject sink,
+                            const std::vector<std::string> *images, jint image_msg) {
     auto *e = engine(h);
 
     std::vector<iris::ChatMessage> msgs;
@@ -288,7 +289,7 @@ IRIS_JNI(nativeGenerate)(
         st.stop = iris::StopReason::Error;
         st.error = "engine handle is null";
     } else {
-        st = e->generate(msgs, sp, [&](const char *data, size_t len) -> bool {
+        iris::PieceCallback cb = [&](const char *data, size_t len) -> bool {
             if (!sink || !on_piece) return true;
             jbyteArray arr = env->NewByteArray((jsize) len);
             if (!arr) {  // OutOfMemoryError: stop instead of calling Java with a pending exception
@@ -303,7 +304,8 @@ IRIS_JNI(nativeGenerate)(
                 return false;
             }
             return keep == JNI_TRUE;
-        });
+        };
+        st = images ? e->generate_vision(msgs, sp, cb, *images, image_msg) : e->generate(msgs, sp, cb);
     }
 
     std::string j = "{";
@@ -321,6 +323,41 @@ IRIS_JNI(nativeGenerate)(
     j += "}";
     return utf8_to_jstring(env, j);
 }
+
+JNIEXPORT jstring JNICALL
+IRIS_JNI(nativeGenerate)(
+        JNIEnv *env, jobject, jlong h, jobjectArray roles, jobjectArray contents,
+        jfloatArray jf, jintArray ji, jobject sink) {
+    return run_generate(env, h, roles, contents, jf, ji, sink, nullptr, -1);
+}
+
+#ifdef IRIS_MTMD
+/** 2.2.17: loads (or, with an empty path, drops) the vision projector. Null on success, else the reason. */
+JNIEXPORT jstring JNICALL
+IRIS_JNI(nativeLoadMmproj)(JNIEnv *env, jobject, jlong h, jbyteArray jpath, jboolean prefer_gpu) {
+    auto *e = engine(h);
+    if (!e) return utf8_to_jstring(env, "engine handle is null");
+    std::string err;
+    if (!e->load_mmproj(bytes_to_string(env, jpath), prefer_gpu == JNI_TRUE, err))
+        return utf8_to_jstring(env, err.empty() ? "unknown error" : err);
+    return nullptr;
+}
+
+/** 2.2.17: nativeGenerate + picture files (UTF-8 paths) placed in front of message [imageMsg]. */
+JNIEXPORT jstring JNICALL
+IRIS_JNI(nativeGenerateVision)(
+        JNIEnv *env, jobject, jlong h, jobjectArray roles, jobjectArray contents,
+        jfloatArray jf, jintArray ji, jobjectArray jimages, jint image_msg, jobject sink) {
+    std::vector<std::string> images;
+    const jsize n = jimages ? env->GetArrayLength(jimages) : 0;
+    for (jsize k = 0; k < n; ++k) {
+        auto b = (jbyteArray) env->GetObjectArrayElement(jimages, k);
+        images.push_back(bytes_to_string(env, b));
+        env->DeleteLocalRef(b);
+    }
+    return run_generate(env, h, roles, contents, jf, ji, sink, &images, image_msg);
+}
+#endif
 
 }  // extern "C"
 

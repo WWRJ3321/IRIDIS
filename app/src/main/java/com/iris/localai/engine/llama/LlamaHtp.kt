@@ -24,6 +24,10 @@ interface LlamaJni {
     fun requestLivePolicy(h: Long, threads: Int, cpus: IntArray, nice: Int)
     fun meta(h: Long): String
     fun generate(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray, sink: PieceSink?): String
+    /** 2.2.17: vision projector (mtmd). Only libiris_llama has it; the NPU library stays text-only. */
+    fun loadMmproj(h: Long, path: ByteArray, preferGpu: Boolean): String? = "内置 NPU 运行库不支持 mmproj 识图"
+    fun generateVision(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray,
+                       images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?): String = generate(h, roles, contents, floats, ints, sink)
 }
 
 object LlamaJnis {
@@ -41,6 +45,10 @@ object LlamaJnis {
         override fun meta(h: Long) = LlamaNative.nativeMeta(h)
         override fun generate(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray, sink: PieceSink?) =
             LlamaNative.nativeGenerate(h, roles, contents, floats, ints, sink)
+        override fun loadMmproj(h: Long, path: ByteArray, preferGpu: Boolean) = LlamaNative.nativeLoadMmproj(h, path, preferGpu)
+        override fun generateVision(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray,
+                                    images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?) =
+            LlamaNative.nativeGenerateVision(h, roles, contents, floats, ints, images, imageMsg, sink)
     }
     val htp: LlamaJni = object : LlamaJni {
         override fun create() = LlamaHtpNative.nativeCreate()

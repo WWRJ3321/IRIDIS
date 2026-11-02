@@ -137,6 +137,13 @@ class EngineManager(
     /** Probed on demand: the NPU runtime can be installed while the app runs. */
     fun environment(): BackendEnvironment = BackendEnvironment.probe(appContext)
 
+    /** 2.2.17: projector paired with this GGUF file (same folder), or null = text-only. */
+    fun mmprojFor(model: LocalModel, userPick: String?): String? = runCatching {
+        val dir = java.io.File(model.path).parentFile ?: return null
+        val names = dir.list()?.toList().orEmpty()
+        com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, names, userPick)?.let { java.io.File(dir, it).absolutePath }
+    }.getOrNull()
+
     fun backendOptions(model: LocalModel): List<BackendOption> =
         BackendCapabilities.options(model.format, model.fileName, environment())
 
@@ -422,6 +429,7 @@ class EngineManager(
                                 useMmap = cfg.useMmap && !settings.current.mnnForceNoMmap,
                                 noVisual = settings.current.mnnNoVisual,
                                 resources = plan,
+                                mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.
@@ -480,7 +488,7 @@ class EngineManager(
                 loadedPreferred = preferred
                 lastAppliedTier = plan.tier
                 if (applyingTier == null) _tierApply.value = null   // a fresh model: no stale status
-                _state.value = EngineState.Ready(model, d.copy(fallbackNote = note))
+                _state.value = EngineState.Ready(model, d.copy(fallbackNote = listOfNotNull(note, d.fallbackNote).joinToString("；").ifEmpty { null }))
                 settings.update { it.copy(lastModelFile = model.fileName) }
                 startupGuard.noteLoadSucceeded()
                 scheduleIdleUnload()

@@ -72,6 +72,16 @@ add_library(iris_llama SHARED
         iris_engine.cpp
         jni_bridge.cpp)
 
+# 2.2.17: llama.cpp tools/mtmd (libmtmd, static) for GGUF vision: mmproj + mtmd_helper. Only in
+# libiris_llama; libiris_lhtp (IRIS_HTP) stays text-only and unchanged.
+option(IRIS_MTMD "Link llama.cpp mtmd (GGUF vision) into libiris_llama" ON)
+if (IRIS_MTMD)
+    set(MTMD_VIDEO OFF CACHE BOOL "" FORCE)
+    add_subdirectory(${LLAMA_DIR}/tools/mtmd mtmd EXCLUDE_FROM_ALL)
+    target_compile_definitions(iris_llama PRIVATE IRIS_MTMD=1)
+    target_link_libraries(iris_llama PRIVATE mtmd)
+endif ()
+
 target_compile_features(iris_llama PRIVATE cxx_std_17)
 target_compile_options(iris_llama PRIVATE -Wall -Wextra -O3 -fvisibility=hidden)
 target_link_libraries(iris_llama PRIVATE llama ggml android log)

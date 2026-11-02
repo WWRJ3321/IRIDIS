@@ -16,6 +16,7 @@
 struct llama_model;
 struct llama_context;
 struct llama_vocab;
+struct mtmd_context;
 
 namespace iris {
 
@@ -134,6 +135,17 @@ public:
     GenerateStats generate(const std::vector<ChatMessage> &messages,
                            const SamplingParams &sp, const PieceCallback &on_piece);
 
+    /// 2.2.17: vision projector (mmproj) for the loaded model via llama.cpp mtmd. Only built into
+    /// libiris_llama (IRIS_MTMD); elsewhere returns false with a message. GPU first when the model
+    /// itself is on the GPU and `prefer_gpu`, then CPU. Empty path = drop the projector.
+    bool load_mmproj(const std::string &path, bool prefer_gpu, std::string &error);
+    bool has_vision() const { return mtmd_ != nullptr; }
+    bool vision_on_gpu() const { return mtmd_gpu_; }
+    /// Like generate(), with `images` (file paths) placed in front of message `image_msg`.
+    GenerateStats generate_vision(const std::vector<ChatMessage> &messages, const SamplingParams &sp,
+                                  const PieceCallback &on_piece, const std::vector<std::string> &images,
+                                  int32_t image_msg);
+
     /// Thread-safe; may be called from any thread while generate() runs.
     void cancel() { cancelled_.store(true, std::memory_order_release); }
     /// Forgets a pending cancel() (see SamplingParams::honor_prior_cancel).
@@ -162,6 +174,13 @@ public:
 
 private:
     void free_all();
+    void free_mmproj();
+    bool init_mmproj(bool use_gpu, std::string &error);
+    GenerateStats generate_impl(const std::vector<ChatMessage> &messages, const SamplingParams &sp,
+                                const PieceCallback &on_piece, const std::vector<std::string> *images,
+                                int32_t image_msg);
+    bool reuse_prefix(std::vector<int32_t> &tokens, bool need_tail, GenerateStats &st);
+    bool prefill_media(const std::string &prompt, const std::vector<std::string> &images, GenerateStats &st);
     bool decode_tokens(const std::vector<int32_t> &tokens, size_t from, GenerateStats &st);
     void resync_after_failure();
     void apply_pending_threads();
@@ -176,6 +195,10 @@ private:
     std::string template_;           // raw jinja template from GGUF metadata (may be empty)
     bool use_chatml_fallback_ = false;
     std::string gpu_name_;
+    mtmd_context *mtmd_ = nullptr;   // 2.2.17 vision projector (IRIS_MTMD builds only)
+    bool mtmd_gpu_ = false;
+    std::string mmproj_path_;
+    int32_t threads_ = 0;
     int32_t n_ctx_ = 0;
     int32_t n_batch_ = 512;
     std::vector<int32_t> kv_tokens_; // tokens currently materialised in the KV cache (seq 0)

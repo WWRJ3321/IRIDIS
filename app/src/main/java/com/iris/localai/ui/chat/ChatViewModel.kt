@@ -659,7 +659,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         }
         val ready = c.engine.state.value as? EngineState.Ready
         if (attachments.any { it.kind == com.iris.localai.data.AttachmentKind.IMAGE } && ready != null && ready.details.supportsVision != true)
-            notice.value = ATTACH_NO_VISION
+            notice.value = if (ready.model.format == com.iris.localai.data.ModelFormat.GGUF) com.iris.localai.engine.llama.MmprojPairing.NO_MMPROJ_HINT else ATTACH_NO_VISION
         // 1.11.1: a request that needs the internet while no tool can reach it.
         if (notice.value == null) {
             val ag = c.agent.settings.current

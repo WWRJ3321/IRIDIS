@@ -40,6 +40,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     private val handleLock = Any()
     @Volatile private var handle = 0L
     @Volatile private var loaded = false
+    /** 2.2.17: a projector is loaded for the current model. */
+    @Volatile private var visionLoaded = false
     @Volatile private var active: Request? = null
 
     // ---- 1.7.2: mid-reply resource-tier switch (CPU backend only) ----
@@ -74,6 +76,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             val npu = config.backend == com.iris.localai.engine.Backend.NPU
             val h = ensureHandle(npu)
             loaded = false
+            visionLoaded = false
             com.iris.localai.engine.NativeThreadPolicy.apply(config.resources)
             // 2.2.15: NPU = libiris_lhtp.so, where the only offload device is the Hexagon HTP ("GPU" type in ggml).
             val gpu = config.backend == com.iris.localai.engine.Backend.GPU || npu
@@ -97,6 +100,18 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 jni.unload(h)
                 throw EngineException(if (npu) "没有找到可用的 Hexagon NPU 设备" else "没有找到可用的 OpenCL GPU 设备")
             }
+            // 2.2.17: vision projector via mtmd (GPU when the model is on the GPU, CPU otherwise / on failure).
+            // A projector that fails to load leaves the model text-only; it never fails the load.
+            var vision = false
+            var visionNote: String? = null
+            config.mmprojPath?.let { mp ->
+                val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), gpu && !npu) }
+                    .getOrElse { "mmproj 加载异常：${it.message ?: it.javaClass.simpleName}" }
+                if (e == null) vision = true
+                else { visionNote = "视觉投影未加载：$e"; android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
+            }
+            visionLoaded = vision
+            val vm = if (vision) runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }.getOrDefault(m) else m
             ModelDetails(
                 description = m.description,
                 parameterCount = m.nParams,
@@ -105,11 +120,13 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 supportsThinking = m.supportsThinking,
                 thinkingPrefilled = m.thinkingPrefilled,
                 hasChatTemplate = m.hasChatTemplate,
+                supportsVision = vision && vm.vision,
+                fallbackNote = visionNote,
                 backend = when {
                     m.gpu.isBlank() -> "CPU · llama.cpp"
                     npu -> "NPU · ${m.gpu} · llama.cpp Hexagon"
                     else -> "GPU · ${m.gpu} · OpenCL"
-                },
+                } + if (vision && vm.vision) " · 识图 " + (if (vm.visionGpu) "GPU" else "CPU") else "",
                 activeBackend = if (m.gpu.isNotBlank()) accel else com.iris.localai.engine.Backend.CPU,
             )
         }
@@ -129,6 +146,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         // Encode on the caller's thread so the single native thread only runs native work.
         val roles = Array(history.size) { history[it].role.toByteArray(Charsets.UTF_8) }
         val contents = Array(history.size) { history[it].content.toByteArray(Charsets.UTF_8) }
+        // 2.2.17: pictures of one message (the newest that has any) go through mtmd.
+        val imageMsg = if (visionLoaded) MmprojPairing.imageMessage(history.map { it.images }) else -1
+        val images = if (imageMsg >= 0) Array(history[imageMsg].images.size) { history[imageMsg].images[it].toByteArray(Charsets.UTF_8) } else null
         val floats = floatArrayOf(
             params.temperature, params.topP, params.minP, params.repeatPenalty,
             params.frequencyPenalty, params.presencePenalty,
@@ -153,7 +173,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 pendingPriority.clear()
                 runningPlan = params.resources
                 com.iris.localai.engine.ThermalGovernor.beginReply()
-                jni.generate(h, roles, contents, floats, ints) { bytes ->
+                val sink = PieceSink { bytes ->
                     // Runs on this (decoding) thread between two llama_decode calls: the native side
                     // applies threads / cores / nice right before the next decode; the Java priority
                     // call additionally moves Android's task profile (background ↔ foreground).
@@ -167,6 +187,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                     // Unlimited buffer: trySend only fails once the collector is gone → stop generating.
                     !req.cancelled && channel.push(String(bytes, Charsets.UTF_8)).let { t -> t.isEmpty() || trySend(GenEvent.Piece(t)).isSuccess }
                 }
+                if (images != null) jni.generateVision(h, roles, contents, floats, ints, images, imageMsg, sink)
+                else jni.generate(h, roles, contents, floats, ints, sink)
             }
         } finally {
             if (active === req) active = null
@@ -285,6 +307,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         val hasChatTemplate: Boolean = false,
         val supportsThinking: Boolean = false,
         val thinkingPrefilled: Boolean = false,
+        val vision: Boolean = false,
+        val visionGpu: Boolean = false,
     )
 
     @Serializable

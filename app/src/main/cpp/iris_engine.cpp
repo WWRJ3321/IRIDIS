@@ -14,6 +14,10 @@
 #include <android/log.h>
 #endif
 #include "llama.h"
+#ifdef IRIS_MTMD
+#include "mtmd.h"
+#include "mtmd-helper.h"
+#endif
 
 #if defined(__linux__)
 #include <sched.h>
@@ -258,7 +262,17 @@ Engine::~Engine() {
     free_all();
 }
 
+void Engine::free_mmproj() {
+#ifdef IRIS_MTMD
+    if (mtmd_) mtmd_free(mtmd_);
+#endif
+    mtmd_ = nullptr;
+    mtmd_gpu_ = false;
+}
+
 void Engine::free_all() {
+    free_mmproj();
+    mmproj_path_.clear();
     if (ctx_) llama_free(ctx_);
     if (model_) llama_model_free(model_);
     ctx_ = nullptr;
@@ -321,6 +335,7 @@ bool Engine::load(const std::string &path, const LoadParams &params,
     n_ctx = std::max(n_ctx, 512);
 
     const int32_t threads = params.n_threads > 0 ? params.n_threads : auto_threads();
+    threads_ = threads;
     n_batch_ = std::clamp(params.n_batch, 32, 2048);
 
     int32_t kv_type = params.kv_type >= 0 ? params.kv_type : (params.kv_q8 ? 1 : 0);
@@ -452,6 +467,42 @@ bool Engine::apply_pending_policy(int32_t token_index) {
     return true;
 }
 
+bool Engine::init_mmproj(bool use_gpu, std::string &error) {
+#ifdef IRIS_MTMD
+    mtmd_context_params mp = mtmd_context_params_default();
+    mp.use_gpu = use_gpu;
+    mp.print_timings = false;
+    mp.n_threads = threads_ > 0 ? threads_ : auto_threads();
+    mp.warmup = false;
+    mtmd_ = mtmd_init_from_file(mmproj_path_.c_str(), model_, mp);
+    mtmd_gpu_ = mtmd_ != nullptr && use_gpu;
+    if (mtmd_ && !mtmd_support_vision(mtmd_)) {
+        free_mmproj();
+        error = "该 mmproj 不含视觉编码器";
+        return false;
+    }
+    if (!mtmd_) error = "无法加载 mmproj（与模型不匹配、文件损坏或内存不足）";
+    return mtmd_ != nullptr;
+#else
+    (void) use_gpu;
+    error = "此运行库不支持 mmproj";
+    return false;
+#endif
+}
+
+bool Engine::load_mmproj(const std::string &path, bool prefer_gpu, std::string &error) {
+    std::lock_guard<std::mutex> lk(mu_);
+    free_mmproj();
+    mmproj_path_ = path;
+    if (path.empty()) return true;
+    if (!model_) { error = "模型未加载"; return false; }
+    if (prefer_gpu && !gpu_name_.empty() && init_mmproj(true, error)) return true;
+    error.clear();
+    if (init_mmproj(false, error)) return true;
+    mmproj_path_.clear();
+    return false;
+}
+
 void Engine::reset() {
     std::lock_guard<std::mutex> lk(mu_);
     if (ctx_) llama_memory_clear(llama_get_memory(ctx_), true);
@@ -574,6 +625,8 @@ bool Engine::shift_context(int32_t n_keep, GenerateStats &st) {
     // (not SWA-only / recurrent models); otherwise the caller stops with ContextFull.
     llama_memory_t mem = llama_get_memory(ctx_);
     if (!llama_memory_can_shift(mem)) return false;
+    // 2.2.17: picture cells (-1) carry their own positions (M-RoPE etc.); never shift them.
+    if (std::find(kv_tokens_.begin(), kv_tokens_.end(), -1) != kv_tokens_.end()) return false;
     const int32_t n_past = (int32_t) kv_tokens_.size();
     n_keep = std::clamp(n_keep, 0, n_past / 4);
     const int32_t n_left = n_past - n_keep;
@@ -586,9 +639,153 @@ bool Engine::shift_context(int32_t n_keep, GenerateStats &st) {
     return true;
 }
 
+bool Engine::reuse_prefix(std::vector<int32_t> &tokens, bool need_tail, GenerateStats &st) {
+    llama_memory_t mem = llama_get_memory(ctx_);
+    size_t n_common = 0;
+    while (n_common < kv_tokens_.size() && n_common < tokens.size() &&
+           kv_tokens_[n_common] == tokens[n_common]) {
+        n_common++;
+    }
+    if (need_tail && n_common == tokens.size() && n_common > 0) n_common--;  // need at least one token to produce logits
+    if (n_common < kv_tokens_.size()) {
+        bool keep = n_common > 0;
+        if (keep) {
+            // Sliding-window attention only keeps the last n_swa positions: rolling back to
+            // n_common is valid only if the window ending there is still materialised.
+            const int32_t n_swa = llama_model_n_swa(model_);
+            if (n_swa > 0) {
+                const llama_pos pos_min = llama_memory_seq_pos_min(mem, 0);
+                if (pos_min > std::max<int32_t>(0, (int32_t) n_common - n_swa)) keep = false;
+            }
+        }
+        if (!keep || !llama_memory_seq_rm(mem, 0, (llama_pos) n_common, -1)) {
+            llama_memory_clear(mem, true);  // e.g. SWA / recurrent memory cannot be partially removed
+            n_common = 0;
+        }
+        kv_tokens_.resize(n_common);
+    }
+    st.reused_tokens = (int32_t) n_common;
+
+    return true;
+}
+
+bool Engine::prefill_media(const std::string &prompt, const std::vector<std::string> &images, GenerateStats &st) {
+#ifdef IRIS_MTMD
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        std::vector<mtmd_bitmap *> bitmaps;
+        auto free_bitmaps = [&]() { for (auto *b : bitmaps) mtmd_bitmap_free(b); bitmaps.clear(); };
+        for (const auto &path : images) {
+            mtmd_helper_bitmap_wrapper w = mtmd_helper_bitmap_init_from_file(mtmd_, path.c_str(), false, mtmd_helper_init_opt_default());
+            if (w.video_ctx) mtmd_helper_video_free(w.video_ctx);
+            if (!w.bitmap) {
+                free_bitmaps();
+                st.stop = StopReason::Error;
+                st.error = "图片读取失败：" + path;
+                return false;
+            }
+            bitmaps.push_back(w.bitmap);
+        }
+        mtmd_input_chunks *chunks = mtmd_input_chunks_init();
+        bool add_bos = llama_vocab_get_add_bos(vocab_);
+        if (add_bos) {
+            const llama_token bos = llama_vocab_bos(vocab_);
+            const char *bos_text = bos != LLAMA_TOKEN_NULL ? llama_vocab_get_text(vocab_, bos) : nullptr;
+            if (bos_text && starts_with(prompt, bos_text)) add_bos = false;  // template already has BOS
+        }
+        mtmd_input_text txt{prompt.c_str(), prompt.size(), add_bos, true};
+        const int32_t rc = mtmd_tokenize(mtmd_, chunks, &txt, (const mtmd_bitmap **) bitmaps.data(), bitmaps.size());
+        free_bitmaps();
+        if (rc != 0) {
+            mtmd_input_chunks_free(chunks);
+            st.stop = StopReason::Error;
+            st.error = rc == 1 ? "图片数量与提示词中的占位符不一致" : "图片预处理失败 (" + std::to_string(rc) + ")";
+            return false;
+        }
+        const size_t n_chunks = mtmd_input_chunks_size(chunks);
+        st.prompt_tokens = (int32_t) mtmd_helper_get_n_tokens(chunks);
+        // Leading text chunk: same KV prefix reuse as text-only turns (system prompt stays cached).
+        size_t first = 0;
+        if (n_chunks > 0 && mtmd_input_chunk_get_type(mtmd_input_chunks_get(chunks, 0)) == MTMD_INPUT_CHUNK_TYPE_TEXT) {
+            size_t nt = 0;
+            const llama_token *tt = mtmd_input_chunk_get_tokens_text(mtmd_input_chunks_get(chunks, 0), &nt);
+            std::vector<int32_t> head(tt, tt + nt);
+            if (!reuse_prefix(head, n_chunks == 1, st) || !decode_tokens(head, (size_t) st.reused_tokens, st)) {
+                mtmd_input_chunks_free(chunks);
+                return false;
+            }
+            first = 1;
+        } else {
+            llama_memory_clear(llama_get_memory(ctx_), true);
+            kv_tokens_.clear();
+        }
+        llama_pos n_past = (llama_pos) kv_tokens_.size();
+        bool media_failed = false;
+        for (size_t c = first; c < n_chunks; ++c) {
+            if (cancelled_.load(std::memory_order_relaxed)) { st.stop = StopReason::Cancelled; break; }
+            const mtmd_input_chunk *ch = mtmd_input_chunks_get(chunks, c);
+            const bool is_text = mtmd_input_chunk_get_type(ch) == MTMD_INPUT_CHUNK_TYPE_TEXT;
+            llama_pos np = n_past;
+            const int32_t r = mtmd_helper_eval_chunk_single(mtmd_, ctx_, ch, n_past, 0, n_batch_, c + 1 == n_chunks, &np);
+            if (r != 0) {
+                if (cancelled_.load()) st.stop = StopReason::Cancelled;
+                else { st.stop = StopReason::Error; st.error = "图片编码/解码失败 (" + std::to_string(r) + ")"; media_failed = !is_text; }
+                break;
+            }
+            if (is_text) {
+                size_t nt = 0;
+                const llama_token *tt = mtmd_input_chunk_get_tokens_text(ch, &nt);
+                kv_tokens_.insert(kv_tokens_.end(), tt, tt + nt);
+            } else {
+                // Media cells never match a text token, so a later turn reuses the cache only up to here.
+                kv_tokens_.insert(kv_tokens_.end(), mtmd_input_chunk_get_n_tokens(ch), (int32_t) -1);
+            }
+            n_past = np;
+        }
+        mtmd_input_chunks_free(chunks);
+        if (st.stop == StopReason::Cancelled || st.stop == StopReason::Error) {
+            resync_after_failure();
+            // GPU vision encoder failed: reload the projector on the CPU and try once more.
+            if (media_failed && mtmd_gpu_ && attempt == 0) {
+                std::string err;
+                free_mmproj();
+                if (init_mmproj(false, err)) {
+                    __android_log_print(ANDROID_LOG_WARN, "IrisNative", "mtmd: GPU encode failed, retrying on CPU");
+                    const int32_t dropped = st.dropped_messages;
+                    st = GenerateStats{};
+                    st.dropped_messages = dropped;
+                    continue;
+                }
+            }
+            return false;
+        }
+        st.stop = StopReason::EndOfGeneration;
+        return true;
+    }
+    return false;
+#else
+    (void) prompt; (void) images;
+    st.stop = StopReason::Error;
+    st.error = "此运行库不支持图片";
+    return false;
+#endif
+}
+
 GenerateStats Engine::generate(const std::vector<ChatMessage> &input,
                                const SamplingParams &sp, const PieceCallback &on_piece) {
     std::lock_guard<std::mutex> lk(mu_);
+    return generate_impl(input, sp, on_piece, nullptr, -1);
+}
+
+GenerateStats Engine::generate_vision(const std::vector<ChatMessage> &input, const SamplingParams &sp,
+                                      const PieceCallback &on_piece, const std::vector<std::string> &images,
+                                      int32_t image_msg) {
+    std::lock_guard<std::mutex> lk(mu_);
+    return generate_impl(input, sp, on_piece, images.empty() ? nullptr : &images, image_msg);
+}
+
+GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const SamplingParams &sp,
+                                    const PieceCallback &on_piece, const std::vector<std::string> *images,
+                                    int32_t image_msg) {
     GenerateStats st;
     if (!ctx_) {
         st.stop = StopReason::Error;
@@ -602,9 +799,23 @@ GenerateStats Engine::generate(const std::vector<ChatMessage> &input,
     const int32_t reserve = std::clamp(sp.max_new_tokens, 64, n_ctx_ / 2);
     const int32_t budget = n_ctx_ - reserve;
     std::vector<ChatMessage> messages = input;
+#ifdef IRIS_MTMD
+    // 2.2.17: one media marker per picture in front of the user's text (mtmd splits on it).
+    const bool vision = images && mtmd_ && image_msg >= 0 && image_msg < (int32_t) messages.size();
+    if (vision) {
+        std::string pre;
+        for (size_t k = 0; k < images->size(); ++k) pre += std::string(mtmd_default_marker()) + "\n";
+        messages[(size_t) image_msg].content = pre + messages[(size_t) image_msg].content;
+    }
+#else
+    const bool vision = false;
+    (void) images; (void) image_msg;
+#endif
+    std::string prompt;
     std::vector<int32_t> tokens;
     for (;;) {
-        tokens = tokenize(format_prompt(messages, sp.disable_thinking));
+        prompt = format_prompt(messages, sp.disable_thinking);
+        tokens = tokenize(prompt);
         if ((int32_t) tokens.size() <= budget) break;
         // Find the oldest non-system message that is not the final user turn.
         auto it = std::find_if(messages.begin(), messages.end(),
@@ -633,36 +844,14 @@ GenerateStats Engine::generate(const std::vector<ChatMessage> &input,
     }
     st.prompt_tokens = (int32_t) tokens.size();
 
-    // ---- 2. KV-cache prefix reuse ----
-    llama_memory_t mem = llama_get_memory(ctx_);
-    size_t n_common = 0;
-    while (n_common < kv_tokens_.size() && n_common < tokens.size() &&
-           kv_tokens_[n_common] == tokens[n_common]) {
-        n_common++;
-    }
-    if (n_common == tokens.size()) n_common--;  // need at least one token to produce logits
-    if (n_common < kv_tokens_.size()) {
-        bool keep = n_common > 0;
-        if (keep) {
-            // Sliding-window attention only keeps the last n_swa positions: rolling back to
-            // n_common is valid only if the window ending there is still materialised.
-            const int32_t n_swa = llama_model_n_swa(model_);
-            if (n_swa > 0) {
-                const llama_pos pos_min = llama_memory_seq_pos_min(mem, 0);
-                if (pos_min > std::max<int32_t>(0, (int32_t) n_common - n_swa)) keep = false;
-            }
-        }
-        if (!keep || !llama_memory_seq_rm(mem, 0, (llama_pos) n_common, -1)) {
-            llama_memory_clear(mem, true);  // e.g. SWA / recurrent memory cannot be partially removed
-            n_common = 0;
-        }
-        kv_tokens_.resize(n_common);
-    }
-    st.reused_tokens = (int32_t) n_common;
-
-    // ---- 3. Prefill ----
+    // ---- 2+3. KV-cache prefix reuse + prefill (2.2.17: pictures through mtmd) ----
     const auto t_prefill = Clock::now();
-    if (!decode_tokens(tokens, n_common, st)) return st;
+    if (vision) {
+        if (!prefill_media(prompt, *images, st)) return st;
+    } else {
+        if (!reuse_prefix(tokens, true, st)) return st;
+        if (!decode_tokens(tokens, (size_t) st.reused_tokens, st)) return st;
+    }
     st.prefill_us = us_since(t_prefill);
 
     // ---- 4. Sampler chain (penalties → top-k → top-p → min-p → temperature → dist) ----

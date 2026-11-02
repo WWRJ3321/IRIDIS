@@ -61,6 +61,13 @@ object LlamaNative {
         handle: Long, roles: Array<ByteArray>, contents: Array<ByteArray>,
         floats: FloatArray, ints: IntArray, sink: PieceSink?,
     ): String
+    /** 2.2.17 (mtmd): loads the vision projector for the loaded model (empty path = drop it); null = ok, else the reason. */
+    @JvmStatic external fun nativeLoadMmproj(handle: Long, pathUtf8: ByteArray, preferGpu: Boolean): String?
+    /** 2.2.17: [nativeGenerate] with picture files placed in front of message [imageMsg]. */
+    @JvmStatic external fun nativeGenerateVision(
+        handle: Long, roles: Array<ByteArray>, contents: Array<ByteArray>,
+        floats: FloatArray, ints: IntArray, images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?,
+    ): String
 }
 
 /** The native library is compiled for armv8.2-a+dotprod+i8mm+fp16; refuse to load it elsewhere. */

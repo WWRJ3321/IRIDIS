@@ -28,6 +28,8 @@ data class LoadConfig(
     val noVisual: Boolean = false,
     /** Resource tier resolved for this device: cores / priority are applied on the engine thread. */
     val resources: ResourcePlan? = null,
+    /** 2.2.17, GGUF (llama.cpp): absolute path of the vision projector to load with the model, or null. */
+    val mmprojPath: String? = null,
 )
 
 data class SamplingConfig(

@@ -45,6 +45,8 @@ data class ModelOverrides(
     val systemPrompt: String? = null,
     /** 2.2.0, GGUF only: "llama" / "geniex". 2.1.3: no longer chosen; old values are migrated ([com.iris.localai.engine.geniex.GgufEngineRule.migrate]). */
     val engine: String? = null,
+    /** 2.2.17, GGUF: vision projector file name in the model's folder; "" = 不使用; null = 自动配对. */
+    val mmproj: String? = null,
 ) {
     val isEmpty: Boolean get() = this == ModelOverrides()
 
@@ -68,7 +70,7 @@ data class ModelOverrides(
     )
 
     /** Keys whose change only takes effect after reloading the model. */
-    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine)
+    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj)
 }
 
 /** Global defaults + one model's overrides, fully resolved. */
@@ -96,6 +98,8 @@ data class EffectiveModelConfig(
     val systemPrompt: String,
     /** 2.2.0: engine for GGUF files ([com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA] / ENGINE_GENIEX). */
     val engine: String = com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
+    /** 2.2.17: [ModelOverrides.mmproj] as is (null = 自动). */
+    val mmproj: String? = null,
 ) {
     companion object {
         fun resolve(s: AppSettings, format: ModelFormat?, o: ModelOverrides?): EffectiveModelConfig {
@@ -125,6 +129,7 @@ data class EffectiveModelConfig(
                 engine = com.iris.localai.engine.geniex.GenieX.parseEngine(m.engine)
                     ?: com.iris.localai.engine.geniex.GenieX.parseEngine(s.ggufEngine)
                     ?: com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
+                mmproj = m.mmproj,
             )
         }
     }

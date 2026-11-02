@@ -46,6 +46,8 @@ import com.iris.localai.ui.components.SectionTitle
 import com.iris.localai.ui.components.SegmentedRow
 import com.iris.localai.ui.components.SettingsGroup
 import com.iris.localai.ui.components.SettingsRow
+import com.iris.localai.ui.components.CheckRow
+import com.iris.localai.ui.components.IrisDialog
 import com.iris.localai.ui.components.SheetHeader
 import com.iris.localai.ui.components.SliderRow
 import com.iris.localai.ui.components.SwitchRow
@@ -84,6 +86,14 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     fun f2(v: Float) = String.format(Locale.US, "%.2f", v)
     var editPrompt by remember { mutableStateOf(false) }
     var editSeed by remember { mutableStateOf(false) }
+    var pickMmproj by remember { mutableStateOf(false) }
+    // 2.2.17: projectors in the model's folder (GGUF vision through llama.cpp mtmd).
+    val mmprojSiblings = remember(model.path, pickMmproj) {
+        if (model.format != com.iris.localai.data.ModelFormat.GGUF) emptyList()
+        else java.io.File(model.path).parentFile?.list()?.toList().orEmpty()
+    }
+    val mmprojChoices = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.candidates(java.io.File(model.path).name, mmprojSiblings) }
+    val mmprojAuto = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, mmprojSiblings) }
     val c = Iris.colors
 
     IrisSheet(onDismiss = onDismiss) {
@@ -275,6 +285,18 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                         OvSwitch("mmap 加载", eff.useMmap, o.useMmap == null, subtitle = "按需分页读取权重，加载快、占用少",
                             onChange = { on -> set { it.copy(useMmap = on) } }, onReset = { set { it.copy(useMmap = null) } })
                     }
+                    if (model.format == com.iris.localai.data.ModelFormat.GGUF && mmprojChoices.isNotEmpty()) {
+                        Divider()
+                        SettingsRow(
+                            "视觉投影 (mmproj)",
+                            subtitle = when (o.mmproj) {
+                                null -> "自动：" + (mmprojAuto ?: "未配对（不识图）")
+                                com.iris.localai.engine.llama.MmprojPairing.OFF -> "不使用（不识图）"
+                                else -> o.mmproj
+                            } + "  · 重新加载后生效",
+                            onClick = { pickMmproj = true },
+                        )
+                    }
                     Divider()
                     OvSwitch("加载后预热", eff.warmup, o.warmup == null, subtitle = "加载完先跑 1 个 token，首条回复更快",
                         onChange = { on -> set { it.copy(warmup = on) } }, onReset = { set { it.copy(warmup = null) } })
@@ -337,6 +359,15 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             singleLine = false,
             allowEmpty = true,
         )
+    }
+    if (pickMmproj) {
+        IrisDialog(onDismiss = { pickMmproj = false }, title = "视觉投影 (mmproj)", confirmText = "完成", onConfirm = { pickMmproj = false }, dismissText = null) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                CheckRow("自动配对", o.mmproj == null, subtitle = mmprojAuto ?: "未找到匹配的文件") { set { it.copy(mmproj = null) } }
+                CheckRow("不使用", o.mmproj == com.iris.localai.engine.llama.MmprojPairing.OFF) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
+                mmprojChoices.forEach { f -> CheckRow(f, o.mmproj == f) { set { it.copy(mmproj = f) } } }
+            }
+        }
     }
     if (editSeed) {
         TextInputDialog(
