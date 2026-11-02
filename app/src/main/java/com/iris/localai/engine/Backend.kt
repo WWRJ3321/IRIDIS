@@ -116,7 +116,7 @@ object BackendCapabilities {
                     val npuReason = when {
                         env.npuSoc == null -> "本机芯片没有受支持的高通 NPU"
                         !NpuIds.socMatches(target, env.npuSoc) -> "模型为 ${target.uppercase()} 编译，本机是 ${env.npuSoc.uppercase()}"
-                        !env.npuRuntimeInstalled -> "需要先在 设置 › 模型与后端 下载 NPU 运行库"
+                        !env.npuRuntimeInstalled -> "需要先在 设置 › 模型与加载 下载 NPU 运行库"
                         else -> null
                     }
                     listOf(

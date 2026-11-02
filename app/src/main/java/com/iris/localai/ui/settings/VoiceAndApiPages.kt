@@ -225,7 +225,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
 
-                GroupFootnote("Matcha 声码器与 ZipVoice 从 GitHub 下载。")
+                GroupFootnote("和「模型与加载」里的下载源是同一个设置。Matcha 声码器与 ZipVoice 从 GitHub 下载。")
             }
         }
     }

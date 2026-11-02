@@ -144,6 +144,7 @@ class VoiceModelStore(private val context: Context) {
         if (isInstalled(pack)) PackState.Installed else PackState.NotInstalled
 
     suspend fun download(pack: VoicePack, source: DownloadSource) = withContext(Dispatchers.IO) {
+        this@VoiceModelStore.source = source
         val m = manifest(pack)
         val dir = dir(pack).apply { mkdirs() }
         val free = StatFs(dir.absolutePath).availableBytes
@@ -163,7 +164,7 @@ class VoiceModelStore(private val context: Context) {
                 val target = File(dir, entry.path)
                 if (target.exists() && target.length() == entry.size) continue
                 target.parentFile?.mkdirs()
-                val url = entry.url ?: "${source.baseUrl}/${m.repo}/resolve/${m.revision}/${encodePath(entry.path)}"
+                val url = entry.url ?: "${com.iris.localai.data.DownloadSources.HF}/${m.repo}/resolve/${m.revision}/${encodePath(entry.path)}"
                 val before = done - (HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L)
                 fetch(url, target, entry.size) { got ->
                     done = before + got
@@ -214,17 +215,14 @@ class VoiceModelStore(private val context: Context) {
 
     private fun publish(pack: VoicePack, s: PackState) = _states.update { it + (pack to s) }
 
+    /** 2.2.16: Hugging Face files go through the download sources (自动 / 魔搭 / hf-mirror / HF, falling through). */
+    @Volatile private var source: DownloadSource = DownloadSource.AUTO
+
     private suspend fun fetch(url: String, target: File, expected: Long, onBytes: (Long) -> Unit) {
-        var attempt = 0
-        while (true) {
-            try {
-                HttpDownload.fetchOnce(url, target, expected, onBytes)
-                return
-            } catch (e: IOException) {
-                if (++attempt >= 4) throw e
-                kotlinx.coroutines.delay(1500L * attempt)
-            }
-        }
+        com.iris.localai.data.DownloadSources.fetchAny(
+            com.iris.localai.data.DownloadSources.resolve(url, source), target, expected, onBytes,
+            fetch = { u, t, e, b -> HttpDownload.fetchOnce(u, t, e, b) }, attemptsPerSource = 3,
+        )
     }
 
     internal companion object {

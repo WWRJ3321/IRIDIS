@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
  *  - `llama_cpp`: GGUF files on the Hexagon NPU / Adreno GPU / CPU (Q4_0 is best on Hexagon);
  *  - `qairt`: Qualcomm AI Hub pre-compiled bundles (a folder: genie_config.json + *.bin + tokenizer.json), NPU only.
  * The APK carries only the SDK's Kotlin classes; its native libraries are an optional download
- * (设置 › 模型与后端), like the LiteRT NPU runtime. Everything in this file is pure and unit-tested.
+ * (设置 › 模型与加载), like the LiteRT NPU runtime. Everything in this file is pure and unit-tested.
  */
 object GenieX {
     const val VERSION = "0.8.0"
@@ -40,7 +40,7 @@ object GenieX {
     const val RUNTIME_QAIRT = "qairt"
 
     /** Shown when the runtime is not installed. */
-    const val NEED_RUNTIME = "需要先在 设置 › 模型与后端 下载 GenieX 运行库"
+    const val NEED_RUNTIME = "需要先在 设置 › 模型与加载 下载 GenieX 运行库"
     const val NOT_IN_BUILD = "此版本不含 GenieX（仅 full 版本）"
 
     /**
@@ -71,7 +71,7 @@ object GenieX {
             "parameter not supported" in m -> "参数不受该运行时支持（QAIRT 包的上下文长度在编译时固定）"
             "file not found" in m -> "找不到模型文件（QAIRT 包需要 genie_config.json、tokenizer.json 和全部 .bin；GGUF 需可读）"
             "unknown device" in m -> "不认识的计算单元"
-            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> "GenieX 插件未加载，可在 设置 › 模型与后端 修复运行库"
+            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> "GenieX 插件未加载，可在 设置 › 模型与加载 修复运行库"
             "memory allocation" in m -> "内存不足"
             "model loading failed" in m || "invalid model" in m -> "模型加载失败（格式不受支持或文件损坏）"
             else -> null
@@ -342,7 +342,7 @@ object GenieXRules {
         null -> GenieX.NOT_IN_BUILD
         is NpuState.Unsupported -> state.reason
         NpuState.Installed -> null
-        is NpuState.NeedsRepair -> "GenieX 运行库不完整（${state.reason}），请在 设置 › 模型与后端 修复"
+        is NpuState.NeedsRepair -> "GenieX 运行库不完整（${state.reason}），请在 设置 › 模型与加载 修复"
         is NpuState.Downloading -> "GenieX 运行库正在下载"
         NpuState.NotInstalled, is NpuState.Failed -> GenieX.NEED_RUNTIME
     }

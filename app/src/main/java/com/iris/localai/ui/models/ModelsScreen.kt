@@ -1,5 +1,7 @@
 package com.iris.localai.ui.models
 
+import kotlinx.coroutines.flow.first
+import com.iris.localai.ui.settings.ModelLoadSettings
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,6 +49,7 @@ import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -108,6 +111,24 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     fun engineTag(m: LocalModel): String? = runCatching { c.engine.geniexTag(m) }.getOrNull()
     val modelConfigs = c.modelConfigs.configs
     val settingsFlow = c.settings.settings
+    /** 2.2.16 (merged 模型与加载 page): load telemetry, 资源档位, 改用 CPU — formerly the 档位与加载 sheet. */
+    val loadStats = c.engine.loadStats.records
+    fun preferredBackendLabel(m: LocalModel): String = runCatching { c.engine.preferredBackend(m).label }.getOrDefault("")
+    fun setResourceTier(tier: Int) {
+        val t = tier.coerceIn(0, com.iris.localai.engine.ResourceTier.entries.size - 1)
+        if (t == c.settings.current.resourceTier) return
+        c.settings.update { it.copy(resourceTier = t) }
+        c.engine.applyTierLive(com.iris.localai.engine.ResourceTier.of(t))
+    }
+    /** 1.10.3 「改用 CPU」: the model's own backend becomes CPU; reloads now when it is (being) loaded elsewhere. */
+    fun switchModelToCpu(m: LocalModel) {
+        c.modelConfigs.update(m.id) { it.copy(backend = com.iris.localai.engine.Backend.CPU.name) }
+        viewModelScope.launch {
+            val end = c.engine.state.first { it !is EngineState.Loading }
+            if (end is EngineState.Ready && end.model.path == m.path && end.details.activeBackend != com.iris.localai.engine.Backend.CPU) c.engine.reload()
+            else if (end is EngineState.Failed && end.model?.path == m.path) c.engine.load(m)
+        }
+    }
     /** Current models folder (2.1.0: Download/IRIDIS/models with 全部文件访问) — re-read on resume. */
     data class Folder(val path: String, val shared: Boolean)
     private val _folder = MutableStateFlow<Folder?>(null)
@@ -185,12 +206,111 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** 2.2.16 「换源重试」 for the failed model download. */
+    fun retryOtherSource() = c.mnnHub.retryOtherSource(c.scope) { m ->
+        if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+    }
+    fun setDownloadSource(s: com.iris.localai.data.DownloadSource) = c.settings.update { it.copy(downloadSource = s) }
+
+    // ---- 2.2.16 「在线搜索模型」 (GGUF on HF / 魔搭) ----
+    data class SearchUi(
+        val mode: com.iris.localai.data.GgufSearch.Browse = com.iris.localai.data.GgufSearch.Browse.HOT,
+        val query: String = "",
+        val loading: Boolean = false,
+        val hits: List<com.iris.localai.data.GgufSearch.RepoHit> = emptyList(),
+        val errors: List<String> = emptyList(),
+        val searched: Boolean = false,
+        /** Paging: HF cursor ("" first page, null no more), 魔搭 page (null no more). */
+        val hfNext: String? = "",
+        val msNext: Int? = 1,
+        val repo: com.iris.localai.data.GgufSearch.RepoHit? = null,
+        val files: com.iris.localai.data.GgufSearch.Files? = null,
+        val filesLoading: Boolean = false,
+        val filesError: String? = null,
+    ) {
+        val hasMore: Boolean get() = hfNext != null || msNext != null
+    }
+    private val _search = MutableStateFlow(SearchUi())
+    val search = _search.asStateFlow()
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    /** Opens the sheet: the 热门 list unless something is already shown. */
+    fun openBrowse() { if (_search.value.hits.isEmpty() && !_search.value.loading) browse(_search.value.mode, _search.value.query) }
+
+    fun searchModels(q: String) = browse(_search.value.mode.takeIf { it != com.iris.localai.data.GgufSearch.Browse.NEW } ?: com.iris.localai.data.GgufSearch.Browse.HOT, q.trim())
+
+    /** First page of [mode] (keyword [q] optional). */
+    fun browse(mode: com.iris.localai.data.GgufSearch.Browse, q: String = _search.value.query) {
+        searchJob?.cancel()
+        _search.value = SearchUi(mode = mode, query = q, loading = true)
+        searchJob = viewModelScope.launch { fetchMore() }
+    }
+
+    /** Infinite scroll: the next page (适合本机 fetches up to 3 pages until a few fit). */
+    fun loadMore() {
+        val st = _search.value
+        if (st.loading || !st.hasMore || st.repo != null) return
+        _search.value = st.copy(loading = true)
+        searchJob = viewModelScope.launch { fetchMore() }
+    }
+
+    private suspend fun fetchMore() {
+        var st = _search.value
+        val ram = totalRam()
+        var added = 0
+        var rounds = 0
+        do {
+            val p = com.iris.localai.data.GgufSearch.browse(st.mode, st.query, c.settings.current.downloadSource, st.hfNext, st.msNext, ram)
+            val seen = st.hits.map { it.site to it.id }.toSet()
+            val new = p.hits.filter { (it.site to it.id) !in seen }
+            added += new.size
+            st = st.copy(hits = st.hits + new, errors = p.errors, hfNext = p.hfNext, msNext = p.msNext)
+            rounds++
+        } while (st.mode == com.iris.localai.data.GgufSearch.Browse.FIT && added < 8 && st.hasMore && rounds < 3 && p.errors.isEmpty())
+        _search.value = st.copy(loading = false, searched = true)
+    }
+
+    fun totalRam(): Long = runCatching {
+        val am = getApplication<Application>().getSystemService(android.app.ActivityManager::class.java)
+        android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem
+    }.getOrDefault(0L)
+
+    fun openRepo(hit: com.iris.localai.data.GgufSearch.RepoHit) {
+        searchJob?.cancel()
+        _search.value = _search.value.copy(repo = hit, files = null, filesLoading = true, filesError = null)
+        searchJob = viewModelScope.launch {
+            val r = runCatching { com.iris.localai.data.GgufSearch.files(hit, c.settings.current.downloadSource) }
+            _search.value = _search.value.copy(
+                filesLoading = false, files = r.getOrNull(),
+                filesError = r.exceptionOrNull()?.let { "读取文件列表失败：" + com.iris.localai.data.DownloadSources.describe(it) },
+            )
+        }
+    }
+
+    fun closeRepo() { searchJob?.cancel(); _search.value = _search.value.copy(repo = null, files = null, filesLoading = false, filesError = null) }
+
+    /** Free RAM now (for the 内存够用 / 偏紧 hint, same rule as the load preflight). */
+    fun availRam(): Long = runCatching {
+        val am = getApplication<Application>().getSystemService(android.app.ActivityManager::class.java)
+        android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+    }.getOrDefault(0L)
+
+    fun downloadGguf(choice: com.iris.localai.data.GgufSearch.Choice, projector: com.iris.localai.data.GgufSearch.GgufFile?) {
+        val hit = _search.value.repo ?: return
+        val mainLocal = com.iris.localai.data.ModelFiles.sanitizeFileName(choice.main.name)
+        val files = choice.parts.map { Triple(it.path, it.size, com.iris.localai.data.ModelFiles.sanitizeFileName(it.name)) } +
+            listOfNotNull(projector?.let { Triple(it.path, it.size, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it.name)) })
+        c.mnnHub.startGguf(c.scope, hit, files, c.settings.current.downloadSource) { m ->
+            if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+        }
+    }
+
     fun cancelDownload() = c.mnnHub.cancel()
     fun clearDownloadError() = c.mnnHub.clearError()
 }
 
 @Composable
-fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
+fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, vm: ModelsViewModel = viewModel()) {
     val c = Iris.colors
     val models by vm.models.collectAsStateWithLifecycle()
     val engine by vm.engine.collectAsStateWithLifecycle()
@@ -198,6 +318,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
     val modelConfigs by vm.modelConfigs.collectAsStateWithLifecycle()
     val appSettings by vm.settingsFlow.collectAsStateWithLifecycle()
     val import by vm.import.collectAsStateWithLifecycle()
+    val loadRecords by vm.loadStats.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf<LocalModel?>(null) }
     var configure by remember { mutableStateOf<LocalModel?>(null) }
     configure?.let { m -> ModelConfigSheet(m, onDismiss = { configure = null }) }
@@ -207,6 +328,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::importFolder) }
     val hub by vm.hub.collectAsStateWithLifecycle()
     var showDownload by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
     val folder by vm.folder.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -221,7 +343,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
     }
 
     SubpageScaffold(
-        title = "模型管理",
+        title = ModelsText.TITLE,
         onBack = onBack,
         actions = { PressableIcon(Icons.Outlined.Refresh, "刷新") { vm.refresh() } },
     ) {
@@ -234,6 +356,15 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
             contentPadding = PaddingValues(bottom = IrisDimens.space32 + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
         ) {
             item(key = "large-title", contentType = "largeTitle") { LargeTitle() }
+            // 2.2.16: 资源档位 lives on this page now (was the separate 档位与加载 sheet)
+            item(key = "tier", contentType = "tier") {
+                com.iris.localai.ui.components.SettingsGroup {
+                    com.iris.localai.ui.components.SegmentedRow(
+                        "资源档位", com.iris.localai.ui.chat.SpeedLevel.labels, appSettings.resourceTier, vm::setResourceTier,
+                        subtitle = com.iris.localai.engine.ResourceTier.of(appSettings.resourceTier).hint,
+                    )
+                }
+            }
             item(key = "import", contentType = "import") {
                 Column(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)) {
                     IrisButton(
@@ -258,7 +389,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                             Column(Modifier.padding(top = IrisDimens.space16)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        "正在下载 ${hub.repoId} · ${hub.file}",
+                                        "正在下载 ${hub.repoId} · ${hub.file}" + (if (hub.source.isNotEmpty()) " · ${hub.source}" else ""),
                                         style = IrisType.labelSmall, color = c.textSecondary,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                     )
@@ -269,10 +400,18 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                                 }
                                 Spacer(Modifier.height(IrisDimens.space8))
                                 IrisProgressBar(progress = hub.progress.takeIf { hub.totalBytes > 0 })
+                                hub.notice?.let { Text(it, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4)) }
                                 IrisButton("取消下载", vm::cancelDownload, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
                             }
                         }
-                        hub.error?.let { Text(it, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8)) }
+                        hub.error?.let { err ->
+                            Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8))
+                            // 2.2.16: per-download 换源重试 (resumes what is already downloaded) + import as the way out
+                            Row(Modifier.padding(top = IrisDimens.space4), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                                IrisButton(SourceText.RETRY_OTHER, vm::retryOtherSource, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Refresh)
+                                IrisButton(SourceText.IMPORT, { picker.launch(arrayOf("*/*")) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.Add)
+                            }
+                        }
                     }
                     AnimatedVisibility(
                         visible = import.active,
@@ -388,6 +527,18 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                             onSettings = { configure = m },
                             dragHandle = handle,
                         )
+                        // 1.10.2 / 1.10.3 (from the old 档位与加载 sheet): last load time + 「改用 CPU」 hint
+                        com.iris.localai.engine.LoadTelemetry.latest(loadRecords.values, m.id)?.let(com.iris.localai.engine.LoadTelemetry::summary)?.let { t ->
+                            Text(t, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 48.dp, end = IrisDimens.space16, bottom = IrisDimens.space6))
+                        }
+                        if (com.iris.localai.engine.CpuFasterHint.shouldShow(loadRecords.values, m.id, vm.preferredBackendLabel(m))) {
+                            Row(Modifier.fillMaxWidth().padding(start = 48.dp, end = IrisDimens.space8), verticalAlignment = Alignment.CenterVertically) {
+                                Text(com.iris.localai.engine.CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                IrisButton(com.iris.localai.engine.CpuFasterHint.ACTION, { vm.switchModelToCpu(m) }, style = IrisButtonStyle.Text, compact = true, enabled = busy == null)
+                            }
+                        }
                     }
                 }
             }
@@ -409,11 +560,24 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = viewModel()) {
                 }
                 GroupFootnote("可在「下载模型」里获取，或把模型文件拷进上面的文件夹。")
             }
+            // 2.2.16: the former 设置 › 模型与加载 (加载、下载源、默认后端、NPU、加载选项) on the same page
+            if (settingsVm != null) item(key = "load-settings", contentType = "loadSettings") {
+                Column { ModelLoadSettings(settingsVm) }
+            }
         }
     }
 
     if (showDownload) {
-        MnnDownloadDialog(onDismiss = { showDownload = false }, onDownload = { vm.downloadMnn(it) }, onDownloadImage = { vm.downloadImageModel(it) })
+        MnnDownloadDialog(
+            onDismiss = { showDownload = false }, onDownload = { vm.downloadMnn(it) }, onDownloadImage = { vm.downloadImageModel(it) },
+            source = appSettings.downloadSource, onSource = vm::setDownloadSource,
+            onImport = { showDownload = false; picker.launch(arrayOf("*/*")) },
+            onImportFolder = { showDownload = false; folderPicker.launch(null) },
+            onSearch = { showDownload = false; showSearch = true },
+        )
+    }
+    if (showSearch) {
+        GgufSearchSheet(vm, hubActive = hub.active, onDismiss = { showSearch = false })
     }
 
     confirmDelete?.let { m ->
@@ -433,8 +597,15 @@ internal fun ModelDeleteDialog(m: LocalModel, onConfirm: () -> Unit, onDismiss: 
     )
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Unit, onDownloadImage: (String) -> Unit = {}) {
+private fun MnnDownloadDialog(
+    onDismiss: () -> Unit, onDownload: (String) -> Unit, onDownloadImage: (String) -> Unit = {},
+    source: com.iris.localai.data.DownloadSource = com.iris.localai.data.DownloadSource.AUTO,
+    onSource: (com.iris.localai.data.DownloadSource) -> Unit = {},
+    onImport: () -> Unit = {}, onImportFolder: () -> Unit = {},
+    onSearch: () -> Unit = {},
+) {
     val c = Iris.colors
     var text by remember { mutableStateOf(com.iris.localai.data.MnnHub.RECOMMENDED.first().first) }
     val valid = com.iris.localai.data.MnnModels.parseRepoId(text) != null
@@ -444,7 +615,23 @@ private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Uni
         onConfirm = { onDownload(text.trim()); onDismiss() },
     ) {
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-            Text("Hugging Face 仓库名，或点选推荐：", style = IrisType.secondary, color = c.textSecondary)
+            // 2.2.16: 下载源, visible right here (国内选 自动 或 魔搭)
+            Text(SourceText.TITLE, style = IrisType.labelSmall, color = c.textTertiary)
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+                verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+            ) {
+                com.iris.localai.data.DownloadSource.entries.forEach { src ->
+                    androidx.compose.material3.FilterChip(
+                        selected = source == src, onClick = { onSource(src) },
+                        label = { Text(src.short, style = IrisType.labelSmall) },
+                    )
+                }
+            }
+            Text(SourceText.hint(source), style = IrisType.caption, color = c.textTertiary)
+            // 2.2.16: search any GGUF on HuggingFace / 魔搭
+            IrisButton(SearchText.OPEN, onSearch, style = IrisButtonStyle.Tonal, icon = Icons.Outlined.Search, modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space4))
+            Text("Hugging Face 仓库名，或点选推荐：", style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4))
             androidx.compose.material3.OutlinedTextField(
                 text, { text = it }, singleLine = true,
                 textStyle = IrisType.body.copy(color = c.text),
@@ -470,7 +657,13 @@ private fun MnnDownloadDialog(onDismiss: () -> Unit, onDownload: (String) -> Uni
                     }
                 }
             }
-            Text("镜像失败时自动换源。", style = IrisType.caption, color = c.textTertiary)
+            Text(SourceText.AUTO_SWITCH, style = IrisType.caption, color = c.textTertiary)
+            // 2.2.16: models obtained elsewhere (网盘、电脑) → the existing import, reachable from here
+            Text(SourceText.IMPORT_HINT, style = IrisType.labelSmall, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
+            Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                IrisButton(SourceText.IMPORT, onImport, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add)
+                IrisButton("导入文件夹", onImportFolder, style = IrisButtonStyle.Text, compact = true, icon = com.iris.localai.ui.icons.IrisIcons.Folder)
+            }
         }
     }
 }
@@ -568,4 +761,25 @@ fun openAllFilesAccess(context: android.content.Context) {
             ),
         )
     }.onFailure { runCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
+}
+
+/** 2.2.16 下载源 texts (unit-tested). */
+object SourceText {
+    const val TITLE = "下载源"
+    const val RETRY_OTHER = "换源重试"
+    const val IMPORT = "从文件导入"
+    const val IMPORT_HINT = "已经有模型文件（网盘、电脑拷来的）？"
+    const val AUTO_SWITCH = "某个源失败或 20 秒没有速度时，会自动换下一个源并接着下载。"
+    const val FOOTNOTE = "自动：先测速，优先魔搭 ModelScope（有官方副本的模型），其次 hf-mirror.com，最后 HuggingFace 官方；失败会自动换源续传。国内网络建议选「自动」或「魔搭」。"
+    fun hint(s: com.iris.localai.data.DownloadSource): String = when (s) {
+        com.iris.localai.data.DownloadSource.AUTO -> "自动测速选最快的源，国内一般会用魔搭或 hf-mirror"
+        com.iris.localai.data.DownloadSource.MODELSCOPE -> "阿里魔搭，国内最快；没有副本的模型会改用 hf-mirror"
+        com.iris.localai.data.DownloadSource.HF_MIRROR -> "HuggingFace 的国内镜像"
+        com.iris.localai.data.DownloadSource.HUGGING_FACE -> "官方源，国内通常连不上"
+    }
+}
+
+/** 2.2.16 merged page texts (unit-tested). */
+object ModelsText {
+    const val TITLE = "模型与加载"
 }

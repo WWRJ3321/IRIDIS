@@ -287,7 +287,7 @@ private fun ModelChip(
         } else when (dl) {
             is ImageDl.Downloading, is ImageDl.Extracting -> {
                 val frac = if (dl is ImageDl.Downloading) dl.fraction else (dl as ImageDl.Extracting).fraction
-                val label = if (dl is ImageDl.Downloading) "${Format.bytes(dl.done)} / ${Format.bytes(dl.total)}"
+                val label = if (dl is ImageDl.Downloading) "${Format.bytes(dl.done)} / ${Format.bytes(dl.total)}" + (if (dl.source.isNotEmpty()) " · ${dl.source}" else "")
                     else "${ImageGenText.EXTRACTING} ${(frac * 100).toInt()}%"
                 IrisProgressBar(frac, Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +296,7 @@ private fun ModelChip(
                 }
             }
             else -> {
-                if (dl is ImageDl.Failed) Text(dl.message, style = IrisType.caption, color = c.danger, maxLines = 3)
+                if (dl is ImageDl.Failed) Text(dl.message, style = IrisType.caption, color = c.danger, maxLines = 5)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (downloaded) ImageGenText.DOWNLOADED else ImageGenText.NOT_DOWNLOADED, style = IrisType.caption,
                         color = if (downloaded) c.success else c.textTertiary, modifier = Modifier.weight(1f))

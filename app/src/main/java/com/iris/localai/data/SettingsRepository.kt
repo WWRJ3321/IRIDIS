@@ -46,7 +46,7 @@ class SettingsRepository(context: Context) {
         )
     }
 
-    /** 1.7.8: 「恢复默认」 on 设置 › 模型与后端 — default backends and load options. */
+    /** 1.7.8: 「恢复默认」 on 设置 › 模型与加载 — default backends and load options. */
     fun resetLoadOptions() = update {
         val d = AppSettings()
         it.copy(
@@ -162,6 +162,10 @@ fun AppSettings.migrated(): AppSettings {
         }
         if (s.mnnBackend == 1) m.putIfAbsent(ModelFormat.MNN.name, "GPU")
         s = s.copy(defaultBackends = m, backendsMigrated = true)
+    }
+    // 2.2.16: hf-mirror was only the default; 自动 now picks 魔搭 / hf-mirror / HF. A chosen HF 官方 stays.
+    if (!s.downloadSourceMigrated) {
+        s = s.copy(downloadSource = if (s.downloadSource == DownloadSource.HF_MIRROR) DownloadSource.AUTO else s.downloadSource, downloadSourceMigrated = true)
     }
     if (s.kvCacheType < 0) s = s.copy(kvCacheType = if (s.kvQuant) 1 else 0)
     if (s.visualEffects < 0) s = s.copy(visualEffects = if (s.glassEffects) 1 else 0)

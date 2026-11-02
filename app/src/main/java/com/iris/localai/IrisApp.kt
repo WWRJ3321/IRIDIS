@@ -100,6 +100,9 @@ class IrisApp : Application() {
             }
             registerReceiver(r, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))?.let { r.onReceive(this, it) }
         }
+        // 2.2.16: remember the download source that last worked (自动 tries it first).
+        com.iris.localai.data.DownloadSources.lastGood = com.iris.localai.data.DownloadSource.byName(container.settings.current.lastGoodSource)
+        com.iris.localai.data.DownloadSources.onLastGood = { src -> container.settings.update { it.copy(lastGoodSource = src.name) } }
         container.scope.launch {
             container.settings.settings.collect {
                 com.iris.localai.engine.ThermalGovernor.setLimit(it.thermalLimitC)

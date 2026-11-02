@@ -1,6 +1,7 @@
 package com.iris.localai.imagegen
 
 import com.iris.localai.data.DownloadSource
+import com.iris.localai.data.DownloadSources
 import com.iris.localai.util.HttpDownload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +22,7 @@ import java.util.zip.ZipFile
 
 /** Download state of one 生图 model (absent from the map = idle). */
 sealed interface ImageDl {
-    data class Downloading(val done: Long, val total: Long, val file: String) : ImageDl {
+    data class Downloading(val done: Long, val total: Long, val file: String, val source: String = "") : ImageDl {
         val fraction: Float get() = if (total > 0) (done.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f
     }
     /** 解压中: [done] / [total] uncompressed bytes. */
@@ -136,14 +137,12 @@ object ZipSlice {
 
 /** Pure download rules (unit-tested). */
 object ImageDownloads {
-    private const val HF = "https://huggingface.co"
 
-    /** Hosts to try for [url]: the chosen source first, then the other one; non-HF urls as they are. */
+    /** Urls to try for [url] before probing (2.2.16: 魔搭 when mapped → hf-mirror → HF); non-HF urls as they are. */
     fun urlsFor(url: String, source: DownloadSource): List<String> {
-        if (!url.startsWith("$HF/")) return listOf(url)
-        val rest = url.removePrefix(HF)
-        val bases = listOf(source.baseUrl) + DownloadSource.entries.map { it.baseUrl }.filter { it != source.baseUrl }
-        return bases.map { it + rest }
+        val ref = DownloadSources.parseHf(url)
+        val order = DownloadSources.order(source, ref != null && DownloadSources.modelScopeFor(ref.repo) != null)
+        return DownloadSources.candidates(url, order).map { it.url }
     }
 
     /** Bytes already on disk for [f] (complete file, its `.part`, or done because the archive is unpacked). */
@@ -177,6 +176,9 @@ object ImageDownloads {
         fetch: Fetcher,
         publish: (ImageDl) -> Unit,
         retryDelayMs: Long = 1500,
+        demote: DownloadSource? = null,
+        probe: (String) -> Long? = DownloadSources::probeOnce,
+        onSource: (DownloadSource?) -> Unit = {},
     ) {
         if (model.files.isEmpty()) throw IOException("该模型暂无可下载文件")
         val dir = ImageGenFiles.modelDir(root, model).apply { mkdirs() }
@@ -195,10 +197,11 @@ object ImageDownloads {
             if (!(target.isFile && target.length() == f.size)) {
                 val name = f.path.substringAfterLast('/')
                 val before = done - have(root, model, f)
-                fetchWithRetry(urlsFor(f.fetchUrl, source), target, f.size, retryDelayMs, { got ->
+                var via = ""
+                DownloadSources.fetchAny(DownloadSources.resolve(f.fetchUrl, source, demote, probe), target, f.size, { got ->
                     done = before + got
-                    publish(ImageDl.Downloading(done, total, name))
-                }, fetch)
+                    publish(ImageDl.Downloading(done, total, name, via))
+                }, fetch, onSource = { c -> via = c.source?.short ?: ""; onSource(c.source) }, retryDelayMs = retryDelayMs)
                 done = before + f.size
             }
             if (f.isArchive) {
@@ -213,19 +216,6 @@ object ImageDownloads {
         File(dir, ".part").takeIf { it.isDirectory && it.list().isNullOrEmpty() }?.delete()
     }
 
-    /** 3 attempts per host, then the next host. */
-    internal suspend fun fetchWithRetry(urls: List<String>, target: File, size: Long, retryDelayMs: Long, onBytes: (Long) -> Unit, fetch: Fetcher) {
-        var last: IOException? = null
-        for (u in urls) {
-            repeat(3) { attempt ->
-                try { fetch(u, target, size, onBytes); return } catch (e: IOException) {
-                    last = e
-                    if (attempt < 2) delay(retryDelayMs * (attempt + 1))
-                }
-            }
-        }
-        throw last ?: IOException("下载失败")
-    }
 
     /** Removes the model folder from every root. */
     fun delete(roots: List<File>, model: ImageModel): Boolean =
@@ -243,11 +233,14 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
 
     fun isActive(id: String): Boolean = synchronized(jobs) { jobs[id]?.isActive == true }
 
-    fun start(model: ImageModel, root: File, source: DownloadSource, onDone: () -> Unit = {}): Job? = synchronized(jobs) {
+    /** Source each model's download was last using (换源重试 moves it to the end). */
+    private val lastSource = java.util.concurrent.ConcurrentHashMap<String, DownloadSource>()
+
+    fun start(model: ImageModel, root: File, source: DownloadSource, demote: DownloadSource? = null, onDone: () -> Unit = {}): Job? = synchronized(jobs) {
         if (jobs[model.id]?.isActive == true) return null
         val job = scope.launch(Dispatchers.IO) {
             try {
-                downloadInto(root, model, source)
+                downloadInto(root, model, source, demote)
                 _states.update { it - model.id }
                 onDone()
             } catch (e: CancellationException) {
@@ -261,10 +254,14 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
         job
     }
 
-    private suspend fun downloadInto(root: File, model: ImageModel, source: DownloadSource) {
+    /** 2.2.16 「换源重试」: the failed download again with the source it was using moved last. */
+    fun retryOtherSource(model: ImageModel, root: File, source: DownloadSource, onDone: () -> Unit = {}): Job? =
+        start(model, root, source, lastSource[model.id] ?: DownloadSource.HF_MIRROR, onDone)
+
+    private suspend fun downloadInto(root: File, model: ImageModel, source: DownloadSource, demote: DownloadSource?) {
         val publish: (ImageDl) -> Unit = { s -> _states.update { it + (model.id to s) } }
         if (model.files.isEmpty()) throw IOException("该模型暂无可下载文件")
-        ImageDownloads.download(root, model, source, fetch, publish)
+        ImageDownloads.download(root, model, source, fetch, publish, demote = demote, onSource = { s -> if (s != null) lastSource[model.id] = s })
     }
 
     fun cancel(id: String) {

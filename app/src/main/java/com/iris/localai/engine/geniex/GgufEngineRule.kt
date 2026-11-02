@@ -13,7 +13,7 @@ import com.iris.localai.engine.BackendOption
  */
 object GgufEngineRule {
     /** Short reason on the greyed-out NPU option when the GenieX runtime is missing. */
-    const val NEED_GENIEX = "需先在 设置 › 模型与后端 下载 GenieX"
+    const val NEED_GENIEX = "需先在 设置 › 模型与加载 下载 GenieX"
 
     /** The engine that runs a GGUF model on [backend]. */
     fun engineFor(backend: Backend, geniexReady: Boolean): String =

@@ -392,8 +392,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     // ------------------------------------------------------------------ models
 
-    /** 1.10.2: load telemetry for the model sheet. */
-    val loadStats = c.engine.loadStats.records
     /** 2.1.7: the load started from this screen (picker / logo), cancellable by 「取消」. */
     private var loadJob: Job? = null
     fun loadModel(model: LocalModel): Job = viewModelScope.launch {
@@ -1609,19 +1607,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         }
     }
 
-    /**
-     * 1.10.3: 「改用 CPU」 on the model sheet's [com.iris.localai.engine.CpuFasterHint]: the model's own
-     * backend becomes CPU (a real user choice). Loading it now → the same flow as the slow-load card;
-     * loaded on another backend → reload on the CPU; not loaded → takes effect on the next load.
-     */
-    fun switchModelToCpu(m: LocalModel) {
-        val st = c.engine.state.value
-        if (st is EngineState.Loading && st.model.path == m.path) { switchLoadingModelToCpu(); return }
-        c.modelConfigs.update(m.id) { it.copy(backend = com.iris.localai.engine.Backend.CPU.name) }
-        if (st is EngineState.Ready && st.model.path == m.path && st.details.activeBackend != com.iris.localai.engine.Backend.CPU) {
-            viewModelScope.launch { c.engine.reload() }
-        }
-    }
 
     private fun agentPreview(tool: com.iris.localai.agent.AgentTool, call: com.iris.localai.agent.ToolCall): String {
         val a = call.args

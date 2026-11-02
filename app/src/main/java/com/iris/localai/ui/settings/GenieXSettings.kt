@@ -30,7 +30,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
 
 /**
- * 2.2.0, 设置 › 模型与后端 › GenieX (full flavour): the downloadable runtime.
+ * 2.2.0, 设置 › 模型与加载 › GenieX (full flavour): the downloadable runtime.
  * 2.1.3: the global GGUF engine switch is gone — a GGUF model on the NPU runs on GenieX, on GPU / CPU on llama.cpp.
  */
 @Composable

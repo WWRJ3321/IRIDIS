@@ -230,7 +230,10 @@ data class AppSettings(
     val ttsSpeed: Float = 1.0f,
     /** Read assistant replies aloud in normal chat (voice mode always speaks). */
     val autoSpeak: Boolean = false,
-    val downloadSource: DownloadSource = DownloadSource.HF_MIRROR,
+    val downloadSource: DownloadSource = DownloadSource.AUTO,
+    /** 2.2.16: old default HF_MIRROR → 自动 once; [lastGoodSource] = DownloadSource name that last worked. */
+    val downloadSourceMigrated: Boolean = false,
+    val lastGoodSource: String = "",
     /** Cloned voice (ZipVoice) used for voice chat and read-aloud; "" = the fixed voice of [ttsPack]. */
     val cloneVoiceId: String = "",
     /** 0 = 快 (few ZipVoice steps), 1 = 像 (more steps: closer to the reference, slower to start). */
@@ -363,11 +366,6 @@ enum class ContextStrategy(val label: String, val hint: String) {
     }
 }
 
-@Serializable
-enum class DownloadSource(val label: String, val baseUrl: String) {
-    HF_MIRROR("国内镜像 hf-mirror.com", "https://hf-mirror.com"),
-    HUGGING_FACE("Hugging Face 官方", "https://huggingface.co"),
-}
 
 object ModelNames {
     private val QUANT = Regex(

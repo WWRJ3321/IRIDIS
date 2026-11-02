@@ -350,12 +350,12 @@ fun StoragePage(
                         )
                     }
                 }
-                if (g.entries.isEmpty()) SettingsRow("还没有模型", subtitle = "在模型管理中下载或导入")
+                if (g.entries.isEmpty()) SettingsRow("还没有模型", subtitle = "在「模型与加载」中下载或导入")
                 Divider()
-                SettingsRow("模型管理", subtitle = "下载、导入、卸载模型", onClick = onModels, trailing = { Chevron() })
+                SettingsRow("模型与加载", subtitle = "下载、导入、卸载模型", onClick = onModels, trailing = { Chevron() })
                 ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
-            GroupFootnote("正在使用的模型不能在这里删除，请先在模型管理中卸载。")
+            GroupFootnote("正在使用的模型不能在这里删除，请先在「模型与加载」中卸载。")
             folder?.let { GroupFootnote(it.path, monospace = true) }
 
             // ---- 模型缓存 ----
@@ -366,7 +366,7 @@ fun StoragePage(
                         e.id == Ids.CACHE_ORPHAN -> ActionRow(e, "清除", enabled = !anyLoading, detail = "模型已删除，缓存不再使用") { pending = StoragePending.OrphanCaches }
                         e.id == Ids.CACHE_OPENCL -> ActionRow(e, "清除", enabled = !anyLoading, detail = "llama.cpp OpenCL 编译结果；清除后下次 GPU 加载重新编译") { storage.clearOpenCl() }
                         e.id == Ids.CACHE_NPU -> SettingsRow(
-                            e.label, subtitle = "${sizeLine(e)} · 在「模型与后端」中管理",
+                            e.label, subtitle = "${sizeLine(e)} · 在「模型与加载」中管理",
                             onClick = { onOpen(SettingsPage.MODEL_BACKEND) }, trailing = { Chevron() },
                         )
                         else -> {

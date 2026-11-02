@@ -152,7 +152,6 @@ fun ChatScreen(
     val settings by vm.settings.collectAsStateWithLifecycle()
     val guiSetup by vm.guiSetup.collectAsStateWithLifecycle()
     /** 1.10.2: last load per model / backend (model sheet: 「上次加载 N 秒 · 已用缓存」). */
-    val loadRecords by vm.loadStats.collectAsStateWithLifecycle()
     val tierApply by vm.tierApply.collectAsStateWithLifecycle()
     val speakingId by vm.speakingMessageId.collectAsStateWithLifecycle()
     // Read only inside the streaming message (and the follow loop), never here.
@@ -206,12 +205,10 @@ fun ChatScreen(
     ) { addPicked(it) }
     /** 1.10.6: 「查看提示内容」 text (null = closed). */
     var promptView by remember { mutableStateOf<String?>(null) }
-    var showPicker by rememberSaveable { mutableStateOf(false) }
     // 2.2.7: the model pill morphs into the model panel (container transform).
     var modelMenu by remember { mutableStateOf(false) }
     var pillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     val modelMorph = remember { Animatable(0f) }
-    var configureModel by remember { mutableStateOf<com.iris.localai.data.LocalModel?>(null) }
     var showContext by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val inputFocus = remember { FocusRequester() }
@@ -687,7 +684,6 @@ fun ChatScreen(
                         val locked = ui.isGenerating || backgroundRunId != null
                         if (!locked && m.path != current) vm.loadModel(m)
                     },
-                    onTiers = { modelMenu = false; showPicker = true },
                     onManage = { modelMenu = false; onOpenModels() },
                     // 2.2.9: free the model's memory; disabled while a reply / background run is going.
                     unloadEnabled = !(ui.isGenerating || backgroundRunId != null),
@@ -697,28 +693,6 @@ fun ChatScreen(
     }
     }
 
-    if (showPicker) {
-        ModelPickerSheet(
-            models = models,
-            engine = ui.engine,
-            busy = ui.isGenerating || backgroundRunId != null,
-            onPick = { vm.loadModel(it) },
-            onUnload = { vm.unloadModel(); showPicker = false },
-            onManage = { showPicker = false; onOpenModels() },
-            onDismiss = { showPicker = false },
-            resourceTier = settings.resourceTier,
-            onResourceTier = vm::setResourceTier,
-            preferredBackend = { m -> vm.preferredBackendLabel(m) },
-            onConfigure = { m -> configureModel = m },
-            lastLoad = { m -> com.iris.localai.engine.LoadTelemetry.latest(loadRecords.values, m.id)?.let(com.iris.localai.engine.LoadTelemetry::summary) },
-            // 1.10.3: 「建议：这个模型在 CPU 上加载更快（可选）」 from the load records.
-            cpuFaster = { m -> com.iris.localai.engine.CpuFasterHint.shouldShow(loadRecords.values, m.id, vm.preferredBackendLabel(m)) },
-            onSwitchToCpu = vm::switchModelToCpu,
-            engineTag = { m -> vm.engineTag(m) },
-            onCancelLoad = vm::cancelLoad,
-        )
-    }
-    configureModel?.let { m -> com.iris.localai.ui.models.ModelConfigSheet(m, onDismiss = { configureModel = null }) }
     remembering?.let { m ->
         RememberDialog(
             initial = vm.memoryEntryFor(m),
@@ -745,7 +719,7 @@ fun ChatScreen(
         }
     }
     // 2.1.9: `screen` was blocked → the matching guide (无障碍 / 受限设置 / 识图模型).
-    guiSetup?.let { b -> com.iris.localai.ui.agent.GuiSetupDialog(b, onDismiss = vm::dismissGuiSetup, onPickModel = { vm.dismissGuiSetup(); showPicker = true }) }
+    guiSetup?.let { b -> com.iris.localai.ui.agent.GuiSetupDialog(b, onDismiss = vm::dismissGuiSetup, onPickModel = { vm.dismissGuiSetup(); onOpenModels() }) }
     // 1.13.0: a tool of the chat running in the background asks only once that chat is on screen.
     LaunchedEffect(permissionAsk != null && backgroundRunId != null) {
         if (permissionAsk != null && backgroundRunId != null) vm.showNotice("后台对话在等你确认权限，去侧边栏查看")
@@ -849,7 +823,6 @@ private fun ModelMorphPanel(
     currentPath: String?,
     onDismiss: () -> Unit,
     onPick: (LocalModel) -> Unit,
-    onTiers: () -> Unit,
     onManage: () -> Unit,
     unloadEnabled: Boolean = true,
     onUnload: () -> Unit = {},
@@ -954,8 +927,8 @@ private fun ModelMorphPanel(
                             }
                         }
                         if (models.isNotEmpty()) MorphHairline()
-                        CompactMenuRow("档位与加载…", Icons.Outlined.Tune) { if (expanded) onTiers() }
-                        CompactMenuRow("管理模型", Icons.Outlined.Settings) { if (expanded) onManage() }
+                        // 2.2.16: one entry for the merged 模型与加载 page (models + 档位 + load settings)
+                        CompactMenuRow(ModelMenuText.MODELS_AND_LOADING, Icons.Outlined.Tune) { if (expanded) onManage() }
                         if (engine is EngineState.Ready) {
                             CompactMenuRow("卸载模型", Icons.Outlined.Eject, enabled = unloadEnabled) { if (expanded) onUnload() }
                         }
@@ -1245,4 +1218,9 @@ private fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCanc
             }
         }
     }
+}
+
+/** 2.2.16: the home model menu's single entry to the merged page (unit-tested). */
+object ModelMenuText {
+    const val MODELS_AND_LOADING = "模型与加载"
 }

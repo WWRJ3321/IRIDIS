@@ -72,6 +72,7 @@ import com.iris.localai.ui.components.ScrollBody
 import com.iris.localai.ui.components.SectionTitle
 import com.iris.localai.ui.components.SegmentedRow
 import com.iris.localai.ui.components.GroupFootnote
+import com.iris.localai.ui.components.CheckRow
 import com.iris.localai.ui.components.SettingsGroup
 import com.iris.localai.ui.components.SettingsRow
 import com.iris.localai.ui.components.SliderRow
@@ -99,7 +100,7 @@ private val THEME_OPTIONS = listOf(ThemeMode.SYSTEM to "跟随系统", ThemeMode
 
 /** One-line descriptions, kept in one place so the wording stays consistent (unit-tested). */
 object SettingsText {
-    const val MODEL_BACKEND = "模型与默认后端"
+    const val MODEL_BACKEND = "下载、导入、资源档位和加载设置"
     const val GENERATION = "指令、思考与采样"
     const val CONTEXT = "上下文长度与超出处理"
     /** 2.1.3: one entry for the merged 记忆与上下文 page. */
@@ -127,7 +128,7 @@ object SettingsText {
 
     /** The pages HOME links to, with their titles: the structure the 1.7.8 tests check. */
     val HOME_GROUPS: List<Pair<String, List<String>>> = listOf(
-        "模型与推理" to listOf("模型与后端", "生成", ContextMemoryText.NAV, "性能与资源"),
+        "模型与推理" to listOf("模型与加载", "生成", ContextMemoryText.NAV, "性能与资源"),
         "语音与服务" to listOf("语音", "API 服务"),
         "界面与外观" to listOf("外观"),
         "数据" to listOf("存储空间", "删除全部对话"),
@@ -169,7 +170,7 @@ internal fun CrashDumpRow() {
 }
 
 @Composable
-fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPage) -> Unit, onModels: () -> Unit) {
+fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPage) -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val api by vm.apiStatus.collectAsStateWithLifecycle()
     var confirmWipe by rememberSaveable { mutableStateOf(false) }
@@ -179,7 +180,7 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
             // 2.1.3: the 运行状态 rack moved to 关于 IRIDIS › 开发者选项 (DeveloperPage).
             SectionTitle("模型与推理")
             SettingsGroup {
-                NavItem("模型与后端", SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
+                NavItem("模型与加载", SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
                 Divider()
                 NavItem("生成", SettingsText.GENERATION, com.iris.localai.ui.icons.IrisIcons.Spark) { onOpen(SettingsPage.GENERATION) }
                 Divider()
@@ -239,19 +240,18 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
     }
 }
 
-/** 设置 › 模型与后端. */
+/**
+ * 2.2.16: the load settings (formerly the page 设置 › 模型与加载), shown at the bottom of the merged
+ * 「模型与加载」 page ([com.iris.localai.ui.models.ModelsScreen]): one page for models, 档位 and loading.
+ */
 @Composable
-fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> Unit) {
+fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
     val s by vm.settings.collectAsStateWithLifecycle()
-    SubpageScaffold(
-        "模型与后端", onBack,
-        actions = { IrisButton("恢复默认", vm::resetLoadOptions, style = IrisButtonStyle.Text, compact = true) },
-    ) {
-        ScrollBody {
-            SectionTitle("模型")
+            Row(Modifier.fillMaxWidth().padding(end = IrisDimens.groupGutter), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { SectionTitle("加载") }
+                IrisButton("恢复默认", vm::resetLoadOptions, style = IrisButtonStyle.Text, compact = true)
+            }
             SettingsGroup {
-                NavItem("模型管理", "下载、导入、删除模型；每个模型可单独设置后端和参数", com.iris.localai.ui.icons.IrisIcons.Cube, onModels)
-                Divider()
                 SwitchRow(
                     "启动时预加载上次的模型", s.autoLoadLastModel, icon = com.iris.localai.ui.icons.IrisIcons.Power,
                     subtitle = "打开 App 时就在后台加载上次用的模型，进入对话即可使用；关闭可省一点电和内存",
@@ -263,6 +263,16 @@ fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> 
                 Divider()
                 SettingsRow("立即重新加载模型", icon = com.iris.localai.ui.icons.IrisIcons.Reload, subtitle = "让需要重新加载才生效的修改马上生效", onClick = { vm.reloadModel() })
             }
+
+            // 2.2.16: model / voice / 生图 downloads; 自动 picks the fastest reachable source and falls through.
+            SectionTitle("下载源")
+            SettingsGroup {
+                com.iris.localai.data.DownloadSource.entries.forEachIndexed { i, src ->
+                    if (i > 0) Divider()
+                    CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
+                }
+            }
+            GroupFootnote(com.iris.localai.ui.models.SourceText.FOOTNOTE)
 
             SectionTitle("默认后端")
             SettingsGroup {
@@ -322,8 +332,6 @@ fun ModelBackendPage(vm: SettingsViewModel, onBack: () -> Unit, onModels: () -> 
                 }
             }
             GroupFootnote("修改后需重新加载模型。")
-        }
-    }
 }
 
 /** 设置 › 生成. */
@@ -384,7 +392,7 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            GroupFootnote("全局默认值。每个模型可在模型管理里点 ⚙ 单独设置。")
+            GroupFootnote("全局默认值。每个模型可在「模型与加载」里点 ⚙ 单独设置。")
         }
     }
 

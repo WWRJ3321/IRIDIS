@@ -43,8 +43,15 @@ object HttpDownload {
         try {
             val code = conn.responseCode
             val resumed = code == HttpURLConnection.HTTP_PARTIAL
+            if (code == HttpURLConnection.HTTP_NOT_FOUND) throw com.iris.localai.data.DownloadSources.NotFound("HTTP 404（该源没有这个文件）")
+            if (code == 401 || code == 403) throw com.iris.localai.data.DownloadSources.NotFound("HTTP $code（需要登录或无权访问）")
             if (code != HttpURLConnection.HTTP_OK && !resumed) throw IOException("HTTP $code：$url")
             if (range != null && !resumed) throw IOException("服务器不支持分段下载：$url")
+            // 2.2.16: a source holding another version of the file is skipped before anything is written.
+            if (range == null && expected > 0) {
+                val total = remoteTotal(conn.getHeaderField("Content-Range"), conn.contentLengthLong, resumed, offset)
+                if (total != null && total != expected) throw com.iris.localai.data.DownloadSources.SizeMismatch("文件大小与预期不同（$total / $expected）")
+            }
             RandomAccessFile(part, "rw").use { raf ->
                 var written = if (resumed) offset else 0L // 200 = server ignored Range: start over
                 raf.setLength(written)
@@ -70,14 +77,26 @@ object HttpDownload {
         onBytes(expected)
     }
 
-    /** GET with manual redirect handling (so a Range header survives cross-host redirects). */
-    fun open(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8): HttpURLConnection {
+    /** 2.2.16: full size of the remote file from a 206 Content-Range or a 200 Content-Length; null = unknown. Pure. */
+    fun remoteTotal(contentRange: String?, contentLength: Long, partial: Boolean, offset: Long): Long? {
+        if (partial) {
+            val t = contentRange?.substringAfterLast('/', "")?.trim()
+            return t?.toLongOrNull() ?: contentLength.takeIf { it >= 0 }?.plus(offset)
+        }
+        return contentLength.takeIf { it >= 0 }
+    }
+
+    /**
+     * GET with manual redirect handling (so a Range header survives cross-host redirects).
+     * 2.2.16: read timeout = 20 s without bytes (a stall → the caller moves to the next source).
+     */
+    fun open(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8, timeoutMs: Int = 0): HttpURLConnection {
         var url = start
         repeat(maxRedirects) {
             val c = (URL(url).openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = false
-                connectTimeout = 15_000
-                readTimeout = 30_000
+                connectTimeout = if (timeoutMs > 0) timeoutMs else 15_000
+                readTimeout = if (timeoutMs > 0) timeoutMs else com.iris.localai.data.DownloadSources.STALL_MS
                 setRequestProperty("User-Agent", "IRIS-LocalAI/1.0")
                 if (rangeTo >= 0) setRequestProperty("Range", "bytes=$rangeFrom-$rangeTo")
                 else if (rangeFrom > 0) setRequestProperty("Range", "bytes=$rangeFrom-")

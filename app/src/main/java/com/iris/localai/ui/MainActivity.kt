@@ -68,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, MODEL_BACKEND, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT }
 
 class MainActivity : ComponentActivity() {
 
@@ -244,14 +244,13 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpenImageGen = { push(Route.IMAGEGEN) },
         )
         Route.IMAGEGEN -> com.iris.localai.ui.imagegen.ImageGenScreen(onBack = pop, onSendToChat = { path -> chat.attachGeneratedImage(path); pop() })
-        Route.MODELS -> ModelsScreen(onBack = pop)
+        // 2.2.16: one 「模型与加载」 page (models + 档位 + load settings); 设置 › 模型与加载 opens it too
+        Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm)
         Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)
         Route.SETTINGS -> SettingsHome(
             settingsVm, onBack = pop,
             onOpen = { p -> push(routeOf(p)) },
-            onModels = { push(Route.MODELS) },
         )
-        Route.MODEL_BACKEND -> com.iris.localai.ui.settings.ModelBackendPage(settingsVm, onBack = pop, onModels = { push(Route.MODELS) })
         Route.GENERATION -> GenerationPage(settingsVm, onBack = pop)
         Route.CONTEXT, Route.MEMORY -> {
             // 2.2.9 F: one 上下文 · 记忆 · 知识库 page; the old controls are under 开发者选项.
@@ -282,7 +281,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
 private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.APPEARANCE -> Route.APPEARANCE
     SettingsPage.HOME -> Route.SETTINGS
-    SettingsPage.MODEL_BACKEND -> Route.MODEL_BACKEND
+    SettingsPage.MODEL_BACKEND -> Route.MODELS
     SettingsPage.GENERATION -> Route.GENERATION
     SettingsPage.CONTEXT -> Route.CONTEXT
     SettingsPage.PERFORMANCE -> Route.PERFORMANCE

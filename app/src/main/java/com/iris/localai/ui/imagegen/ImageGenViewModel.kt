@@ -32,7 +32,7 @@ object ImageGenText {
     const val EXTRACTING = "解压中"
     const val DELETE = "删除"
     const val DELETE_TITLE = "删除模型"
-    const val RETRY = "重试"
+    const val RETRY = "换源重试"
     const val PROMPT = "正向提示词"
     const val NEGATIVE = "反向提示词"
     const val REF_IMAGE = "参考图"
@@ -117,10 +117,14 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     /** Starts (or resumes) [m]'s download in the app scope with the 下载源 from 设置. */
     fun download(m: ImageModel) {
         if (m.needsHexagonRuntime || m.files.isEmpty()) return
+        // 2.2.16: after a failure the button is 「换源重试」 (the source that failed goes last; .part files resume)
+        val failed = downloader.states.value[m.id] is com.iris.localai.imagegen.ImageDl.Failed
         downloader.clearError(m.id)
         viewModelScope.launch {
             val root = withContext(Dispatchers.IO) { repo.downloadRoot(m) }
-            downloader.start(m, root, container.settings.current.downloadSource) { refresh() }
+            val src = container.settings.current.downloadSource
+            if (failed) downloader.retryOtherSource(m, root, src) { refresh() }
+            else downloader.start(m, root, src) { refresh() }
         }
     }
 

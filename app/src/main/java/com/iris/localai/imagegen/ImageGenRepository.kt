@@ -179,7 +179,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
         val dir = DeviceProbe.qnnRuntimeDir(context.filesDir, probe.htpArch ?: DeviceProbe.htpArch(DeviceProbe.socModel()))
         return when {
             !probe.libLoaded -> UnavailableEngine("NPU 生图原生库未加载：${probe.error ?: "?"}")
-            dir == null -> UnavailableEngine("缺少 QNN 运行库：请先在 设置 › 模型与后端 安装 NPU 运行库")
+            dir == null -> UnavailableEngine("缺少 QNN 运行库：请先在 设置 › 模型与加载 安装 NPU 运行库")
             !(probe.backendOk && probe.deviceOk) -> UnavailableEngine("QNN 后端初始化失败：${probe.error ?: "?"}")
             else -> synchronized(this) {
                 qnn ?: QnnSdEngine(modelDir = { repo.downloadedDir(it) }, loader = NativeQnnGraphLoader(dir), perf = NativeHtpPerf).also { qnn = it }

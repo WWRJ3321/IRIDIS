@@ -58,6 +58,8 @@ class ModelRepository(private val context: Context) {
                 // anywhere (home menu, 档位与加载, 模型管理, GUI pickers). They stay on disk (and move
                 // with the models), they are just not entries.
                 .filterNot { isProjectorFile(it.fileName) }
+                // 2.2.16: split GGUF — only part 1 is a model (llama.cpp opens the rest next to it)
+                .filterNot { isSplitTail(it.fileName) }
         }
         val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list
@@ -157,6 +159,8 @@ class ModelRepository(private val context: Context) {
     suspend fun delete(model: LocalModel) = withContext(Dispatchers.IO) {
         val f = File(model.path)
         if (f.isDirectory) f.deleteRecursively() else f.delete()
+        // 2.2.16: the other parts of a split GGUF and the projector downloaded with it go too
+        f.parentFile?.listFiles()?.filter { companionOf(f.name, it.name) }?.forEach { it.delete() }
         refresh()
     }
 
@@ -384,6 +388,22 @@ object ModelFiles {
         }
         return n
     }
+}
+
+/** 2.2.16: part 2…N of a split GGUF (`-00002-of-00003.gguf`). */
+fun isSplitTail(name: String): Boolean =
+    GgufSearch.SPLIT.find(name)?.groupValues?.get(1)?.toIntOrNull()?.let { it > 1 } ?: false
+
+/** Files that belong to model file [model]: its other split parts, and a projector saved as `<model>-mmproj…`. Pure. */
+fun companionOf(model: String, other: String): Boolean {
+    if (other == model) return false
+    val m = GgufSearch.SPLIT.find(model)
+    if (m != null) {
+        val prefix = model.substring(0, m.range.first)
+        if (GgufSearch.SPLIT.find(other)?.let { other.substring(0, it.range.first) == prefix && it.groupValues[2] == m.groupValues[2] } == true) return true
+    }
+    val stem = model.replace(GgufSearch.SPLIT, ".gguf").removeSuffix(".gguf")
+    return other.startsWith("$stem-") && isProjectorFile(other)
 }
 
 /** 2.2.5: vision projector files (mmproj etc.) — attached to their parent model, never a model themselves. */
