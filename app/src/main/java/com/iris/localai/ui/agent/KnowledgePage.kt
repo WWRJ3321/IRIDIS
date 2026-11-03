@@ -153,12 +153,16 @@ fun KnowledgePage(onBack: () -> Unit) {
     var renaming by remember { mutableStateOf<String?>(null) }
     var deletingFolder by remember { mutableStateOf<String?>(null) }
     var moving by remember { mutableStateOf<KbFileInfo?>(null) }
+    var showTrash by remember { mutableStateOf(false) } // 2.3.3 回收站
     val c = Iris.colors
     fun toast(id: Int) = Toast.makeText(context, com.iris.localai.I18n.s(id), Toast.LENGTH_SHORT).show()
 
     // Listed first (unread files show 「正在读取…」), then the index is brought up to date and listed again.
     val folders by produceState(emptyList<String>(), tick, ws) {
         value = withContext(Dispatchers.IO) { runCatching { agent.knowledge.folders() }.getOrDefault(emptyList()) }
+    }
+    val trashItems by produceState(emptyList<com.iris.localai.knowledge.KbTrash.Item>(), tick, ws) {
+        value = withContext(Dispatchers.IO) { runCatching { agent.knowledge.trashItems() }.getOrDefault(emptyList()) }
     }
     val files by produceState<List<KbFileInfo>?>(null, tick, ws) {
         value = withContext(Dispatchers.IO) { runCatching { agent.knowledge.files() }.getOrNull() }
@@ -273,6 +277,51 @@ fun KnowledgePage(onBack: () -> Unit) {
                 )
             }
             GroupFootnote(KnowledgeText.NOTE)
+            // 2.3.3: 回收站 — deleted files and folders, kept 30 days.
+            SettingsGroup {
+                SettingsRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_trash), icon = IrisIcons.Trash,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_trash_sub, trashItems.size),
+                    onClick = { showTrash = true },
+                    trailing = { com.iris.localai.ui.components.Chevron() },
+                )
+            }
+        }
+    }
+
+    if (showTrash) {
+        com.iris.localai.ui.components.IrisDialog(
+            onDismiss = { showTrash = false }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_trash),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { showTrash = false },
+            dismissText = if (trashItems.isEmpty()) null else com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_empty_trash),
+            onDismissClick = {
+                scope.launch { withContext(Dispatchers.IO) { runCatching { agent.knowledge.emptyTrash() } }; tick++ }
+            },
+        ) {
+            Column(Modifier.heightIn(max = 400.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                if (trashItems.isEmpty()) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_trash_empty), style = IrisType.secondary, color = c.textTertiary)
+                trashItems.forEach { t ->
+                    val days = ((com.iris.localai.knowledge.KbTrash.KEEP_MS - (System.currentTimeMillis() - t.deletedAt)) / 86_400_000L).coerceAtLeast(0)
+                    SettingsRow(
+                        t.path, icon = if (t.folder) IrisIcons.Folder else IrisIcons.Copy,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_days_left, days),
+                        trailing = {
+                            Row {
+                                com.iris.localai.ui.components.IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_restore), {
+                                    scope.launch {
+                                        val r = withContext(Dispatchers.IO) { runCatching { agent.knowledge.restore(t.id) }.getOrNull() }
+                                        if (r == null) toast(com.iris.localai.R.string.kb232_failed)
+                                        tick++
+                                    }
+                                }, style = com.iris.localai.ui.components.IrisButtonStyle.Text, compact = true)
+                                com.iris.localai.ui.components.IrisButton(KnowledgeText.DELETE, {
+                                    scope.launch { withContext(Dispatchers.IO) { runCatching { agent.knowledge.removeFromTrash(t.id) } }; tick++ }
+                                }, style = com.iris.localai.ui.components.IrisButtonStyle.Text, compact = true)
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -305,7 +354,7 @@ fun KnowledgePage(onBack: () -> Unit) {
     }
 
     deletingFolder?.let { path ->
-        // No file trash exists for the knowledge folder: a non-empty folder asks first; an empty one goes at once.
+        // 2.3.3: a non-empty folder asks first (it goes to the 回收站); an empty one goes at once.
         val empty = remember(path) { agent.knowledge.folderEmpty(path) }
         fun doDelete() = scope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { agent.knowledge.deleteFolder(path) }.getOrDefault(false) }
@@ -315,7 +364,7 @@ fun KnowledgePage(onBack: () -> Unit) {
         if (empty) { androidx.compose.runtime.LaunchedEffect(path) { doDelete(); deletingFolder = null } }
         else ConfirmDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_delete_folder, path.substringAfterLast('/')),
-            message = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_delete_folder_msg),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_to_trash),
             confirmText = KnowledgeText.DELETE,
             onConfirm = { doDelete() },
             onDismiss = { deletingFolder = null },
@@ -349,7 +398,7 @@ fun KnowledgePage(onBack: () -> Unit) {
     deleting?.let { f ->
         ConfirmDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_883acf, f.path.substringAfterLast('/')),
-            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_993fd9),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.kb233_to_trash),
             confirmText = KnowledgeText.DELETE,
             onConfirm = {
                 scope.launch {

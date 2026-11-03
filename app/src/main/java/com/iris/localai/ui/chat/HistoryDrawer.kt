@@ -258,7 +258,7 @@ fun HistoryDrawer(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Cube, DrawerNavText.MODELS, onClick = onModels)
-            DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Person, DrawerNavText.CHARACTERS, onClick = onCharacters)
+            // 2.3.3: 角色 moved to the top-bar 角色 pill (its 「管理角色…」 opens the page).
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Image, DrawerNavText.IMAGEGEN, onClick = onImageGen)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Folder, DrawerNavText.FILES, onClick = onFiles)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Plug, DrawerNavText.API, badge = apiRunning, onClick = onApi)

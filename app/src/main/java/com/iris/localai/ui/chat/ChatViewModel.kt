@@ -1625,15 +1625,31 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         .map { id -> id?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.characters.get(it) }.getOrNull() } } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    init {
+        // 2.3.3: card chat on screen → its bound voice as an override; any other chat → the global voice.
+        viewModelScope.launch {
+            character.collect { e ->
+                val card = e?.card
+                c.synthesizer.override = card?.let {
+                    val pack = com.iris.localai.voice.VoicePack.entries.firstOrNull { p -> p.id == it.bindTtsPack }
+                    com.iris.localai.voice.VoiceBinding.forCard(it.bindTtsPack, it.bindTtsSpeaker, it.bindCloneVoice,
+                        packInstalled = pack != null && c.voiceStore.isInstalled(pack),
+                        cloneExists = it.bindCloneVoice.isNotBlank() && c.cloneVoices.get(it.bindCloneVoice) != null)
+                }
+            }
+        }
+    }
+
     /**
      * Starts a new chat with card [id]: the card is bound to it, the greeting(s) become the opening
      * assistant message (alternates as its versions, switched with ‹ ›), and the card's bound model /
      * voice are applied when they exist on this device (otherwise the current ones stay).
      */
-    fun startCharacterChat(id: String) = viewModelScope.launch {
+    fun startCharacterChat(id: String, reuse: Conversation? = null) = viewModelScope.launch {
         val entry = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.characters.get(id) }.getOrNull() } ?: return@launch
         val card = entry.card
-        val conv0 = Conversation(characterId = entry.id, title = card.name.ifBlank { entry.id }, titled = true)
+        val conv0 = reuse?.copy(characterId = entry.id, title = card.name.ifBlank { entry.id }, titled = true, messages = emptyList())
+            ?: Conversation(characterId = entry.id, title = card.name.ifBlank { entry.id }, titled = true)
         val greets = com.iris.localai.character.CardPrompt.greetings(card, cardUser(), conv0.id.hashCode())
         val opening = greets.firstOrNull()?.let { g ->
             ChatMessage(role = Role.ASSISTANT, content = g, modelName = card.name,
@@ -1648,12 +1664,24 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             val m = c.models.models.value.firstOrNull { it.fileName == file }
             if (m != null && c.engine.readyModel?.path != m.path && genJob?.isActive != true) loadModel(m)
         }
-        if (card.bindTtsPack.isNotBlank()) {
-            val pack = com.iris.localai.voice.VoicePack.entries.firstOrNull { it.id == card.bindTtsPack }
-            if (pack != null && c.voiceStore.isInstalled(pack)) c.settings.update { s ->
-                s.copy(ttsPack = pack.id, ttsSpeakerId = card.bindTtsSpeaker.takeIf { it >= 0 } ?: s.ttsSpeakerId,
-                    cloneVoiceId = card.bindCloneVoice.takeIf { v -> v.isNotBlank() && c.cloneVoices.get(v) != null } ?: "")
-            }
+        // 2.3.3: the bound voice is applied per chat by [character] (VoiceBinding), never saved to settings.
+    }
+
+    /** 2.3.3: cards for the top-bar 角色 dropdown. */
+    fun characterEntries(): List<com.iris.localai.character.CharacterStore.Entry> =
+        runCatching { c.characters.list() }.getOrDefault(emptyList())
+
+    /**
+     * 2.3.3: top-bar 角色 pick. [id] null = 「无角色」. A chat without user messages (new, or only the
+     * card's opening) takes the card in place; otherwise a new chat starts with it (the old one stays).
+     */
+    fun pickCharacter(id: String?) {
+        val cur = viewing.value ?: conversation.value
+        when (com.iris.localai.character.CharacterPick.decide(cur.characterId, id, cur.messages.any { it.role == Role.USER })) {
+            com.iris.localai.character.CharacterPick.Action.NONE -> Unit
+            com.iris.localai.character.CharacterPick.Action.NEW_PLAIN -> newChat()
+            com.iris.localai.character.CharacterPick.Action.APPLY_IN_PLACE -> startCharacterChat(id!!, reuse = cur)
+            com.iris.localai.character.CharacterPick.Action.NEW_WITH_CARD -> startCharacterChat(id!!)
         }
     }
 
@@ -2148,7 +2176,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                     // Same cleanup as the voice conversation (links, code, emoji, list markers…).
                     val speakable = com.iris.localai.util.SpeechText.speakable(sentence)
                     if (speakable.none { it.isLetterOrDigit() }) continue
-                    c.synthesizer.speak(speakable, s.ttsSpeakerId, s.ttsSpeed) { out.write(it) }
+                    c.synthesizer.speak(speakable, c.synthesizer.speaker(s.ttsSpeakerId), s.ttsSpeed) { out.write(it) }
                 }
                 out.drain() // the last ~0.5 s is still queued when the final write returns
             } catch (e: kotlinx.coroutines.CancellationException) {

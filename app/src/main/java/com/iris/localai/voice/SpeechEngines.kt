@@ -193,7 +193,12 @@ class SpeechSynthesizer(
     /** True while prepare() chose the system engine (cleared when a cloned voice is previewed). */
     @Volatile var usingSystem = false
         private set
-    fun systemSelected(): Boolean = settings.current.ttsEngine == TTS_ENGINE_SYSTEM && system != null
+    /** 2.3.3: the card chat on screen speaks with its bound voice; null = the global setting. */
+    @Volatile var override: VoiceOverride? = null
+    private fun sel(): VoiceSel = settings.current.let { s -> VoiceBinding.effective(VoiceSel(s.ttsPack, s.ttsSpeakerId, s.cloneVoiceId), override) }
+    /** Speaker to use: the card's when it binds one, else [global]. */
+    fun speaker(global: Int): Int = override?.speaker ?: global
+    fun systemSelected(): Boolean = override == null && settings.current.ttsEngine == TTS_ENGINE_SYSTEM && system != null
 
     // Synthesis competes with the LLM for CPU while the reply is still being written; run it
     // (and the ONNX threads it spawns, which inherit this) at audio priority so speech keeps up.
@@ -211,9 +216,9 @@ class SpeechSynthesizer(
     private var cloneAudio: FloatArray? = null
 
     val isAvailable: Boolean get() = (systemSelected() && system?.hasEngine() == true) || activeClone() != null || activePack() != null
-    fun activePack(): VoicePack? = store.active(VoiceKind.TTS, settings.current.ttsPack)
+    fun activePack(): VoicePack? = store.active(VoiceKind.TTS, sel().pack)
     /** The selected cloned voice, if it and the ZipVoice model are both present. */
-    fun activeClone(): ClonedVoice? = settings.current.cloneVoiceId.takeIf { it.isNotEmpty() }
+    fun activeClone(): ClonedVoice? = sel().clone.takeIf { it.isNotEmpty() }
         ?.let { clones.get(it) }?.takeIf { store.states.value[VoicePack.CLONE_ZIPVOICE] == PackState.Installed }
     /** Kokoro has 103 selectable voices; the other packs and cloned voices have one. */
     val hasSpeakers: Boolean get() = activeClone() == null && activePack()?.singleSpeaker == false

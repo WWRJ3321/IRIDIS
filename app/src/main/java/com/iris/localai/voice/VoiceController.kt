@@ -312,7 +312,7 @@ class VoiceController(
                 if (speakable.none { it.isLetterOrDigit() }) continue
                 echoText.remember(speakable, System.currentTimeMillis())
                 try {
-                    synthesizer.speak(speakable, s.ttsSpeakerId, s.ttsSpeed) { chunk ->
+                    synthesizer.speak(speakable, synthesizer.speaker(s.ttsSpeakerId), s.ttsSpeed) { chunk ->
                         pcm.trySend(chunk.copyOf())
                         playback.isActive
                     }

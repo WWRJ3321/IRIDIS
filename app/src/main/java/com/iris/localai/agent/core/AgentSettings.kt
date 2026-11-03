@@ -36,6 +36,8 @@ data class AgentSettings(
     val workspace: String = WorkspaceLocation.DOWNLOADS.name,
     /** 1.10.0: persisted SAF grant of Download/IRISLocalAI (read files the app did not create); null = none. */
     val workspaceTreeUri: String? = null,
+    /** 2.3.3: real path of the 自定义位置 workspace (used when [workspace] = CUSTOM). */
+    val customWorkspace: String = "",
     /** 1.12.0: [SearchProvider] name for web_search, and the SearXNG address. 2.0.0 default 谷歌（浏览器）. */
     val searchProvider: String = SearchProvider.DEFAULT.name,
     /** 2.0.0: true once the user picked a provider in settings (an untouched AUTO is moved to the new default). */
@@ -132,7 +134,10 @@ class AgentContainer(context: Context) {
         val loc = settings.current.workspaceLocation
         val downloads = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull()
         val state = runCatching { android.os.Environment.getExternalStorageState() }.getOrNull()
-        val choice = WorkspaceResolver.resolve(loc, downloads, state, privateRoot)
+        val choice = WorkspaceResolver.resolve(loc, downloads, state, privateRoot,
+            customPath = settings.current.customWorkspace, allFiles = hasAllFilesAccess(), volumes = storageVolumes())
+            .let { ch -> ch.customProblem?.let { p -> ch.copy(fallbackReason = customReason(p)) } ?: ch }
+        noteCustomFallback(choice)
         val sb = runCatching { WorkspaceSandbox(choice.root) }.getOrElse {
             WorkspaceSandbox(privateRoot).also { return Ws(WorkspaceChoice(loc, WorkspaceLocation.PRIVATE, privateRoot, "无法使用 ${choice.root.path}，智能体工作区暂时改用应用私有目录",
                 appRoot = WorkspaceResolver.privateAppRoot(privateRoot)), it) }
@@ -160,6 +165,51 @@ class AgentContainer(context: Context) {
         ws.value = next
         workspaceFlow.value = next.choice
         changed()
+    }
+
+    /** 2.3.3: mounted storage roots (internal shared storage + SD cards / USB) for the folder picker. */
+    fun storageVolumes(): List<java.io.File> = runCatching {
+        val sm = ctx.getSystemService(android.os.storage.StorageManager::class.java)
+        sm.storageVolumes.filter { it.state == android.os.Environment.MEDIA_MOUNTED }.mapNotNull { it.directory }
+    }.getOrNull()?.takeIf { it.isNotEmpty() } ?: listOf(android.os.Environment.getExternalStorageDirectory())
+
+    /** 2.3.3: Download/IRIDIS (only its workspace/ may be picked as a custom folder). */
+    fun iridisRoot(): java.io.File? = runCatching {
+        WorkspaceResolver.downloadsRoot(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS))
+    }.getOrNull()
+
+    fun validateCustom(path: String): CustomWorkspace.Problem? =
+        CustomWorkspace.validate(path, hasAllFilesAccess(), storageVolumes(), iridisRoot())
+
+    fun customReason(p: CustomWorkspace.Problem): String = com.iris.localai.I18n.s(when (p) {
+        CustomWorkspace.Problem.BLANK -> com.iris.localai.R.string.ws233_p_blank
+        CustomWorkspace.Problem.NO_ACCESS -> com.iris.localai.R.string.ws233_p_access
+        CustomWorkspace.Problem.NOT_ABSOLUTE, CustomWorkspace.Problem.OUTSIDE_STORAGE -> com.iris.localai.R.string.ws233_p_outside
+        CustomWorkspace.Problem.VOLUME_ROOT -> com.iris.localai.R.string.ws233_p_root
+        CustomWorkspace.Problem.APP_DATA -> com.iris.localai.R.string.ws233_p_android
+        CustomWorkspace.Problem.RESERVED -> com.iris.localai.R.string.ws233_p_reserved
+        CustomWorkspace.Problem.NOT_WRITABLE -> com.iris.localai.R.string.ws233_p_write
+    }) + com.iris.localai.I18n.s(com.iris.localai.R.string.ws233_fallback)
+
+    /** 2.3.3: one toast per custom path when it had to fall back (shown again only after it worked once). */
+    private fun noteCustomFallback(choice: WorkspaceChoice) {
+        if (choice.requested != WorkspaceLocation.CUSTOM) return
+        val prefs = ctx.getSharedPreferences("iris_agent", Context.MODE_PRIVATE)
+        val path = settings.current.customWorkspace
+        if (choice.location == WorkspaceLocation.CUSTOM) { prefs.edit().remove(CUSTOM_TOAST_KEY).apply(); return }
+        if (prefs.getString(CUSTOM_TOAST_KEY, null) == path) return
+        prefs.edit().putString(CUSTOM_TOAST_KEY, path).apply()
+        val text = choice.fallbackReason ?: return
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            runCatching { android.widget.Toast.makeText(ctx, text, android.widget.Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    /** 2.3.3: use [path] (already validated) as the agent workspace. */
+    fun setCustomWorkspace(path: String) {
+        val canon = CustomWorkspace.canonical(path)?.path ?: path
+        settings.update { it.copy(workspace = WorkspaceLocation.CUSTOM.name, customWorkspace = canon) }
+        refreshWorkspace()
     }
 
     fun setWorkspaceLocation(loc: WorkspaceLocation) {
@@ -393,7 +443,7 @@ class AgentContainer(context: Context) {
             "if the user put this file in the folder themselves, tell them to turn on 全部文件访问 in 设置›智能体"
         else null
 
-    private companion object { const val MIGRATED_KEY = "workspace_migrated_v1" }
+    private companion object { const val MIGRATED_KEY = "workspace_migrated_v1"; const val CUSTOM_TOAST_KEY = "custom_ws_fallback_toast" }
 }
 
 /** 1.10.0 memory / compaction settings: same prefs file as the agent (`iris_agent`), own key `memory`. */

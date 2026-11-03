@@ -206,6 +206,19 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             // search provider, skills, backup and logs.
             AgentExtraSections()
 
+            var allFiles by remember { mutableStateOf(agent.hasAllFilesAccess()) }
+            var customAsk by remember { mutableStateOf(false) }
+            var showPicker by remember { mutableStateOf(false) }
+            if (showPicker) WorkspaceFolderPicker(
+                volumes = remember { agent.storageVolumes() },
+                start = s.customWorkspace.ifBlank { null },
+                validate = { agent.validateCustom(it)?.let { p -> agent.customReason(p).substringBefore(com.iris.localai.I18n.s(com.iris.localai.R.string.ws233_fallback)) } },
+                onPick = { path ->
+                    showPicker = false; customAsk = false
+                    scope.launch { withContext(Dispatchers.IO) { agent.setCustomWorkspace(path) } }
+                },
+                onDismiss = { showPicker = false },
+            )
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1))
             SettingsGroup {
                 // 1.10.0: 下载/IRIDIS/workspace (2.1.1, default) or 应用私有目录, with the real path.
@@ -218,20 +231,40 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                     )
                     val locs = WorkspaceLocation.entries
                     SegmentedControl(
-                        locs.map { it.label }, locs.indexOf(s.workspaceLocation),
-                        { idx -> scope.launch { withContext(Dispatchers.IO) { agent.setWorkspaceLocation(locs[idx]) } } },
+                        locs.map { wsLabel(it) }, locs.indexOf(s.workspaceLocation).takeIf { !customAsk } ?: locs.indexOf(WorkspaceLocation.CUSTOM),
+                        { idx ->
+                            if (locs[idx] == WorkspaceLocation.CUSTOM) {
+                                // 2.3.3: a real folder needs 全部文件访问; without it the grant row shows below.
+                                if (agent.hasAllFilesAccess()) showPicker = true else customAsk = true
+                            } else { customAsk = false; scope.launch { withContext(Dispatchers.IO) { agent.setWorkspaceLocation(locs[idx]) } } }
+                        },
                         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding),
                     )
                 }
-                if (ws.location == WorkspaceLocation.DOWNLOADS) {
+                // 2.3.3: 自定义位置… — the picked folder, tap to choose another.
+                if (s.workspaceLocation == WorkspaceLocation.CUSTOM || customAsk) {
+                    Divider()
+                    SettingsRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.ws233_custom_row), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+                        subtitle = if (!allFiles) com.iris.localai.I18n.s(com.iris.localai.R.string.ws233_need_access)
+                        else s.customWorkspace.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.ws233_p_blank) },
+                        subtitleColor = if (!allFiles) Iris.colors.danger else Iris.colors.textTertiary,
+                        enabled = allFiles,
+                        onClick = { showPicker = true },
+                        trailing = { com.iris.localai.ui.components.Chevron() },
+                    )
+                }
+                if (ws.location == WorkspaceLocation.DOWNLOADS || customAsk || s.workspaceLocation == WorkspaceLocation.CUSTOM) {
                     Divider()
                     // 1.10.6: 全部文件访问 — the simplest way to let 智能体 read and edit every file here.
-                    var allFiles by remember { mutableStateOf(agent.hasAllFilesAccess()) }
                     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
                     androidx.compose.runtime.DisposableEffect(lifecycle) {
                         val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
                             if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                                 allFiles = agent.hasAllFilesAccess(); agent.changed()
+                                // 2.3.3: access just granted → the custom folder can be used / picked now.
+                                if (allFiles && agent.settings.current.workspaceLocation == WorkspaceLocation.CUSTOM) scope.launch { withContext(Dispatchers.IO) { agent.refreshWorkspace() } }
+                                if (allFiles && customAsk) showPicker = true
                                 // 2.1.0: access may have just been granted — the old folder can be moved now.
                                 if (legacyHint != null) scope.launch { withContext(Dispatchers.IO) { runCatching { agent.migrateLegacyFolder() } } }
                                 // 2.1.1: with 全部文件访问 the root's old files are visible — finish the move into workspace/.
@@ -255,12 +288,14 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                             }.onFailure { runCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
                         },
                     )
+                    if (ws.location == WorkspaceLocation.DOWNLOADS) {
                     Divider()
                     SettingsRow(
                         AgentText.SAF, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                         subtitle = if (granted) AgentText.SAF_DONE else AgentText.SAF_HINT,
                         onClick = { runCatching { treeLauncher.launch(SafWorkspaceFiles.initialUri()) } },
                     )
+                    }
                 }
                 Divider()
                 SettingsRow(
@@ -333,3 +368,10 @@ private fun ToolRow(
         }
     }
 }
+
+/** 2.3.3: localized names of the workspace locations. */
+private fun wsLabel(l: WorkspaceLocation): String = com.iris.localai.I18n.s(when (l) {
+    WorkspaceLocation.DOWNLOADS -> com.iris.localai.R.string.ws233_loc_downloads
+    WorkspaceLocation.PRIVATE -> com.iris.localai.R.string.ws233_loc_private
+    WorkspaceLocation.CUSTOM -> com.iris.localai.R.string.ws233_loc_custom
+})

@@ -4,6 +4,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Eject
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ManageAccounts
+import androidx.compose.material.icons.outlined.PersonOff
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.snap
@@ -216,6 +218,9 @@ fun ChatScreen(
     // 2.2.7: the model pill morphs into the model panel (container transform).
     var modelMenu by remember { mutableStateOf(false) }
     var pillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var charPillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) } // 2.3.3
+    var charMenu by remember { mutableStateOf(false) }
+    val charMorph = remember { androidx.compose.animation.core.Animatable(0f) }
     val modelMorph = remember { Animatable(0f) }
     var showContext by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -504,27 +509,30 @@ fun ChatScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8dce1), Modifier.align(Alignment.CenterStart), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
-                    ModelTitle(
-                        ui.engine,
-                        Modifier
-                            // 2.2.13: pill sits on the left, right after the menu button.
-                            .align(Alignment.CenterStart)
-                            .padding(start = IrisDimens.topBarControl + IrisDimens.space8, end = IrisDimens.topBarControl + IrisDimens.space8)
-                            .onGloballyPositioned { pillBounds = it.boundsInRoot() }
-                            // hidden while the morphing surface stands in for it
-                            .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
-                    ) { hideKeyboard(); modelMenu = true }
-                    // 2.3.2 角色卡: the bound card (avatar + name) left of the new-chat button.
-                    character?.let { ch ->
-                        Row(
-                            Modifier.align(Alignment.CenterEnd).padding(end = IrisDimens.topBarControl + IrisDimens.space8)
-                                .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(ch.card.name, style = com.iris.localai.ui.theme.IrisType.secondary, color = com.iris.localai.ui.theme.Iris.colors.text, maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp))
-                            Spacer(Modifier.width(6.dp))
-                            com.iris.localai.ui.character.CharacterAvatar(ch.avatar, ch.card.name, 32.dp)
+                    // 2.3.3: 模型 and 角色 pills side by side after the menu button; on a narrow row the
+                    // 角色 pill shrinks to the card's avatar.
+                    androidx.compose.foundation.layout.BoxWithConstraints(
+                        Modifier.align(Alignment.CenterStart)
+                            .padding(start = IrisDimens.topBarControl + IrisDimens.space8, end = IrisDimens.topBarControl + IrisDimens.space8),
+                    ) {
+                        val compactChar = com.iris.localai.character.CharacterPick.compact(maxWidth.value.toInt(), character != null)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ModelTitle(
+                                ui.engine,
+                                Modifier
+                                    .weight(1f, fill = false)
+                                    .onGloballyPositioned { pillBounds = it.boundsInRoot() }
+                                    // hidden while the morphing surface stands in for it
+                                    .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
+                            ) { hideKeyboard(); charMenu = false; modelMenu = true }
+                            Spacer(Modifier.width(IrisDimens.space8))
+                            CharacterTitle(
+                                character, compactChar,
+                                Modifier
+                                    .then(if (compactChar) Modifier else Modifier.weight(1f, fill = false))
+                                    .onGloballyPositioned { charPillBounds = it.boundsInRoot() }
+                                    .graphicsLayer { alpha = if (charMenu || charMorph.value > 0f) 0f else 1f },
+                            ) { hideKeyboard(); modelMenu = false; charMenu = true }
                         }
                     }
                     com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
@@ -734,6 +742,32 @@ fun ChatScreen(
                     onUnload = { modelMenu = false; vm.unloadModel() },
                 )
             }
+            // ---- 2.3.3: 角色 pill → panel morph (same pattern as the model panel) ----
+            LaunchedEffect(charMenu) {
+                charMorph.animateTo(
+                    if (charMenu) 1f else 0f,
+                    if (reduceMorph) tween(120) else tween(300, easing = IrisMotion.ProgressEasing),
+                )
+            }
+            androidx.activity.compose.BackHandler(enabled = charMenu) { charMenu = false }
+            val cb = charPillBounds
+            if (cb != null && (charMenu || charMorph.value > 0f)) {
+                val cards by androidx.compose.runtime.produceState(emptyList<com.iris.localai.character.CharacterStore.Entry>(), charMenu) {
+                    if (charMenu) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { vm.characterEntries() }
+                }
+                val compactChar = cb.width < 60f * androidx.compose.ui.platform.LocalDensity.current.density && character != null
+                CharacterMorphPanel(
+                    progress = { charMorph.value },
+                    expanded = charMenu,
+                    pillInRoot = cb,
+                    current = character,
+                    compact = compactChar,
+                    cards = cards,
+                    onDismiss = { charMenu = false },
+                    onPick = { id -> charMenu = false; vm.pickCharacter(id) },
+                    onManage = { charMenu = false; onOpenCharacters() },
+                )
+            }
     }
     }
 
@@ -858,18 +892,14 @@ private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, h
  * Same window as the chat, so the Haze glass keeps blurring the messages behind it.
  */
 @Composable
-private fun ModelMorphPanel(
+private fun MorphPanel(
     progress: () -> Float,
     expanded: Boolean,
     pillInRoot: androidx.compose.ui.geometry.Rect,
-    engine: EngineState,
-    models: List<LocalModel>,
-    currentPath: String?,
     onDismiss: () -> Unit,
-    onPick: (LocalModel) -> Unit,
-    onManage: () -> Unit,
-    unloadEnabled: Boolean = true,
-    onUnload: () -> Unit = {},
+    closeLabel: String,
+    header: @Composable RowScope.(p: Float, hPad: androidx.compose.ui.unit.Dp) -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val c = Iris.colors
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -939,10 +969,10 @@ private fun ModelMorphPanel(
                             .width(w.toDp()).height(headerH.toDp())
                             .clickable(
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                indication = null, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9),
+                                indication = null, onClickLabel = closeLabel,
                             ) { onDismiss() },
                         verticalAlignment = Alignment.CenterVertically,
-                    ) { ModelPillContent(engine, chevronTurn = p, hPad = hPad) }
+                    ) { header(p, hPad) }
                     Column(
                         Modifier
                             .fillMaxWidth()
@@ -951,6 +981,33 @@ private fun ModelMorphPanel(
                             .verticalScroll(androidx.compose.foundation.rememberScrollState())
                             .padding(bottom = 4.dp),
                     ) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ModelMorphPanel(
+    progress: () -> Float,
+    expanded: Boolean,
+    pillInRoot: androidx.compose.ui.geometry.Rect,
+    engine: EngineState,
+    models: List<LocalModel>,
+    currentPath: String?,
+    onDismiss: () -> Unit,
+    onPick: (LocalModel) -> Unit,
+    onManage: () -> Unit,
+    unloadEnabled: Boolean = true,
+    onUnload: () -> Unit = {},
+) {
+    val c = Iris.colors
+    MorphPanel(progress, expanded, pillInRoot, onDismiss, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9),
+        header = { p, hPad -> ModelPillContent(engine, chevronTurn = p, hPad = hPad) },
+    ) {
                         MorphHairline()
                         models.forEach { m ->
                             val selected = m.path == currentPath
@@ -976,10 +1033,101 @@ private fun ModelMorphPanel(
                         if (engine is EngineState.Ready) {
                             CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_41cb75), Icons.Outlined.Eject, enabled = unloadEnabled) { if (expanded) onUnload() }
                         }
-                    }
-                }
+    }
+}
+
+/** 2.3.3: the 角色 pill — 「角色」, or the active card's avatar + short name (avatar only when [compact]). */
+@Composable
+private fun CharacterTitle(entry: com.iris.localai.character.CharacterStore.Entry?, compact: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    com.iris.localai.ui.components.IrisPill(
+        modifier,
+        height = IrisDimens.topBarControl,
+        onClick = onClick, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_pick),
+    ) { CharacterPillContent(entry, compact, chevronTurn = 0f) }
+}
+
+@Composable
+private fun RowScope.CharacterPillContent(
+    entry: com.iris.localai.character.CharacterStore.Entry?,
+    compact: Boolean,
+    chevronTurn: Float,
+    hPad: androidx.compose.ui.unit.Dp = IrisDimens.space12,
+) {
+    val c = Iris.colors
+    if (entry != null && compact) {
+        // avatar only: 7 dp around a 28 dp avatar keeps the 42 dp pill round
+        Spacer(Modifier.width(7.dp))
+        com.iris.localai.ui.character.CharacterAvatar(entry.avatar, entry.card.name, 28.dp)
+        Spacer(Modifier.width(7.dp))
+        return
+    }
+    Spacer(Modifier.width(if (entry != null) 7.dp else hPad))
+    Row(Modifier.weight(1f, fill = chevronTurn > 0f), verticalAlignment = Alignment.CenterVertically) {
+        if (entry != null) {
+            com.iris.localai.ui.character.CharacterAvatar(entry.avatar, entry.card.name, 28.dp)
+            Spacer(Modifier.width(IrisDimens.space8))
+        }
+        Text(
+            entry?.card?.name?.ifBlank { null } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.ch232_nav),
+            style = IrisType.pillTitle, color = c.text, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 120.dp),
+        )
+    }
+    Icon(
+        Icons.Outlined.KeyboardArrowDown, null, tint = c.textSecondary,
+        modifier = Modifier
+            .padding(start = IrisDimens.space4, end = hPad)
+            .size(16.dp)
+            .graphicsLayer { rotationZ = 180f * chevronTurn },
+    )
+}
+
+/** 2.3.3: 角色 dropdown — 「无角色」, the cards (avatar + name), 「管理角色…」. */
+@Composable
+private fun CharacterMorphPanel(
+    progress: () -> Float,
+    expanded: Boolean,
+    pillInRoot: androidx.compose.ui.geometry.Rect,
+    current: com.iris.localai.character.CharacterStore.Entry?,
+    compact: Boolean,
+    cards: List<com.iris.localai.character.CharacterStore.Entry>,
+    onDismiss: () -> Unit,
+    onPick: (String?) -> Unit,
+    onManage: () -> Unit,
+) {
+    val c = Iris.colors
+    MorphPanel(progress, expanded, pillInRoot, onDismiss, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_close),
+        header = { p, hPad -> CharacterPillContent(current, compact, chevronTurn = p, hPad = hPad) },
+    ) {
+        MorphHairline()
+        CharRow(null == current?.id, expanded, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_none), { onPick(null) }) {
+            Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.PersonOff, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
             }
         }
+        cards.forEach { e ->
+            CharRow(e.id == current?.id, expanded, e.card.name.ifBlank { e.id }, { onPick(e.id) }) { com.iris.localai.ui.character.CharacterAvatar(e.avatar, e.card.name, 28.dp) }
+        }
+        MorphHairline()
+        CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_manage), Icons.Outlined.ManageAccounts) { if (expanded) onManage() }
+    }
+}
+
+@Composable
+private fun CharRow(selected: Boolean, enabled: Boolean, name: String, onClick: () -> Unit, lead: @Composable () -> Unit) {
+    val c = Iris.colors
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        lead()
+        Text(
+            name,
+            style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
+            color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).weight(1f),
+        )
+        if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
     }
 }
 

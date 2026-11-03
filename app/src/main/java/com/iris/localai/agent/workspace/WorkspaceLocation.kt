@@ -10,7 +10,9 @@ enum class WorkspaceLocation(val label: String) {
      */
     DOWNLOADS("下载/IRIDIS/workspace"),
     /** App-private `filesDir/workspace` (the 1.9.0 location). */
-    PRIVATE("应用私有目录");
+    PRIVATE("应用私有目录"),
+    /** 2.3.3: a real folder the user picked (needs 全部文件访问); models / 知识库 / voice stay in Download/IRIDIS. */
+    CUSTOM("自定义位置");
 
     companion object {
         fun parse(s: String?): WorkspaceLocation = entries.firstOrNull { it.name.equals(s?.trim(), ignoreCase = true) } ?: DOWNLOADS
@@ -29,7 +31,53 @@ data class WorkspaceChoice(
      * `Download/IRIDIS` next to `workspace/`, or `filesDir/iridis` in 应用私有目录 mode.
      */
     val appRoot: File = File(root.parentFile ?: root, StorageLayout.PRIVATE_APP_DIR),
+    /** 2.3.3: why the custom folder could not be used (fallbackReason is then set). */
+    val customProblem: CustomWorkspace.Problem? = null,
 )
+
+/**
+ * 2.3.3: validation of a user-picked agent workspace folder (real path; native tools need one, so no
+ * SAF tree). Pure, unit-tested: the app passes its storage volumes (/storage/emulated/0, SD cards).
+ */
+object CustomWorkspace {
+    enum class Problem { BLANK, NO_ACCESS, NOT_ABSOLUTE, OUTSIDE_STORAGE, VOLUME_ROOT, APP_DATA, RESERVED, NOT_WRITABLE }
+
+    /** Canonical folder, or null when it cannot be resolved. */
+    fun canonical(path: String): File? = runCatching { File(path).canonicalFile }.getOrNull()
+
+    private fun under(child: File, parent: File): Boolean =
+        child.path == parent.path || child.path.startsWith(parent.path.trimEnd('/') + "/")
+
+    /**
+     * Null = usable. [volumes] = mounted storage roots; [iridisRoot] = Download/IRIDIS (only its
+     * workspace/ subtree may be picked); [usable] probes that the folder exists and is writable.
+     */
+    fun validate(path: String?, allFiles: Boolean, volumes: List<File>, iridisRoot: File?, usable: (File) -> Boolean = WorkspaceResolver::probe): Problem? {
+        if (path.isNullOrBlank()) return Problem.BLANK
+        if (!allFiles) return Problem.NO_ACCESS
+        if (!path.startsWith("/")) return Problem.NOT_ABSOLUTE
+        val dir = canonical(path) ?: return Problem.OUTSIDE_STORAGE
+        val roots = volumes.mapNotNull { canonical(it.path) }
+        val vol = roots.firstOrNull { under(dir, it) } ?: return Problem.OUTSIDE_STORAGE
+        if (dir.path == vol.path) return Problem.VOLUME_ROOT
+        val rel = dir.path.removePrefix(vol.path).trimStart('/')
+        if (rel == "Android" || rel.startsWith("Android/")) return Problem.APP_DATA
+        iridisRoot?.let { canonical(it.path) }?.let { ir ->
+            val ws = File(ir, StorageLayout.WORKSPACE)
+            if (under(dir, ir) && !under(dir, ws)) return Problem.RESERVED
+        }
+        if (!usable(dir)) return Problem.NOT_WRITABLE
+        return null
+    }
+
+    /** Chinese fallback text (the app shows a localized one). */
+    fun reasonZh(p: Problem): String = when (p) {
+        Problem.BLANK -> "还没有选择自定义文件夹"
+        Problem.NO_ACCESS -> "没有「全部文件访问」权限"
+        Problem.NOT_WRITABLE -> "自定义文件夹不存在或无法写入"
+        else -> "自定义文件夹不可用"
+    }
+}
 
 /**
  * Pure path resolution for the workspace root (unit-tested). The app passes
@@ -58,7 +106,18 @@ object WorkspaceResolver {
         storageState: String?,
         privateRoot: File,
         usable: (File) -> Boolean = ::probe,
+        customPath: String? = null,
+        allFiles: Boolean = false,
+        volumes: List<File> = emptyList(),
     ): WorkspaceChoice {
+        if (requested == WorkspaceLocation.CUSTOM) {
+            // 2.3.3: the sandbox moves; skills / 知识库 / models stay with the default location.
+            val base = resolve(WorkspaceLocation.DOWNLOADS, downloadsDir, storageState, privateRoot, usable)
+            val problem = CustomWorkspace.validate(customPath, allFiles, volumes, downloadsDir?.let { downloadsRoot(it) }, usable)
+            return if (problem == null) WorkspaceChoice(requested, WorkspaceLocation.CUSTOM, CustomWorkspace.canonical(customPath!!)!!, appRoot = base.appRoot)
+            else base.copy(requested = requested, customProblem = problem,
+                fallbackReason = CustomWorkspace.reasonZh(problem) + "，智能体工作区暂时改用默认位置")
+        }
         val privateApp = privateAppRoot(privateRoot)
         if (requested == WorkspaceLocation.PRIVATE) return WorkspaceChoice(requested, WorkspaceLocation.PRIVATE, privateRoot, appRoot = privateApp)
         val reason = when {

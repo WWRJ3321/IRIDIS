@@ -67,6 +67,21 @@ class KnowledgeBase(
 
     fun dir(): File = File(root(), FOLDER)
 
+    /** 2.3.3: 知识库回收站 (knowledge/.trash), purged after 30 days. */
+    val trash = KbTrash { dir() }
+    private var lastPurge = 0L
+
+    fun trashItems(): List<KbTrash.Item> = synchronized(lock) { purgeTrash(); trash.list() }
+    fun restore(id: String): String? = synchronized(lock) { trash.restore(id).also { lastScan = 0 } }?.also { refresh() }
+    fun removeFromTrash(id: String): Boolean = synchronized(lock) { trash.remove(id) }
+    fun emptyTrash(): Int = synchronized(lock) { trash.empty() }
+
+    private fun purgeTrash(now: Long = System.currentTimeMillis()) {
+        if (now - lastPurge < 3_600_000L) return
+        lastPurge = now
+        runCatching { trash.purge(now) }
+    }
+
     private fun load(): KbIndexData = data ?: runCatching {
         json.decodeFromString(KbIndexData.serializer(), indexFile.readText())
     }.getOrNull().let { it ?: KbIndexData() }.also { data = it }
@@ -76,7 +91,8 @@ class KnowledgeBase(
         val out = LinkedHashMap<String, KbSourceFile>()
         var unsupported = 0
         val d = dir()
-        d.walkTopDown().maxDepth(4).filter { it.isFile }.forEach { f ->
+        // 2.3.3: hidden folders (the .trash recycle bin) are never indexed.
+        d.walkTopDown().maxDepth(4).onEnter { it == d || !it.name.startsWith(".") }.filter { it.isFile }.forEach { f ->
             val rel = f.relativeTo(d).path.replace(File.separatorChar, '/')
             if (KbFormats.supported(f.name) && f.length() <= MAX_BYTES) out[rel] = KbSourceFile(rel, f.length(), f.lastModified())
             else if (!f.name.startsWith(".")) unsupported++
@@ -86,7 +102,7 @@ class KnowledgeBase(
                 val entries = ext.list(if (rel.isEmpty()) FOLDER else "$FOLDER/$rel") ?: return
                 for (e in entries) {
                     val p = if (rel.isEmpty()) e.name else "$rel/${e.name}"
-                    if (e.isDir) { if (depth < 4) walk(p, depth + 1) }
+                    if (e.isDir) { if (depth < 4 && !e.name.startsWith(".")) walk(p, depth + 1) }
                     else if (p !in out) {
                         if (KbFormats.supported(e.name) && e.size <= MAX_BYTES) out[p] = KbSourceFile(p, e.size, 0L)
                         else if (!e.name.startsWith(".")) unsupported++
@@ -106,6 +122,7 @@ class KnowledgeBase(
 
     /** Brings the index up to date. [force] = 重建索引 (reads every file again). Returns the status. */
     fun refresh(force: Boolean = false): Status = synchronized(lock) {
+        purgeTrash()
         val (files, unsupported) = scan()
         val old = load()
         val plan = KbChanges.plan(old.files, files, force)
@@ -209,7 +226,8 @@ class KnowledgeBase(
     fun delete(path: String): Boolean = synchronized(lock) {
         if (KbPaths.file(path) == null) return@synchronized false
         val f = File(dir(), path)
-        val gone = (f.isFile && f.delete()) || external()?.delete("$FOLDER/$path") == true || !f.exists()
+        // 2.3.3: into the 回收站 when File access can move it; SAF-only files are deleted as before.
+        val gone = (f.isFile && trash.put(path)) || (f.isFile && f.delete()) || external()?.delete("$FOLDER/$path") == true || !f.exists()
         if (!gone) return@synchronized false
         val d = load()
         if (d.files.any { it.path == path }) {
@@ -276,7 +294,7 @@ class KnowledgeBase(
     fun folders(): List<String> = synchronized(lock) {
         val d = dir()
         if (!d.isDirectory) return@synchronized emptyList()
-        d.walkTopDown().maxDepth(KbPaths.MAX_FOLDER_DEPTH).filter { it.isDirectory && it != d && !it.name.startsWith(".") }
+        d.walkTopDown().maxDepth(KbPaths.MAX_FOLDER_DEPTH).onEnter { it == d || !it.name.startsWith(".") }.filter { it.isDirectory && it != d && !it.name.startsWith(".") }
             .map { it.relativeTo(d).path.replace(File.separatorChar, '/') }.sortedBy { it.lowercase() }.toList()
     }
 
@@ -307,7 +325,7 @@ class KnowledgeBase(
         val p = KbPaths.folder(path)?.takeIf { it.isNotEmpty() } ?: return@synchronized false
         val f = File(dir(), p)
         if (!f.isDirectory) return@synchronized false
-        if (!f.deleteRecursively()) return@synchronized false
+        if (!trash.put(p) && !f.deleteRecursively()) return@synchronized false
         dropIndex { KbPaths.under(it, p) }
         loadStats().let { m -> if (m.keys.removeAll { KbPaths.under(it, p) }) saveStats(m) }
         lastScan = 0
