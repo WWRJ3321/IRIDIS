@@ -84,7 +84,10 @@ data class KbIndexData(val version: Int = 1, val files: List<KbFileEntry> = empt
 data class KbSourceFile(val path: String, val size: Long, val mtime: Long)
 
 /** 2.2.9: [chunkIndex] = position of the chunk in its file (-1 unknown); 「第 chunkIndex+1 段」. */
-data class KbHit(val file: String, val text: String, val score: Double, val chunkIndex: Int = -1)
+data class KbHit(val file: String, val text: String, val score: Double, val chunkIndex: Int = -1, val covers: List<Int> = emptyList()) {
+    /** 2.3.2: (file, chunk) pairs this hit's text holds (after [KbMerge.expand]: the merged neighbours too). */
+    val keys: Set<Pair<String, Int>> get() = (covers.ifEmpty { listOf(chunkIndex) }).filter { it >= 0 }.map { file to it }.toSet()
+}
 
 object KbChanges {
     data class Plan(val keep: List<KbFileEntry>, val reindex: List<KbSourceFile>, val removed: List<String>) {
@@ -163,8 +166,14 @@ object KbQuery {
     val STOP = setOf("什么", "怎么", "么时", "时候", "一下", "是不", "不是", "可以", "这个", "那个", "我们", "你们", "一个", "有没", "没有",
         "我的", "你的", "的是", "是什", "怎样", "如何", "多少", "哪里", "请问", "还有", "上面", "刚才", "the", "a", "is", "of", "to", "and", "what")
     const val TOP_K = 4
+    /** 2.3.2: acknowledgements / continuations that say nothing about the subject. */
+    val ACK = setOf("好的", "好", "嗯", "嗯嗯", "继续", "谢谢", "多谢", "感谢", "收到", "明白", "了解", "知道", "道了", "行", "对", "是的",
+        "没问", "问题", "可以", "ok", "okay", "thanks", "thank", "you", "yes", "go", "on", "continue", "next", "sure", "got", "it", "好吧", "然后", "接着", "再来")
 
     fun meaningful(text: String): List<String> = KbTokenizer.tokens(text).filter { it !in STOP }
+
+    /** 2.3.2: terms that say what [current] is about; empty (好的 / 继续 / 谢谢) → no search at all. */
+    fun effective(current: String): List<String> = meaningful(current).filter { it !in ACK }.distinct()
 
     fun isFollowUp(current: String): Boolean {
         val t = current.trim()
@@ -201,8 +210,8 @@ object KbMerge {
      * Each hit takes chunk i-1 and/or i+1 of its file ([chunks] gives a file's chunks) while the text
      * stays within [maxChars]; a hit already covered by an earlier (better) one is dropped.
      */
-    fun expand(hits: List<KbHit>, chunks: (String) -> List<String>, maxChars: Int): List<KbHit> {
-        val covered = HashSet<Pair<String, Int>>()
+    fun expand(hits: List<KbHit>, chunks: (String) -> List<String>, maxChars: Int, already: Set<Pair<String, Int>> = emptySet()): List<KbHit> {
+        val covered = HashSet<Pair<String, Int>>(already)
         val out = ArrayList<KbHit>()
         for (h in hits) {
             if (h.chunkIndex >= 0 && (h.file to h.chunkIndex) in covered) continue
@@ -221,7 +230,7 @@ object KbMerge {
                     val j = join(all[prev], text); if (j.length <= maxChars) { text = j; lo = prev; covered += h.file to prev }
                 }
             }
-            out += h.copy(text = text)
+            out += h.copy(text = text, covers = (lo..hi).toList())
         }
         return out
     }
@@ -245,6 +254,7 @@ object KbPrompt {
 
     /** Block added to the user's turn in 对话 mode: at most [maxChars] characters of snippet text. */
     fun inject(hits: List<KbHit>, maxChars: Int = INJECT_CHARS): String {
+        if (maxChars <= 0) return ""
         if (hits.isEmpty()) return ""
         val per = maxChars / hits.size
         return buildString {
@@ -284,12 +294,38 @@ object KbFormats {
 
 /** 2.1.0 引用知识库 in 对话 mode. */
 object KbChat {
-    /** Snippets for [question], or none when the folder is empty or nothing matches well enough. */
-    fun hits(kb: KnowledgeBase, question: String, boostFiles: List<String> = emptyList(), maxChars: Int = KbPrompt.INJECT_CHARS): List<KbHit> = runCatching {
+    /**
+     * Snippets for [current] (2.3.2: no search when it has no effective term, e.g. 好的 / 继续); a follow-up
+     * borrows [previousUser]'s keywords, and a hit that only matches through them needs [CARRIED_MIN_SCORE].
+     * [exclude] = (file, chunk) already in a kept block: skipped, and not merged in as a neighbour.
+     */
+    fun hits(
+        kb: KnowledgeBase, current: String, previousUser: String? = null, boostFiles: List<String> = emptyList(),
+        maxChars: Int = KbPrompt.INJECT_CHARS, exclude: Set<Pair<String, Int>> = emptySet(),
+    ): List<KbHit> = runCatching {
+        if (KbQuery.effective(current).isEmpty() || maxChars <= 0) return emptyList()
         if (!kb.hasFiles()) return emptyList()
-        val found = keep(kb.search(question, KbPrompt.INJECT_SNIPPETS, boostFiles))
-        KbMerge.expand(found, kb::chunksOf, maxChars / found.size.coerceAtLeast(1))
+        val q = runCatching { KbQuery.build(current, previousUser, boostFiles, kb::idf) }.getOrDefault(current)
+        val pool = KbPrompt.INJECT_SNIPPETS + exclude.size.coerceAtMost(6)
+        var found = keep(kb.search(q, pool, boostFiles))
+        if (q != current) {
+            val direct = keep(kb.search(current, pool * 3)).flatMap { it.keys }.toSet()
+            found = gateCarried(found, direct)
+        }
+        found = dedupe(found, exclude).take(KbPrompt.INJECT_SNIPPETS)
+        KbMerge.expand(found, kb::chunksOf, maxChars / found.size.coerceAtLeast(1), exclude)
     }.getOrDefault(emptyList())
+
+    /** 2.3.2: a hit the current words alone do not reach ([direct]) stays only with score ≥ [CARRIED_MIN_SCORE]. Pure. */
+    fun gateCarried(hits: List<KbHit>, direct: Set<Pair<String, Int>>): List<KbHit> =
+        hits.filter { h -> h.keys.any { it in direct } || h.score >= CARRIED_MIN_SCORE }
+
+    /** 2.3.2: drops hits whose chunk is already injected in a kept block. Pure. */
+    fun dedupe(hits: List<KbHit>, exclude: Set<Pair<String, Int>>): List<KbHit> =
+        if (exclude.isEmpty()) hits else hits.filter { h -> h.chunkIndex < 0 || (h.file to h.chunkIndex) !in exclude }
+
+    /** 2.3.2: carried-over keywords alone must score at least this. */
+    const val CARRIED_MIN_SCORE = 1.5
 
     /** Below this BM25 score a snippet shares only a common word or two with the question. */
     const val MIN_SCORE = 0.6
@@ -311,13 +347,107 @@ object KbChat {
         else msgs.map { m -> blocks[m.id]?.let { com.iris.localai.util.CtxMessage(m.id, m.role, it + "\n\n" + m.content) } ?: m }
 
     /** 2.3: stores [block] for [id], keeping at most [MAX_KEPT] (oldest dropped first). */
-    fun remember(blocks: MutableMap<String, String>, id: String, block: String) {
+    fun <T> remember(blocks: MutableMap<String, T>, id: String, block: T) {
         blocks.remove(id)
         blocks[id] = block
         val it = blocks.keys.iterator()
         while (blocks.size > MAX_KEPT && it.hasNext()) { it.next(); it.remove() }
     }
 
-    /** Messages whose snippets stay in the prompt (older ones have usually left the window anyway). */
+    /** Memory blocks kept per message (2.3.2: knowledge blocks are bounded by [KbBudget] instead). */
     const val MAX_KEPT = 64
+}
+
+/** 2.3.2: a knowledge block as injected, with the chunks it holds (for dedupe) and its size. */
+data class KbBlock(val text: String, val keys: Set<Pair<String, Int>>) {
+    val tokens: Int get() = com.iris.localai.util.TokenEstimator.estimate(text)
+}
+
+/**
+ * 2.3.2 知识库预算: only the newest [KEEP_TURNS] user messages keep their block in the prompt, together at
+ * most [SHARE] of the window; over budget the oldest goes first. Older kept blocks are never rewritten,
+ * so the prompt prefix up to the newest message stays byte-stable (KV-cache reuse). Pure.
+ */
+object KbBudget {
+    const val KEEP_TURNS = 2
+    const val SHARE = 0.15
+    /** Characters ≈ tokens for CJK; a conservative factor for the per-turn character cap. */
+    fun limit(nCtx: Int): Int = (nCtx.coerceAtLeast(0) * SHARE).toInt()
+
+    /**
+     * Blocks that go into the prompt. [userIds] = the conversation's user message ids, oldest first.
+     */
+    fun select(userIds: List<String>, blocks: Map<String, KbBlock>, nCtx: Int): Map<String, KbBlock> {
+        val ids = userIds.takeLast(KEEP_TURNS).filter { it in blocks }
+        val kept = ids.toMutableList()
+        val max = limit(nCtx)
+        while (kept.isNotEmpty() && kept.sumOf { blocks.getValue(it).tokens } > max) kept.removeAt(0)
+        return kept.associateWith { blocks.getValue(it) }
+    }
+
+    /** Below this many tokens of room the newest turn takes the whole budget and the older block goes. */
+    const val MIN_ROOM = 300
+
+    /**
+     * For a new block on [newId]: its room in tokens, and the chunks of the older kept block(s) to skip.
+     * The newest turn wins: when the older block leaves less than [MIN_ROOM], it is dropped (oldest first).
+     */
+    fun plan(userIds: List<String>, blocks: Map<String, KbBlock>, newId: String, nCtx: Int): Pair<Int, Set<Pair<String, Int>>> {
+        val max = limit(nCtx)
+        val others = select(userIds, blocks - newId, nCtx).toList().toMutableList()
+        while (others.isNotEmpty() && max - others.sumOf { it.second.tokens } < minOf(MIN_ROOM, max)) others.removeAt(0)
+        return (max - others.sumOf { it.second.tokens }).coerceAtLeast(0) to others.flatMap { it.second.keys }.toSet()
+    }
+
+    /** Block overhead (tags + instruction line), so the snippet characters fit into [tokens]. */
+    fun charsFor(tokens: Int): Int = (tokens - 60).coerceAtLeast(0)
+}
+
+/** 2.3.2: paths inside knowledge/ — relative, '/'-separated, no ".." / absolute / hidden parts. Pure. */
+object KbPaths {
+    /** Folders a file may sit in: knowledge/a/b/c/file (the scan reaches depth 4). */
+    const val MAX_FOLDER_DEPTH = 3
+    const val MAX_NAME = 64
+    private val BAD = Regex("[/\\\\:*?\"<>|\\u0000-\\u001f]")
+    val EDITABLE = setOf("txt", "md", "markdown")
+
+    /** A single safe file / folder name, or null. */
+    fun name(raw: String): String? {
+        val t = raw.trim()
+        if (t.isEmpty() || t == "." || t == ".." || t.startsWith(".") || t.length > MAX_NAME || BAD.containsMatchIn(t)) return null
+        return t
+    }
+
+    private fun parts(path: String): List<String>? {
+        if (path.startsWith("/") || path.contains('\\')) return null
+        val ps = path.split('/').filter { it.isNotEmpty() }
+        return if (ps.all { name(it) == it }) ps else null
+    }
+
+    /** A folder path ("" = the root), or null when unsafe or deeper than [MAX_FOLDER_DEPTH]. */
+    fun folder(path: String): String? = parts(path.trim().trimEnd('/'))?.takeIf { it.size <= MAX_FOLDER_DEPTH }?.joinToString("/")
+
+    /** A file path (at least the name), or null when unsafe or too deep. */
+    fun file(path: String): String? = parts(path.trim())?.takeIf { it.isNotEmpty() && it.size <= MAX_FOLDER_DEPTH + 1 }?.joinToString("/")
+
+    fun join(folder: String, name: String): String = if (folder.isEmpty()) name else "$folder/$name"
+    fun depth(folder: String): Int = if (folder.isEmpty()) 0 else folder.count { it == '/' } + 1
+    fun parent(path: String): String = path.substringBeforeLast('/', "")
+    /** [path] lies inside folder [folder] (not the folder itself). */
+    fun under(path: String, folder: String): Boolean = folder.isEmpty() || path.startsWith("$folder/")
+    fun editable(path: String): Boolean = KbFormats.ext(path) in EDITABLE
+
+    /** Breadcrumbs: ("", root label) then each folder of [folder] with its path. */
+    fun crumbs(folder: String, root: String): List<Pair<String, String>> {
+        val out = mutableListOf("" to root)
+        var acc = ""
+        for (p in folder.split('/').filter { it.isNotEmpty() }) { acc = join(acc, p); out += acc to p }
+        return out
+    }
+
+    /** Direct sub-folders of [folder] among [all] folder paths. */
+    fun subfolders(all: List<String>, folder: String): List<String> = all.filter { parent(it) == folder && it != folder }
+
+    /** Files directly in [folder]. */
+    fun filesIn(paths: List<String>, folder: String): List<String> = paths.filter { parent(it) == folder }
 }

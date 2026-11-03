@@ -77,6 +77,8 @@ data class ContextUsage(
     val memoryInjected: Boolean = false,
     /** 2.2.9 E: history messages the model sees in the next prompt (planFor). */
     val visibleMessages: Int = 0,
+    /** 2.3.2: tokens of knowledge snippets in the next prompt (part of [used]). */
+    val knowledgeTokens: Int = 0,
 ) {
     val fraction: Float get() = if (limit > 0) (used.toFloat() / limit).coerceIn(0f, 1f) else 0f
     val nearFull: Boolean get() = limit > 0 && used >= limit * NEAR_FULL
@@ -173,6 +175,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             compactions = compacted?.times ?: 0,
             visibleMessages = planned.second,
             memoryInjected = memoryInjectFor(agentMode) && !conv.memorySnapshot.isNullOrBlank() && conv.memoryEpoch == c.agent.memorySettings.current.epoch,
+            knowledgeTokens = if (agentMode || !s.knowledgeInChat) 0 else keptKb(conv, contextTokensFor(ready)).values.sumOf { it.tokens },
         )
     }
 
@@ -499,7 +502,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      * sends the history the engine already holds and its KV cache is reused instead of the whole
      * conversation being prefilled again. Bounded ([KbChat.MAX_KEPT]); not persisted.
      */
-    private val kbBlocks = LinkedHashMap<String, String>()
+    private val kbBlocks = LinkedHashMap<String, com.iris.localai.knowledge.KbBlock>()
+
+    /** 2.3.2: knowledge blocks that go into the prompt (newest 2 user turns, ≤ 15% of the window). */
+    private fun keptKb(conv: Conversation, nCtx: Int): Map<String, com.iris.localai.knowledge.KbBlock> {
+        val ids = conv.messages.filter { it.role == Role.USER && it.content.isNotBlank() }.map { it.id }
+        val all = synchronized(kbBlocks) { HashMap(kbBlocks) }
+        return com.iris.localai.knowledge.KbBudget.select(ids, all, nCtx)
+    }
 
     /**
      * 2.2.9 C: user message id → its 【相关记忆】 block (FACT items relevant to it), put in front of
@@ -508,8 +518,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     private val memBlocks = LinkedHashMap<String, String>()
 
     /** kbBlocks + memBlocks, memory first, for [KbChat.attachAll]. */
-    private fun turnBlocks(): Map<String, String> {
-        val kb = synchronized(kbBlocks) { HashMap(kbBlocks) }
+    private fun turnBlocks(conv: Conversation, nCtx: Int): Map<String, String> {
+        val kb = keptKb(conv, nCtx).mapValues { it.value.text }
         val mem = memOnly()
         if (mem.isEmpty()) return kb
         return (mem.keys + kb.keys).associateWith { listOfNotNull(mem[it], kb[it]).joinToString("\n\n") }
@@ -542,15 +552,22 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val pi = msgs.subList(0, ui).indexOfLast { it.role == Role.USER && it.content.isNotBlank() }
         val prevUser = if (pi >= 0) msgs[pi].content else null
         val prevFiles = if (pi >= 0) msgs.subList(pi + 1, ui).flatMap { com.iris.localai.knowledge.KbSource.files(it.kbSources) }.distinct() else emptyList()
-        val maxChars = if (requester == Requester.VOICE) com.iris.localai.knowledge.KbPrompt.INJECT_CHARS / 2 else com.iris.localai.knowledge.KbPrompt.INJECT_CHARS
+        val base = if (requester == Requester.VOICE) com.iris.localai.knowledge.KbPrompt.INJECT_CHARS / 2 else com.iris.localai.knowledge.KbPrompt.INJECT_CHARS
         val kb = c.agent.knowledge
+        // 2.3.2: room left in the 15% budget next to the previous turn's block, and its chunks (dedupe).
+        val ids = msgs.subList(0, ui + 1).filter { it.role == Role.USER && it.content.isNotBlank() }.map { it.id }
+        val nCtx = contextTokensFor((c.engine.state.value as? EngineState.Ready))
+        val (room, exclude) = synchronized(kbBlocks) { com.iris.localai.knowledge.KbBudget.plan(ids, HashMap(kbBlocks), user.id, nCtx) }
+        val maxChars = minOf(base, com.iris.localai.knowledge.KbBudget.charsFor(room))
         val hits = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val q = runCatching { com.iris.localai.knowledge.KbQuery.build(user.content, prevUser, prevFiles, kb::idf) }.getOrDefault(user.content)
-            com.iris.localai.knowledge.KbChat.hits(kb, q, prevFiles, maxChars).also { h -> if (h.isNotEmpty()) runCatching { kb.cite(h.map { it.file }) } }
+            com.iris.localai.knowledge.KbChat.hits(kb, user.content, prevUser, prevFiles, maxChars, exclude).also { h -> if (h.isNotEmpty()) runCatching { kb.cite(h.map { it.file }) } }
         }
         synchronized(kbBlocks) {
             if (hits.isEmpty()) kbBlocks.remove(user.id)
-            else com.iris.localai.knowledge.KbChat.remember(kbBlocks, user.id, com.iris.localai.knowledge.KbPrompt.inject(hits, maxChars))
+            else com.iris.localai.knowledge.KbChat.remember(kbBlocks, user.id, com.iris.localai.knowledge.KbBlock(com.iris.localai.knowledge.KbPrompt.inject(hits, maxChars), hits.flatMap { it.keys }.toSet()))
+            // Only blocks that can still be kept matter; the rest are forgotten.
+            val keep = com.iris.localai.knowledge.KbBudget.select(ids, HashMap(kbBlocks), nCtx).keys
+            kbBlocks.keys.retainAll(keep + ids.takeLast(com.iris.localai.knowledge.KbBudget.KEEP_TURNS))
         }
         if (hits.isEmpty()) return
         val sources = hits.map { com.iris.localai.knowledge.KbSource.label(it) }
@@ -586,7 +603,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val ms = c.agent.memorySettings.current
         if (!manual && !com.iris.localai.context.ContextAssembly.autoAllowed(agentMode, strategy, ms.autoCompact)) return 0
         // 2.2.17 D: count each message's memory/knowledge block, as planFor sends it.
-        val blocks = if (agentMode || !s.knowledgeInChat) memOnly() else turnBlocks()
+        val blocks = if (agentMode || !s.knowledgeInChat) memOnly() else turnBlocks(conv, contextTokensFor(ready))
         val active = com.iris.localai.context.ContextAssembly.withExtras(
             com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, agentMode, ready?.details?.supportsVision == true), blocks)
         val ctx = contextTokensFor(ready)
@@ -1112,7 +1129,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         // engine sees next turn is the one it already holds (KV-cache reuse).
         val msgs = com.iris.localai.context.ContextAssembly.forPlanner(active, compaction, withTools = agent)
             // 2.2.9: plus each message's 【相关记忆】 (memory FACTs), both modes.
-            .let { m -> com.iris.localai.knowledge.KbChat.attachAll(m, if (agent || !s.knowledgeInChat) memOnly() else turnBlocks()) }
+            .let { m -> com.iris.localai.knowledge.KbChat.attachAll(m, if (agent || !s.knowledgeInChat) memOnly() else turnBlocks(conv, ready?.details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength)) }
         return com.iris.localai.util.ContextPlanner.plan(
             com.iris.localai.util.ContextRequest(
                 system = system,

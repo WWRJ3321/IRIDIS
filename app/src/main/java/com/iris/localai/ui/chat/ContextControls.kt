@@ -203,6 +203,8 @@ object ContextText {
     fun usageDetail(u: ContextUsage): String = listOfNotNull(
         if (u.limit > 0) (if (u.exact) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35)) + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3c47ff),
         u.visibleMessages.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a20e8a, it) },
+        // 2.3.2: knowledge snippets counted apart (part of the total above).
+        u.knowledgeTokens.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_meter, shortTokens(it)) },
     ).joinToString(" · ")
 }
 

@@ -6,6 +6,12 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +90,10 @@ object KnowledgeText {
         val t = title.trim().replace(Regex("[/\\\\:*?\"<>|\\u0000\\n\\r\\t]"), " ").replace(Regex(" +"), " ").trim().take(MAX_TITLE).trimEnd('.', ' ')
         return t.ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8b3889) } + ".md"
     }
+    /** 2.3.2 */
+    val NEW_TEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_new_text)
+    val EDIT_TEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_edit_text)
+    val READONLY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_readonly)
     val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ce81e3)
     val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_16ca25)
 
@@ -136,10 +146,20 @@ fun KnowledgePage(onBack: () -> Unit) {
     var tick by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<KbFileInfo?>(null) }
-    var pasting by remember { mutableStateOf(false) }
+    // 2.3.2: current folder ("" = knowledge/), the editor (null = closed; path "" = new text), folder dialogs.
+    var folder by remember { mutableStateOf("") }
+    var editor by remember { mutableStateOf<KbEditorState?>(null) }
+    var newFolder by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var deletingFolder by remember { mutableStateOf<String?>(null) }
+    var moving by remember { mutableStateOf<KbFileInfo?>(null) }
     val c = Iris.colors
+    fun toast(id: Int) = Toast.makeText(context, com.iris.localai.I18n.s(id), Toast.LENGTH_SHORT).show()
 
     // Listed first (unread files show 「正在读取…」), then the index is brought up to date and listed again.
+    val folders by produceState(emptyList<String>(), tick, ws) {
+        value = withContext(Dispatchers.IO) { runCatching { agent.knowledge.folders() }.getOrDefault(emptyList()) }
+    }
     val files by produceState<List<KbFileInfo>?>(null, tick, ws) {
         value = withContext(Dispatchers.IO) { runCatching { agent.knowledge.files() }.getOrNull() }
         if (value?.any { !it.indexed } == true) {
@@ -157,7 +177,7 @@ fun KnowledgePage(onBack: () -> Unit) {
                         val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                             ?.use { cur -> if (cur.moveToFirst()) cur.getString(0) else null } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "file.txt"
                         val bytes = context.contentResolver.openInputStream(uri)?.use { s -> s.readBytes().takeIf { it.size <= KnowledgeBase.MAX_BYTES } }
-                        bytes != null && agent.knowledge.add(name, bytes) != null
+                        bytes != null && agent.knowledge.add(name, bytes, folder) != null
                     }.getOrDefault(false)
                 }
             }
@@ -165,6 +185,22 @@ fun KnowledgePage(onBack: () -> Unit) {
             tick++
             Toast.makeText(context, if (added == uris.size) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0cf789, added) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_321562, added, uris.size), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    editor?.let { ed ->
+        KbEditorPage(ed, onClose = { editor = null }) { title, body ->
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        if (ed.path.isNotEmpty()) agent.knowledge.writeText(ed.path, body)
+                        else agent.knowledge.add(KnowledgeText.fileName(title.ifBlank { KnowledgeText.titleFrom(body) }), body.toByteArray(Charsets.UTF_8), folder)?.also { agent.knowledge.refresh() } != null
+                    }.getOrDefault(false)
+                }
+                tick++
+                if (ok) { editor = null; toast(com.iris.localai.R.string.kb232_saved) } else toast(com.iris.localai.R.string.kb232_failed)
+            }
+        }
+        return
     }
 
     SubpageScaffold(KnowledgeText.TITLE, onBack) {
@@ -178,21 +214,44 @@ fun KnowledgePage(onBack: () -> Unit) {
             Spacer(Modifier.height(IrisDimens.space8))
             // 2.2.17 D: paste text straight in (saved as a .md file and indexed like any import).
             IrisButton(
-                KnowledgeText.PASTE, { pasting = true }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
+                KnowledgeText.NEW_TEXT, { editor = KbEditorState("", "", "") }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
                 icon = IrisIcons.Copy, enabled = !busy,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
             )
+            Spacer(Modifier.height(IrisDimens.space8))
+            IrisButton(
+                com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_new_folder), { newFolder = true }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
+                icon = IrisIcons.FolderPlus, enabled = !busy && com.iris.localai.knowledge.KbPaths.depth(folder) < com.iris.localai.knowledge.KbPaths.MAX_FOLDER_DEPTH,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
+            )
             Spacer(Modifier.height(IrisDimens.space16))
-            val list = files
+            // 2.3.2: breadcrumbs (知识库 › a › b), each tappable.
+            KbCrumbs(folder) { folder = it }
+            val subs = com.iris.localai.knowledge.KbPaths.subfolders(folders, folder)
+            val list = files?.filter { com.iris.localai.knowledge.KbPaths.parent(it.path) == folder }
             if (list == null) {
                 Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
-            } else if (list.isEmpty()) {
+            } else if (list.isEmpty() && subs.isEmpty()) {
                 Text(KnowledgeText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
             } else {
                 SettingsGroup {
-                    list.forEachIndexed { i, f ->
+                    subs.forEachIndexed { i, sub ->
                         if (i > 0) HairlineDivider()
-                        KbFileRow(f, onDelete = { deleting = f })
+                        KbFolderRow(sub, onOpen = { folder = sub }, onRename = { renaming = sub }, onDelete = { deletingFolder = sub })
+                    }
+                    list.forEachIndexed { i, f ->
+                        if (i > 0 || subs.isNotEmpty()) HairlineDivider()
+                        KbFileRow(
+                            f, onDelete = { deleting = f }, onMove = { moving = f },
+                            onOpen = {
+                                if (!com.iris.localai.knowledge.KbPaths.editable(f.path)) { Toast.makeText(context, KnowledgeText.READONLY, Toast.LENGTH_SHORT).show() }
+                                else scope.launch {
+                                    val text = withContext(Dispatchers.IO) { runCatching { agent.knowledge.readText(f.path) }.getOrNull() }
+                                    if (text == null) toast(com.iris.localai.R.string.kb232_failed)
+                                    else editor = KbEditorState(f.path, f.path.substringAfterLast('/').substringBeforeLast('.'), text)
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -217,15 +276,73 @@ fun KnowledgePage(onBack: () -> Unit) {
         }
     }
 
-    if (pasting) PasteTextDialog(onDismiss = { pasting = false }) { title, body ->
-        busy = true
-        scope.launch {
-            val ok = withContext(Dispatchers.IO) {
-                runCatching { agent.knowledge.add(KnowledgeText.fileName(title), body.toByteArray(Charsets.UTF_8)) != null && run { agent.knowledge.refresh(); true } }.getOrDefault(false)
+    if (newFolder) com.iris.localai.ui.components.TextInputDialog(
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_new_folder), initial = "",
+        placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_folder_name),
+        onConfirm = { name ->
+            scope.launch {
+                val r = withContext(Dispatchers.IO) { runCatching { agent.knowledge.mkdir(folder, name) }.getOrNull() }
+                if (r == null) toast(com.iris.localai.R.string.kb232_folder_bad)
+                tick++
             }
-            busy = false
+        },
+        onDismiss = { newFolder = false },
+    )
+
+    renaming?.let { path ->
+        com.iris.localai.ui.components.TextInputDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_rename), initial = path.substringAfterLast('/'),
+            placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_folder_name),
+            onConfirm = { name ->
+                scope.launch {
+                    val r = withContext(Dispatchers.IO) { runCatching { agent.knowledge.renameFolder(path, name) }.getOrNull() }
+                    if (r == null) toast(com.iris.localai.R.string.kb232_folder_bad)
+                    tick++
+                }
+            },
+            onDismiss = { renaming = null },
+        )
+    }
+
+    deletingFolder?.let { path ->
+        // No file trash exists for the knowledge folder: a non-empty folder asks first; an empty one goes at once.
+        val empty = remember(path) { agent.knowledge.folderEmpty(path) }
+        fun doDelete() = scope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { agent.knowledge.deleteFolder(path) }.getOrDefault(false) }
+            if (!ok) toast(com.iris.localai.R.string.kb232_failed)
             tick++
-            Toast.makeText(context, if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_19b758, title.trim()) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6452a0), Toast.LENGTH_SHORT).show()
+        }
+        if (empty) { androidx.compose.runtime.LaunchedEffect(path) { doDelete(); deletingFolder = null } }
+        else ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_delete_folder, path.substringAfterLast('/')),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_delete_folder_msg),
+            confirmText = KnowledgeText.DELETE,
+            onConfirm = { doDelete() },
+            onDismiss = { deletingFolder = null },
+        )
+    }
+
+    moving?.let { f ->
+        val here = com.iris.localai.knowledge.KbPaths.parent(f.path)
+        com.iris.localai.ui.components.IrisDialog(
+            onDismiss = { moving = null }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_move),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2), onConfirm = { moving = null }, dismissText = null,
+        ) {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                (listOf("") + folders).filter { it != here }.forEach { target ->
+                    SettingsRow(
+                        if (target.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_root) else target, icon = IrisIcons.Folder,
+                        onClick = {
+                            moving = null
+                            scope.launch {
+                                val r = withContext(Dispatchers.IO) { runCatching { agent.knowledge.move(f.path, target) }.getOrNull() }
+                                if (r == null) toast(com.iris.localai.R.string.kb232_failed)
+                                tick++
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -247,11 +364,11 @@ fun KnowledgePage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit) {
+private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit, onMove: () -> Unit = {}, onOpen: () -> Unit = {}) {
     val c = Iris.colors
     var menu by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().padding(start = IrisDimens.space16, top = IrisDimens.space16, bottom = IrisDimens.space16, end = IrisDimens.space4),
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = IrisDimens.space16, top = IrisDimens.space16, bottom = IrisDimens.space16, end = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -261,49 +378,123 @@ private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit) {
             Text(KnowledgeText.badge(f.path), style = IrisType.caption, color = c.textSecondary, maxLines = 1)
         }
         Column(Modifier.weight(1f).padding(start = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
-            Text(f.path, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(KnowledgeText.fileLine(f), style = IrisType.caption, color = if (f.indexed) c.textSecondary else c.warning)
         }
         Box {
             PressableIcon(IrisIcons.More, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
             IrisMenu(menu, { menu = false }) {
+                if (com.iris.localai.knowledge.KbPaths.editable(f.path)) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_edit), IrisIcons.Edit) { menu = false; onOpen() }
+                IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_move), IrisIcons.Folder) { menu = false; onMove() }
                 IrisMenuItem(KnowledgeText.DELETE, null, destructive = true) { menu = false; onDelete() }
             }
         }
     }
 }
 
-/** 2.2.17 D 「粘贴文字」: content (prefilled from the clipboard) + a title taken from its first line, editable. */
+/** 2.3.2: a sub-folder row: tap opens it; ⋯ rename / delete. */
 @Composable
-private fun PasteTextDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+private fun KbFolderRow(path: String, onOpen: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) {
     val c = Iris.colors
-    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
-    val initial = remember { clip.getText()?.text.orEmpty().take((KnowledgeBase.MAX_BYTES / 4).toInt()) }
-    var body by remember { mutableStateOf(initial) }
-    var title by remember { mutableStateOf(KnowledgeText.titleFrom(initial).takeIf { initial.isNotBlank() }.orEmpty()) }
-    var titleEdited by remember { mutableStateOf(false) }
-    com.iris.localai.ui.components.IrisDialog(
-        onDismiss = onDismiss, title = KnowledgeText.PASTE, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
-        confirmEnabled = body.isNotBlank(),
-        onConfirm = { onSave(title.ifBlank { KnowledgeText.titleFrom(body) }, body); onDismiss() },
+    var menu by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = IrisDimens.space16, top = IrisDimens.space12, bottom = IrisDimens.space12, end = IrisDimens.space4),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(IrisDimens.space8)) {
+        Box(Modifier.size(40.dp).clip(IrisRadius.smallShape).background(c.surfaceVariant), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.Icon(IrisIcons.Folder, null, tint = c.textSecondary, modifier = Modifier.size(20.dp))
+        }
+        Column(Modifier.weight(1f).padding(start = IrisDimens.space16)) {
+            Text(path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_folder), style = IrisType.caption, color = c.textSecondary)
+        }
+        Box {
+            PressableIcon(IrisIcons.More, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
+            IrisMenu(menu, { menu = false }) {
+                IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_rename), IrisIcons.Edit) { menu = false; onRename() }
+                IrisMenuItem(KnowledgeText.DELETE, null, destructive = true) { menu = false; onDelete() }
+            }
+        }
+    }
+}
+
+/** 2.3.2: 知识库 › a › b — each part opens that folder. */
+@Composable
+private fun KbCrumbs(folder: String, onOpen: (String) -> Unit) {
+    val c = Iris.colors
+    val crumbs = com.iris.localai.knowledge.KbPaths.crumbs(folder, KnowledgeText.TITLE)
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        crumbs.forEachIndexed { i, (path, label) ->
+            if (i > 0) Text(" › ", style = IrisType.secondary, color = c.textTertiary)
+            val last = i == crumbs.lastIndex
+            Text(
+                label, style = IrisType.secondary, color = if (last) c.text else c.accent, maxLines = 1,
+                modifier = if (last) Modifier else Modifier.clickable { onOpen(path) },
+            )
+        }
+    }
+}
+
+/** 2.3.2: what the editor opens on. [path] "" = a new text (saved as 「title.md」 in the current folder). */
+data class KbEditorState(val path: String, val title: String, val text: String)
+
+/**
+ * 2.3.2 文字编辑页 (was the 2.2.17 「粘贴文字」 dialog): title + a multi-line box typed by hand. 「粘贴」 inserts
+ * the clipboard at the cursor only when tapped; the clipboard is never read on its own. An existing file
+ * keeps its name (title read-only) and is overwritten in place.
+ */
+@Composable
+private fun KbEditorPage(state: KbEditorState, onClose: () -> Unit, onSave: (String, String) -> Unit) {
+    val c = Iris.colors
+    val context = LocalContext.current
+    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+    val isNew = state.path.isEmpty()
+    var title by remember { mutableStateOf(state.title) }
+    var body by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(state.text)) }
+    androidx.activity.compose.BackHandler(onBack = onClose)
+    SubpageScaffold(
+        if (isNew) KnowledgeText.NEW_TEXT else KnowledgeText.EDIT_TEXT, onClose, scrollUnder = false,
+        actions = {
+            com.iris.localai.ui.components.IrisButton(
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb), { onSave(title, body.text) },
+                enabled = body.text.isNotBlank(),
+            )
+        },
+    ) {
+        Column(
+            Modifier.fillMaxSize().imePadding().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8),
+            verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+        ) {
             androidx.compose.material3.OutlinedTextField(
-                title, { title = it; titleEdited = true }, singleLine = true,
+                title, { title = it }, singleLine = true, enabled = isNew,
                 textStyle = IrisType.body.copy(color = c.text),
                 placeholder = { Text(KnowledgeText.PASTE_TITLE, style = IrisType.body, color = c.textTertiary) },
-                shape = com.iris.localai.ui.theme.IrisRadius.mediumShape,
+                shape = IrisRadius.mediumShape,
                 colors = com.iris.localai.ui.components.irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
+            IrisButton(
+                com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_paste), {
+                    val t = clip.getText()?.text.orEmpty()
+                    if (t.isEmpty()) Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_clip_empty), Toast.LENGTH_SHORT).show()
+                    else {
+                        val sel = body.selection
+                        val next = body.text.substring(0, sel.min) + t + body.text.substring(sel.max)
+                        body = androidx.compose.ui.text.input.TextFieldValue(next.take((KnowledgeBase.MAX_BYTES / 4).toInt()), androidx.compose.ui.text.TextRange((sel.min + t.length).coerceAtMost(next.length)))
+                    }
+                },
+                style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, icon = IrisIcons.Copy,
+            )
             androidx.compose.material3.OutlinedTextField(
-                body, { body = it; if (!titleEdited) title = if (it.isBlank()) "" else KnowledgeText.titleFrom(it) },
-                minLines = 5, maxLines = 10,
+                body, { body = it },
                 textStyle = IrisType.body.copy(color = c.text),
-                placeholder = { Text(KnowledgeText.PASTE_BODY, style = IrisType.body, color = c.textTertiary) },
-                shape = com.iris.localai.ui.theme.IrisRadius.mediumShape,
+                placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_body_hint), style = IrisType.body, color = c.textTertiary) },
+                shape = IrisRadius.mediumShape,
                 colors = com.iris.localai.ui.components.irisTextFieldColors(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().weight(1f),
             )
         }
     }

@@ -207,7 +207,7 @@ class KnowledgeBase(
 
     /** Deletes [path] from knowledge/, drops it from the index and the stats. */
     fun delete(path: String): Boolean = synchronized(lock) {
-        if (path.contains("..")) return@synchronized false
+        if (KbPaths.file(path) == null) return@synchronized false
         val f = File(dir(), path)
         val gone = (f.isFile && f.delete()) || external()?.delete("$FOLDER/$path") == true || !f.exists()
         if (!gone) return@synchronized false
@@ -228,9 +228,10 @@ class KnowledgeBase(
     }
 
     /** Copies a picked file into knowledge/ (a free name when it exists). Returns its relative path. */
-    fun add(name: String, bytes: ByteArray): String? = synchronized(lock) {
+    fun add(name: String, bytes: ByteArray, folder: String = ""): String? = synchronized(lock) {
         val clean = name.replace(Regex("[/\\\\:*?\"<>|\\u0000]"), "_").trim().ifEmpty { "file.txt" }
-        val d = dir().apply { mkdirs() }
+        val sub = KbPaths.folder(folder) ?: return@synchronized null
+        val d = (if (sub.isEmpty()) dir() else File(dir(), sub)).apply { mkdirs() }
         var target = File(d, clean)
         var i = 2
         while (target.exists()) {
@@ -238,9 +239,131 @@ class KnowledgeBase(
             target = File(d, if (ext.isEmpty()) "$base ($i)" else "$base ($i).$ext"); i++
         }
         val ok = runCatching { target.writeBytes(bytes); true }.getOrDefault(false)
-        val rel = if (ok) target.name else if (external()?.write("$FOLDER/${target.name}", bytes) == true) target.name else null
+        val relName = KbPaths.join(sub, target.name)
+        val rel = if (ok) relName else if (external()?.write("$FOLDER/$relName", bytes) == true) relName else null
         lastScan = 0
         rel
+    }
+
+    // ---- 2.3.2: edit text files, folders ----
+
+    /** Text of [path] for the editor; null when it is not an editable text file or cannot be read. */
+    fun readText(path: String): String? = synchronized(lock) {
+        val p = KbPaths.file(path) ?: return@synchronized null
+        if (!KbPaths.editable(p)) return@synchronized null
+        read(p)?.let { KbFormats.text(p, it) }
+    }
+
+    /** Overwrites [path] in place with [text] and re-indexes it. */
+    fun writeText(path: String, text: String): Boolean = synchronized(lock) {
+        val p = KbPaths.file(path) ?: return@synchronized false
+        if (!KbPaths.editable(p)) return@synchronized false
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        val f = File(dir(), p)
+        val ok = runCatching {
+            f.parentFile?.mkdirs()
+            val tmp = File(f.path + ".tmp~")
+            tmp.writeBytes(bytes)
+            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) } else true
+        }.getOrDefault(false) || external()?.write("$FOLDER/$p", bytes) == true
+        if (!ok) return@synchronized false
+        dropIndex { it == p }
+        refresh()
+        true
+    }
+
+    /** Sub-folders of knowledge/ (relative, '/'-separated), at most [KbPaths.MAX_FOLDER_DEPTH] deep. */
+    fun folders(): List<String> = synchronized(lock) {
+        val d = dir()
+        if (!d.isDirectory) return@synchronized emptyList()
+        d.walkTopDown().maxDepth(KbPaths.MAX_FOLDER_DEPTH).filter { it.isDirectory && it != d && !it.name.startsWith(".") }
+            .map { it.relativeTo(d).path.replace(File.separatorChar, '/') }.sortedBy { it.lowercase() }.toList()
+    }
+
+    /** Creates folder [name] in [parent]; returns its path, or null (bad name, too deep, exists). */
+    fun mkdir(parent: String, name: String): String? = synchronized(lock) {
+        val pp = KbPaths.folder(parent) ?: return@synchronized null
+        val n = KbPaths.name(name) ?: return@synchronized null
+        val rel = KbPaths.join(pp, n)
+        if (KbPaths.depth(rel) > KbPaths.MAX_FOLDER_DEPTH) return@synchronized null
+        val f = File(dir(), rel)
+        if (f.exists()) return@synchronized null
+        if (f.mkdirs()) rel else null
+    }
+
+    /** Renames folder [path] (same parent); index entries and cite counts follow. */
+    fun renameFolder(path: String, newName: String): String? = synchronized(lock) {
+        val p = KbPaths.folder(path)?.takeIf { it.isNotEmpty() } ?: return@synchronized null
+        val n = KbPaths.name(newName) ?: return@synchronized null
+        val target = KbPaths.join(p.substringBeforeLast('/', ""), n)
+        val src = File(dir(), p); val dst = File(dir(), target)
+        if (!src.isDirectory || dst.exists() || !src.renameTo(dst)) return@synchronized null
+        moved(p, target, folder = true)
+        target
+    }
+
+    /** Deletes folder [path] and everything in it. */
+    fun deleteFolder(path: String): Boolean = synchronized(lock) {
+        val p = KbPaths.folder(path)?.takeIf { it.isNotEmpty() } ?: return@synchronized false
+        val f = File(dir(), p)
+        if (!f.isDirectory) return@synchronized false
+        if (!f.deleteRecursively()) return@synchronized false
+        dropIndex { KbPaths.under(it, p) }
+        loadStats().let { m -> if (m.keys.removeAll { KbPaths.under(it, p) }) saveStats(m) }
+        lastScan = 0
+        true
+    }
+
+    /** Whether folder [path] holds anything. */
+    fun folderEmpty(path: String): Boolean = KbPaths.folder(path)?.let { File(dir(), it).list()?.isEmpty() } ?: true
+
+    /** Moves file [path] into [folder] (a free name when taken). Returns the new path. */
+    fun move(path: String, folder: String): String? = synchronized(lock) {
+        val p = KbPaths.file(path) ?: return@synchronized null
+        val to = KbPaths.folder(folder) ?: return@synchronized null
+        if (p.substringBeforeLast('/', "") == to) return@synchronized p
+        val src = File(dir(), p)
+        if (!src.isFile) return@synchronized null
+        val d = (if (to.isEmpty()) dir() else File(dir(), to)).apply { mkdirs() }
+        val name = src.name
+        var target = File(d, name); var i = 2
+        while (target.exists()) {
+            val base = name.substringBeforeLast('.', name); val ext = name.substringAfterLast('.', "")
+            target = File(d, if (ext.isEmpty()) "$base ($i)" else "$base ($i).$ext"); i++
+        }
+        if (!src.renameTo(target)) return@synchronized null
+        val rel = KbPaths.join(to, target.name)
+        moved(p, rel, folder = false)
+        rel
+    }
+
+    private fun moved(from: String, to: String, folder: Boolean) {
+        fun map(x: String): String? = if (x == from) to else if (folder && KbPaths.under(x, from)) to + x.substring(from.length) else null
+        val d = load()
+        val next = d.copy(files = d.files.map { e -> map(e.path)?.let { e.copy(path = it) } ?: e }.sortedBy { it.path.lowercase() })
+        saveIndex(next)
+        val m = loadStats()
+        val moves = m.keys.mapNotNull { k -> map(k)?.let { k to it } }
+        if (moves.isNotEmpty()) { moves.forEach { (a, b) -> m.remove(a)?.let { m[b] = it } }; saveStats(m) }
+        lastScan = 0
+    }
+
+    private fun dropIndex(match: (String) -> Boolean) {
+        val d = load()
+        if (d.files.none { match(it.path) }) return
+        saveIndex(d.copy(files = d.files.filterNot { match(it.path) }))
+    }
+
+    private fun saveIndex(next: KbIndexData) {
+        data = next
+        ranker = null
+        nonEmpty = next.files.any { it.chunks.isNotEmpty() }
+        runCatching {
+            indexFile.parentFile?.mkdirs()
+            val tmp = File(indexFile.path + ".tmp")
+            tmp.writeText(json.encodeToString(KbIndexData.serializer(), next))
+            if (!tmp.renameTo(indexFile)) { indexFile.delete(); tmp.renameTo(indexFile) }
+        }
     }
 
     companion object {
