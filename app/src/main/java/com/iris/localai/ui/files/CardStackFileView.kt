@@ -207,8 +207,8 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                 EmptyState(
                     title = when {
                         state.unreadable && state.atRoot -> FilesText.UNAVAILABLE
-                        state.unreadable -> "无法读取这个文件夹"
-                        else -> "空文件夹"
+                        state.unreadable -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_b4991b)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910)
                     },
                     message = if (state.unreadable) FilesText.UNAVAILABLE_HINT else null,
                     icon = IrisIcons.Archive,
@@ -327,7 +327,7 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
             )
             Spacer(Modifier.width(10.dp))
             RollingNumber(count, minWidth = 2, style = monoTitle, color = c.accent)
-            Text(" 项", style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = IrisDimens.space4))
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c4c4af), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = IrisDimens.space4))
         }
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
             Row(
@@ -458,11 +458,11 @@ internal fun EntryMenu(e: FileEntry, actions: FilesActions, expanded: Boolean, o
     }
     IrisMenu(expanded = expanded, onDismiss = onDismiss) {
         if (!e.isDir) {
-            IrisMenuItem("用其他应用打开", IrisIcons.OpenExternal) { onDismiss(); actions.openExternal(e) }
-            IrisMenuItem("分享", IrisIcons.Share) { onDismiss(); actions.share(e) }
+            IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1d93c3), IrisIcons.OpenExternal) { onDismiss(); actions.openExternal(e) }
+            IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), IrisIcons.Share) { onDismiss(); actions.share(e) }
         }
-        if (canRename) IrisMenuItem("重命名", IrisIcons.Edit) { onDismiss(); actions.requestRename(e) }
-        if (canDelete) IrisMenuItem("删除", IrisIcons.Trash, destructive = true) { onDismiss(); actions.requestDelete(e) }
+        if (canRename) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), IrisIcons.Edit) { onDismiss(); actions.requestRename(e) }
+        if (canDelete) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), IrisIcons.Trash, destructive = true) { onDismiss(); actions.requestDelete(e) }
     }
 }
 
@@ -501,7 +501,7 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
             Spacer(Modifier.width(IrisDimens.space8))
             Text(ArchiveMath.typeTag(e), style = IrisType.monoSmall, color = c.textSecondary)
             Spacer(Modifier.weight(1f))
-            PressableIcon(IrisIcons.Close, "关闭", size = 40.dp, iconSize = IrisDimens.space20, onClick = onClose)
+            PressableIcon(IrisIcons.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), size = 40.dp, iconSize = IrisDimens.space20, onClick = onClose)
         }
         Box(
             Modifier.fillMaxWidth().padding(vertical = IrisDimens.space8).clip(IrisRadius.mediumShape)
@@ -528,31 +528,31 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
             ) {
                 Text(e.name, style = IrisType.title, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(10.dp))
-                DetailRow("类型", if (e.extension.isEmpty()) "文件" else e.extension.uppercase(java.util.Locale.ROOT))
-                DetailRow("大小", FileSizes.format(e.size))
-                DetailRow("修改时间", formatModified(e.modified))
-                DetailRow("路径", ArchiveMath.pathTag(e.relPath), mono = true)
+                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_226b09), if (e.extension.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47) else e.extension.uppercase(java.util.Locale.ROOT))
+                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_58f966), FileSizes.format(e.size))
+                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1303e6), formatModified(e.modified))
+                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_4f35e8), ArchiveMath.pathTag(e.relPath), mono = true)
             }
         }
         val preview = FilePreview.canPreview(e)
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4)) {
-            if (preview) IrisButton("预览", onClick = { actions.onEntryClick(e) }, icon = IrisIcons.Eye, modifier = Modifier.weight(1f), compact = true)
-            else IrisButton("打开", onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, modifier = Modifier.weight(1f), compact = true)
+            if (preview) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_645dbc), onClick = { actions.onEntryClick(e) }, icon = IrisIcons.Eye, modifier = Modifier.weight(1f), compact = true)
+            else IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d7098f), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, modifier = Modifier.weight(1f), compact = true)
             Spacer(Modifier.width(IrisDimens.space8))
-            IrisButton("分享", onClick = { actions.share(e) }, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), onClick = { actions.share(e) }, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
         }
         val canRename = actions.canRename(e)
         val canDelete = actions.canDelete(e)
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8)) {
             if (preview) {
-                IrisButton("其他应用打开", onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_9f2ce6), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
                 Spacer(Modifier.width(IrisDimens.space8))
             }
             if (canRename) {
-                IrisButton("重命名", onClick = { onClose(); actions.requestRename(e) }, icon = IrisIcons.Edit, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), onClick = { onClose(); actions.requestRename(e) }, icon = IrisIcons.Edit, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
                 Spacer(Modifier.width(IrisDimens.space8))
             }
-            if (canDelete) IrisButton("删除", onClick = { onClose(); actions.requestDelete(e) }, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.weight(1f), compact = true)
+            if (canDelete) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onClick = { onClose(); actions.requestDelete(e) }, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.weight(1f), compact = true)
         }
         state.rootPath?.let { Text(it, style = IrisType.micro, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp)) }
     }

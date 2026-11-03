@@ -87,7 +87,7 @@ object FilesOps {
 
     /** "a/b/c" → [("工作区",""), ("a","a"), ("b","a/b"), ("c","a/b/c")]. */
     fun crumbs(rel: String): List<Pair<String, String>> {
-        val out = mutableListOf("工作区" to "")
+        val out = mutableListOf(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1) to "")
         var acc = ""
         rel.split('/').filter { it.isNotEmpty() }.forEach { seg -> acc = if (acc.isEmpty()) seg else "$acc/$seg"; out += seg to acc }
         return out
@@ -165,7 +165,7 @@ fun FilesPage(onBack: () -> Unit) {
                     }.isSuccess
                 }
             }
-            message = if (n == uris.size) "已导入 $n 个文件" else "已导入 $n 个，${uris.size - n} 个失败"
+            message = if (n == uris.size) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_121c52, n) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ec03b6, n, uris.size - n)
             agent.changed()
         }
     }
@@ -177,14 +177,14 @@ fun FilesPage(onBack: () -> Unit) {
             val ok = withContext(Dispatchers.IO) {
                 runCatching { context.contentResolver.openOutputStream(uri)?.use { out -> agent.sandbox.resolve(f.path).inputStream().use { it.copyTo(out) } } != null }.getOrDefault(false)
             }
-            message = if (ok) "已导出 ${f.name}" else "导出失败"
+            message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_234c82, f.name) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dd51ab)
         }
     }
 
-    SubpageScaffold("文件", onBack, scrollUnder = false, actions = {
-        PressableIcon(Icons.AutoMirrored.Outlined.Undo, "撤销上次修改", enabled = undoCount > 0) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47), onBack, scrollUnder = false, actions = {
+        PressableIcon(Icons.AutoMirrored.Outlined.Undo, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e9f3fb), enabled = undoCount > 0) {
             scope.launch {
-                message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { "撤销失败：${it.message}" } } ?: "没有可撤销的修改"
+                message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6336b9, it.message) } } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_40caf8)
                 agent.changed()
             }
         }
@@ -209,12 +209,12 @@ fun FilesPage(onBack: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space4)) {
                     com.iris.localai.ui.components.IrisButton(
-                        "导入", onClick = { importer.launch(arrayOf("*/*")) }, icon = Icons.Outlined.Add,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8d9a07), onClick = { importer.launch(arrayOf("*/*")) }, icon = Icons.Outlined.Add,
                         style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
                     )
                     androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = IrisDimens.space4))
                     com.iris.localai.ui.components.IrisButton(
-                        "新建文件夹", onClick = { newFolder = true }, icon = Icons.Outlined.CreateNewFolder,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485), onClick = { newFolder = true }, icon = Icons.Outlined.CreateNewFolder,
                         style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
                     )
                 }
@@ -223,8 +223,8 @@ fun FilesPage(onBack: () -> Unit) {
             if (items.isEmpty() && !loading) {
                 item(key = "empty") {
                     EmptyState(
-                        title = if (rel.isEmpty()) "工作区还是空的" else "空文件夹",
-                        message = "智能体写入的文件会出现在这里，也可以从手机导入",
+                        title = if (rel.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e83b67) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910),
+                        message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1b4e0b),
                         icon = Icons.Outlined.FolderOpen,
                         modifier = Modifier.padding(top = 48.dp),
                     )
@@ -243,17 +243,17 @@ fun FilesPage(onBack: () -> Unit) {
                     SettingsRow(
                         it.name,
                         icon = if (it.dir) Icons.Outlined.Folder else Icons.Outlined.Description,
-                        subtitle = (if (it.dir) "${it.children} 项" else FilesOps.size(it.size)) + " · " +
+                        subtitle = (if (it.dir) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b5d2d7, it.children) else FilesOps.size(it.size)) + " · " +
                             java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.ROOT).format(java.util.Date(it.modified)),
                         subtitleMaxLines = 1,
                         onClick = { if (it.dir) rel = it.path else viewing = it },
                         trailing = {
                             Box {
-                                PressableIcon(Icons.Outlined.MoreVert, "更多：${it.name}", size = 40.dp, iconSize = IrisDimens.space20) { menuFor = it.path }
+                                PressableIcon(Icons.Outlined.MoreVert, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ea320a, it.name), size = 40.dp, iconSize = IrisDimens.space20) { menuFor = it.path }
                                 IrisMenu(expanded = menuFor == it.path, onDismiss = { menuFor = null }) {
-                                    IrisMenuItem("重命名", Icons.Outlined.DriveFileRenameOutline) { menuFor = null; renaming = it }
-                                    if (!it.dir) IrisMenuItem("导出到手机", Icons.Outlined.FileUpload) { menuFor = null; exporting = it; exportLauncher.launch(it.name) }
-                                    IrisMenuItem("删除", Icons.Outlined.DeleteOutline, destructive = true) { menuFor = null; deleting = it }
+                                    IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { menuFor = null; renaming = it }
+                                    if (!it.dir) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_961d7f), Icons.Outlined.FileUpload) { menuFor = null; exporting = it; exportLauncher.launch(it.name) }
+                                    IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { menuFor = null; deleting = it }
                                 }
                             }
                         },
@@ -261,7 +261,7 @@ fun FilesPage(onBack: () -> Unit) {
                 }
             }
             item(key = "foot") {
-                GroupFootnote(ws.root.path + "\n删除和覆盖前自动备份，右上角可撤销。", monospace = false, modifier = Modifier.padding(top = IrisDimens.space8))
+                GroupFootnote(ws.root.path + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d0f22a), monospace = false, modifier = Modifier.padding(top = IrisDimens.space8))
             }
         }
     }
@@ -274,29 +274,29 @@ fun FilesPage(onBack: () -> Unit) {
                 runCatching {
                     val file = agent.sandbox.resolve(f.path)
                     val bytes = file.inputStream().use { s -> s.readNBytes(64 * 1024) }
-                    if (bytes.take(4096).any { it == 0.toByte() }) "（二进制文件，${FilesOps.size(f.size)}，可导出后用其他 App 打开）"
-                    else String(bytes, Charsets.UTF_8).let { if (f.size > bytes.size) it + "\n…（只显示前 64 KB，完整内容请导出）" else it }
-                }.getOrElse { "读取失败：${it.message}" }
+                    if (bytes.take(4096).any { it == 0.toByte() }) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7e40a, FilesOps.size(f.size))
+                    else String(bytes, Charsets.UTF_8).let { if (f.size > bytes.size) it + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8971dc) else it }
+                }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b78ad, it.message) }
             }
         }
-        IrisDialog(onDismiss = { viewing = null }, title = f.name, confirmText = "关闭", onConfirm = { viewing = null }, dismissText = null) {
+        IrisDialog(onDismiss = { viewing = null }, title = f.name, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { viewing = null }, dismissText = null) {
             Box(
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
                     .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(10.dp),
             ) {
-                SelectionContainer { Text(text ?: "正在读取…", style = IrisType.monoSmall, color = c.text) }
+                SelectionContainer { Text(text ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.monoSmall, color = c.text) }
             }
         }
     }
     if (newFolder) {
         TextInputDialog(
-            title = "新建文件夹", initial = "", placeholder = "名称",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485), initial = "", placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7ec2d),
             onConfirm = { name ->
                 newFolder = false
-                if (!FilesOps.validName(name)) { message = "名称不可用"; return@TextInputDialog }
+                if (!FilesOps.validName(name)) { message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0780c6); return@TextInputDialog }
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { File(dirFile(), FilesOps.unique(dirFile(), name.trim())).mkdirs() }.getOrDefault(false) }
-                    message = if (ok) "已新建 ${name.trim()}" else "新建失败"
+                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76ace8, name.trim()) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c71e1b)
                     agent.changed()
                 }
             },
@@ -305,11 +305,11 @@ fun FilesPage(onBack: () -> Unit) {
     }
     renaming?.let { f ->
         TextInputDialog(
-            title = "重命名", initial = f.name,
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), initial = f.name,
             onConfirm = { name ->
                 renaming = null
                 val n = name.trim()
-                if (!FilesOps.validName(n) || n == f.name) { if (n != f.name) message = "名称不可用"; return@TextInputDialog }
+                if (!FilesOps.validName(n) || n == f.name) { if (n != f.name) message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0780c6); return@TextInputDialog }
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) {
                         runCatching {
@@ -318,7 +318,7 @@ fun FilesPage(onBack: () -> Unit) {
                             !to.exists() && from.renameTo(to)
                         }.getOrDefault(false)
                     }
-                    message = if (ok) "已重命名为 $n" else "重命名失败（可能已有同名文件）"
+                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_eac80a, n) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f32d54)
                     agent.changed()
                 }
             },
@@ -327,19 +327,19 @@ fun FilesPage(onBack: () -> Unit) {
     }
     deleting?.let { f ->
         ConfirmDialog(
-            title = "删除 ${f.name}？",
-            message = if (f.dir) "文件夹里的 ${f.children} 项也会删除。删除前会自动备份，可撤销。" else "删除前会自动备份，可撤销。",
-            confirmText = "删除",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4a78de, f.name),
+            message = if (f.dir) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_47d706, f.children) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0fbeac),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = {
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) {
                         runCatching {
                             val target = agent.sandbox.resolve(f.path)
-                            target.walkBottomUp().filter { it.isFile }.forEach { agent.undo.snapshot(agent.sandbox, it, "删除") }
+                            target.walkBottomUp().filter { it.isFile }.forEach { agent.undo.snapshot(agent.sandbox, it, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)) }
                             target.deleteRecursively()
                         }.getOrDefault(false)
                     }
-                    message = if (ok) "已删除 ${f.name}" else "删除失败"
+                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b0b6b9, f.name) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066)
                     agent.changed()
                 }
             },

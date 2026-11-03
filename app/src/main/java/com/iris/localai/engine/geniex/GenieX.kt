@@ -40,8 +40,8 @@ object GenieX {
     const val RUNTIME_QAIRT = "qairt"
 
     /** Shown when the runtime is not installed. */
-    const val NEED_RUNTIME = "需要先在 设置 › 模型与加载 下载 GenieX 运行库"
-    const val NOT_IN_BUILD = "此版本不含 GenieX（仅 full 版本）"
+    val NEED_RUNTIME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_51a58e)
+    val NOT_IN_BUILD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f09b89)
 
     /**
      * User-facing error: a Chinese summary plus the original exception text (class + message, and the
@@ -55,10 +55,10 @@ object GenieX {
             val c = t.cause
             if (c != null && c !== t) {
                 val cm = c.message?.trim().orEmpty()
-                if (cm.isNotEmpty() && cm != t.message?.trim()) append("（原因：").append(c.javaClass.simpleName).append(": ").append(cm).append('）')
+                if (cm.isNotEmpty() && cm != t.message?.trim()) append(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1afce1)).append(c.javaClass.simpleName).append(": ").append(cm).append('）')
             }
         }
-        return "$summary（原始错误：${raw.take(600)}）"
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.engine_22de1b, summary, raw.take(600))
     }
 
     /**
@@ -68,12 +68,12 @@ object GenieX {
     fun codeHint(message: String?): String? {
         val m = message.orEmpty().lowercase()
         return when {
-            "parameter not supported" in m -> "参数不受该运行时支持（QAIRT 包的上下文长度在编译时固定）"
-            "file not found" in m -> "找不到模型文件（QAIRT 包需要 genie_config.json、tokenizer.json 和全部 .bin；GGUF 需可读）"
-            "unknown device" in m -> "不认识的计算单元"
-            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> "GenieX 插件未加载，可在 设置 › 模型与加载 修复运行库"
-            "memory allocation" in m -> "内存不足"
-            "model loading failed" in m || "invalid model" in m -> "模型加载失败（格式不受支持或文件损坏）"
+            "parameter not supported" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_77a0f4)
+            "file not found" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8931e5)
+            "unknown device" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5d92a6)
+            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1bcb6b)
+            "memory allocation" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d8e6a6)
+            "model loading failed" in m || "invalid model" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f4bcd9)
             else -> null
         }
     }
@@ -157,8 +157,8 @@ object GenieXLibs {
 
     /** Why GenieX cannot run on this chip, or null when it can. */
     fun unsupportedReason(manufacturer: String?, socModel: String?): String? = when {
-        !isQualcomm(manufacturer) -> "GenieX 只支持高通骁龙芯片；本机是 ${manufacturer.orEmpty().ifBlank { "未知厂商" }} ${socModel.orEmpty()}".trim()
-        hexagonArch(manufacturer, socModel) == null -> "GenieX 0.8.0 不支持此骁龙型号（${socModel.orEmpty()}）；支持 8 Gen 2 / 8 Gen 3 / 8 Elite / 8 Elite Gen 5，QAIRT 包仅 8 Elite 系列"
+        !isQualcomm(manufacturer) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_78eb36, manufacturer.orEmpty().ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1df01e) }, socModel.orEmpty()).trim()
+        hexagonArch(manufacturer, socModel) == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2cc6d9, socModel.orEmpty())
         else -> null
     }
 
@@ -216,10 +216,10 @@ object GenieXLibs {
     fun check(arch: Int, marker: String?, sizeOf: (String) -> Long?): Check {
         if (marker == null) return Check.NotInstalled
         val header = marker.lineSequence().firstOrNull().orEmpty()
-        if (header != "geniex=${GenieX.VERSION} arch=v$arch") return Check.Broken("运行库版本不匹配（$header）")
+        if (header != "geniex=${GenieX.VERSION} arch=v$arch") return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6a0843, header))
         for (l in forArch(arch)) {
-            val got = sizeOf(l.path) ?: return Check.Broken("缺少 ${l.path}")
-            if (got != l.pin.size) return Check.Broken("${l.path} 大小不对（$got ≠ ${l.pin.size}）")
+            val got = sizeOf(l.path) ?: return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, l.path))
+            if (got != l.pin.size) return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4a161b, l.path, got, l.pin.size))
         }
         return Check.Ok
     }
@@ -238,9 +238,9 @@ object QairtBundle {
 
     /** What a load needs that is missing, or null. */
     fun missing(names: Set<String>): String? = when {
-        names.none { it.lowercase().endsWith(".bin") } -> "没有 .bin 分片"
-        GENIE_CONFIG !in names -> "缺少 $GENIE_CONFIG"
-        TOKENIZER !in names -> "缺少 $TOKENIZER"
+        names.none { it.lowercase().endsWith(".bin") } -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0d698d)
+        GENIE_CONFIG !in names -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, GENIE_CONFIG)
+        TOKENIZER !in names -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, TOKENIZER)
         else -> null
     }
 
@@ -315,7 +315,7 @@ object GenieXTurns {
 
 /** 2.1.2: GenieX GGUF on Hexagon sometimes finished a regenerate with no tokens at all. */
 object GenieXRetry {
-    const val EMPTY_MESSAGE = "模型这次没有输出任何内容。已清空缓存，再点一次重新生成试试；仍然没有就换 GPU 后端。"
+    val EMPTY_MESSAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d792e1)
 
     fun shouldRetryEmpty(attempt: Int, cancelled: Boolean, emptyOutput: Boolean, reason: com.iris.localai.engine.StopReason?): Boolean =
         attempt == 0 && !cancelled && emptyOutput && reason != com.iris.localai.engine.StopReason.CANCELLED
@@ -342,25 +342,25 @@ object GenieXRules {
         null -> GenieX.NOT_IN_BUILD
         is NpuState.Unsupported -> state.reason
         NpuState.Installed -> null
-        is NpuState.NeedsRepair -> "GenieX 运行库不完整（${state.reason}），请在 设置 › 模型与加载 修复"
-        is NpuState.Downloading -> "GenieX 运行库正在下载"
+        is NpuState.NeedsRepair -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_af7b98, state.reason)
+        is NpuState.Downloading -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_00acad)
         NpuState.NotInstalled, is NpuState.Failed -> GenieX.NEED_RUNTIME
     }
 
     fun ggufOptions(env: com.iris.localai.engine.BackendEnvironment): List<com.iris.localai.engine.BackendOption> {
         val b = env.geniexBlock
         if (b != null) return Backend.entries.map { com.iris.localai.engine.BackendOption(it, false, b) }
-        val noCl = "本机没有可用的 OpenCL 驱动"
+        val noCl = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2d318f)
         return listOf(
-            com.iris.localai.engine.BackendOption(Backend.CPU, true, detail = "最稳，速度一般"),
-            com.iris.localai.engine.BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "显卡加速"),
-            com.iris.localai.engine.BackendOption(Backend.NPU, true, detail = "最快，Q4_0 模型效果最好"),
+            com.iris.localai.engine.BackendOption(Backend.CPU, true, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a1a409)),
+            com.iris.localai.engine.BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2de3e4)),
+            com.iris.localai.engine.BackendOption(Backend.NPU, true, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_95046e)),
         )
     }
 
     fun qairtOptions(env: com.iris.localai.engine.BackendEnvironment): List<com.iris.localai.engine.BackendOption> {
-        val onlyNpu = "AI Hub QAIRT 包是为 NPU 预编译的，只能在 NPU 上运行"
-        val npuReason = env.geniexBlock ?: if (!env.geniexQairt) "本机芯片没有 GenieX 的 QAIRT 运行库（仅骁龙 8 Elite / 8 Elite Gen 5）" else null
+        val onlyNpu = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2dca88)
+        val npuReason = env.geniexBlock ?: if (!env.geniexQairt) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b96a2e) else null
         return listOf(
             com.iris.localai.engine.BackendOption(Backend.CPU, false, onlyNpu),
             com.iris.localai.engine.BackendOption(Backend.GPU, false, onlyNpu),

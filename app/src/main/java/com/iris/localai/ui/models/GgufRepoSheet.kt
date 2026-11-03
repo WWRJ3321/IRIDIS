@@ -41,21 +41,21 @@ import com.iris.localai.ui.theme.IrisType
 
 /** 2.2.16 「在线搜索模型」 texts (unit-tested). */
 object SearchText {
-    const val OPEN = "在线搜索模型"
-    const val HINT = "输入模型名，例如 qwen3、gemma、deepseek"
-    const val EMPTY = "没有找到 GGUF 模型，换个关键词试试"
-    const val MAIN = "选择一个文件下载（越小越快，Q4_K_M 通常最均衡）"
-    const val NO_GGUF = "这个仓库里没有可用的 GGUF 文件"
-    const val VISION = "同时下载看图组件（mmproj）"
+    val OPEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d2c548)
+    val HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_03e899)
+    val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8c8980)
+    val MAIN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_22fc16)
+    val NO_GGUF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_691d85)
+    val VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_93f6a8)
 
     fun stats(h: GgufSearch.RepoHit): String = listOfNotNull(
-        "下载 ${count(h.downloads)}", if (h.likes > 0) "♥ ${count(h.likes)}" else null, h.updated.takeIf { it.isNotEmpty() }?.let { "更新 $it" },
+        com.iris.localai.I18n.s(com.iris.localai.R.string.models_cbd50e, count(h.downloads)), if (h.likes > 0) "♥ ${count(h.likes)}" else null, h.updated.takeIf { it.isNotEmpty() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.models_56ffb4, it) },
     ).joinToString(" · ")
 
-    fun modeHint(m: GgufSearch.Browse, q: String): String = (if (q.isNotBlank()) "「$q」的搜索结果 · " else "") + when (m) {
-        GgufSearch.Browse.HOT -> "下载最多的 GGUF 模型"
-        GgufSearch.Browse.NEW -> "最近更新的 GGUF 模型"
-        GgufSearch.Browse.FIT -> "Q4 体积不超过本机内存 60% 的模型"
+    fun modeHint(m: GgufSearch.Browse, q: String): String = (if (q.isNotBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.models_45e86f, q) else "") + when (m) {
+        GgufSearch.Browse.HOT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_1c57f4)
+        GgufSearch.Browse.NEW -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_fbdc63)
+        GgufSearch.Browse.FIT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_f07455)
     }
 
     /** "约 4.2B 参数 · Q4–Q8 约 2.2–4.2 GB · qwen3" (null when the size is unknown). */
@@ -64,12 +64,12 @@ object SearchText {
         val p = h.params / 1e9
         val ps = if (p >= 1) String.format(java.util.Locale.US, "%.1fB", p) else String.format(java.util.Locale.US, "%.0fM", h.params / 1e6)
         val gb = { b: Long -> String.format(java.util.Locale.US, "%.1f", b / 1073741824.0) }
-        return "约 $ps 参数 · Q4–Q8 约 ${gb(r.first)}–${gb(r.last)} GB" + (h.arch?.let { " · $it" } ?: "")
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.models_4d544f, ps, gb(r.first), gb(r.last)) + (h.arch?.let { " · $it" } ?: "")
     }
 
     fun count(n: Long): String = when {
-        n >= 100_000_000 -> String.format(java.util.Locale.US, "%.1f亿", n / 1e8)
-        n >= 10_000 -> String.format(java.util.Locale.US, "%.1f万", n / 1e4)
+        n >= 100_000_000 -> String.format(java.util.Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.models_51364d), n / 1e8)
+        n >= 10_000 -> String.format(java.util.Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.models_80b156), n / 1e4)
         else -> n.toString()
     }
 }
@@ -91,12 +91,12 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
         val visionFile = st.files?.projectors?.let { ps -> ps.firstOrNull { "f16" in it.name.lowercase() } ?: ps.firstOrNull() }
         Column(Modifier.padding(horizontal = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
             Text(
-                listOf(repo.id.substringBefore('/'), if (repo.site == GgufSearch.Site.MS) "来自 魔搭" else "来自 HuggingFace", SearchText.stats(repo)).joinToString(" · "),
+                listOf(repo.id.substringBefore('/'), if (repo.site == GgufSearch.Site.MS) com.iris.localai.I18n.s(com.iris.localai.R.string.models_76bc06) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_f4bd50), SearchText.stats(repo)).joinToString(" · "),
                 style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val files = st.files
-            files?.license?.let { Text("许可证 $it · 使用前请确认允许你的用途", style = IrisType.caption, color = c.textSecondary) }
-            if (st.filesLoading) Text("正在读取文件列表…", style = IrisType.caption, color = c.textSecondary)
+            files?.license?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_a68e4d, it), style = IrisType.caption, color = c.textSecondary) }
+            if (st.filesLoading) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fc70c), style = IrisType.caption, color = c.textSecondary)
             st.filesError?.let { Text(it, style = IrisType.caption, color = c.danger) }
             if (files != null) {
                 if (files.gated) {
@@ -115,11 +115,11 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                                     Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = c.text)
                                     Text(
                                         listOfNotNull(Format.bytes(ch.size), if (ram > 0) GgufSearch.fitHint(ch.size, ram) else null, ch.title.takeIf { ch.quant != null })
-                                            .joinToString(" · ") + if (!ch.complete) " · 分卷不全" else "",
+                                            .joinToString(" · ") + if (!ch.complete) com.iris.localai.I18n.s(com.iris.localai.R.string.models_1366d0) else "",
                                         style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                IrisButton("下载", {
+                                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9), {
                                     vm.downloadGguf(ch, if (withVision) projector else null)
                                     vm.closeRepo()
                                 }, style = IrisButtonStyle.Tonal, compact = true, enabled = !hubActive && ch.complete)

@@ -190,10 +190,10 @@ class FilesViewModel(app: Application) : AndroidViewModel(app), FilesActions {
         viewModelScope.launch {
             val text = withContext(Dispatchers.IO) {
                 runCatching {
-                    val f = root()?.let { FilesPaths.resolve(it, entry.relPath) } ?: error("路径不在 IRIDIS 内")
+                    val f = root()?.let { FilesPaths.resolve(it, entry.relPath) } ?: error(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
                     val bytes = FilePreview.readHead(f)
-                    if (!FilePreview.looksText(bytes)) "（看起来不是文本文件，可用其他应用打开）" else String(bytes, Charsets.UTF_8)
-                }.getOrElse { "读取失败：${it.message}" }
+                    if (!FilePreview.looksText(bytes)) com.iris.localai.I18n.s(com.iris.localai.R.string.files_f38b91) else String(bytes, Charsets.UTF_8)
+                }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b78ad, it.message) }
             }
             update { s -> val d = s.dialog; if (d is FileDialog.Preview && d.entry == entry) s.copy(dialog = d.copy(text = text)) else s }
         }
@@ -216,26 +216,26 @@ class FilesViewModel(app: Application) : AndroidViewModel(app), FilesActions {
 
     override fun openExternal(entry: FileEntry) {
         if (entry.isDir) return
-        val uri = uriFor(entry) ?: return update { it.copy(message = "无法打开 ${entry.name}") }
+        val uri = uriFor(entry) ?: return update { it.copy(message = com.iris.localai.I18n.s(com.iris.localai.R.string.files_840000, entry.name)) }
         val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime(entry)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        start(i, "打开方式", "没有可以打开 ${entry.name} 的应用")
+        start(i, com.iris.localai.I18n.s(com.iris.localai.R.string.files_14aecb), com.iris.localai.I18n.s(com.iris.localai.R.string.files_e73091, entry.name))
     }
 
     override fun share(entry: FileEntry) {
         if (entry.isDir) return
-        val uri = uriFor(entry) ?: return update { it.copy(message = "无法分享 ${entry.name}") }
+        val uri = uriFor(entry) ?: return update { it.copy(message = com.iris.localai.I18n.s(com.iris.localai.R.string.files_bdfa4a, entry.name)) }
         val i = Intent(Intent.ACTION_SEND).setType(mime(entry)).putExtra(Intent.EXTRA_STREAM, uri)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        start(i, "分享", "没有可以分享的应用")
+        start(i, com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), com.iris.localai.I18n.s(com.iris.localai.R.string.files_f54daa))
     }
 
     override fun requestRename(entry: FileEntry) {
-        if (!FileProtection.canRename(entry.relPath)) return update { it.copy(message = "系统文件夹不能重命名") }
+        if (!FileProtection.canRename(entry.relPath)) return update { it.copy(message = com.iris.localai.I18n.s(com.iris.localai.R.string.files_4831d0)) }
         update { it.copy(dialog = FileDialog.Rename(entry, FileProtection.warningText(entry.relPath))) }
     }
 
     override fun requestDelete(entry: FileEntry) {
-        if (!FileProtection.canDelete(entry.relPath)) return update { it.copy(message = "系统文件夹不能删除") }
+        if (!FileProtection.canDelete(entry.relPath)) return update { it.copy(message = com.iris.localai.I18n.s(com.iris.localai.R.string.files_b92433)) }
         update { it.copy(dialog = FileDialog.Delete(entry, FileProtection.warningText(entry.relPath))) }
     }
 
@@ -244,7 +244,7 @@ class FilesViewModel(app: Application) : AndroidViewModel(app), FilesActions {
     private fun io(block: (File) -> FilesIo.Result) {
         update { it.copy(dialog = null) }
         viewModelScope.launch {
-            val r = withContext(Dispatchers.IO) { root()?.let(block) ?: FilesIo.Result.Failed("找不到「下载」文件夹") }
+            val r = withContext(Dispatchers.IO) { root()?.let(block) ?: FilesIo.Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a3936b)) }
             update { it.copy(message = when (r) { is FilesIo.Result.Ok -> r.message; is FilesIo.Result.Failed -> r.message }) }
             refresh()
             c.agent.changed() // workspace / skills / knowledge listings elsewhere re-read

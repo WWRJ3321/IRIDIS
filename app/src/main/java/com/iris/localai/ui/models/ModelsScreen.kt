@@ -467,7 +467,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                         Column(Modifier.padding(top = IrisDimens.space16)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "正在复制 ${import.fileName.substringAfterLast('/').ifBlank { "模型" }}",
+                                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_99b61e, import.fileName.substringAfterLast('/').ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1) }),
                                     style = IrisType.labelSmall, color = c.textSecondary,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )

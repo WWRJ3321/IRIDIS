@@ -69,7 +69,7 @@ import kotlin.math.sin
 
 /** 1.14.0: state of one rack slot. */
 enum class RackState(val code: String, val label: String) {
-    OFF("OFF", "关闭"), STANDBY("STANDBY", "待机"), ON("ON", "就绪"), RUN("RUN", "运行中"), LOAD("LOAD", "加载中"), DONE("DONE", "完成"), ERROR("ERR", "出错");
+    OFF("OFF", com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91)), STANDBY("STANDBY", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f5af7)), ON("ON", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c0d218)), RUN("RUN", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d679ae)), LOAD("LOAD", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f013ea)), DONE("DONE", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_769d88)), ERROR("ERR", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad8e01));
     val up: Boolean get() = this == ON || this == RUN || this == LOAD || this == DONE
 }
 
@@ -102,28 +102,28 @@ object RackRules {
     fun modules(i: RackInput): List<RackModule> {
         fun live(group: String) = i.agentRunning && i.toolGroup == group
         return listOf(
-            RackModule("PWR", "模型", i.modelState, i.modelName?.let { it + (if (i.modelDetail.isNotBlank()) " · " + i.modelDetail else "") } ?: "未加载模型", i.modelChips),
+            RackModule("PWR", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), i.modelState, i.modelName?.let { it + (if (i.modelDetail.isNotBlank()) " · " + i.modelDetail else "") } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bb4fd), i.modelChips),
             RackModule(
-                "AGENT", "智能体",
+                "AGENT", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9),
                 when { i.agentRunning -> RackState.RUN; !i.agentMode -> RackState.OFF; i.planLeft > 0 -> RackState.STANDBY; else -> RackState.ON },
                 when {
-                    i.agentRunning -> (i.tool?.let { "正在：$it" } ?: "思考中") + " · 已完成 ${i.stepsDone} 步"
-                    !i.agentMode -> "对话模式（不调用工具）"
-                    i.planLeft > 0 -> "计划还有 ${i.planLeft} 步"
-                    else -> "智能体模式"
+                    i.agentRunning -> (i.tool?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7c7c73, it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dc269a)) + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8dd1ea, i.stepsDone)
+                    !i.agentMode -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e1ca2e)
+                    i.planLeft > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_88f19c, i.planLeft)
+                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c)
                 },
-                listOfNotNull(i.tool, if (i.planLeft > 0) "计划 ${i.planLeft}" else null, "${i.stepsDone} 步"),
+                listOfNotNull(i.tool, if (i.planLeft > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_60e1a5, i.planLeft) else null, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8fdb54, i.stepsDone)),
             ),
-            RackModule("NET", "联网", if (!i.webOn) RackState.OFF else if (live("WEB")) RackState.RUN else RackState.ON,
-                if (i.webOn) "搜索与网页读取已开启" else "联网工具已关闭", listOf("搜索", "网页")),
-            RackModule("SCREEN", "看屏", if (!i.screenOn) RackState.OFF else if (i.agentRunning && i.tool == com.iris.localai.agent.ScreenTool.label) RackState.RUN else RackState.STANDBY,
-                if (i.screenOn) "可操作手机屏幕" else "看屏工具已关闭", emptyList()),
-            RackModule("VOICE", "语音", when { i.voiceActive -> RackState.RUN; i.voicePacks > 0 -> RackState.ON; else -> RackState.OFF },
-                if (i.voicePacks > 0) "已安装 ${i.voicePacks} 个语音包" else "未安装语音包", listOf("${i.voicePacks} 包")),
-            RackModule("API", "API 服务", when { i.apiError != null -> RackState.ERROR; i.apiRunning -> RackState.ON; else -> RackState.OFF },
-                i.apiError ?: if (i.apiRunning) "运行中 · 端口 ${i.apiPort}" else "未启动", if (i.apiRunning) listOf(":${i.apiPort}") else emptyList()),
-            RackModule("MEM", "记忆", if (!i.memoryOn) RackState.OFF else if (live("MEMORY")) RackState.RUN else RackState.ON,
-                if (i.memoryOn) "长期记忆已开启" else "长期记忆已关闭", emptyList()),
+            RackModule("NET", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e0e755), if (!i.webOn) RackState.OFF else if (live("WEB")) RackState.RUN else RackState.ON,
+                if (i.webOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_30ea5a) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cdf966), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e5f71f), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_18a481))),
+            RackModule("SCREEN", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cc8c48), if (!i.screenOn) RackState.OFF else if (i.agentRunning && i.tool == com.iris.localai.agent.ScreenTool.label) RackState.RUN else RackState.STANDBY,
+                if (i.screenOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_54438d) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7ddb), emptyList()),
+            RackModule("VOICE", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35), when { i.voiceActive -> RackState.RUN; i.voicePacks > 0 -> RackState.ON; else -> RackState.OFF },
+                if (i.voicePacks > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5049f8, i.voicePacks) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d4f54e), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_91315e, i.voicePacks))),
+            RackModule("API", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), when { i.apiError != null -> RackState.ERROR; i.apiRunning -> RackState.ON; else -> RackState.OFF },
+                i.apiError ?: if (i.apiRunning) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27de1c, i.apiPort) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4baf7), if (i.apiRunning) listOf(":${i.apiPort}") else emptyList()),
+            RackModule("MEM", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7), if (!i.memoryOn) RackState.OFF else if (live("MEMORY")) RackState.RUN else RackState.ON,
+                if (i.memoryOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e2b20) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5190eb), emptyList()),
         )
     }
 
@@ -349,7 +349,7 @@ fun StatusRack(
                     .graphicsLayer { alpha = b.coerceIn(0f, 1f); translationY = (1f - b) * 18.dp.toPx() }
                     .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
                     .background(bg)
-                    .clickable(onClickLabel = "打开${m.name}设置") { picked = i; onOpen?.invoke(i) }
+                    .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_369d31, m.name)) { picked = i; onOpen?.invoke(i) }
                     .heightIn(min = 48.dp)
                     .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space6),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
@@ -376,7 +376,7 @@ fun StatusRack(
                 RackList.toggleLabel(hidden, showAll), style = IrisType.caption, color = c.textSecondary,
                 modifier = Modifier.fillMaxWidth()
                     .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
-                    .clickable(onClickLabel = if (showAll) "收起" else "展开") { showAll = !showAll }
+                    .clickable(onClickLabel = if (showAll) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { showAll = !showAll }
                     .heightIn(min = 40.dp)
                     .padding(horizontal = IrisDimens.space16, vertical = 11.dp),
             )
@@ -390,7 +390,7 @@ object RackList {
     fun visible(states: List<RackState>, selected: Int): Set<Int> =
         states.indices.filter { states[it] != RackState.OFF && states[it] != RackState.STANDBY || it == selected }.toSet()
 
-    fun toggleLabel(hidden: Int, open: Boolean): String = if (open) "收起" else "其余 $hidden 项 ›"
+    fun toggleLabel(hidden: Int, open: Boolean): String = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b54b50, hidden)
 }
 
 /** Isometric projection of the rack (x along the front, y into depth, z up). */
@@ -554,7 +554,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
         val base = TextStyle(fontWeight = FontWeight.SemiBold)
         // line 1: name · state            打开 ›
         val l1 = y + depth * 0.80f
-        val hint = topText("打开 ›", ix1 - 0.03f, l1, z, base.copy(color = Orange.copy(alpha = a), fontWeight = FontWeight.Medium), 0.044f, m, rightAlign = true)
+        val hint = topText(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0bbf91), ix1 - 0.03f, l1, z, base.copy(color = Orange.copy(alpha = a), fontWeight = FontWeight.Medium), 0.044f, m, rightAlign = true)
         val nw = topText(mod.name, tx, l1, z, base.copy(color = text.copy(alpha = a)), 0.056f, m, maxWidth = 0.40f)
         topText("· " + mod.state.label, tx + nw + 0.02f, l1, z, base.copy(color = stateColor.copy(alpha = a), fontWeight = FontWeight.Medium), 0.046f, m,
             maxWidth = (ix1 - 0.05f - hint - (tx + nw + 0.02f)).coerceAtLeast(0.05f))

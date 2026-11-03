@@ -17,7 +17,7 @@ object SelfCheck {
     const val QNN_MIN_HTP = 73
     const val QNN_MIN_RAM_MB = 2500L
     const val MNN_MIN_RAM_MB = 3000L
-    const val HEXAGON_PENDING = "需要 Hexagon 运行库（待发布）"
+    val HEXAGON_PENDING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1b8a07)
 
     fun verdicts(facts: ProbeFacts, models: List<ImageModel> = ImageCatalog.all): List<TierVerdict> =
         models.map { verdict(facts, it) }
@@ -28,34 +28,34 @@ object SelfCheck {
             Backend.QNN -> {
                 val minArch = maxOf(QNN_MIN_HTP, m.minHtpArch)
                 if ((f.htpArch ?: 0) < minArch) problems.add("NPU 架构不支持（需 HTP v$minArch+，当前 ${f.htpArch?.let { "v$it" } ?: "未知"}）")
-                if (!f.qnnRuntimePresent) problems.add("缺少 QNN 运行库")
-                if (!f.qnnBackendOk) problems.add("QNN 后端初始化失败")
-                if (!f.unsignedPd) problems.add("不支持 unsigned PD")
-                if (f.freeRamMb < QNN_MIN_RAM_MB) problems.add("可用内存不足（需 ${QNN_MIN_RAM_MB}MB，当前 ${f.freeRamMb}MB）")
+                if (!f.qnnRuntimePresent) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_aa3110))
+                if (!f.qnnBackendOk) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_135123))
+                if (!f.unsignedPd) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_2a754e))
+                if (f.freeRamMb < QNN_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, QNN_MIN_RAM_MB, f.freeRamMb))
             }
             Backend.MNN_CPU -> {
-                if (f.freeRamMb < MNN_MIN_RAM_MB) problems.add("可用内存不足（需 ${MNN_MIN_RAM_MB}MB，当前 ${f.freeRamMb}MB）")
+                if (f.freeRamMb < MNN_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, MNN_MIN_RAM_MB, f.freeRamMb))
             }
             Backend.HEXAGON -> problems.add(HEXAGON_PENDING)
         }
         val ok = problems.isEmpty()
         val parts = ArrayList<String>()
-        parts.add(if (ok) "可用" else problems.joinToString("；"))
-        if (ok && m.id !in f.downloaded) parts.add("未下载")
-        return TierVerdict(m.id, ok, parts.joinToString("，"))
+        parts.add(if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ad6b70) else problems.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d)))
+        if (ok && m.id !in f.downloaded) parts.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_336189))
+        return TierVerdict(m.id, ok, parts.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d3b98f)))
     }
 
     fun report(facts: ProbeFacts, verdicts: List<TierVerdict>): String = buildString {
-        fun yn(b: Boolean) = if (b) "是" else "否"
-        appendLine("【IRIDIS 图像生成自检】")
-        appendLine("芯片：${facts.soc}")
-        appendLine("HTP 架构：${facts.htpArch?.let { "v$it" } ?: "未知"}")
-        appendLine("QNN 运行库：${yn(facts.qnnRuntimePresent)}")
-        appendLine("QNN 后端：${if (facts.qnnBackendOk) "正常" else "失败"}")
-        appendLine("CDSP：${yn(facts.cdspPresent)}")
-        appendLine("Unsigned PD：${yn(facts.unsignedPd)}")
-        appendLine("可用内存：${facts.freeRamMb} MB")
-        appendLine("—— 模型 ——")
+        fun yn(b: Boolean) = if (b) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_0a60ac) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c9744f)
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_04ac56))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_60f471, facts.soc))
+        appendLine("HTP 架构：${facts.htpArch?.let { "v$it" } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1622dc)}")
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_7777a5, yn(facts.qnnRuntimePresent)))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c2180a, if (facts.qnnBackendOk) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_fd6e80) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_acd5cb)))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_05b9ee, yn(facts.cdspPresent)))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b88c6f, yn(facts.unsignedPd)))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_f97000, facts.freeRamMb))
+        appendLine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a639d3))
         for (v in verdicts) {
             val name = ImageCatalog.byId(v.modelId)?.name ?: v.modelId
             appendLine("${if (v.ok) "✓" else "✗"} $name（${v.modelId}）：${v.reasonZh}")

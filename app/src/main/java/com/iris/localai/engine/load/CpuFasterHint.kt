@@ -15,8 +15,8 @@ package com.iris.localai.engine
 object CpuFasterHint {
     const val GPU_SLOW_MS = 60_000L
     /** A suggestion only: nothing changes unless the user taps [ACTION]; GPU stays the default. */
-    const val TEXT = "建议：这个模型在 CPU 上加载更快（可选）"
-    const val ACTION = "改用 CPU"
+    val TEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_35156c)
+    val ACTION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f)
 
     fun shouldShow(records: Collection<LoadRecord>, modelId: String, nextBackend: String?): Boolean {
         if (!Backend.GPU.label.equals(nextBackend?.trim(), ignoreCase = true)) return false

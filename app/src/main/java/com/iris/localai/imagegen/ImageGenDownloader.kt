@@ -69,7 +69,7 @@ object ZipExtract {
                 val rel = flattened(e.name, top) ?: continue
                 if (e.isDirectory) continue
                 val f = File(root, rel).canonicalFile
-                if (!f.path.startsWith(root.path + File.separator)) throw IOException("压缩包路径非法：${e.name}")
+                if (!f.path.startsWith(root.path + File.separator)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_36db28, e.name))
                 f.parentFile?.mkdirs()
                 val part = File(f.path + ".part")
                 var lastReport = done
@@ -86,7 +86,7 @@ object ZipExtract {
                     }
                 }
                 f.delete()
-                if (!part.renameTo(f)) throw IOException("无法写入 ${f.name}")
+                if (!part.renameTo(f)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, f.name))
                 out += f
             }
             onProgress(total, total)
@@ -107,9 +107,9 @@ object ZipSlice {
         java.io.RandomAccessFile(slice, "r").use { raf ->
             val h = ByteArray(30); raf.readFully(h)
             fun u16(i: Int) = (h[i].toInt() and 0xFF) or ((h[i + 1].toInt() and 0xFF) shl 8)
-            if (u16(0) != 0x4b50 || u16(2) != 0x0403) throw IOException("压缩包片段无效：${slice.name}")
+            if (u16(0) != 0x4b50 || u16(2) != 0x0403) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_371496, slice.name))
             val method = u16(8)
-            if (method != 0 && method != 8) throw IOException("不支持的压缩方式 $method：${slice.name}")
+            if (method != 0 && method != 8) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_0777c1, method, slice.name))
             raf.seek(30L + u16(26) + u16(28))
             val raw = java.io.BufferedInputStream(java.io.FileInputStream(raf.fd), 256 * 1024)
             val ins = if (method == 8) java.util.zip.InflaterInputStream(raw, java.util.zip.Inflater(true), 256 * 1024) else raw
@@ -126,11 +126,11 @@ object ZipSlice {
                     if (done - last >= (4L shl 20)) { last = done; onProgress(done, size) }
                 }
             }
-            if (done != size) { part.delete(); throw IOException("解压后大小不符（$done / $size）：${out.name}") }
-            if (crc >= 0 && sum.value != crc) { part.delete(); throw IOException("校验失败：${out.name}") }
+            if (done != size) { part.delete(); throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1d5bf5, done, size, out.name)) }
+            if (crc >= 0 && sum.value != crc) { part.delete(); throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_65c161, out.name)) }
         }
         out.delete()
-        if (!part.renameTo(out)) throw IOException("无法写入 ${out.name}")
+        if (!part.renameTo(out)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, out.name))
         onProgress(size, size)
     }
 }
@@ -180,12 +180,12 @@ object ImageDownloads {
         probe: (String) -> Long? = DownloadSources::probeOnce,
         onSource: (DownloadSource?) -> Unit = {},
     ) {
-        if (model.files.isEmpty()) throw IOException("该模型暂无可下载文件")
+        if (model.files.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ca539c))
         val dir = ImageGenFiles.modelDir(root, model).apply { mkdirs() }
         val free = dir.usableSpace
         val need = bytesNeeded(root, model)
         if (free in 1 until need) {
-            throw IOException("存储空间不足：需要 ${com.iris.localai.data.Format.bytes(need)}，可用 ${com.iris.localai.data.Format.bytes(free)}")
+            throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, com.iris.localai.data.Format.bytes(need), com.iris.localai.data.Format.bytes(free)))
         }
         val total = model.files.sumOf { it.size }
         var done = model.files.sumOf { have(root, model, it) }
@@ -208,7 +208,7 @@ object ImageDownloads {
                 publish(ImageDl.Extracting(0, f.unpacked.sumOf { it.size }))
                 if (f.isZipSlice) ZipSlice.extract(target, File(dir, f.unpacked.single().path), f.unpacked.single().size, f.crc) { d, t -> publish(ImageDl.Extracting(d, t)) }
                 else ZipExtract.extract(target, dir) { d, t -> publish(ImageDl.Extracting(d, t)) }
-                if (!unpacked(root, model, f)) throw IOException("解压后文件不完整：${target.name}")
+                if (!unpacked(root, model, f)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ac40fd, target.name))
                 target.delete()
                 publish(ImageDl.Downloading(done, total, ""))
             }
@@ -247,7 +247,7 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
                 _states.update { it - model.id }
                 throw e
             } catch (e: Throwable) {
-                _states.update { it + (model.id to ImageDl.Failed(e.message ?: "下载失败")) }
+                _states.update { it + (model.id to ImageDl.Failed(e.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200))) }
             }
         }
         jobs[model.id] = job
@@ -260,7 +260,7 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
 
     private suspend fun downloadInto(root: File, model: ImageModel, source: DownloadSource, demote: DownloadSource?) {
         val publish: (ImageDl) -> Unit = { s -> _states.update { it + (model.id to s) } }
-        if (model.files.isEmpty()) throw IOException("该模型暂无可下载文件")
+        if (model.files.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ca539c))
         ImageDownloads.download(root, model, source, fetch, publish, demote = demote, onSource = { s -> if (s != null) lastSource[model.id] = s })
     }
 

@@ -24,10 +24,10 @@ import javax.net.ssl.SSLException
  */
 @kotlinx.serialization.Serializable
 enum class DownloadSource(val label: String, val baseUrl: String, val short: String) {
-    AUTO("自动（推荐）", "", "自动"),
-    MODELSCOPE("魔搭 ModelScope", "https://www.modelscope.cn", "魔搭"),
-    HF_MIRROR("hf-mirror.com 镜像", "https://hf-mirror.com", "hf-mirror"),
-    HUGGING_FACE("HuggingFace 官方", "https://huggingface.co", "HuggingFace");
+    AUTO(com.iris.localai.I18n.s(com.iris.localai.R.string.data_3e6ca1), "", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c)),
+    MODELSCOPE(com.iris.localai.I18n.s(com.iris.localai.R.string.data_01529c), "https://www.modelscope.cn", com.iris.localai.I18n.s(com.iris.localai.R.string.data_662005)),
+    HF_MIRROR(com.iris.localai.I18n.s(com.iris.localai.R.string.data_50ae18), "https://hf-mirror.com", "hf-mirror"),
+    HUGGING_FACE(com.iris.localai.I18n.s(com.iris.localai.R.string.data_941c0b), "https://huggingface.co", "HuggingFace");
 
     val concrete: Boolean get() = this != AUTO
 
@@ -40,7 +40,7 @@ enum class DownloadSource(val label: String, val baseUrl: String, val short: Str
 
 /** One place to fetch a file from. [source] = null: not a Hugging Face file (S3, GitHub…), fetched as is. */
 data class SourceUrl(val source: DownloadSource?, val url: String) {
-    val label: String get() = source?.label ?: (runCatching { java.net.URI(url).host }.getOrNull() ?: "下载地址")
+    val label: String get() = source?.label ?: (runCatching { java.net.URI(url).host }.getOrNull() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_d911cf))
 }
 
 object DownloadSources {
@@ -148,11 +148,11 @@ object DownloadSources {
 
     /** Plain-language reason for a failed attempt (shown with the source name). */
     fun describe(e: Throwable): String = when (e) {
-        is UnknownHostException -> "无法连接（域名解析失败）"
-        is SocketTimeoutException -> if (e.message?.contains("connect", true) == true) "连接超时" else "${STALL_MS / 1000} 秒没有收到数据"
-        is ConnectException -> "无法连接"
-        is SSLException -> "安全连接失败"
-        else -> e.message?.takeIf { it.isNotBlank() }?.substringBefore("：http")?.take(80) ?: "网络错误"
+        is UnknownHostException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_a749ad)
+        is SocketTimeoutException -> if (e.message?.contains("connect", true) == true) com.iris.localai.I18n.s(com.iris.localai.R.string.data_5f4aa5) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_253482, STALL_MS / 1000)
+        is ConnectException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_757a73)
+        is SSLException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_d93e0d)
+        else -> e.message?.takeIf { it.isNotBlank() }?.substringBefore("：http")?.take(80) ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_0bffc6)
     }
 
     /** ~3 s Range 0-0 request; round-trip ms, or null when unreachable / not there. */
@@ -203,7 +203,7 @@ object DownloadSources {
         retryDelayMs: Long = 1500,
         attemptsPerSource: Int = 2,
     ) {
-        if (cands.isEmpty()) throw IOException("没有可用的下载源")
+        if (cands.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_cde279))
         val errors = ArrayList<String>()
         for ((i, c) in cands.withIndex()) {
             onSource(c)
@@ -222,10 +222,10 @@ object DownloadSources {
                 }
             }
             val why = describe(last ?: IOException())
-            errors += "${c.label}：$why"
-            cands.getOrNull(i + 1)?.let { onSwitch("${c.label} 下载失败（$why），已换到 ${it.label}") }
+            errors += com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, c.label, why)
+            cands.getOrNull(i + 1)?.let { onSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0c59da, c.label, why, it.label)) }
         }
-        throw IOException(if (cands.size == 1) "下载失败：${errors.single()}" else "所有下载源都失败了：\n" + errors.joinToString("\n"))
+        throw IOException(if (cands.size == 1) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ce1a3a, errors.single()) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_300628) + errors.joinToString("\n"))
     }
 
     /** Thrown when a source serves a different-sized file (another version): skip it, keep nothing from it. */

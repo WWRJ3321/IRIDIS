@@ -94,7 +94,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     deleting?.let { m ->
         ConfirmDialog(
             title = ImageGenText.DELETE_TITLE,
-            message = "删除「${m.name}」的全部模型文件（含未下载完的部分）？",
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_916ad2, m.name),
             confirmText = ImageGenText.DELETE,
             onConfirm = { vm.deleteModel(m) },
             onDismiss = { deleting = null },
@@ -110,7 +110,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
             verticalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
-            full { SectionTitle("模型") }
+            full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)) }
             full {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.groupGutter),
@@ -123,7 +123,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 }
             }
 
-            full { SectionTitle("提示词") }
+            full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_47b7af)) }
             full {
                 SettingsGroup {
                     Field(s.prompt, ImageGenText.PROMPT, minLines = 3) { v -> vm.edit { it.copy(prompt = v) } }
@@ -141,11 +141,11 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             Icon(IrisIcons.Image, null, tint = Iris.colors.textTertiary)
                         }
                         Spacer(Modifier.width(IrisDimens.space12))
-                        IrisButton("选择", onClick = { pickRef.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_153fa6), onClick = { pickRef.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                             style = IrisButtonStyle.Tonal, compact = true, enabled = s.img2imgSupported)
                         if (ref != null && s.img2imgSupported) {
                             Spacer(Modifier.width(IrisDimens.space8))
-                            IrisButton("移除", onClick = { vm.edit { it.copy(initImage = null) } }, style = IrisButtonStyle.Text, compact = true)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_86048b), onClick = { vm.edit { it.copy(initImage = null) } }, style = IrisButtonStyle.Text, compact = true)
                         }
                     }
                     if (s.img2imgSupported) {
@@ -155,14 +155,14 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             }
             if (!s.img2imgSupported) full { GroupFootnote(ImageGenText.NO_IMG2IMG) }
 
-            full { SectionTitle("参数") }
+            full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_3d0a2d)) }
             full {
                 SettingsGroup {
                     val fixed = s.model.fixedSize
                     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
-                        Text("尺寸", style = IrisType.row, color = Iris.colors.text)
+                        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c8339f), style = IrisType.row, color = Iris.colors.text)
                         Spacer(Modifier.height(IrisDimens.space6))
-                        if (fixed != null) Text("$fixed × $fixed（${ImageGenText.FIXED_SIZE}）", style = IrisType.secondary, color = Iris.colors.textSecondary)
+                        if (fixed != null) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a5cf72, fixed, fixed, ImageGenText.FIXED_SIZE), style = IrisType.secondary, color = Iris.colors.textSecondary)
                         else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                             for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
                         }
@@ -177,18 +177,18 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space12)) {
                     // 2.2.14: which model this generates with (and on what), always visible.
                     Text(
-                        (if (s.running) "正在用：" else "将使用：") + s.model.name + " · " + when (s.model.backend) {
+                        (if (s.running) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b8656e) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_62227c)) + s.model.name + " · " + when (s.model.backend) {
                             com.iris.localai.imagegen.Backend.QNN, com.iris.localai.imagegen.Backend.HEXAGON -> "NPU"
                             com.iris.localai.imagegen.Backend.MNN_CPU -> "CPU"
                         } +
-                            (if (s.modelId in s.downloaded) "" else "（未下载）"),
+                            (if (s.modelId in s.downloaded) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)),
                         style = IrisType.caption, color = Iris.colors.accent,
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
                     if (s.running) {
                         IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
                         Spacer(Modifier.height(IrisDimens.space6))
-                        Text("第 ${s.step}/${s.total} 步", style = IrisType.caption, color = Iris.colors.textSecondary)
+                        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption, color = Iris.colors.textSecondary)
                         Spacer(Modifier.height(IrisDimens.space8))
                         IrisButton(ImageGenText.CANCEL, onClick = vm::cancel, modifier = Modifier.fillMaxWidth(), style = IrisButtonStyle.Tonal, icon = IrisIcons.Stop)
                     } else {
@@ -209,7 +209,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(ImageGenText.SAVE, icon = IrisIcons.Download, style = IrisButtonStyle.Tonal, compact = true, onClick = {
                                 val ok = runCatching { ChatImageLoader.saveToGallery(context, File(path).readBytes()) }.getOrDefault(false)
-                                toast(if (ok) "已保存到 相册/Pictures/IRIDIS" else "保存失败")
+                                toast(if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_e8561b) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6de920))
                             })
                             IrisButton(ImageGenText.SHARE, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, compact = true, onClick = {
                                 runCatching { ChatImageLoader.share(context, File(path).readBytes()) }
@@ -280,10 +280,10 @@ private fun ModelChip(
         Text(m.name, style = IrisType.labelSmall, color = fg.copy(alpha = alpha), maxLines = 2)
         if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha), maxLines = 2)
         Spacer(Modifier.height(IrisDimens.space4))
-        Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: "大小待定", style = IrisType.caption, color = c.textSecondary.copy(alpha = alpha))
+        Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary.copy(alpha = alpha))
         Spacer(Modifier.height(IrisDimens.space4))
         if (!enabled) {
-            Text("「${SelfCheck.HEXAGON_PENDING}」", style = IrisType.caption, color = c.textTertiary)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c6c01f, SelfCheck.HEXAGON_PENDING), style = IrisType.caption, color = c.textTertiary)
         } else when (dl) {
             is ImageDl.Downloading, is ImageDl.Extracting -> {
                 val frac = if (dl is ImageDl.Downloading) dl.fraction else (dl as ImageDl.Extracting).fraction
@@ -311,9 +311,9 @@ private fun ModelChip(
 }
 
 private fun tierLabel(m: ImageModel): String = when (m.tier) {
-    com.iris.localai.imagegen.Tier.LOW -> "入门"
-    com.iris.localai.imagegen.Tier.MID -> "进阶"
-    com.iris.localai.imagegen.Tier.HIGH -> "高级"
+    com.iris.localai.imagegen.Tier.LOW -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1fa42a)
+    com.iris.localai.imagegen.Tier.MID -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_fa11f8)
+    com.iris.localai.imagegen.Tier.HIGH -> com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)
 }
 
 /** Decoded thumbnail of a local PNG/JPEG (off the main thread). */
@@ -334,13 +334,13 @@ private fun SelfCheckCard(report: String?, onRun: () -> Unit) {
     val context = LocalContext.current
     SettingsGroup {
         Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
-            Text("检测芯片、NPU 运行库与内存，判断每个模型能否在本机运行。", style = IrisType.secondary, color = Iris.colors.textSecondary)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_82fc22), style = IrisType.secondary, color = Iris.colors.textSecondary)
             Spacer(Modifier.height(IrisDimens.space8))
             Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 IrisButton(ImageGenText.RUN, onClick = onRun, compact = true, style = IrisButtonStyle.Tonal, icon = IrisIcons.Gauge)
                 if (report != null) IrisButton(ImageGenText.COPY, compact = true, style = IrisButtonStyle.Text, icon = IrisIcons.Copy, onClick = {
                     clipboard.setText(AnnotatedString(report))
-                    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab), Toast.LENGTH_SHORT).show()
                 })
             }
             if (report != null) {

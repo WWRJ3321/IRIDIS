@@ -51,27 +51,27 @@ object TierReloadPolicy {
             ModelFormat.GGUF -> {
                 // CPU: threads / cores / nice are applied between decodes (1.7.2), batch next load.
                 // GPU/NPU: per-request threads; only a different backend choice needs a reload.
-                if (activeBackend != Backend.CPU && backendChanged) changed += "后端"
+                if (activeBackend != Backend.CPU && backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
             }
             ModelFormat.MNN -> if (activeBackend == Backend.CPU) {
                 // 1.7.5: cores + nice are re-pinned on the existing threads (no reload); only the
                 // pool size needs one. Power is always "normal" on the CPU (MNN binding off).
-                if (loaded.threads != next.threads) changed += "线程"
+                if (loaded.threads != next.threads) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d27612)
                 val curCpus = live?.cpus ?: LiveResourcePolicy.coresFor(loaded, loaded.threads)
                 val curNice = live?.nice ?: loaded.nice
-                if (curCpus != LiveResourcePolicy.coresFor(next, loaded.threads)) changed += "核心"
-                if (curNice != next.nice) changed += "优先级"
-                if (backendChanged) changed += "后端"
+                if (curCpus != LiveResourcePolicy.coresFor(next, loaded.threads)) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
+                if (curNice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
+                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
             } else {
                 // 1.7.8, MNN on the GPU: thread_num is the OpenCL mode (fixed by MnnEngine) and the
                 // power hint is forced to normal, so neither needs a reload. Cores + nice reach the
                 // generating (host) thread every reply; the reload only re-homes the driver threads
                 // created at load.
-                if (loaded.cpus != next.cpus) changed += "核心"
-                if (loaded.nice != next.nice) changed += "优先级"
+                if (loaded.cpus != next.cpus) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
+                if (loaded.nice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
                 // 1.7.9: the Adreno perf hint is a property of the OpenCL context created at load.
-                if (loaded.gpuHint != next.gpuHint) changed += "GPU 性能提示"
-                if (backendChanged) changed += "后端"
+                if (loaded.gpuHint != next.gpuHint) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_117661)
+                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
             }
             ModelFormat.LITERT -> {
                 // 1.7.9: LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() takes no
@@ -80,14 +80,14 @@ object TierReloadPolicy {
                 // 1.10.2: and no reload for the host threads' cores / priority either — that cost
                 // the user a full 40 s+ engine init per speed change. They apply at the next load.
                 if (ReloadRules.tierReloadsLiteRt(activeBackend)) {
-                    if (loaded.threads != next.threads) changed += "线程"
-                    if (loaded.cpus != next.cpus) changed += "核心"
-                    if (loaded.nice != next.nice) changed += "优先级"
+                    if (loaded.threads != next.threads) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d27612)
+                    if (loaded.cpus != next.cpus) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
+                    if (loaded.nice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
                 }
-                if (backendChanged) changed += "后端"
+                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
             }
             // 2.2.0: GenieX QAIRT bundles take no thread / core setting; only a backend change matters.
-            ModelFormat.QAIRT -> if (backendChanged) changed += "后端"
+            ModelFormat.QAIRT -> if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
         }
         return TierReloadDecision(changed.isNotEmpty(), changed)
     }

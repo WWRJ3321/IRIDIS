@@ -39,9 +39,9 @@ object DiagnosticsText {
     fun tokPerSec(v: Float?): String = v?.let { "%.1f tok/s".format(it) } ?: "—"
     fun cpuPerToken(v: Float?): String = v?.let { "%.1f ms/token".format(it) } ?: "—"
     fun current(ma: Float?, samples: Int, charging: Boolean): String = when {
-        ma == null -> "读不到电流"
-        charging -> "%.0f mA（充电中，不代表耗电）".format(ma)
-        else -> "%.0f mA（%d 次采样）".format(ma, samples)
+        ma == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b8daf9)
+        charging -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_38fba7).format(ma)
+        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_200006).format(ma, samples)
     }
 
     /** "cpu5 100%" … sorted by CPU id; "—" when no running sample was taken. */
@@ -51,12 +51,12 @@ object DiagnosticsText {
     /** "1 线程 · cpu5 · nice 10" for one tier on this phone. */
     fun plan(p: ResourcePlan): String {
         val cores = when {
-            p.cpus.isEmpty() -> "全部核心"
+            p.cpus.isEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927)
             p.cpus.size == 1 -> "cpu${p.cpus[0]}"
             p.cpus == (p.cpus.first()..p.cpus.last()).toList() -> "cpu${p.cpus.first()}-${p.cpus.last()}"
             else -> p.cpus.joinToString(",") { "cpu$it" }
         }
-        return "${p.threads} 线程 · $cores · nice ${p.nice}"
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.settings_308707, p.threads, cores, p.nice)
     }
 }
 
@@ -67,36 +67,36 @@ object DiagnosticsText {
 @Composable
 fun ResourceDiagnosticsPage(vm: SettingsViewModel, onBack: () -> Unit) {
     val report by vm.telemetryReport.collectAsStateWithLifecycle()
-    SubpageScaffold("资源诊断", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7ea069), onBack) {
         ScrollBody {
             val r = report
             if (r == null) {
-                SectionTitle("最近一次回复")
-                SettingsGroup { SettingsRow("还没有数据", subtitle = "加载模型并发一条消息后，这里显示每个档位的速度、CPU 和电流") }
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ef2768))
+                SettingsGroup { SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c3cc2a), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c55f8f)) }
             } else {
                 ReplySection(r)
             }
-            SectionTitle("本机各档")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7f6fa4))
             SettingsGroup {
                 // 1.7.8: CPU and GPU/NPU profile sets (资源档配置) side by side.
                 ResourceTier.entries.forEachIndexed { i, t ->
                     if (i > 0) Divider()
                     SettingsRow(
                         t.label,
-                        subtitle = "CPU：" + DiagnosticsText.plan(vm.tierPlan(t, com.iris.localai.engine.ResourceBackendKind.CPU)) +
-                            "\nGPU：" + DiagnosticsText.plan(vm.tierPlan(t, com.iris.localai.engine.ResourceBackendKind.GPU)),
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_83575b) + DiagnosticsText.plan(vm.tierPlan(t, com.iris.localai.engine.ResourceBackendKind.CPU)) +
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78f6de) + DiagnosticsText.plan(vm.tierPlan(t, com.iris.localai.engine.ResourceBackendKind.GPU)),
                     )
                 }
             }
-            GroupFootnote("比较电流时请拔掉充电线、保持亮度不变，同一个问题在不同档位各问一次。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bcecaf))
 
             // 2.0.x: moved here from the settings home page (diagnostics, rarely needed).
-            SectionTitle("故障排查")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_97dbb1))
             val st by vm.settings.collectAsStateWithLifecycle()
             SettingsGroup {
-                com.iris.localai.ui.components.SwitchRow("禁用视觉模块 (MNN)", st.mnnNoVisual, subtitle = "视觉模型只按纯文本加载（重新加载后生效）") { on -> vm.update { it.copy(mnnNoVisual = on) } }
+                com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b100d8), st.mnnNoVisual, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_38669a)) { on -> vm.update { it.copy(mnnNoVisual = on) } }
                 Divider()
-                com.iris.localai.ui.components.SwitchRow("强制关闭 mmap", st.mnnForceNoMmap, subtitle = "权重全部直接读取（重新加载后生效）") { on -> vm.update { it.copy(mnnForceNoMmap = on) } }
+                com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c75698), st.mnnForceNoMmap, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d0cdb4)) { on -> vm.update { it.copy(mnnForceNoMmap = on) } }
                 Divider()
                 CrashDumpRow()
             }
@@ -107,15 +107,15 @@ fun ResourceDiagnosticsPage(vm: SettingsViewModel, onBack: () -> Unit) {
 @Composable
 private fun ReplySection(r: ReplyReport) {
     val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(r.atEpochMs))
-    SectionTitle("最近一次回复 · $time")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_39ef97, time))
     SettingsGroup {
         SettingsRow(
-            "整条",
-            subtitle = "${r.tokens ?: "?"} tokens · ${DiagnosticsText.tokPerSec(r.tokPerSec)} · ${DiagnosticsText.cpuPerToken(r.cpuMsPerToken)}（含预填充）",
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_92e3af),
+            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b2b81b, r.tokens ?: '?', DiagnosticsText.tokPerSec(r.tokPerSec), DiagnosticsText.cpuPerToken(r.cpuMsPerToken)),
         )
     }
     r.segments.forEachIndexed { i, s ->
-        SectionTitle(if (r.segments.size > 1) "第 ${i + 1} 段 · ${s.tier}" else "档位 · ${s.tier}")
+        SectionTitle(if (r.segments.size > 1) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ef75f8, i + 1, s.tier) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a3fa50, s.tier))
         SettingsGroup { SegmentBody(s, r.charging) }
     }
 }
@@ -124,10 +124,10 @@ private fun ReplySection(r: ReplyReport) {
 private fun SegmentBody(s: SegmentReport, charging: Boolean) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12)) {
-        Metric("速度", DiagnosticsText.tokPerSec(s.tokPerSec))
-        Metric("CPU", "${DiagnosticsText.cpuPerToken(s.cpuMsPerToken)} · 平均 %.2f 个核在忙".format(s.busyCores))
-        Metric("电流", DiagnosticsText.current(s.avgMa, s.maSamples, charging))
-        Metric("推理线程所在 CPU", DiagnosticsText.cores(s.coreShare))
+        Metric(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_03f385), DiagnosticsText.tokPerSec(s.tokPerSec))
+        Metric("CPU", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_76cc26, DiagnosticsText.cpuPerToken(s.cpuMsPerToken)).format(s.busyCores))
+        Metric(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5ecd05), DiagnosticsText.current(s.avgMa, s.maSamples, charging))
+        Metric(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_338c76), DiagnosticsText.cores(s.coreShare))
         if (s.coreShare.isNotEmpty()) {
             Spacer(Modifier.height(IrisDimens.space8))
             CoreBars(s.coreShare)

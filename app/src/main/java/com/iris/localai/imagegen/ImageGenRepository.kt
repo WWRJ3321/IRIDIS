@@ -73,7 +73,7 @@ object ImageGenFiles {
         val bytes = runCatching { PngParams.insert(png, parameters) }.getOrDefault(png)
         val part = File(file.path + ".part")
         part.writeBytes(bytes)
-        if (!part.renameTo(file)) { part.delete(); throw java.io.IOException("无法写入 ${file.path}") }
+        if (!part.renameTo(file)) { part.delete(); throw java.io.IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, file.path)) }
         return file
     }
 }
@@ -178,9 +178,9 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
         val probe = DeviceProbe.nativeProbe(context)
         val dir = DeviceProbe.qnnRuntimeDir(context.filesDir, probe.htpArch ?: DeviceProbe.htpArch(DeviceProbe.socModel()))
         return when {
-            !probe.libLoaded -> UnavailableEngine("NPU 生图原生库未加载：${probe.error ?: "?"}")
-            dir == null -> UnavailableEngine("缺少 QNN 运行库：请先在 设置 › 模型与加载 安装 NPU 运行库")
-            !(probe.backendOk && probe.deviceOk) -> UnavailableEngine("QNN 后端初始化失败：${probe.error ?: "?"}")
+            !probe.libLoaded -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6b0e80, probe.error ?: '?'))
+            dir == null -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_f724e7))
+            !(probe.backendOk && probe.deviceOk) -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a999cf, probe.error ?: '?'))
             else -> synchronized(this) {
                 qnn ?: QnnSdEngine(modelDir = { repo.downloadedDir(it) }, loader = NativeQnnGraphLoader(dir), perf = NativeHtpPerf).also { qnn = it }
             }

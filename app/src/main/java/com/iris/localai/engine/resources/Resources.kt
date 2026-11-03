@@ -7,9 +7,9 @@ package com.iris.localai.engine
  * priority, the prefill batch size, MNN's power hint, and whether "自动" may put a model on the GPU.
  */
 enum class ResourceTier(val label: String, val short: String, val hint: String) {
-    LOW("省电", "省电", "线程最少、只用较慢的核心、低优先级；最凉快省电，适合长时间语音对话"),
-    MEDIUM("中资源", "中", "避开最快的超大核；日常够用，较省电"),
-    HIGH("高资源", "高", "用较快的核心，偏高优先级；日常推荐");
+    LOW(com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_58b88a)),
+    MEDIUM(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6e6d30), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aed1df), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a48137)),
+    HIGH(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d4e66e), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4296d7), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_478e37));
     // 1.7.8: 「全部」was removed (user request). A stored ordinal 3 is migrated to HIGH
     // (AppSettings.migrated / sanitized); [of] maps anything out of range to DEFAULT = HIGH too.
 
@@ -27,7 +27,7 @@ enum class ResourceTier(val label: String, val short: String, val hint: String) 
  * own threads created at load), so it gets its own profile set with different defaults.
  */
 enum class ResourceBackendKind(val label: String) {
-    CPU("CPU 后端"), GPU("GPU / NPU 后端");
+    CPU(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d30939)), GPU(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b80954));
 
     companion object {
         /** null (not loaded yet) = CPU, the profile set a load starts from for CPU-default engines. */

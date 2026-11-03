@@ -62,44 +62,44 @@ import kotlinx.coroutines.withContext
 
 /** 2.1.0 texts of the 知识库 page (unit-tested). */
 object KnowledgeText {
-    const val TITLE = "知识库"
-    const val TOGGLE = "引用知识库"
-    const val TOGGLE_SUB = "回答时自动参考最相关的资料"
-    const val REBUILD = "重建索引"
-    const val ADD = "添加文件（txt / md / csv / html…）"
-    const val DELETE = "删除"
-    const val PASTE = "粘贴文字"
-    const val PASTE_TITLE = "标题"
-    const val PASTE_BODY = "内容"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e4333)
+    val TOGGLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bc270f)
+    val TOGGLE_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_db3b61)
+    val REBUILD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_be0ade)
+    val ADD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2a6c4d)
+    val DELETE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
+    val PASTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cf3ae4)
+    val PASTE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_32c65d)
+    val PASTE_BODY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2d711b)
     const val MAX_TITLE = 40
 
     /** 2.2.17 D: a pasted entry's title — its first non-blank line (markdown #/-/> stripped), short. */
     fun titleFrom(text: String): String {
         val line = text.lineSequence().map { it.trim().trimStart('#', '>', '-', '*', ' ').trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
-        return if (line.length > MAX_TITLE) line.take(MAX_TITLE).trimEnd() else line.ifEmpty { "粘贴的文字" }
+        return if (line.length > MAX_TITLE) line.take(MAX_TITLE).trimEnd() else line.ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8b3889) }
     }
 
     /** File name for a pasted entry: the title, made safe, as .md (indexed like an imported file). */
     fun fileName(title: String): String {
         val t = title.trim().replace(Regex("[/\\\\:*?\"<>|\\u0000\\n\\r\\t]"), " ").replace(Regex(" +"), " ").trim().take(MAX_TITLE).trimEnd('.', ' ')
-        return t.ifEmpty { "粘贴的文字" } + ".md"
+        return t.ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8b3889) } + ".md"
     }
-    const val EMPTY = "还没有文件。添加后，聊天里提到相关内容会自动引用。"
-    const val NOTE = "支持 txt、md、csv、json、html 等文本文件。放进文件夹即可，自动在本机建索引。"
+    val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ce81e3)
+    val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_16ca25)
 
     fun status(files: Int, chunks: Int, unsupported: Int): String =
-        if (files == 0) "还没有文件" else "$files 个文件 · $chunks 段" + if (unsupported > 0) " · $unsupported 个不支持" else ""
+        if (files == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e93a44) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6b7690, files, chunks) + if (unsupported > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f07c0e, unsupported) else ""
 
     /** [appRoot] = Download/IRIDIS (2.1.1: the 知识库 is an app resource beside workspace/, not inside it). */
-    fun folder(appRoot: String): String = "用文件管理器把文件放进：$appRoot/${KnowledgeBase.FOLDER}"
+    fun folder(appRoot: String): String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_36bea8, appRoot, KnowledgeBase.FOLDER)
 
     /** 2.2.9: 「42 段 · 引用 6 次」 / 「正在读取…」. */
-    fun fileLine(f: KbFileInfo): String = if (!f.indexed) "正在读取…" else if (f.chunks == 0) "没有可读的文字" else "${f.chunks} 段 · 引用 ${f.cites} 次"
+    fun fileLine(f: KbFileInfo): String = if (!f.indexed) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a) else if (f.chunks == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d554e5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_882d2c, f.chunks, f.cites)
 
     /** Badge in the file tile: the extension, upper case, at most 4 letters. */
     fun badge(path: String): String = KbFormats.ext(path).uppercase().take(4).ifEmpty { "TXT" }
 
-    fun entry(files: Int, chunks: Int): String = if (files == 0) "还没有文件" else "$files 个文件 · $chunks 段"
+    fun entry(files: Int, chunks: Int): String = if (files == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e93a44) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6b7690, files, chunks)
 }
 
 /** 2.2.9: the row in 记忆与上下文 that opens the 知识库 page, plus 引用知识库. */
@@ -115,7 +115,7 @@ fun KnowledgeEntry(onOpen: () -> Unit) {
     SettingsGroup {
         SettingsRow(
             KnowledgeText.TITLE, icon = IrisIcons.Folder,
-            subtitle = files?.let { l -> KnowledgeText.entry(l.size, l.sumOf { it.chunks }) } ?: "正在读取…",
+            subtitle = files?.let { l -> KnowledgeText.entry(l.size, l.sumOf { it.chunks }) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
             onClick = onOpen, trailing = { com.iris.localai.ui.components.Chevron() },
         )
         Divider()
@@ -163,7 +163,7 @@ fun KnowledgePage(onBack: () -> Unit) {
             }
             busy = false
             tick++
-            Toast.makeText(context, if (added == uris.size) "已添加 $added 个文件" else "已添加 $added / ${uris.size} 个文件（过大或无法读取的已跳过）", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, if (added == uris.size) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0cf789, added) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_321562, added, uris.size), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -185,7 +185,7 @@ fun KnowledgePage(onBack: () -> Unit) {
             Spacer(Modifier.height(IrisDimens.space16))
             val list = files
             if (list == null) {
-                Text("正在读取…", style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
             } else if (list.isEmpty()) {
                 Text(KnowledgeText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
             } else {
@@ -197,11 +197,11 @@ fun KnowledgePage(onBack: () -> Unit) {
                 }
             }
 
-            SectionTitle("索引")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b271e4))
             SettingsGroup {
                 SettingsRow(
                     KnowledgeText.REBUILD, icon = IrisIcons.Reload, enabled = !busy,
-                    subtitle = "重新读取全部文件（一般不需要：文件变化会自动更新）\n" + KnowledgeText.folder(ws.appRoot.path),
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_eb0217) + KnowledgeText.folder(ws.appRoot.path),
                     subtitleMaxLines = 4,
                     onClick = {
                         busy = true
@@ -225,19 +225,19 @@ fun KnowledgePage(onBack: () -> Unit) {
             }
             busy = false
             tick++
-            Toast.makeText(context, if (ok) "已添加「${title.trim()}」" else "添加失败", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_19b758, title.trim()) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6452a0), Toast.LENGTH_SHORT).show()
         }
     }
 
     deleting?.let { f ->
         ConfirmDialog(
-            title = "删除「${f.path.substringAfterLast('/')}」？",
-            message = "文件会从知识库文件夹删除，之后不再被引用。",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_883acf, f.path.substringAfterLast('/')),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_993fd9),
             confirmText = KnowledgeText.DELETE,
             onConfirm = {
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { agent.knowledge.delete(f.path) }.getOrDefault(false) }
-                    if (!ok) Toast.makeText(context, "删除失败", Toast.LENGTH_SHORT).show()
+                    if (!ok) Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066), Toast.LENGTH_SHORT).show()
                     tick++
                 }
             },
@@ -265,7 +265,7 @@ private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit) {
             Text(KnowledgeText.fileLine(f), style = IrisType.caption, color = if (f.indexed) c.textSecondary else c.warning)
         }
         Box {
-            PressableIcon(IrisIcons.More, "更多", size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
+            PressableIcon(IrisIcons.More, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
             IrisMenu(menu, { menu = false }) {
                 IrisMenuItem(KnowledgeText.DELETE, null, destructive = true) { menu = false; onDelete() }
             }
@@ -283,7 +283,7 @@ private fun PasteTextDialog(onDismiss: () -> Unit, onSave: (String, String) -> U
     var title by remember { mutableStateOf(KnowledgeText.titleFrom(initial).takeIf { initial.isNotBlank() }.orEmpty()) }
     var titleEdited by remember { mutableStateOf(false) }
     com.iris.localai.ui.components.IrisDialog(
-        onDismiss = onDismiss, title = KnowledgeText.PASTE, confirmText = "保存",
+        onDismiss = onDismiss, title = KnowledgeText.PASTE, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
         confirmEnabled = body.isNotBlank(),
         onConfirm = { onSave(title.ifBlank { KnowledgeText.titleFrom(body) }, body); onDismiss() },
     ) {

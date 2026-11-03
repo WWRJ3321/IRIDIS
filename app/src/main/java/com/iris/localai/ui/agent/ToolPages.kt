@@ -67,8 +67,8 @@ import kotlinx.coroutines.withContext
 
 /** 1.11.0 texts of the 浏览器 pages (unit-tested). */
 object ToolPageText {
-    const val BROWSER_NAV = "智能体使用的内置浏览器；可在这里查看或手动登录"
-    const val BROWSER_NOTE = "智能体使用这个浏览器，登录信息只存在 IRIDIS 里。需要登录的网站可先在这里登录。"
+    val BROWSER_NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_edb1e1)
+    val BROWSER_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fc83b5)
 }
 
 @Composable
@@ -87,9 +87,9 @@ fun BrowserPage(onBack: () -> Unit) {
             browser.layoutOffscreen(web)
         }
     }
-    SubpageScaffold("浏览器", onBack, scrollUnder = false, actions = {
-        PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, "后退", enabled = web.canGoBack()) { web.goBack() }
-        PressableIcon(Icons.Outlined.Refresh, "刷新") { web.reload() }
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), onBack, scrollUnder = false, actions = {
+        PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5094c1), enabled = web.canGoBack()) { web.goBack() }
+        PressableIcon(Icons.Outlined.Refresh, com.iris.localai.I18n.s(com.iris.localai.R.string.models_694fc5)) { web.reload() }
     }) {
         Column(Modifier.fillMaxSize().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
@@ -98,7 +98,7 @@ fun BrowserPage(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = IrisType.secondary.copy(color = c.text),
-                    placeholder = { Text("输入网址或搜索", style = IrisType.secondary) },
+                    placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_efd030), style = IrisType.secondary) },
                     shape = IrisRadius.mediumShape,
                     colors = irisTextFieldColors(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, autoCorrectEnabled = false),

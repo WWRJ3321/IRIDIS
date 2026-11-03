@@ -49,11 +49,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object McpText {
-    const val TITLE = "MCP 服务"
-    const val NAV = "连接远程 MCP 服务器，扩展智能体工具"
-    const val NOTE = "仅支持远程服务器（Streamable HTTP，自动兼容旧版 SSE）。令牌与请求头加密保存在本机。每个服务首次调用工具前会询问，可选「总是允许」。"
-    const val EMPTY = "还没有 MCP 服务。点上方「添加服务」，填写服务器地址（如 https://example.com/mcp）。"
-    fun over(total: Int, cap: Int) = "已启用 $total 个 MCP 工具，只向模型提供前 $cap 个；请关掉不常用的工具。"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ae4ece)
+    val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b7ad17)
+    val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1462ba)
+    val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e1ee4f)
+    fun over(total: Int, cap: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c91761, total, cap)
 }
 
 /** 2.3.0 ②: 设置 › 智能体 › MCP 服务 — add / test / enable / delete remote MCP servers and their tools. */
@@ -74,14 +74,14 @@ fun McpPage(onBack: () -> Unit) {
         scope.launch {
             val r = withContext(Dispatchers.IO) { mcp.refresh(id) }
             testing = null
-            Toast.makeText(context, r.fold({ "连接成功：$it 个工具" }, { "连接失败：" + com.iris.localai.agent.mcp.McpClient.describe(it) }), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, r.fold({ com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1a6c05, it) }, { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4d5cd5) + com.iris.localai.agent.mcp.McpClient.describe(it) }), Toast.LENGTH_LONG).show()
         }
     }
 
     SubpageScaffold(McpText.TITLE, onBack) {
         ScrollBody {
             Spacer(Modifier.height(IrisDimens.space8))
-            IrisButton("添加服务", { adding = true }, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16))
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bd700b), { adding = true }, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16))
             val total = servers.filter { it.enabled }.sumOf { s -> s.tools.count { it.name !in s.disabledTools } }
             if (total > McpCap.DEFAULT) {
                 Text(McpText.over(total, McpCap.DEFAULT), style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(IrisDimens.space16))
@@ -92,18 +92,18 @@ fun McpPage(onBack: () -> Unit) {
             servers.forEach { s ->
                 SectionTitle(s.name)
                 SettingsGroup {
-                    SwitchRow("启用", s.enabled, subtitle = s.url + (if (s.alwaysAllow) "\n已总是允许" else "")) { on -> mcp.update(s.id) { it.copy(enabled = on) } }
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7854b5), s.enabled, subtitle = s.url + (if (s.alwaysAllow) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f28c74) else "")) { on -> mcp.update(s.id) { it.copy(enabled = on) } }
                     Divider()
                     SettingsRow(
-                        if (testing == s.id) "正在连接…" else "测试连接",
-                        subtitle = if (s.checkedAt > 0) "${s.tools.size} 个工具" else "尚未连接",
+                        if (testing == s.id) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_594397) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_69e747),
+                        subtitle = if (s.checkedAt > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6dfe26, s.tools.size) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_16ae3a),
                         enabled = testing == null, onClick = { test(s.id) },
                     )
                     Divider()
                     Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                        IrisButton("编辑", { editing = s }, style = IrisButtonStyle.Tonal, compact = true, modifier = Modifier.weight(1f))
-                        if (s.alwaysAllow) IrisButton("改为询问", { mcp.update(s.id) { it.copy(alwaysAllow = false) } }, style = IrisButtonStyle.Tonal, compact = true, modifier = Modifier.weight(1f))
-                        IrisButton("删除", { deleting = s }, style = IrisButtonStyle.Tonal, compact = true, destructive = true, modifier = Modifier.weight(1f))
+                        IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_95b351), { editing = s }, style = IrisButtonStyle.Tonal, compact = true, modifier = Modifier.weight(1f))
+                        if (s.alwaysAllow) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5c5b0a), { mcp.update(s.id) { it.copy(alwaysAllow = false) } }, style = IrisButtonStyle.Tonal, compact = true, modifier = Modifier.weight(1f))
+                        IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { deleting = s }, style = IrisButtonStyle.Tonal, compact = true, destructive = true, modifier = Modifier.weight(1f))
                     }
                     s.tools.forEach { t ->
                         Divider()
@@ -126,7 +126,7 @@ fun McpPage(onBack: () -> Unit) {
         })
     }
     deleting?.let { s ->
-        ConfirmDialog("删除「${s.name}」？", "将删除这个服务及其保存的令牌。", "删除", onConfirm = { mcp.delete(s.id) }, onDismiss = { deleting = null })
+        ConfirmDialog(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_883acf, s.name), com.iris.localai.I18n.s(com.iris.localai.R.string.agent_45c23e), com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onConfirm = { mcp.delete(s.id) }, onDismiss = { deleting = null })
     }
 }
 
@@ -141,15 +141,15 @@ private fun McpEditSheet(orig: McpServer?, mcp: McpManager, onDone: (String?) ->
     val fieldMod = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space6)
     IrisSheet(onDismiss = { onDone(null) }) {
         Column(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space8)) {
-            Text(if (orig == null) "添加 MCP 服务" else "编辑 MCP 服务", style = IrisType.title, color = Iris.colors.text, modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8))
-            OutlinedTextField(name, { name = it }, modifier = fieldMod, singleLine = true, label = { Text("名称") }, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
-            OutlinedTextField(url, { url = it }, modifier = fieldMod, singleLine = true, label = { Text("服务器地址（https://…/mcp）") }, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
-            OutlinedTextField(token, { token = it }, modifier = fieldMod, singleLine = true, label = { Text("令牌（可选，Bearer）") },
+            Text(if (orig == null) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3136ac) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9d3143), style = IrisType.title, color = Iris.colors.text, modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8))
+            OutlinedTextField(name, { name = it }, modifier = fieldMod, singleLine = true, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7ec2d)) }, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
+            OutlinedTextField(url, { url = it }, modifier = fieldMod, singleLine = true, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_211eb1)) }, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
+            OutlinedTextField(token, { token = it }, modifier = fieldMod, singleLine = true, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c3dde5)) },
                 visualTransformation = PasswordVisualTransformation(), shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
-            OutlinedTextField(headers, { headers = it }, modifier = fieldMod, label = { Text("自定义请求头（可选，每行 名称: 值）") }, minLines = 2, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
-            if (url.trim().startsWith("http://", true)) Text("http 地址不加密，令牌可能被截获。", style = IrisType.secondary, color = Iris.colors.danger, modifier = Modifier.padding(horizontal = IrisDimens.space16))
+            OutlinedTextField(headers, { headers = it }, modifier = fieldMod, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6a0a31)) }, minLines = 2, shape = IrisRadius.mediumShape, colors = irisTextFieldColors())
+            if (url.trim().startsWith("http://", true)) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_133a18), style = IrisType.secondary, color = Iris.colors.danger, modifier = Modifier.padding(horizontal = IrisDimens.space16))
             Spacer(Modifier.height(IrisDimens.space8))
-            IrisButton("保存并测试连接", {
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dd609c), {
                 val id = orig?.id ?: McpManager.newId()
                 val n = name.trim().ifEmpty { runCatching { java.net.URI(url.trim()).host }.getOrNull() ?: "MCP" }
                 val base = orig ?: McpServer(id, n, url.trim())

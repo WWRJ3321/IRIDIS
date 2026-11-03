@@ -30,12 +30,12 @@ enum class TranslatePack(
     val sizes: List<Long>,
 ) {
     ZH_EN(
-        "bergamot-zhen-tiny", TransLang.ZH, TransLang.EN, "中文 → 英文", "Firefox 翻译 · tiny 模型",
+        "bergamot-zhen-tiny", TransLang.ZH, TransLang.EN, com.iris.localai.I18n.s(com.iris.localai.R.string.translate_d72896), com.iris.localai.I18n.s(com.iris.localai.R.string.translate_688492),
         "tiny/zhen", "model.zhen.intgemm.alphas.bin", "lex.50.50.zhen.s2t.bin", "vocab.zhen.spm", "vocab.zhen.spm",
         listOf(25_461_051L, 9_219_524L, 1_359_697L),
     ),
     EN_ZH(
-        "bergamot-enzh-base", TransLang.EN, TransLang.ZH, "英文 → 中文", "Firefox 翻译 · base 模型",
+        "bergamot-enzh-base", TransLang.EN, TransLang.ZH, com.iris.localai.I18n.s(com.iris.localai.R.string.translate_931985), com.iris.localai.I18n.s(com.iris.localai.R.string.translate_5ecfb0),
         "base/enzh", "model.enzh.intgemm.alphas.bin", "lex.50.50.enzh.s2t.bin", "srcvocab.enzh.spm", "trgvocab.enzh.spm",
         listOf(42_992_955L, 6_506_248L, 806_952L, 772_004L),
     );
@@ -99,7 +99,7 @@ class TranslatePackStore(private val context: Context) {
         val need = pack.totalBytes - have + 32L * 1024 * 1024
         try {
             val free = StatFs(dir.absolutePath).availableBytes
-            if (free < need) throw IOException("存储空间不足：需要 ${Format.bytes(need)}，可用 ${Format.bytes(free)}")
+            if (free < need) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
             var done = have
             publish(pack, PackState.Downloading(done, pack.totalBytes))
             for ((name, size) in pack.files) {
@@ -118,7 +118,7 @@ class TranslatePackStore(private val context: Context) {
             File(dir, MARKER).writeText(TranslatePack.REVISION)
             publish(pack, PackState.Installed)
         } catch (t: Throwable) {
-            publish(pack, if (t is kotlinx.coroutines.CancellationException) (if (isInstalled(pack)) PackState.Installed else PackState.NotInstalled) else PackState.Failed(t.message ?: "下载失败"))
+            publish(pack, if (t is kotlinx.coroutines.CancellationException) (if (isInstalled(pack)) PackState.Installed else PackState.NotInstalled) else PackState.Failed(t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)))
             throw t
         }
     }

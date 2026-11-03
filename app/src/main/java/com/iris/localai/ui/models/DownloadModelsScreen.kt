@@ -390,7 +390,7 @@ private fun Badge(text: String, tone: Color? = null) {
 }
 
 @Composable
-private fun ramTone(hint: String): Color = if (hint == "内存够用") Iris.colors.success else Iris.colors.warning
+private fun ramTone(hint: String): Color = if (hint == com.iris.localai.I18n.s(com.iris.localai.R.string.models_60a35c)) Iris.colors.success else Iris.colors.warning
 
 @Composable
 private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?) {

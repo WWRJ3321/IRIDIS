@@ -96,7 +96,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val ready = c.engine.ensureLoaded()
                 val details = c.engine.readyDetails
-                if (!ready || details == null) { _bench.value = Bench.Failed("请先加载一个模型"); return@launch }
+                if (!ready || details == null) { _bench.value = Bench.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99db9d)); return@launch }
                 val llamaCpu = details.backend.contains("llama.cpp") && details.backend.startsWith("CPU")
                 val counts = if (llamaCpu) {
                     val pc = c.engine.threadPolicy.performanceCores
@@ -188,7 +188,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             if (same) return
         }
         previewTarget.value = clone?.id ?: ""
-        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) "没有可用的系统 TTS 引擎" else "请先下载并选用一个朗读模型"); return }
+        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7a658c) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_87feec)); return }
         // Stops a running voice conversation or read-aloud instead of talking over it.
         c.synthesizer.claim(this) { stopPreview() }
         previewJob = viewModelScope.launch {
@@ -200,7 +200,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 player = out
                 val s = c.settings.current
                 val text = if (c.synthesizer.usingSystem || c.synthesizer.speakingWithClone || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
-                    "你好，我是 IRIDIS，一个完全运行在你手机上的智能助手。" else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48574b) else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
                 val job = kotlin.coroutines.coroutineContext[Job]
                 c.synthesizer.speak(text, s.ttsSpeakerId, s.ttsSpeed) { chunk ->
                     if (_preview.value != Preview.Playing) _preview.value = Preview.Playing
@@ -212,7 +212,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 _preview.value = Preview.Idle
                 throw e
             } catch (t: Throwable) {
-                _preview.value = Preview.Failed("试听失败：${t.message ?: t.javaClass.simpleName}")
+                _preview.value = Preview.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f2890, t.message ?: t.javaClass.simpleName))
             } finally {
                 player?.release()
                 if (previewPlayer === player) previewPlayer = null
@@ -265,7 +265,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 _draft.value = CloneDraft.Idle
                 throw e
             } catch (t: Throwable) {
-                _draft.value = CloneDraft.Failed("录音失败：${t.message ?: t.javaClass.simpleName}")
+                _draft.value = CloneDraft.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd2ddd, t.message ?: t.javaClass.simpleName))
                 return@launch
             }
             processClip(buf.copyOf(n), rate)
@@ -279,11 +279,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         if (recordJob?.isActive == true) return
         stopDraftPlayback()
         recordJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            _draft.value = CloneDraft.Processing("正在读取音频…")
+            _draft.value = CloneDraft.Processing(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c34bda))
             val pcm = try {
                 com.iris.localai.voice.AudioFileDecoder.decode(getApplication(), uri, maxSec = 40f)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (t: Throwable) {
-                _draft.value = CloneDraft.Failed("无法读取这个音频：${t.message ?: t.javaClass.simpleName}")
+                _draft.value = CloneDraft.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da7116, t.message ?: t.javaClass.simpleName))
                 return@launch
             }
             // Keep a 24 kHz reference: ZipVoice works at 24 kHz, higher rates only cost memory.
@@ -296,21 +296,21 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         val clip = com.iris.localai.voice.CloneAudio.prepare(raw, rate)
         com.iris.localai.voice.CloneAudio.problem(clip, rate)?.let { _draft.value = CloneDraft.Failed(it); return }
         val secs = com.iris.localai.voice.CloneAudio.seconds(clip, rate)
-        val longNote = if (raw.size.toFloat() / rate > com.iris.localai.voice.CloneAudio.MAX_SEC + 0.5f) "已截取前 15 秒" else null
+        val longNote = if (raw.size.toFloat() / rate > com.iris.localai.voice.CloneAudio.MAX_SEC + 0.5f) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5407cc) else null
         var text = ""
         var note = longNote
         if (c.recognizer.isAvailable) {
-            _draft.value = CloneDraft.Processing("正在用语音识别转写参考文本…")
+            _draft.value = CloneDraft.Processing(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a99852))
             text = try {
                 c.recognizer.prepare(c.settings.current.asrLanguage)
                 c.recognizer.transcribe(com.iris.localai.voice.CloneAudio.resample(clip, rate, com.iris.localai.voice.ASR_SAMPLE_RATE))
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (t: Throwable) {
-                note = "自动转写失败，请手动输入这段话的文字"; ""
+                note = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd468e); ""
             }
         } else {
-            note = "未安装语音识别模型，请手动输入这段话的文字"
+            note = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_add960)
         }
-        if (secs < 5f) note = listOfNotNull(note, "样本偏短，5–15 秒效果更好").joinToString("；")
+        if (secs < 5f) note = listOfNotNull(note, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c6d587)).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d))
         _draft.value = CloneDraft.Ready(clip, rate, text, secs, note)
     }
 

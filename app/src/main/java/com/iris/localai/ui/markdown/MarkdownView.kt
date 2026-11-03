@@ -169,7 +169,7 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
             )
             PressableIcon(
                 if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-                contentDescription = if (copied) "已复制" else "复制代码", size = 36.dp, iconSize = IrisDimens.space16, tint = c.textSecondary,
+                contentDescription = if (copied) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_224996), size = 36.dp, iconSize = IrisDimens.space16, tint = c.textSecondary,
             ) {
                 clipboard.setText(AnnotatedString(block.code))
                 copied = true

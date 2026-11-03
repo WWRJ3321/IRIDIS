@@ -23,16 +23,16 @@ enum class VoiceKind { ASR, TTS, CLONE }
 
 /** A downloadable voice model: a pinned Hugging Face repo revision and the files we need from it. */
 enum class VoicePack(val id: String, val kind: VoiceKind, val title: String, val blurb: String) {
-    ASR_SENSEVOICE("sense-voice-int8", VoiceKind.ASR, "SenseVoice Small", "中/英/粤/日/韩 · 最快，日常推荐"),
-    ASR_PARAFORMER("paraformer-zh-int8", VoiceKind.ASR, "Paraformer 中文", "达摩院 · 普通话和中英混说更准"),
-    ASR_QWEN3("qwen3-asr-0.6b-int8", VoiceKind.ASR, "Qwen3-ASR 0.6B", "旗舰精度 · 方言与多语种 · 较慢，约占 1.2 GB 内存"),
-    ASR_ZIPFORMER_CTC("zipformer-ctc-zh-int8-2025-07-03", VoiceKind.ASR, "Zipformer CTC 中文", "k2 新一代 · 纯普通话，识别快而准 · 输出不带标点"),
-    TTS_KOKORO("kokoro-int8-multi-lang-v1_1", VoiceKind.TTS, "Kokoro 中英 · 标准", "103 种音色 · 合成最快"),
-    TTS_KOKORO_HQ("kokoro-multi-lang-v1_1", VoiceKind.TTS, "Kokoro 中英 · 高音质", "同样 103 种音色 · 全精度，更清晰自然"),
-    TTS_MELO("vits-melo-tts-zh_en", VoiceKind.TTS, "MeloTTS 中英混读", "一个自然女声 · 中英夹杂读得最顺"),
-    TTS_PIPER_XIAOYA("vits-piper-zh_CN-xiao_ya-medium", VoiceKind.TTS, "Piper 小雅 · 极速", "中文女声 · 开口最快、最省电（仅中文）"),
-    TTS_MATCHA_BAKER("matcha-icefall-zh-baker", VoiceKind.TTS, "Matcha 标贝 · 极速", "中文女声 · 和 Piper 一样快，语调更自然（仅中文）"),
-    CLONE_ZIPVOICE("zipvoice-distill-int8-zh-en", VoiceKind.CLONE, "ZipVoice 音色克隆", "中英 · 用你录的 5–15 秒声音说话");
+    ASR_SENSEVOICE("sense-voice-int8", VoiceKind.ASR, "SenseVoice Small", com.iris.localai.I18n.s(com.iris.localai.R.string.voice_80950b)),
+    ASR_PARAFORMER("paraformer-zh-int8", VoiceKind.ASR, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_66f8a9), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_d3afd9)),
+    ASR_QWEN3("qwen3-asr-0.6b-int8", VoiceKind.ASR, "Qwen3-ASR 0.6B", com.iris.localai.I18n.s(com.iris.localai.R.string.voice_618272)),
+    ASR_ZIPFORMER_CTC("zipformer-ctc-zh-int8-2025-07-03", VoiceKind.ASR, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_b091cf), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_2e1e7e)),
+    TTS_KOKORO("kokoro-int8-multi-lang-v1_1", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_163e32), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_36f40b)),
+    TTS_KOKORO_HQ("kokoro-multi-lang-v1_1", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_15f869), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_4645e0)),
+    TTS_MELO("vits-melo-tts-zh_en", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_03ace1), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_b0fd88)),
+    TTS_PIPER_XIAOYA("vits-piper-zh_CN-xiao_ya-medium", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c3ab69), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_e027fa)),
+    TTS_MATCHA_BAKER("matcha-icefall-zh-baker", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_522e83), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_39a7d1)),
+    CLONE_ZIPVOICE("zipvoice-distill-int8-zh-en", VoiceKind.CLONE, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c767d0), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c92641));
 
     /** Single-voice packs: the speaker id is ignored. */
     val singleSpeaker: Boolean get() = this != TTS_KOKORO && this != TTS_KOKORO_HQ
@@ -155,7 +155,7 @@ class VoiceModelStore(private val context: Context) {
         val need = m.totalBytes - have + (m.archive?.size?.times(16)?.div(10) ?: 0L) + 64L * 1024 * 1024
         try {
             if (free < need) {
-                throw IOException("存储空间不足：需要 ${Format.bytes(need)}，可用 ${Format.bytes(free)}")
+                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
             }
             var done = have
             publish(pack, PackState.Downloading(done, m.totalBytes))
@@ -186,7 +186,7 @@ class VoiceModelStore(private val context: Context) {
                     verify(archiveFile, a.sha256)
                     TarBz2.extract(archiveFile, dir, a.strip, a.skip)
                     val missing = a.required.filterNot { File(dir, it).exists() }
-                    if (missing.isNotEmpty()) throw IOException("解压后缺少文件：${missing.joinToString()}")
+                    if (missing.isNotEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.voice_f59128, missing.joinToString()))
                     File(dir, ARCHIVE_DONE).writeText(a.sha256)
                     archiveFile.delete()
                 }
@@ -194,7 +194,7 @@ class VoiceModelStore(private val context: Context) {
             File(dir, MARKER).writeText(m.revision.ifEmpty { "1" })
             publish(pack, PackState.Installed)
         } catch (t: Throwable) {
-            publish(pack, if (t is kotlinx.coroutines.CancellationException) stateOnDisk(pack) else PackState.Failed(t.message ?: "下载失败"))
+            publish(pack, if (t is kotlinx.coroutines.CancellationException) stateOnDisk(pack) else PackState.Failed(t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)))
             throw t
         }
     }
@@ -204,7 +204,7 @@ class VoiceModelStore(private val context: Context) {
         val got = Sha256.of(file)
         if (!got.equals(sha256, ignoreCase = true)) {
             file.delete()
-            throw IOException("${file.name} 校验失败，请重试下载")
+            throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.voice_077027, file.name))
         }
     }
 

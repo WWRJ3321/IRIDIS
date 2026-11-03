@@ -7,7 +7,7 @@ package com.iris.localai.data
  * Chat repo ids checked on the HF API 2026-11-01; ccore/Qwen3.5-4B-3D-Coder files/sizes/licence on 2026-11-03.
  */
 object RecommendedCatalog {
-    enum class Section(val title: String) { CHAT("对话"), FEATURED("特色模型"), IMAGE("生图"), SPEECH("语音"), TRANSLATE("翻译") }
+    enum class Section(val title: String) { CHAT(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)), FEATURED(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6284d9)), IMAGE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)), SPEECH(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)), TRANSLATE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)) }
     enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot") }
 
     sealed interface Kind {
@@ -62,40 +62,40 @@ object RecommendedCatalog {
 
     val ITEMS: List<Item> = listOf(
         // ---- 对话 (top = the six shown before 展开全部) ----
-        litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", "谷歌出品，速度快，推荐先试", 2.6, top = true),
-        mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", "中文好，聪明又不慢，均衡之选", 2.9, top = true),
-        mnn("Qwen3.5 4B 推理版", "Qwen3.5-4B$OPUS", "会一步步想清楚，适合数学和逻辑题", 2.8, top = true, licence = null),
-        litert("Gemma 4 E4B", "gemma-4-E4B-it-litert-lm", "更聪明，聊天和写作都更稳", 3.7, top = true),
-        mnn("Qwen3.5 0.8B", "Qwen3.5-0.8B-MNN", "最快最省内存，老手机也能跑", 0.55, top = true),
-        spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", "中文写作更强", 3.5, top = true),
-        mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", "轻快，日常问答够用", 1.4),
-        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", "最强的 Qwen3.5，需要大内存", 7.3),
-        mnn("Qwen3.5 2B 推理版", "Qwen3.5-2B$OPUS", "小而会推理", 1.4, licence = null),
-        mnn("Qwen3.5 0.8B 推理版", "Qwen3.5-0.8B$OPUS", "最小的推理模型", 0.54, licence = null),
-        litert("Gemma 4 12B", "gemma-4-12B-it-litert-lm", "最强的 Gemma，需要 16 GB 内存", 6.9),
-        spark("Spark X2.6 1.7B", "Spark-X2.6-1.7B-GGUF", "轻量中文模型", 1.8),
-        mnn("Qwen3 0.6B", "Qwen3-0.6B-MNN", "上一代，最快，适合低配", 0.45),
-        mnn("Qwen3 1.7B", "Qwen3-1.7B-MNN", "上一代，轻快日常", 1.2),
-        mnn("Qwen3 4B", "Qwen3-4B-MNN", "上一代，均衡", 2.7),
-        mnn("Qwen3 8B", "Qwen3-8B-MNN", "上一代，更强，需要 12 GB 内存", 5.5),
+        litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_73508c), 2.6, top = true),
+        mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8), 2.9, top = true),
+        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6eff8b), "Qwen3.5-4B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2814fe), 2.8, top = true, licence = null),
+        litert("Gemma 4 E4B", "gemma-4-E4B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_5fd1a5), 3.7, top = true),
+        mnn("Qwen3.5 0.8B", "Qwen3.5-0.8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2b93b4), 0.55, top = true),
+        spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aca2d5), 3.5, top = true),
+        mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b), 1.4),
+        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f), 7.3),
+        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "Qwen3.5-2B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f), 1.4, licence = null),
+        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_45dc04), "Qwen3.5-0.8B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aafdaf), 0.54, licence = null),
+        litert("Gemma 4 12B", "gemma-4-12B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_e0fccf), 6.9),
+        spark("Spark X2.6 1.7B", "Spark-X2.6-1.7B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c8f8e), 1.8),
+        mnn("Qwen3 0.6B", "Qwen3-0.6B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_eec245), 0.45),
+        mnn("Qwen3 1.7B", "Qwen3-1.7B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9b89f0), 1.2),
+        mnn("Qwen3 4B", "Qwen3-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79), 2.7),
+        mnn("Qwen3 8B", "Qwen3-8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462), 5.5),
         // ---- 特色模型 ----
         Item(
-            CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", "写 Three.js 3D 场景，可直接预览",
+            CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", com.iris.localai.I18n.s(com.iris.localai.R.string.data_c2d28e),
             2_708_804_096L, Engine.GGUF,
             Kind.Gguf(CODER_REPO, "Qwen3.5-4B-3D-Coder-Q4_K_M.gguf", 2_708_804_096L, "mmproj-Qwen3.5-4B-BF16.gguf", 675_568_768L),
             top = true, quant = "Q4_K_M", licence = APACHE, demoPrompt = CODER_DEMO,
         ),
         // ---- 生图 ----
-        Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", "通用写实风格，512×512", 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
-        Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", "动漫风格，骁龙 8 Gen 3 及以上", gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),
+        Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
+        Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", com.iris.localai.I18n.s(com.iris.localai.R.string.data_479b48), gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),
     ) + voiceItems() + translateItems()
 
     /** 语音: every downloadable voice pack (识别 / 朗读 / 音色克隆), same order as the 语音 page. */
     private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.map { p ->
         val kind = when (p.kind) {
-            com.iris.localai.voice.VoiceKind.ASR -> "语音识别"
-            com.iris.localai.voice.VoiceKind.TTS -> "朗读"
-            com.iris.localai.voice.VoiceKind.CLONE -> "音色克隆"
+            com.iris.localai.voice.VoiceKind.ASR -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c306e)
+            com.iris.localai.voice.VoiceKind.TTS -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f)
+            com.iris.localai.voice.VoiceKind.CLONE -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_8bc980)
         }
         Item(
             "voice:" + p.id, Section.SPEECH, p.title, "$kind · ${p.blurb}", 0L, Engine.ONNX, Kind.Voice(p.id),
@@ -105,7 +105,7 @@ object RecommendedCatalog {
 
     /** 2.3.0 ③ 翻译: the offline Bergamot packs (one per direction), same as 设置 › 语音与翻译. */
     private fun translateItems(): List<Item> = com.iris.localai.translate.TranslatePack.entries.map { p ->
-        Item("translate:" + p.id, Section.TRANSLATE, "离线翻译 ${p.title}", "${p.blurb} · 没加载模型时也能翻译", p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
+        Item("translate:" + p.id, Section.TRANSLATE, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8df05e, p.title), com.iris.localai.I18n.s(com.iris.localai.R.string.data_4b65d4, p.blurb), p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
     }
 
     fun section(s: Section): List<Item> = ITEMS.filter { it.section == s }
@@ -137,13 +137,13 @@ object RecommendedCatalog {
     /** One short Chinese reason out of a (possibly multi-source, multi-line) download error. */
     fun shortReason(error: String?): String {
         val e = error?.trim().orEmpty()
-        if (e.isEmpty()) return "下载失败"
-        if (e == MnnHub.GATED || "需要登录" in e) return "需要登录或申请权限，暂不支持"
-        var line = e.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return "下载失败"
+        if (e.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
+        if (e == MnnHub.GATED || com.iris.localai.I18n.s(com.iris.localai.R.string.data_10091e) in e) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_0834a0)
+        var line = e.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
         val head = line.substringBefore('：', "")
-        val labels = DownloadSource.CONCRETE.map { it.label } + listOf("魔搭", "hf-mirror", "HuggingFace", "Hugging Face")
+        val labels = DownloadSource.CONCRETE.map { it.label } + listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.data_662005), "hf-mirror", "HuggingFace", "Hugging Face")
         if (head.isNotEmpty() && head.length <= 24 && labels.any { head.contains(it, ignoreCase = true) }) line = line.substringAfter('：').trim()
-        if (line.isEmpty()) return "下载失败"
+        if (line.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
         return if (line.length > 40) line.take(39) + "…" else line
     }
 }
@@ -174,14 +174,14 @@ sealed interface RecStatus {
 
         /** 「下载」 / 「42%」 / 「继续」 / 「换源重试」 / 「加载」 / 「使用中」. */
         fun primaryLabel(s: RecStatus, section: RecommendedCatalog.Section): String = when (s) {
-            Idle, Blocked -> "下载"
-            is Downloading -> s.fraction?.let { "${(it * 100).toInt()}%" } ?: "下载中"
-            is Paused -> "继续"
-            is Failed -> "换源重试"
+            Idle, Blocked -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
+            is Downloading -> s.fraction?.let { "${(it * 100).toInt()}%" } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2d455c)
+            is Paused -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56)
+            is Failed -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b7da7)
             is Installed -> when (section) {
-                RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) "使用中" else "加载"
-                RecommendedCatalog.Section.SPEECH -> if (s.loaded) "使用中" else "使用"
-                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE -> "已下载"
+                RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea)
+                RecommendedCatalog.Section.SPEECH -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_ecff77)
+                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
             }
         }
     }

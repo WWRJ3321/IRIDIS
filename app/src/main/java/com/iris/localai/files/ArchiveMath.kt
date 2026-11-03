@@ -376,7 +376,7 @@ object ArchiveMath {
 
     /** The archive's columns, switched with ← COLUMN →; empty ones are skipped. [code] prefixes the file number. */
     enum class Column(val label: String, val code: Char) {
-        FOLDERS("文件夹", 'F'), DOCS("文档", 'D'), MEDIA("媒体", 'M'), MODELS("模型", 'N'), OTHER("其他", 'X')
+        FOLDERS(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1f4c10), 'F'), DOCS(com.iris.localai.I18n.s(com.iris.localai.R.string.files_325369), 'D'), MEDIA(com.iris.localai.I18n.s(com.iris.localai.R.string.files_104ec0), 'M'), MODELS(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), 'N'), OTHER(com.iris.localai.I18n.s(com.iris.localai.R.string.util_0d98c7), 'X')
     }
 
     private val DOCS = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "rtf", "odt")
@@ -630,31 +630,31 @@ object ArchiveMath {
     fun typeName(isDir: Boolean, system: Boolean, extension: String, top: SystemFolder?): String {
         val ext = extension.lowercase(Locale.ROOT)
         return when {
-            system -> "系统文件夹"
-            isDir -> "文件夹"
-            ext in MODEL -> if (top == SystemFolder.VOICE) "语音模型" else "模型权重"
-            ext == "md" || ext == "markdown" -> "Markdown 文档"
-            ext == "txt" -> "文本文档"
-            ext == "log" -> "日志"
-            ext == "json" || ext == "jsonl" -> "JSON 数据"
-            ext in CONFIG -> "配置文件"
-            ext == "xml" -> "XML 文档"
-            ext == "csv" || ext == "tsv" -> "表格数据"
-            ext == "html" || ext == "htm" -> "网页"
-            ext == "jinja" -> "模板"
-            ext == "srt" -> "字幕"
-            ext in CODE -> "源代码"
-            ext in IMAGE_ALL -> "图片"
-            ext in AUDIO -> if (top == SystemFolder.VOICE) "语音素材" else "音频"
-            ext in VIDEO -> "视频"
-            ext == "pdf" -> "PDF 文档"
-            ext == "doc" || ext == "docx" || ext == "odt" || ext == "rtf" -> "文字文档"
-            ext == "xls" || ext == "xlsx" -> "电子表格"
-            ext == "ppt" || ext == "pptx" -> "演示文稿"
-            ext == "epub" -> "电子书"
-            ext == "apk" -> "安装包"
-            ext in PACKAGE -> "压缩包"
-            else -> "文件"
+            system -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_83f35b)
+            isDir -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_1f4c10)
+            ext in MODEL -> if (top == SystemFolder.VOICE) com.iris.localai.I18n.s(com.iris.localai.R.string.util_589dad) else com.iris.localai.I18n.s(com.iris.localai.R.string.files_a10468)
+            ext == "md" || ext == "markdown" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_f26f71)
+            ext == "txt" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_779203)
+            ext == "log" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_456d29)
+            ext == "json" || ext == "jsonl" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_e77523)
+            ext in CONFIG -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_15c64a)
+            ext == "xml" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_878046)
+            ext == "csv" || ext == "tsv" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_642e53)
+            ext == "html" || ext == "htm" -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_18a481)
+            ext == "jinja" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_59cf15)
+            ext == "srt" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_a8c3cc)
+            ext in CODE -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_81cb1f)
+            ext in IMAGE_ALL -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_20def7)
+            ext in AUDIO -> if (top == SystemFolder.VOICE) com.iris.localai.I18n.s(com.iris.localai.R.string.files_58deff) else com.iris.localai.I18n.s(com.iris.localai.R.string.files_726dd5)
+            ext in VIDEO -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_7fcf42)
+            ext == "pdf" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_11f65b)
+            ext == "doc" || ext == "docx" || ext == "odt" || ext == "rtf" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_43e115)
+            ext == "xls" || ext == "xlsx" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_833a88)
+            ext == "ppt" || ext == "pptx" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_930904)
+            ext == "epub" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_709f7c)
+            ext == "apk" -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_03070d)
+            ext in PACKAGE -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_c806d0)
+            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
         }
     }
 
@@ -717,27 +717,27 @@ object ArchiveMath {
 
     fun summary(f: Facts): String = buildString {
         if (f.isDir) {
-            append(f.typeName).append("，")
-            if (f.children == null) append("无法读取内容")
-            else if (f.children == 0) append("空文件夹")
+            append(f.typeName).append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d3b98f))
+            if (f.children == null) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_628444))
+            else if (f.children == 0) append(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910))
             else {
-                append("共 ").append(f.children).append(" 项")
+                append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_03d4b1)).append(f.children).append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c4c4af))
                 if (f.childNames.isNotEmpty()) {
-                    append("：").append(f.childNames.joinToString("、"))
-                    if (f.children > f.childNames.size) append(" 等")
+                    append(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec892)).append(f.childNames.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566)))
+                    if (f.children > f.childNames.size) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_2a3524))
                 }
             }
-            append("。最后修改于 ").append(f.modifiedText).append("。")
+            append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_72e90f)).append(f.modifiedText).append(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81197c))
         } else {
-            append(f.typeName).append("，").append(f.sizeText)
-            if (f.lines != null) append("，共 ").append(f.lines).append(" 行")
-            if (f.imageWidth > 0 && f.imageHeight > 0) append("，分辨率 ").append(f.imageWidth).append(" × ").append(f.imageHeight)
-            append("，最后修改于 ").append(f.modifiedText).append("。")
+            append(f.typeName).append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d3b98f)).append(f.sizeText)
+            if (f.lines != null) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_899285)).append(f.lines).append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d17020))
+            if (f.imageWidth > 0 && f.imageHeight > 0) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_8833ed)).append(f.imageWidth).append(" × ").append(f.imageHeight)
+            append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_18e6b7)).append(f.modifiedText).append(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81197c))
         }
-        if (f.fixed) append("IRIDIS 的系统目录，固定在根目录，不能重命名或删除。")
-        else if (f.systemLabel != null) append("位于「").append(f.systemLabel).append("」系统目录内。")
+        if (f.fixed) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_3b0bfd))
+        else if (f.systemLabel != null) append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_e19652)).append(f.systemLabel).append(com.iris.localai.I18n.s(com.iris.localai.R.string.files_2cc416))
         if (f.warning != null) append(f.warning)
-        else if (!f.isDir) append(if (f.previewable) "可在应用内直接阅读。" else "这一类型交给其他应用打开。")
+        else if (!f.isDir) append(if (f.previewable) com.iris.localai.I18n.s(com.iris.localai.R.string.files_e172b5) else com.iris.localai.I18n.s(com.iris.localai.R.string.files_31a6b4))
     }
 
     // ---------------------------------------------------------------- colours (ARGB ints, no Android types)

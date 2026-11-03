@@ -22,17 +22,15 @@ import com.iris.localai.ui.icons.IrisIcons
 import kotlinx.coroutines.launch
 
 internal object GuiAgentText {
-    const val TITLE = "GUI 智能体（实验）"
-    const val ON = "已开启 · 可以查看屏幕并代你点击、滑动、输入"
-    const val CONNECTING = "已在系统设置里开启，正在连接…"
-    const val OFF = "未开启 · 点按去 系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 开启"
-    const val RESTRICTED = "系统提示「受限设置」时：点按这里打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b2740e)
+    val ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0413be)
+    val CONNECTING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_96cd4a)
+    val OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2696c0)
+    val RESTRICTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fd59e1)
     /** 2.1.9: 清后台 turns the service off on HyperOS. */
-    const val KEEP = "清后台会让系统关掉无障碍：在最近任务里把 IRIDIS 加锁，省电策略设为无限制。" +
-        "想掉了自动重开：设置 › 智能体 › 无障碍保活（Shizuku 一键授权或 adb 命令）"
-    const val SELF_ON = "已授权：被系统关掉后会自动重新开启"
-    const val NOTE = "看屏幕 → 思考 → 操作。需要能识图的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。" +
-        "运行时可随时在顶部悬浮条停止；支付、发送、删除前会先问你。"
+    val KEEP: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76907b)
+    val SELF_ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_13c890)
+    val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b1aa64)
 }
 
 /** 2.2 设置 › 智能体 › GUI 智能体: 无障碍 status and guide, 自检, and a test run (第一阶段入口). */
@@ -61,32 +59,32 @@ fun GuiAgentSection() {
     SectionTitle(GuiAgentText.TITLE)
     SettingsGroup {
         SettingsRow(
-            "无障碍服务", icon = IrisIcons.Eye,
+            com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6279dc), icon = IrisIcons.Eye,
             subtitle = when { connected -> GuiAgentText.ON; enabled -> GuiAgentText.CONNECTING; else -> GuiAgentText.OFF },
             onClick = { IrisAccessibilityService.openSettings(context) },
             trailing = { com.iris.localai.ui.components.Chevron() },
         )
         if (!connected) {
             Divider()
-            SettingsRow("允许受限制的设置", icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
+            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_281ed1), icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
                 onClick = { IrisAccessibilityService.openAppInfo(context) })
         }
         Divider()
-        AdvancedFold("gui-agent", "自检与试运行") {
+        AdvancedFold("gui-agent", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3183f)) {
             SettingsRow(
-                "自检", icon = IrisIcons.Check,
-                subtitle = check ?: "截一张图、读一次界面元素，不做任何操作",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b7d06), icon = IrisIcons.Check,
+                subtitle = check ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e9e37),
                 enabled = connected,
-                onClick = { scope.launch { check = "检查中…"; check = runner.selfTest() } },
+                onClick = { scope.launch { check = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d6a223); check = runner.selfTest() } },
             )
             Divider()
             SettingsRow(
-                if (run.running) "停止试运行" else "试运行",
+                if (run.running) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_31bb97) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3e5caf),
                 icon = if (run.running) IrisIcons.Stop else IrisIcons.Agent,
                 subtitle = when {
-                    run.running -> run.lines.lastOrNull() ?: "运行中…"
+                    run.running -> run.lines.lastOrNull() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8d11c5)
                     run.result != null -> run.result
-                    else -> runner.blockerText() ?: "输入一个任务，用当前模型在本机屏幕上执行"
+                    else -> runner.blockerText() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a2fb8)
                 },
                 enabled = run.running || connected,
                 onClick = { if (run.running) runner.stop() else asking = true },
@@ -99,8 +97,8 @@ fun GuiAgentSection() {
 
     if (asking) {
         TextInputDialog(
-            title = "GUI 任务", initial = "", placeholder = "例如：打开设置，把屏幕亮度调到最高",
-            confirmText = "开始", singleLine = false,
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c43ee1), initial = "", placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_52b807),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a3e3b8), singleLine = false,
             onConfirm = { runner.start(it) }, onDismiss = { asking = false },
         )
     }
@@ -115,15 +113,15 @@ fun GuiSetupDialog(blocker: com.iris.localai.agent.GuiBlocker, onDismiss: () -> 
     val context = LocalContext.current
     when (blocker) {
         com.iris.localai.agent.GuiBlocker.A11Y_OFF -> com.iris.localai.ui.components.IrisDialog(
-            onDismiss = onDismiss, title = "开启无障碍服务",
-            confirmText = "去开启", onConfirm = { onDismiss(); IrisAccessibilityService.openSettings(context) },
-            dismissText = "受限设置", onDismissClick = { onDismiss(); IrisAccessibilityService.openAppInfo(context) },
+            onDismiss = onDismiss, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e7dfa0),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5e213d), onConfirm = { onDismiss(); IrisAccessibilityService.openSettings(context) },
+            dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0415c4), onDismissClick = { onDismiss(); IrisAccessibilityService.openAppInfo(context) },
         ) {
             androidx.compose.material3.Text(GuiSetupText.A11Y)
         }
         com.iris.localai.agent.GuiBlocker.NO_MODEL, com.iris.localai.agent.GuiBlocker.NO_VISION -> com.iris.localai.ui.components.IrisDialog(
-            onDismiss = onDismiss, title = "需要识图模型",
-            confirmText = "选择模型", onConfirm = onPickModel,
+            onDismiss = onDismiss, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_946fdd),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373), onConfirm = onPickModel,
         ) {
             androidx.compose.material3.Text(GuiSetupText.VISION)
         }
@@ -132,9 +130,6 @@ fun GuiSetupDialog(blocker: com.iris.localai.agent.GuiBlocker, onDismiss: () -> 
 }
 
 internal object GuiSetupText {
-    const val A11Y = "操控手机要用到「IRIDIS GUI 智能体」无障碍服务。\n" +
-        "点「去开启」：系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 › 开启。\n" +
-        "如果提示「受限设置」，点「受限设置」打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启。开好后在聊天里再说一次。\n" +
-        GuiAgentText.KEEP
-    const val VISION = "操控手机需要能读图的模型看屏幕。请加载一个识图模型（如 Qwen3-VL MNN），再说一次。"
+    val A11Y: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ca727f) + GuiAgentText.KEEP
+    val VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_88f86e)
 }

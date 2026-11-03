@@ -58,42 +58,42 @@ import kotlinx.coroutines.withContext
 
 /** 2.2.9 F texts of 设置 › 上下文 · 记忆 · 知识库 (unit-tested; no implementation words here). */
 object ContextMemoryText {
-    const val TITLE = "上下文 · 记忆 · 知识库"
-    const val NAV = "上下文、记忆和知识库"
-    const val NAV_SUB = "对话用量、记住的事和你的资料"
-    const val PRIVACY = "全部保存在这台手机里，不上传"
-    const val HINT = "高级设置在开发者选项"
-    const val FOOTNOTE = "索引、压缩细节在 关于 › 开发者选项"
-    const val SEC_CONTEXT = "上下文"
-    const val SEC_MEMORY = "记忆"
-    const val SEC_KB = "知识库"
-    const val SUGGEST = "聊天时提议记住"
-    const val SUGGEST_SUB = "发现「我是…」「以后都…」这类话，回答下方出现一个「记住？」，点一下才保存"
-    const val KB_TOGGLE = "回答时参考知识库"
-    const val KB_SUB = "问到相关内容时，自动把对应段落交给模型，并在回答下标出出处"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_149bed)
+    val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_84fa29)
+    val NAV_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e011af)
+    val PRIVACY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8c4fa6)
+    val HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_949d51)
+    val FOOTNOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f7ccc4)
+    val SEC_CONTEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_50f198)
+    val SEC_MEMORY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7)
+    val SEC_KB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e4333)
+    val SUGGEST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d5fb8d)
+    val SUGGEST_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7f2a54)
+    val KB_TOGGLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65e375)
+    val KB_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cca5e7)
 
-    fun memoryTitle(n: Int): String = if (n == 0) "还没有记住任何事" else "记得你 $n 件事"
+    fun memoryTitle(n: Int): String = if (n == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c13df5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_15ec09, n)
     fun memorySub(latest: String?, ago: String?, pending: Int): String = listOfNotNull(
-        latest?.let { "最近记住：" + it.take(24) + if (it.length > 24) "…" else "" },
+        latest?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1cd2f0) + it.take(24) + if (it.length > 24) "…" else "" },
         ago,
-        pending.takeIf { it > 0 }?.let { "$it 条等你确认" },
-    ).joinToString(" · ").ifEmpty { "说「记住：…」或点回答下的「记住？」就能添加" }
-    fun kbTitle(files: Int): String = if (files == 0) "还没有文件" else "$files 个文件"
-    fun kbSub(files: Int, week: Int): String = if (files == 0) "添加资料后，回答时会自动参考" else "本周回答时引用了 $week 次"
+        pending.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fb4b41, it) },
+    ).joinToString(" · ").ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2d204a) }
+    fun kbTitle(files: Int): String = if (files == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e93a44) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f87840, files)
+    fun kbSub(files: Int, week: Int): String = if (files == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fb6801) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0b7ad7, week)
 
     /** 「刚刚」/「5 分钟前」/「2 小时前」/「3 天前」. */
     fun ago(then: Long, now: Long = System.currentTimeMillis()): String {
         val m = ((now - then).coerceAtLeast(0) / 60_000).toInt()
         return when {
-            m < 1 -> "刚刚"
-            m < 60 -> "$m 分钟前"
-            m < 60 * 24 -> "${m / 60} 小时前"
-            else -> "${m / (60 * 24)} 天前"
+            m < 1 -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_4181f7)
+            m < 60 -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_aea893, m)
+            m < 60 * 24 -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_d935fb, m / 60)
+            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_b24ae9, m / (60 * 24))
         }
     }
 
     /** Words that must not appear on this page (acceptance list). */
-    val FORBIDDEN = listOf("USER.md", "MEMORY.md", "FTS", "token 预算", "KV 平移", "KV 上下文平移")
+    val FORBIDDEN = listOf("USER.md", "MEMORY.md", "FTS", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_56ba83), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fc69cd), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6649d1))
 }
 
 /**
@@ -159,7 +159,7 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
             SectionTitle(ContextMemoryText.SEC_MEMORY)
             SettingsGroup {
                 StatusRow(
-                    mem?.let { ContextMemoryText.memoryTitle(it.n) } ?: "正在读取…",
+                    mem?.let { ContextMemoryText.memoryTitle(it.n) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
                     mem?.let { m -> ContextMemoryText.memorySub(m.latest, m.latest?.let { ContextMemoryText.ago(m.at) }, m.pending) } ?: "",
                     onClick = { showList = true },
                 )
@@ -172,7 +172,7 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
             SectionTitle(ContextMemoryText.SEC_KB)
             SettingsGroup {
                 StatusRow(
-                    kb?.let { ContextMemoryText.kbTitle(it.first) } ?: "正在读取…",
+                    kb?.let { ContextMemoryText.kbTitle(it.first) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
                     kb?.let { ContextMemoryText.kbSub(it.first, it.second) } ?: "",
                     onClick = { showKb = true },
                 )

@@ -73,9 +73,9 @@ object GpuCacheDiag {
     fun lowSpace(freeBytes: Long, modelBytes: Long): Boolean = freeBytes in 0 until (modelBytes + SPACE_SLACK_BYTES)
 
     fun lowSpaceNotice(modelName: String, freeBytes: Long, modelBytes: Long): String =
-        "$modelName：手机剩余空间约 ${gb(freeBytes)}，GPU 编译缓存需要约 ${gb(modelBytes)}，可能写不下，每次加载都要重新编译。清理空间后再加载会快很多。"
+        com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fc5278, modelName, gb(freeBytes), gb(modelBytes))
 
-    const val INTERRUPTED_NOTICE = "上次 GPU 加载没有完成（App 被关闭或被系统冻结），这次需要重新编译。加载期间请让 IRIDIS 保持运行，完成后再加载会快很多。"
+    val INTERRUPTED_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b8f9e9)
 
     private fun gb(b: Long) = String.format(java.util.Locale.ROOT, "%.1f GB", b / 1_073_741_824.0)
 }

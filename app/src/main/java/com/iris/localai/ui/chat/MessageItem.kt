@@ -514,7 +514,7 @@ fun VersionSwitcher(message: ChatMessage, onSwitch: (Int) -> Unit, modifier: Mod
 /** 2.2.9 texts of the 「记住？」 chip. */
 internal object MemoryChipText {
     val DISMISS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c0d5d6)
-    fun label(text: String): String = "＋ 记住？「${if (text.length > 24) text.take(23) + "…" else text}」"
+    fun label(text: String): String { val t = if (text.length > 24) text.take(23) + Typography.ellipsis else text; return com.iris.localai.I18n.s(com.iris.localai.R.string.chat_664f6a, t) }
 }
 
 /** 2.2.9: 「＋ 记住？「…」」 under a finished reply: tap saves, ✕ / long press ignores. */

@@ -36,5 +36,5 @@ object WarmUpGuard {
     }
 
     fun timeoutNotice(modelName: String): String =
-        "$modelName：预热 ${TIMEOUT_MS / 1000} 秒未完成，已跳过（首次回复可能较慢；若一直没有回复请改用 CPU 后端）"
+        com.iris.localai.I18n.s(com.iris.localai.R.string.engine_866d51, modelName, TIMEOUT_MS / 1000)
 }

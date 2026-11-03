@@ -96,7 +96,7 @@ object ModelDirs {
     ): File {
         dstDir.mkdirs()
         val target = File(dstDir, src.name)
-        if (target.exists()) throw IOException("已存在同名模型：${src.name}")
+        if (target.exists()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, src.name))
         val total = totalBytes(src)
         if (rename(src, target)) { onBytes(total); return target }
         val part = File(dstDir, src.name + ModelRepository.PART_SUFFIX)
@@ -118,13 +118,13 @@ object ModelDirs {
                         }
                     }
                 }
-                if (to.length() != from.length()) throw IOException("复制校验失败：${from.name}")
+                if (to.length() != from.length()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81fbbb, from.name))
             }
             if (src.isDirectory) {
                 src.walkTopDown().filter { it.isFile }.forEach { f -> copyFile(f, File(part, f.relativeTo(src).path)) }
             } else copyFile(src, part)
-            if (totalBytes(part) != total) throw IOException("复制校验失败：${src.name}")
-            if (!part.renameTo(target)) throw IOException("无法写入模型目录")
+            if (totalBytes(part) != total) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81fbbb, src.name))
+            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
         } catch (t: Throwable) {
             part.deleteRecursively()
             throw t

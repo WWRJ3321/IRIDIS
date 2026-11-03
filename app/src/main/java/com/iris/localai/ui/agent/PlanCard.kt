@@ -86,14 +86,14 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                 .clip(IrisRadius.mediumShape),
         ) {
             Row(
-                Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "收起计划" else "展开计划") { open = !open }
+                Modifier.fillMaxWidth().clickable(onClickLabel = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f31259) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8ef0f6)) { open = !open }
                     .padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space4, bottom = IrisDimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ProgressRing(progress, done = p.finished, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(IrisDimens.space8))
                 Text(
-                    if (p.finished) "计划已完成 · ${p.steps.size} 步" else "计划 ${p.done}/${p.steps.size}",
+                    if (p.finished) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bb6f66, p.steps.size) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_678b16, p.done, p.steps.size),
                     style = IrisType.labelSmall, color = if (p.finished) c.success else c.text, maxLines = 1,
                 )
                 val cur = p.current
@@ -103,7 +103,7 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                     modifier = Modifier.weight(1f),
                 )
                 Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = turn })
-                PressableIcon(Icons.Outlined.Close, "清除计划", size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
+                PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ed1da1), size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
             }
             AnimatedVisibility(open, enter = IrisMotion.expand(), exit = IrisMotion.collapse()) {
                 Column(

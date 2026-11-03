@@ -294,7 +294,7 @@ class EngineManager(
                 // 1.7.5: cores / nice reach a loaded MNN (CPU) model at once, idle or mid-reply;
                 // then the debounced reload check only reloads for what could not be applied live.
                 if (profileChanged || lastAppliedTier != next) applyTierLive(next)
-                tierReload.onTierChanged(next.label + if (profileChanged) "（资源档配置已修改）" else "")
+                tierReload.onTierChanged(next.label + if (profileChanged) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b66fcc) else "")
             }
         }
     }
@@ -305,7 +305,7 @@ class EngineManager(
     /** 2.1.7: the model of the load in flight (null = none). */
     val loadingModelPath: String? get() = inFlight.current()?.key
 
-    suspend fun load(model: LocalModel, reason: String = "选择模型"): Boolean = inFlight.run(model.path) {
+    suspend fun load(model: LocalModel, reason: String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373)): Boolean = inFlight.run(model.path) {
         lifecycle.withLock {
             // 1.10.2: the resident model is never reloaded by a plain load (same model = same backend
             // choice; a different backend / context only reloads through reload()).
@@ -330,7 +330,7 @@ class EngineManager(
             val pm = models.find(file)
             if (pm != null) {
                 _preloadSkipNotice.value = GpuLoadWatchdog.HANG_NOTICE
-                load(pm, reason = "GPU 卡住后改用 CPU")
+                load(pm, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_827e10))
                 return PreloadDecision.LOAD
             }
         }
@@ -340,7 +340,7 @@ class EngineManager(
         val d = PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle, blocked)
         Log.i(LoadTelemetry.TAG, "preload at start: $d${s.lastModelFile?.let { " ($it)" } ?: ""}")
         if (d == PreloadDecision.SKIP_AFTER_NATIVE_CRASH) _preloadSkipNotice.value = startupGuard.skipNotice()
-        if (d == PreloadDecision.LOAD && m != null) load(m, reason = "启动预加载")
+        if (d == PreloadDecision.LOAD && m != null) load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2feffd))
         return d
     }
 
@@ -353,7 +353,7 @@ class EngineManager(
         /** 1.7.7: CPU only (the first reply on a freshly loaded GPU backend failed). */
         cpuOnly: Boolean = false,
         /** 1.10.2: why this load happens (IrisLoad log). */
-        reason: String = if (applyingTier != null) "资源档重载" else "加载",
+        reason: String = if (applyingTier != null) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_883f2e) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea),
     ): Boolean =
         generation.withLock {
             engine?.unload()
@@ -382,7 +382,7 @@ class EngineManager(
                 appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
                 val v = MemoryPreflight.check(mi.availMem, model.sizeBytes, cfg.contextLength, preferred == Backend.GPU)
                 Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)}")
-                v.message?.let { _notices.tryEmit("${model.displayName}：$it") }
+                v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
             val chain = if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed)
@@ -390,13 +390,13 @@ class EngineManager(
             options.firstOrNull { it.backend == preferred && !it.available }?.let {
                 errors.append("[${preferred.label}] ${it.reason}\n")
             }
-            if (preferred in crashed) errors.append("[${preferred.label}] 上次在这个后端上加载或首次生成时 App 崩溃，已跳过（模型设置里可重试）\n")
+            if (preferred in crashed) errors.append(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ed0bfe, preferred.label))
             var e: InferenceEngine? = null
             // Survives a SIGSEGV (the finally below does not run) so the next start can skip auto-load.
             com.iris.localai.util.CrashReporter.breadcrumb("加载模型 ${model.fileName}")
             try {
             try {
-                if (chain.isEmpty()) throw EngineException("没有可用的后端：\n" + options.joinToString("\n") { "${it.backend.label}：${it.reason ?: "可用"}" })
+                if (chain.isEmpty()) throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_214c8c) + options.joinToString("\n") { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, it.backend.label, it.reason ?: com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ad6b70)) })
                 var details: ModelDetails? = null
                 // 2.2.15: a GGUF on the NPU may get two tries — GenieX, then the built-in llama.cpp Hexagon runtime.
                 val env = environment()
@@ -464,14 +464,14 @@ class EngineManager(
                     if (_state.value is EngineState.Idle) _notices.tryEmit(LoadCancel.RELEASED)
                     return@withLock false
                 }
-                val d = details ?: throw EngineException(errors.toString().trim().ifEmpty { "加载失败" })
-                val note = if (d.activeBackend != preferred) "已从 ${preferred.label} 回退到 ${d.activeBackend.label}：" +
+                val d = details ?: throw EngineException(errors.toString().trim().ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_866b79) })
+                val note = if (d.activeBackend != preferred) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ed13cd, preferred.label, d.activeBackend.label) +
                     errors.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().substringAfter("] ") else null
                 // 1.7.8: never fall back silently (user rule) — log it and tell the chat screen.
                 if (note != null) {
                     Log.w(RES_TAG, "backend FALLBACK: ${model.fileName} wanted ${preferred.label}, running ${d.activeBackend.label} " +
                         "(tier ${useTier.short}${if (applyingTier != null) ", tier reload" else ""}): ${errors.toString().trim().replace('\n', ' ')}")
-                    _notices.tryEmit("${model.displayName}：$note")
+                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, note))
                 }
                 // 2.1.8: bounded warm-up (WarmUpGuard): a first generation that never answers no longer
                 // keeps the load in flight forever; its own cancellation propagates (no runCatching).
@@ -488,7 +488,7 @@ class EngineManager(
                 loadedPreferred = preferred
                 lastAppliedTier = plan.tier
                 if (applyingTier == null) _tierApply.value = null   // a fresh model: no stale status
-                _state.value = EngineState.Ready(model, d.copy(fallbackNote = listOfNotNull(note, d.fallbackNote).joinToString("；").ifEmpty { null }))
+                _state.value = EngineState.Ready(model, d.copy(fallbackNote = listOfNotNull(note, d.fallbackNote).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d)).ifEmpty { null }))
                 settings.update { it.copy(lastModelFile = model.fileName) }
                 startupGuard.noteLoadSucceeded()
                 scheduleIdleUnload()
@@ -522,7 +522,7 @@ class EngineManager(
             val marker = java.io.File(dir, GpuCacheDiag.loadingMarker(model.fileName, backend))
             if (marker.exists()) {
                 Log.w(LoadTelemetry.TAG, "previous GPU load of ${model.fileName} did not finish (marker from ${marker.readText().trim()}): the runtime will rebuild its cache")
-                _notices.tryEmit("${model.displayName}：${GpuCacheDiag.INTERRUPTED_NOTICE}")
+                _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, GpuCacheDiag.INTERRUPTED_NOTICE))
             }
             val free = dir.usableSpace
             if (GpuCacheDiag.lowSpace(free, model.sizeBytes)) {
@@ -581,7 +581,7 @@ class EngineManager(
             maxNumTokens = if (model.format == ModelFormat.LITERT) d?.contextLength ?: 0 else 0,
             ok = ok,
             at = System.currentTimeMillis(),
-            reason = reason + (lastUnload?.let { "（上次卸载：$it）" } ?: ""),
+            reason = reason + (lastUnload?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d7aeae, it) } ?: ""),
         )
         lastUnload = null
         if (ok) loadStats.put(r)
@@ -598,7 +598,7 @@ class EngineManager(
         e.resetContext()
     }
 
-    suspend fun unload(reason: String = "手动卸载") = lifecycle.withLock {
+    suspend fun unload(reason: String = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c5271c)) = lifecycle.withLock {
         cancelAll()
         if (engine != null) {
             lastUnload = reason
@@ -617,8 +617,8 @@ class EngineManager(
     /** Reloads the current model, e.g. after changing context length or threads. */
     suspend fun reload() {
         val m = readyModel ?: return
-        unload("重新加载")
-        load(m, reason = "重新加载")
+        unload(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_64ca9b))
+        load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_64ca9b))
     }
 
     /** Loads the last used model if nothing is loaded (used by auto-load and the API). */
@@ -635,7 +635,7 @@ class EngineManager(
             ?: readyModel
             ?: defaultModel()
             ?: return false
-        return load(target, reason = "按需加载")
+        return load(target, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4978ec))
     }
 
     /** 2.1.7 「默认模型」: the chosen default if still installed, else the last used model. */
@@ -709,10 +709,10 @@ class EngineManager(
                 cpuRetried = true
                 val m = readyModel
                 val from = readyDetails?.activeBackend
-                val ok = m != null && lifecycle.withLock { loadLocked(m, applyingTier = null, cpuOnly = true, reason = "首次生成失败回退 CPU") }
+                val ok = m != null && lifecycle.withLock { loadLocked(m, applyingTier = null, cpuOnly = true, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d24275)) }
                 if (!ok) {
                     emit(GenEvent.Done(StopReason.ERROR, null, "${from?.label ?: "GPU"} 上首次生成失败，回退 CPU 也失败：" +
-                        ((state.value as? EngineState.Failed)?.message ?: "模型未加载")))
+                        ((state.value as? EngineState.Failed)?.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468))))
                     break
                 }
                 Log.w(GEN_TAG, "first reply on ${from?.label} failed before any output → reloaded on CPU, retrying the same request")
@@ -727,7 +727,7 @@ class EngineManager(
         if (engine != null && state.value is EngineState.Ready) return
         val m = lostByReload ?: return
         Log.w(RES_TAG, "request ($requester): the last tier reload left no model loaded → loading ${m.fileName} again")
-        load(m, reason = "重载失败后恢复")
+        load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_689775))
     }
 
     /**
@@ -744,7 +744,7 @@ class EngineManager(
     ): Boolean = generation.withLock {
         val e = engine
         if (e == null) {
-            val why = (state.value as? EngineState.Failed)?.message?.let { "模型加载失败：$it" } ?: "模型未加载"
+            val why = (state.value as? EngineState.Failed)?.message?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fedfea, it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)
             Log.w(GEN_TAG, "request ($requester) rejected: $why")
             emit(GenEvent.Done(StopReason.ERROR, null, why))
             return@withLock false
@@ -955,20 +955,20 @@ class EngineManager(
                 if (loadedPlan?.tier == tier) _tierApply.value = TierApplyResult.RELOADED
                 TierReloadResult.APPLIED
             } else {
-                val err = (state.value as? EngineState.Failed)?.message ?: "未知错误"
+                val err = (state.value as? EngineState.Failed)?.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.engine_974e74)
                 Log.w(RES_TAG, "tier reload FAILED after ${ms}ms: $err")
                 // 1.7.7: never leave the user without a model: load it again with the tier it ran on,
                 // and put the setting back so card, plan and model agree.
-                val restored = prevTier != null && loadLocked(ready.model, applyingTier = null, tierOverride = prevTier, reason = "资源档重载失败后恢复")
+                val restored = prevTier != null && loadLocked(ready.model, applyingTier = null, tierOverride = prevTier, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_694905))
                 if (restored) {
                     Log.w(RES_TAG, "tier reload: restored ${ready.model.fileName} with previous tier ${prevTier.short}; setting reverted")
                     settings.update { it.copy(resourceTier = prevTier.ordinal) }
                     _tierApply.value = TierApplyResult.RELOAD_FAILED
-                    _notices.tryEmit("切换到「${t.label}」时重新加载模型失败：${err.lineSequence().first()}。已恢复为「${prevTier.label}」")
+                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_549f7f, t.label, err.lineSequence().first(), prevTier.label))
                 } else {
                     lostByReload = ready.model
                     Log.w(RES_TAG, "tier reload: restore with previous tier failed too; next request loads again")
-                    _notices.tryEmit("切换到「${t.label}」时重新加载模型失败：${err.lineSequence().first()}")
+                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e87a0d, t.label, err.lineSequence().first()))
                 }
                 TierReloadResult.FAILED
             }
@@ -1050,13 +1050,13 @@ class EngineManager(
             if (IdleUnloadRule.canUnload(busy.value != null, generation.isLocked, gate.requests, gate.reloading.value)) {
                 idleJob = null // unload() must not cancel the coroutine it is running in
                 Log.i(TAG, "idle for $minutes min → unloading model")
-                unload("空闲 $minutes 分钟自动卸载")
+                unload(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0cbbff, minutes))
             }
         }
     }
 
     private companion object {
-        const val SAFE_MODE_NOTICE = "上次加载模型时 App 崩溃，本次已自动改用 CPU 加载"
+        val SAFE_MODE_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b46cdd)
         const val TAG = "EngineManager"
         const val RES_TAG = "IrisResource"
         /** 1.7.7: end-of-reply reason + thinking / answer tokens. */

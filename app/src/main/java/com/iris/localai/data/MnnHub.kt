@@ -59,15 +59,15 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var lastRequest: Pair<String, DownloadSource>? = null
 
     suspend fun download(input: String, source: DownloadSource, demote: DownloadSource? = null): LocalModel = withContext(Dispatchers.IO) {
-        val repoId = MnnModels.parseRepoId(input) ?: throw IOException("仓库名格式应为 作者/名称，例如 taobao-mnn/Qwen3-1.7B-MNN")
+        val repoId = MnnModels.parseRepoId(input) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81c8d3))
         val name = ModelFiles.sanitizeFileName(repoId.substringAfter('/'))
         val modelsDir = repo.modelsDir // resolved once: shared Download/IRIDIS/models when available
         val target = File(modelsDir, name)
-        if (target.exists() || repo.find(name) != null) throw IOException("已存在同名模型：$name")
+        if (target.exists() || repo.find(name) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, name))
         val partName = name + ModelRepository.PART_SUFFIX
-        if (!repo.claimPart(partName)) throw IOException("$repoId 正在下载中")
+        if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
         repo.unholdParts(); curParts = listOf(partName)
-        _state.value = State(repoId = repoId, active = true, file = "读取文件列表…")
+        _state.value = State(repoId = repoId, active = true, file = com.iris.localai.I18n.s(com.iris.localai.R.string.data_864643))
         try {
             // 2.2.16: list the repo on every candidate source (自动: in parallel, the listing doubles as the
             // speed probe); files then come from the ranked sources, each falling through to the next.
@@ -87,14 +87,14 @@ class MnnHub(private val repo: ModelRepository) {
             }
             val files = all.filter { it.type == "file" && MnnModels.shouldCopy(it.path) }
             if (!MnnModels.isModelFileSet(files.filter { '/' !in it.path }.map { it.path }.toSet())) {
-                throw IOException("$repoId 不是 MNN 大模型仓库（缺少 config.json / llm.mnn）。请选 taobao-mnn 下以 -MNN 结尾的仓库")
+                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_5f9c4b, repoId))
             }
             val total = files.sumOf { it.size }
             val part = File(modelsDir, partName).apply { mkdirs() }
             val have = files.sumOf { f -> File(part, f.path).takeIf { it.exists() }?.length()?.coerceAtMost(f.size) ?: 0L }
             val free = StatFs(modelsDir.absolutePath).availableBytes
             if (free < total - have + 256L * 1024 * 1024) {
-                throw IOException("存储空间不足：需要 ${Format.bytes(total - have)}，可用 ${Format.bytes(free)}")
+                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
             }
             var done = have
             _state.value = _state.value.copy(totalBytes = total, doneBytes = done)
@@ -107,7 +107,7 @@ class MnnHub(private val repo: ModelRepository) {
                 fetch(urlsFor(repoId, f.path, order), out, f.size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
                 done = before + f.size
             }
-            if (!part.renameTo(target)) throw IOException("无法写入模型目录")
+            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
             _state.value = State()
         } catch (t: Throwable) {
             _state.value = stopped(repoId, t)
@@ -124,14 +124,14 @@ class MnnHub(private val repo: ModelRepository) {
         val fileName = ModelFiles.sanitizeFileName(path.substringAfterLast('/'))
         val modelsDir = repo.modelsDir
         val target = File(modelsDir, fileName)
-        if (target.exists() || repo.find(fileName) != null) throw IOException("已存在同名模型：$fileName")
+        if (target.exists() || repo.find(fileName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, fileName))
         val partName = fileName + ModelRepository.PART_SUFFIX
-        if (!repo.claimPart(partName)) throw IOException("$repoId 正在下载中")
+        if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
         curParts = listOf(partName)
         try {
             val have = HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < size - have + 256L * 1024 * 1024) throw IOException("存储空间不足：需要 ${Format.bytes(size - have)}，可用 ${Format.bytes(free)}")
+            if (free < size - have + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(size - have), Format.bytes(free)))
             _state.value = _state.value.copy(totalBytes = size, doneBytes = have, file = fileName)
             // fetchOnce writes target.part and renames it when complete, so a half file is never listed.
             fetch(urlsFor(repoId, path, order), target, size) { got -> _state.value = _state.value.copy(doneBytes = got) }
@@ -166,8 +166,8 @@ class MnnHub(private val repo: ModelRepository) {
         val lat = results.associate { (s, ms0, r) -> s to (if (r.isSuccess && r.getOrThrow().isNotEmpty()) ms0 else null) }
         val ranked = if (chosen == DownloadSource.AUTO && demote == null) DownloadSources.rank(order, lat) else order
         val first = ranked.firstNotNullOfOrNull { s -> results.first { it.first == s }.third.getOrNull()?.takeIf { it.isNotEmpty() } }
-            ?: throw IOException("无法获取 $repoId 的文件列表：\n" + results.joinToString("\n") { (s, _, r) ->
-                "${s.label}：" + (r.exceptionOrNull()?.let { DownloadSources.describe(it) } ?: "没有文件")
+            ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_d66ab7, repoId) + results.joinToString("\n") { (s, _, r) ->
+                com.iris.localai.I18n.s(com.iris.localai.R.string.data_a4f150, s.label) + (r.exceptionOrNull()?.let { DownloadSources.describe(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_e67a89))
             })
         return ranked to first
     }
@@ -194,7 +194,7 @@ class MnnHub(private val repo: ModelRepository) {
         val conn = HttpDownload.open("$base/api/models/$repoId/tree/main?recursive=true", 0, timeoutMs = 6_000)
         try {
             val code = conn.responseCode
-            if (code == HttpURLConnection.HTTP_NOT_FOUND || code == 401) throw IOException("找不到仓库 $repoId")
+            if (code == HttpURLConnection.HTTP_NOT_FOUND || code == 401) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_a69177, repoId))
             if (code != HttpURLConnection.HTTP_OK) throw IOException("HTTP $code")
             val body = conn.inputStream.bufferedReader().use { it.readText() }
             return json.decodeFromString<List<TreeEntry>>(body)
@@ -252,9 +252,9 @@ class MnnHub(private val repo: ModelRepository) {
         if (hit.gated) throw IOException(GATED)
         val modelsDir = repo.modelsDir
         val mainName = files.first().third
-        if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException("已存在同名模型：$mainName")
+        if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, mainName))
         val claimed = files.map { it.third + ModelRepository.PART_SUFFIX }
-        if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException("${hit.id} 正在下载中") }
+        if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, hit.id)) }
         repo.unholdParts(); curParts = claimed
         val total = files.sumOf { it.second }
         _state.value = State(repoId = hit.id, active = true, totalBytes = total, file = mainName)
@@ -264,7 +264,7 @@ class MnnHub(private val repo: ModelRepository) {
                 if (t.exists() && t.length() == size) size else HttpDownload.partFile(t).takeIf { it.exists() }?.length()?.coerceAtMost(size) ?: 0L
             }
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < total - have + 256L * 1024 * 1024) throw IOException("存储空间不足：需要 ${Format.bytes(total - have)}，可用 ${Format.bytes(free)}")
+            if (free < total - have + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
             var done = have
             _state.value = _state.value.copy(doneBytes = done)
             // the model's parts and the projector are written with .part first; the main file goes last so the
@@ -313,14 +313,14 @@ class MnnHub(private val repo: ModelRepository) {
         val cur = _state.value
         return if (t is kotlinx.coroutines.CancellationException) {
             if (pausing) { pausing = false; repo.holdParts(curParts); State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
-        } else State(repoId = repoId, error = t.message ?: "下载失败", source = cur.source)
-            .also { com.iris.localai.util.HintLog.add(repoId + " 下载失败：" + it.error, com.iris.localai.util.HintLog.Source.DOWNLOAD) }
+        } else State(repoId = repoId, error = t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200), source = cur.source)
+            .also { com.iris.localai.util.HintLog.add(repoId + com.iris.localai.I18n.s(com.iris.localai.R.string.data_b25c4c) + it.error, com.iris.localai.util.HintLog.Source.DOWNLOAD) }
     }
 
     fun clearError() { if (!_state.value.active) { if (_state.value.paused) repo.unholdParts(); _state.value = State() } }
 
     companion object {
-        const val GATED = "这个仓库需要登录或申请访问权限，IRIDIS 暂不支持下载。请换一个仓库（例如 unsloth、bartowski、lmstudio-community 的同名模型）"
+        val GATED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.data_6a6291)
 
         /** 2.2.12: the Q4 .gguf of a GGUF repo (Q4_K_M, else Q4_0, else any Q4); no mmproj. Pure. */
         fun pickGgufFile(files: List<Pair<String, Long>>): Pair<String, Long>? {

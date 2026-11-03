@@ -512,7 +512,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                 }
                 Divider()
                 val thermal by com.iris.localai.engine.ThermalGovernor.status.collectAsStateWithLifecycle()
-                val nowText = if (thermal.tempC.isNaN()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_80ef0f) else "当前 ${"%.1f".format(thermal.tempC)}°C"
+                val nowText = if (thermal.tempC.isNaN()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_80ef0f) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_137d5c, Math.round(thermal.tempC * 10) / 10.0)
                 SwitchRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3bee9a), s.thermalLimitC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
                     subtitle = if (s.thermalLimitC == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f3765, nowText)
@@ -698,8 +698,8 @@ private fun NpuRuntimeRow(
                 {
                     IrisButton(
                         label, fn, compact = true,
-                        style = if (label == "下载" || label == "重试" || label == "修复") IrisButtonStyle.Outline else IrisButtonStyle.Text,
-                        destructive = label == "删除",
+                        style = if (label == com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) || label == com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) || label == com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f82661)) IrisButtonStyle.Outline else IrisButtonStyle.Text,
+                        destructive = label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
                     )
                 }
             },

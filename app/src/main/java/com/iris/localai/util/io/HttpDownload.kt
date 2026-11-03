@@ -35,7 +35,7 @@ object HttpDownload {
         if (part.exists() && part.length() > expected) part.delete()
         val offset = if (part.exists()) part.length() else 0L
         if (expected > 0 && offset == expected) { // finished earlier, rename failed / was interrupted
-            if (!part.renameTo(target)) throw IOException("无法写入 ${target.name}")
+            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, target.name))
             onBytes(expected)
             return
         }
@@ -43,14 +43,14 @@ object HttpDownload {
         try {
             val code = conn.responseCode
             val resumed = code == HttpURLConnection.HTTP_PARTIAL
-            if (code == HttpURLConnection.HTTP_NOT_FOUND) throw com.iris.localai.data.DownloadSources.NotFound("HTTP 404（该源没有这个文件）")
-            if (code == 401 || code == 403) throw com.iris.localai.data.DownloadSources.NotFound("HTTP $code（需要登录或无权访问）")
-            if (code != HttpURLConnection.HTTP_OK && !resumed) throw IOException("HTTP $code：$url")
-            if (range != null && !resumed) throw IOException("服务器不支持分段下载：$url")
+            if (code == HttpURLConnection.HTTP_NOT_FOUND) throw com.iris.localai.data.DownloadSources.NotFound(com.iris.localai.I18n.s(com.iris.localai.R.string.util_89463f))
+            if (code == 401 || code == 403) throw com.iris.localai.data.DownloadSources.NotFound(com.iris.localai.I18n.s(com.iris.localai.R.string.util_795bfa, code))
+            if (code != HttpURLConnection.HTTP_OK && !resumed) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_19cb06, code, url))
+            if (range != null && !resumed) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_7f9f79, url))
             // 2.2.16: a source holding another version of the file is skipped before anything is written.
             if (range == null && expected > 0) {
                 val total = remoteTotal(conn.getHeaderField("Content-Range"), conn.contentLengthLong, resumed, offset)
-                if (total != null && total != expected) throw com.iris.localai.data.DownloadSources.SizeMismatch("文件大小与预期不同（$total / $expected）")
+                if (total != null && total != expected) throw com.iris.localai.data.DownloadSources.SizeMismatch(com.iris.localai.I18n.s(com.iris.localai.R.string.util_cb7e72, total, expected))
             }
             RandomAccessFile(part, "rw").use { raf ->
                 var written = if (resumed) offset else 0L // 200 = server ignored Range: start over
@@ -68,12 +68,12 @@ object HttpDownload {
                         if (written - lastReport >= REPORT_EVERY) { lastReport = written; onBytes(written) }
                     }
                 }
-                if (written != expected) throw IOException("文件大小不符（$written / $expected）：${target.name}")
+                if (written != expected) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, written, expected, target.name))
             }
         } finally {
             conn.disconnect()
         }
-        if (!part.renameTo(target)) throw IOException("无法写入 ${target.name}")
+        if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, target.name))
         onBytes(expected)
     }
 
@@ -105,11 +105,11 @@ object HttpDownload {
             if (code in 300..399) {
                 val loc = c.getHeaderField("Location")
                 c.disconnect()
-                url = URL(URL(url), loc ?: throw IOException("重定向缺少 Location")).toString()
+                url = URL(URL(url), loc ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_fcc7a6))).toString()
             } else {
                 return c
             }
         }
-        throw IOException("重定向次数过多")
+        throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_9b8100))
     }
 }

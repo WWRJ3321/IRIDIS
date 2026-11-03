@@ -287,7 +287,7 @@ fun HistoryDrawer(
     deleting?.let { s ->
         ConfirmDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8de76),
-            message = "“${s.title.ifBlank { "新对话" }}”将移到回收站，30 天后自动删除。",
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3693f6, s.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }),
             confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { onDelete(s.id) },
             onDismiss = { deleting = null },

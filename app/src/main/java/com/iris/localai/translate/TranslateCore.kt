@@ -8,8 +8,8 @@ import com.iris.localai.engine.PromptMessage
  * the paragraph split the offline engine streams by.
  */
 enum class TransLang(val code: String, val label: String, val english: String) {
-    ZH("zh", "中文", "Simplified Chinese"),
-    EN("en", "英文", "English");
+    ZH("zh", com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a7bac2), "Simplified Chinese"),
+    EN("en", com.iris.localai.I18n.s(com.iris.localai.R.string.translate_f9fb6a), "English");
 
     companion object {
         fun byCode(code: String): TransLang? = entries.firstOrNull { it.code == code }
@@ -22,8 +22,8 @@ object TranslateSettings {
     const val ENGINE_AUTO = "auto"
     const val ENGINE_MODEL = "model"
     const val ENGINE_OFFLINE = "offline"
-    val TARGETS = listOf(TARGET_AUTO to "自动（中↔英）", "zh" to "中文", "en" to "英文")
-    val ENGINES = listOf(ENGINE_AUTO to "自动", ENGINE_MODEL to "当前模型", ENGINE_OFFLINE to "离线")
+    val TARGETS = listOf(TARGET_AUTO to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a73116), "zh" to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a7bac2), "en" to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_f9fb6a))
+    val ENGINES = listOf(ENGINE_AUTO to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), ENGINE_MODEL to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_e18ae8), ENGINE_OFFLINE to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_50d4a8))
 }
 
 object LangDetect {
@@ -104,11 +104,11 @@ sealed interface EngineChoice {
 }
 
 object EngineSelect {
-    const val NEED_MODEL = "请先加载一个模型"
-    const val NEED_EITHER = "请先加载一个模型，或在 设置 › 语音与翻译 下载离线翻译包"
+    val NEED_MODEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99db9d)
+    val NEED_EITHER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.translate_7b5a14)
     fun needPack(source: TransLang, target: TransLang) =
-        "请先在 设置 › 语音与翻译 下载「${source.label}→${target.label}」离线翻译包"
-    const val OFFLINE_UNSUPPORTED = "本机不支持离线翻译引擎，请先加载一个模型"
+        com.iris.localai.I18n.s(com.iris.localai.R.string.translate_85c9c7, source.label, target.label)
+    val OFFLINE_UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.translate_30da87)
 
     /**
      * [pref]: 自动 = the loaded model, else the offline pack; 当前模型 / 离线 = only that one.

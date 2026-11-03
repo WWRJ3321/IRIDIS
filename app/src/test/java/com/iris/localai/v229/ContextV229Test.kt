@@ -80,10 +80,10 @@ class ContextV229Test {
         // Old controls are in 开发者选项 › 上下文与记忆.
         val dev = src("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
         val devPage = dev.substringAfter("fun DevContextMemoryPage(").substringBefore("fun PerformancePage(")
-        for (t in listOf("R.string.models_3b5663", "ContextStrategy.entries", "R.string.settings_dc8bfe", "R.string.settings_0e766b", "developerMode")) // 2.3.1: strings moved to res assertTrue(t, devPage.contains(t))
+        for (t in listOf("R.string.models_3b5663", "ContextStrategy.entries", "R.string.settings_dc8bfe", "R.string.settings_0e766b", "developerMode")) assertTrue(t, devPage.contains(t)) // 2.3.1: strings moved to res
         assertTrue(dev.substringAfter("fun DeveloperPage(").contains("SettingsPage.DEV_CONTEXT"))
         val mem = src("src/main/java/com/iris/localai/ui/agent/MemorySettingsPage.kt")
-        for (t in listOf("\"长期记忆\"", "\"智能体模式注入\"", "\"对话模式注入\"", "\"历史检索索引\"", "KnowledgeText.REBUILD", "\"记忆注入预算\"", "MemoryText.CLEAR")) assertTrue(t, mem.contains(t))
+        for (t in listOf("R.string.agent_de49f7", "R.string.agent_fcd608", "R.string.agent_ec50c7", "R.string.agent_38d78c", "KnowledgeText.REBUILD", "R.string.agent_0a67bd", "MemoryText.CLEAR")) assertTrue(t, mem.contains(t)) // 2.3.1: strings moved to res
         val sheet = src("src/main/java/com/iris/localai/ui/chat/ChatScreen.kt")
         assertTrue(sheet.contains("showStrategy = settings.developerMode"))
     }

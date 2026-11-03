@@ -87,6 +87,15 @@ class MainActivity : ComponentActivity() {
         window.isNavigationBarContrastEnforced = false
         window.isStatusBarContrastEnforced = false
         super.onCreate(savedInstanceState)
+        // 2.3.1: some labels (enums, object texts) are read once per process; after a language switch restart it.
+        if (com.iris.localai.I18n.langChangedSinceStart()) {
+            packageManager.getLaunchIntentForPackage(packageName)?.let {
+                startActivity(it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+            }
+            finishAffinity()
+            Runtime.getRuntime().exit(0)
+            return
+        }
         val container = (application as IrisApp).container
         if (container.settings.current.apiEnabled && !ApiService.status.value.running) {
             ApiService.start(this)

@@ -54,15 +54,15 @@ class EngineGuiModel(private val engine: EngineManager, private val maxNewTokens
                         if (first < 0) first = android.os.SystemClock.elapsedRealtime() - t0
                         sb.append(e.text); chars = sb.length
                     }
-                    is GenEvent.Done -> if (e.reason == StopReason.ERROR) throw EngineException(e.error ?: "生成失败")
+                    is GenEvent.Done -> if (e.reason == StopReason.ERROR) throw EngineException(e.error ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7f7de8))
                 }
             }
             true
         }
         android.util.Log.i(TAG, "step reply: first piece ${first}ms, total ${android.os.SystemClock.elapsedRealtime() - t0}ms, ${sb.length} chars, images=${messages.sumOf { it.images.size }}")
         if (done == null) throw EngineException(
-            if (first < 0) "模型 ${timeoutMs / 1000} 秒还没开始输出（看图太慢或卡住），已停止。可换更小的识图模型，或导出日志给我看"
-            else "模型 ${timeoutMs / 1000} 秒没写完一步，已停止",
+            if (first < 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2b9315, timeoutMs / 1000)
+            else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5efc4f, timeoutMs / 1000),
         )
         return sb.toString()
     }
@@ -111,10 +111,10 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     /** The settings page's text for [blockerKind]. */
     fun blockerText(): String? = when (blockerKind()) {
         null -> null
-        GuiBlocker.A11Y_OFF -> "先在 系统设置 › 无障碍 里开启「IRIDIS GUI 智能体」"
-        GuiBlocker.NO_MODEL -> "先加载一个能识图的模型"
-        GuiBlocker.NO_VISION -> "当前模型不能识图：GUI 智能体需要视觉模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）"
-        GuiBlocker.BUSY -> "正在运行"
+        GuiBlocker.A11Y_OFF -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_13f110)
+        GuiBlocker.NO_MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3f28a)
+        GuiBlocker.NO_VISION -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50199)
+        GuiBlocker.BUSY -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c9e2c3)
     }
 
     /** 2.1.9 `screen`: blocked → the chat shows the matching guide. */
@@ -134,7 +134,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // 悬浮条「停止」 cancels only the GUI run; the chat's 智能体 still reports it.
-                if (me?.isActive == true) GuiOutcome(GuiStop.STOPPED, "已停止", emptyList()) else throw e
+                if (me?.isActive == true) GuiOutcome(GuiStop.STOPPED, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778), emptyList()) else throw e
             }
             return GuiTaskMapping.result(outcome, handedOver)
         } finally {
@@ -158,15 +158,15 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         blockerText()?.let { _state.value = GuiRunState(result = it); return }
         job = scope.launch {
             val outcome = execute(task, maxSteps)
-            _state.value = _state.value.copy(result = "${GuiTaskMapping.head(outcome.stop)}：${outcome.message}")
+            _state.value = _state.value.copy(result = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, GuiTaskMapping.head(outcome.stop), outcome.message))
         }
     }
 
     private suspend fun execute(task: String, maxSteps: Int, onLine: (String) -> Unit = {}, onHandOver: () -> Unit = {}): GuiOutcome {
-        val ready = engine.state.value as? EngineState.Ready ?: return GuiOutcome(GuiStop.ERROR, "没有加载模型", emptyList())
+        val ready = engine.state.value as? EngineState.Ready ?: return GuiOutcome(GuiStop.ERROR, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_65b1d0), emptyList())
         val profile = GuiProfile.forModel(ready.model.fileName)
         GuiStopSignal.reset()
-        _state.value = GuiRunState(running = true, lines = listOf("模型：${ready.model.fileName}（${profile.label} 格式）"))
+        _state.value = GuiRunState(running = true, lines = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_31d943, ready.model.fileName, profile.label)))
         lineSink = onLine
         handOverSink = onHandOver
         val model = EngineGuiModel(engine)
@@ -178,7 +178,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
                 .apply { setReferenceCounted(false); acquire(30 * 60_000L) }
         }.getOrNull()
         val outcome: GuiOutcome = try {
-            GuiOverlay.show("GUI 智能体 · 准备中") { stop() }
+            GuiOverlay.show(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e27070)) { stop() }
             IrisAccessibilityService.instance?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
             delay(600)
             GuiAgentLoop(
@@ -188,7 +188,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
             ).run(task)
         } catch (e: kotlinx.coroutines.CancellationException) {
             GuiOverlay.hide()
-            _state.value = _state.value.copy(running = false, result = "已停止")
+            _state.value = _state.value.copy(running = false, result = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778))
             throw e
         } catch (e: Exception) {
             GuiOutcome(GuiStop.ERROR, e.message ?: e.javaClass.simpleName, emptyList())
@@ -222,19 +222,19 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         job?.cancel()
         chatInner?.cancel()
         chatRun?.cancel()
-        _state.value = _state.value.copy(running = false, result = "已停止")
+        _state.value = _state.value.copy(running = false, result = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778))
         runCatching { onUserStop?.invoke() }
     }
 
     private val callbacks = object : GuiCallbacks {
-        override suspend fun confirm(action: GuiAction, reason: String) = GuiOverlay.ask("$reason\n要继续吗？", "允许", "取消")
+        override suspend fun confirm(action: GuiAction, reason: String) = GuiOverlay.ask(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_24ecf6, reason), com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e6a5c3), com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2))
         override suspend fun takeOver(message: String): Boolean =
-            GuiOverlay.ask("需要你来操作：$message\n完成后点「我已完成」", "我已完成", "停止").also { if (!it) handOverSink() }
+            GuiOverlay.ask(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_32ebdb, message), com.iris.localai.I18n.s(com.iris.localai.R.string.agent_433994), com.iris.localai.I18n.s(com.iris.localai.R.string.service_095e93)).also { if (!it) handOverSink() }
         // 第一阶段没有输入框：模型提问时停下，把问题带回 IRIDIS（聊天里由主智能体转述）。
-        override suspend fun ask(question: String): String? { addLine("模型提问：$question"); handOverSink(); return null }
+        override suspend fun ask(question: String): String? { addLine(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b27633, question)); handOverSink(); return null }
         override fun onPhase(index: Int, phase: com.iris.localai.agent.gui.GuiPhase) {
             ticker?.cancel(); ticker = null
-            val head = "GUI 智能体 · 第 $index 步 · ${phase.label}"
+            val head = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_97e88b, index, phase.label)
             GuiOverlay.update(head)
             if (phase != com.iris.localai.agent.gui.GuiPhase.THINK) return
             val t0 = android.os.SystemClock.elapsedRealtime()
@@ -249,13 +249,13 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
         }
         override fun onStep(step: GuiStep) {
             ticker?.cancel(); ticker = null
-            val what = step.action?.label() ?: "格式错误"
+            val what = step.action?.label() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0257f0)
             val mark = when (step.status) {
-                GuiStepStatus.OK -> ""; GuiStepStatus.FAILED -> " ✗"; GuiStepStatus.DENIED -> "（已拒绝）"
-                GuiStepStatus.BLOCKED -> "（需你操作）"; GuiStepStatus.FORMAT_ERROR -> "：${step.note}"
+                GuiStepStatus.OK -> ""; GuiStepStatus.FAILED -> " ✗"; GuiStepStatus.DENIED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e10c40)
+                GuiStepStatus.BLOCKED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_971669); GuiStepStatus.FORMAT_ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ae5443, step.note)
             }
-            GuiOverlay.update("GUI 智能体 · 第 ${step.index} 步 · $what")
-            addLine("${step.index}. $what$mark" + if (step.status == GuiStepStatus.FAILED && step.note.isNotEmpty()) "（${step.note}）" else "")
+            GuiOverlay.update(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_97e88b, step.index, what))
+            addLine("${step.index}. $what$mark" + if (step.status == GuiStepStatus.FAILED && step.note.isNotEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_67f810, step.note) else "")
         }
     }
 
@@ -266,18 +266,18 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
 
     /** 自检: one screenshot + node tree, no action. */
     suspend fun selfTest(): String {
-        if (!IrisAccessibilityService.connected) return "无障碍服务未连接"
+        if (!IrisAccessibilityService.connected) return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_da8247)
         return runCatching {
             val obs = AccessibilityGuiDevice(context).observe()
             val els = UiTreeSerializer.elements(obs.tree, obs.width, obs.height)
-            "屏幕 ${obs.width}×${obs.height} · 截图" + (if (obs.screenshot != null) "成功" else "失败（安全窗口或系统限制）") +
-                " · 界面元素 ${els.size} 个 · 前台 ${obs.foregroundPkg ?: "未知"}"
-        }.getOrElse { "自检失败：${it.message}" }
+            com.iris.localai.I18n.s(com.iris.localai.R.string.agent_559515, obs.width, obs.height) + (if (obs.screenshot != null) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_330363) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de71af)) +
+                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dd68f5, els.size, obs.foregroundPkg ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1622dc))
+        }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_123b18, it.message) }
     }
 }
 
 /** 2.1.9: the 停止 bar while the model works on a step (unit-tested). */
 object GuiPhaseText {
     fun thinking(head: String, seconds: Long, chars: Int): String =
-        if (chars <= 0) "$head ${seconds}s（看图中）" else "$head ${seconds}s · $chars 字"
+        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0edf72, head, seconds) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1c64a4, head, seconds, chars)
 }

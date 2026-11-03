@@ -17,7 +17,13 @@ object HintLog {
     const val MERGE_MS = 10 * 60_000L
     const val MAX_CHARS = 2000
 
-    object Source { const val CHAT = "对话"; const val MODEL = "模型加载"; const val DOWNLOAD = "下载"; const val TOOL = "工具"; const val SYSTEM = "系统" }
+    object Source {
+        val CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)
+        val MODEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.service_a3db60)
+        val DOWNLOAD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
+        val TOOL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.util_20dce2)
+        val SYSTEM: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_8a8b89)
+    }
 
     private val _items = MutableStateFlow<List<Hint>>(emptyList())
     val items: StateFlow<List<Hint>> = _items

@@ -68,16 +68,16 @@ import com.iris.localai.ui.theme.SmoothRoundedShape
 
 /** Visible copy of the 「文件」 page. */
 internal object FilesText {
-    const val TITLE = "文件"
-    const val ARCHIVE_MODE = "档案模式"
-    const val VIEW_STYLE = "视图"
-    const val SYSTEM_BADGE = "系统"
-    const val NEW_FOLDER = "新建文件夹"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
+    val ARCHIVE_MODE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_331dd7)
+    val VIEW_STYLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_096449)
+    val SYSTEM_BADGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_8a8b89)
+    val NEW_FOLDER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485)
     /** Same wording as 智能体 › 工作区. */
-    const val GRANT_TITLE = "全部文件访问（推荐）"
-    const val GRANT_HINT = "未开启 · 只能看到 IRIDIS 自己创建的文件。点按去系统设置开启，才能看到你放进 下载/IRIDIS 的模型和文件"
-    const val UNAVAILABLE = "找不到 下载/IRIDIS"
-    const val UNAVAILABLE_HINT = "外部存储不可用，或文件夹还没有创建 / 无法读取"
+    val GRANT_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5cd94f)
+    val GRANT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_b1e01a)
+    val UNAVAILABLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_28bcd7)
+    val UNAVAILABLE_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_536c9d)
 }
 
 internal fun systemIcon(s: SystemFolder): ImageVector = when (s) {
@@ -103,7 +103,7 @@ internal fun formatModified(ms: Long): String = synchronized(timeFormat) { timeF
 
 /** "12 项 · 2026-10-23 13:40" / "4.20 GB · …"; system folders lead with their folder name. */
 internal fun entrySubtitle(e: FileEntry): String {
-    val what = if (e.isDir) "${e.childCount} 项" else FileSizes.format(e.size)
+    val what = if (e.isDir) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b5d2d7, e.childCount) else FileSizes.format(e.size)
     val time = formatModified(e.modified)
     return (if (e.system != null) "${e.name} · " else "") + "$what · $time"
 }
@@ -131,7 +131,7 @@ fun AppFilesPage(onBack: () -> Unit) {
         // 2.1.9: small view-style menu — 列表 / 卡片.
         Box {
             PressableIcon(
-                styleIcon(state.viewStyle), FilesText.VIEW_STYLE + "：" + state.viewStyle.label,
+                styleIcon(state.viewStyle), FilesText.VIEW_STYLE + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec892) + state.viewStyle.label,
                 tint = if (styled) Iris.colors.accent else Iris.colors.text,
                 background = if (styled) Iris.colors.accentContainer else androidx.compose.ui.graphics.Color.Transparent,
             ) { styleMenu = true }
@@ -179,7 +179,7 @@ internal fun FilesHeader(state: FilesState, actions: FilesActions, showCrumbs: B
             Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.material3.Icon(IrisIcons.Sort, "排序", Modifier.padding(end = IrisDimens.space4).size(18.dp), tint = c.textTertiary)
+            androidx.compose.material3.Icon(IrisIcons.Sort, com.iris.localai.I18n.s(com.iris.localai.R.string.files_c360e9), Modifier.padding(end = IrisDimens.space4).size(18.dp), tint = c.textTertiary)
             FileSort.entries.forEach { s ->
                 val on = s == state.sort
                 Text(
@@ -225,8 +225,8 @@ fun ListFileView(state: FilesState, actions: FilesActions, modifier: Modifier = 
                 EmptyState(
                     title = when {
                         state.unreadable && state.atRoot -> FilesText.UNAVAILABLE
-                        state.unreadable -> "无法读取这个文件夹"
-                        else -> "空文件夹"
+                        state.unreadable -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_b4991b)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910)
                     },
                     message = if (state.unreadable) FilesText.UNAVAILABLE_HINT else null,
                     icon = IrisIcons.Folder,
@@ -259,14 +259,14 @@ fun ListFileView(state: FilesState, actions: FilesActions, modifier: Modifier = 
                             val canRename = actions.canRename(e)
                             val canDelete = actions.canDelete(e)
                             if (!e.isDir || canRename || canDelete) Box {
-                                PressableIcon(IrisIcons.More, "更多：${e.displayName}", size = 40.dp, iconSize = IrisDimens.space20) { menuFor = e.relPath }
+                                PressableIcon(IrisIcons.More, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ea320a, e.displayName), size = 40.dp, iconSize = IrisDimens.space20) { menuFor = e.relPath }
                                 IrisMenu(expanded = menuFor == e.relPath, onDismiss = { menuFor = null }) {
                                     if (!e.isDir) {
-                                        IrisMenuItem("用其他应用打开", IrisIcons.OpenExternal) { menuFor = null; actions.openExternal(e) }
-                                        IrisMenuItem("分享", IrisIcons.Share) { menuFor = null; actions.share(e) }
+                                        IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1d93c3), IrisIcons.OpenExternal) { menuFor = null; actions.openExternal(e) }
+                                        IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), IrisIcons.Share) { menuFor = null; actions.share(e) }
                                     }
-                                    if (canRename) IrisMenuItem("重命名", IrisIcons.Edit) { menuFor = null; actions.requestRename(e) }
-                                    if (canDelete) IrisMenuItem("删除", IrisIcons.Trash, destructive = true) { menuFor = null; actions.requestDelete(e) }
+                                    if (canRename) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), IrisIcons.Edit) { menuFor = null; actions.requestRename(e) }
+                                    if (canDelete) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), IrisIcons.Trash, destructive = true) { menuFor = null; actions.requestDelete(e) }
                                 }
                             }
                         }
@@ -301,24 +301,24 @@ fun FilesDialogs(state: FilesState, actions: FilesActions) {
             onConfirm = actions::confirmNewFolder, onDismiss = actions::dismissDialog,
         )
         is FileDialog.Rename -> FileNameDialog(
-            title = "重命名", initial = d.entry.name, warning = d.warning, state = state, current = d.entry.name,
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), initial = d.entry.name, warning = d.warning, state = state, current = d.entry.name,
             onConfirm = actions::confirmRename, onDismiss = actions::dismissDialog,
         )
         is FileDialog.Delete -> ConfirmDialog(
-            title = "删除 ${d.entry.name}？",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4a78de, d.entry.name),
             message = listOfNotNull(
                 d.warning,
-                if (d.entry.isDir) "文件夹里的 ${d.entry.childCount} 项也会删除。" else null,
-                "删除后无法撤销。",
+                if (d.entry.isDir) com.iris.localai.I18n.s(com.iris.localai.R.string.files_9ca853, d.entry.childCount) else null,
+                com.iris.localai.I18n.s(com.iris.localai.R.string.files_a3a5ce),
             ).joinToString("\n"),
-            confirmText = "删除",
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { actions.confirmDelete() },
             onDismiss = { if (state.dialog == d) actions.dismissDialog() },
         )
         is FileDialog.Preview -> IrisDialog(
             onDismiss = actions::dismissDialog, title = d.entry.name,
-            confirmText = "关闭", onConfirm = actions::dismissDialog,
-            dismissText = "其他应用打开", onDismissClick = { actions.dismissDialog(); actions.openExternal(d.entry) },
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = actions::dismissDialog,
+            dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.files_9f2ce6), onDismissClick = { actions.dismissDialog(); actions.openExternal(d.entry) },
         ) {
             Box(
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(if (d.markdown) c.surfaceVariant else c.codeBackground)
@@ -326,7 +326,7 @@ fun FilesDialogs(state: FilesState, actions: FilesActions) {
             ) {
                 val text = d.text
                 when {
-                    text == null -> Text("正在读取…", style = IrisType.secondary, color = c.textTertiary)
+                    text == null -> Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary)
                     d.markdown -> SelectionContainer { Markdown(text) }
                     else -> SelectionContainer { Text(text, style = IrisType.monoSmall, color = c.text) }
                 }
@@ -351,7 +351,7 @@ private fun FileNameDialog(
     val problem = remember(value) { FileNames.validate(value, state.rel, state.entries.map { it.name }, current) }
     val unchanged = current != null && value.trim() == current
     IrisDialog(
-        onDismiss = onDismiss, title = title, confirmText = "确定",
+        onDismiss = onDismiss, title = title, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.components_38cf16),
         confirmEnabled = problem == null && !unchanged,
         onConfirm = { onConfirm(value.trim()) },
     ) {
@@ -361,7 +361,7 @@ private fun FileNameDialog(
                 value, { value = it }, singleLine = true,
                 isError = problem != null && value.isNotEmpty(),
                 textStyle = IrisType.body.copy(color = c.text),
-                placeholder = { Text("名称", style = IrisType.body, color = c.textTertiary) },
+                placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7ec2d), style = IrisType.body, color = c.textTertiary) },
                 shape = IrisRadius.mediumShape,
                 colors = irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),

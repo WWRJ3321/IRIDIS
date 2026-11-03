@@ -30,12 +30,12 @@ object MemoryPreflight {
         }
         if (level == Level.OK) return Verdict(level, need, availBytes, null)
         val tip = buildList {
-            if (gpu) add("改用 CPU")
-            if (contextLength > 2048) add("把上下文减到 ${maxOf(2048, contextLength / 2)}")
-            add("换更小的模型或档位")
-        }.joinToString("、")
-        val head = if (level == Level.SHORT) "内存可能不够，加载时可能闪退" else "内存偏紧"
-        return Verdict(level, need, availBytes, "$head：约需 ${gb(need)}，可用 ${gb(availBytes)}。建议$tip")
+            if (gpu) add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f))
+            if (contextLength > 2048) add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ea59f5, maxOf(2048, contextLength / 2)))
+            add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0e6914))
+        }.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566))
+        val head = if (level == Level.SHORT) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8b435d) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6c66e0)
+        return Verdict(level, need, availBytes, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ece637, head, gb(need), gb(availBytes), tip))
     }
 
     fun gb(b: Long): String = String.format(java.util.Locale.US, "%.1f GB", b / (1024.0 * MB))

@@ -127,7 +127,7 @@ class McpManager(context: Context) {
         val tools = client(s).listTools()
         update(id) { it.copy(tools = tools, checkedAt = System.currentTimeMillis()) }
         tools.size
-    }.onFailure { e -> com.iris.localai.util.HintLog.add("MCP「${_servers.value.firstOrNull { it.id == id }?.name}」连接失败：${McpClient.describe(e)}", com.iris.localai.util.HintLog.Source.TOOL) }
+    }.onFailure { e -> com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cc1632, _servers.value.firstOrNull { it.id == id }?.name, McpClient.describe(e)), com.iris.localai.util.HintLog.Source.TOOL) }
 
     /** Every enabled tool of every enabled server, namespaced (before the cap). */
     fun enabledTools(): List<McpTool> {
@@ -170,10 +170,10 @@ class McpTool(
             manager.call(server, info.name, McpSchema.unflatten(args, info.schemaJson()))
         } catch (e: Exception) {
             val msg = McpClient.describe(e)
-            com.iris.localai.util.HintLog.add("MCP「${server.name}」${info.name} 调用失败：$msg", com.iris.localai.util.HintLog.Source.TOOL)
+            com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e7af6f, server.name, info.name, msg), com.iris.localai.util.HintLog.Source.TOOL)
             return ToolResult(false, "Error: MCP server ${server.name}: $msg", msg.take(40))
         }
-        if (!r.ok) com.iris.localai.util.HintLog.add("MCP「${server.name}」${info.name} 返回错误：${r.text.take(300)}", com.iris.localai.util.HintLog.Source.TOOL)
+        if (!r.ok) com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d88230, server.name, info.name, r.text.take(300)), com.iris.localai.util.HintLog.Source.TOOL)
         val out = capTokens(r.text.ifBlank { if (r.ok) "(empty result)" else "error" }, env.outputTokens)
         return ToolResult(r.ok, if (r.ok) out else "Error: $out", McpResult.summary(r))
     }

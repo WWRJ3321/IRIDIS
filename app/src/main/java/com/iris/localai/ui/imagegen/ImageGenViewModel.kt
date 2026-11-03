@@ -24,34 +24,34 @@ import java.io.File
 
 /** Chinese copy of the 生图 page (tests read these). */
 object ImageGenText {
-    const val TITLE = "生图"
-    const val DOWNLOADED = "已下载"
-    const val NOT_DOWNLOADED = "未下载"
-    const val DOWNLOAD = "下载"
-    const val NOT_DOWNLOADED_ERROR = "模型未下载，请先点「下载」"
-    const val EXTRACTING = "解压中"
-    const val DELETE = "删除"
-    const val DELETE_TITLE = "删除模型"
-    const val RETRY = "换源重试"
-    const val PROMPT = "正向提示词"
-    const val NEGATIVE = "反向提示词"
-    const val REF_IMAGE = "参考图"
-    const val STRENGTH = "重绘强度"
-    const val NO_IMG2IMG = "该模型为固定尺寸 NPU 模型，暂不支持参考图"
-    const val STEPS = "步数"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)
+    val DOWNLOADED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
+    val NOT_DOWNLOADED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_336189)
+    val DOWNLOAD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
+    val NOT_DOWNLOADED_ERROR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28b159)
+    val EXTRACTING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_973e8a)
+    val DELETE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
+    val DELETE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_bb7a2e)
+    val RETRY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b7da7)
+    val PROMPT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_68a756)
+    val NEGATIVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9576af)
+    val REF_IMAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_477f3a)
+    val STRENGTH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a27088)
+    val NO_IMG2IMG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b37ef6)
+    val STEPS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_896303)
     const val CFG = "CFG"
-    const val SEED = "种子（留空随机）"
-    const val GENERATE = "生成"
-    const val CANCEL = "取消"
-    const val CANCELLED = "已取消"
-    const val SAVE = "保存"
-    const val SHARE = "分享"
-    const val TO_CHAT = "发到聊天"
-    const val HISTORY = "历史"
-    const val SELF_CHECK = "生图自检"
-    const val RUN = "运行"
-    const val COPY = "复制"
-    const val FIXED_SIZE = "固定尺寸"
+    val SEED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_0e9bf6)
+    val GENERATE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70)
+    val CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)
+    val CANCELLED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_2111cc)
+    val SAVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb)
+    val SHARE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48)
+    val TO_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_bf1781)
+    val HISTORY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c827d8)
+    val SELF_CHECK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_328b2c)
+    val RUN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_4c763b)
+    val COPY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab)
+    val FIXED_SIZE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_e23c9e)
 }
 
 data class ImageGenUi(
@@ -134,7 +134,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteModel(m: ImageModel) {
         viewModelScope.launch {
             val ok = downloader.delete(m, withContext(Dispatchers.IO) { repo.roots() })
-            if (!ok) _ui.update { it.copy(error = "删除失败") }
+            if (!ok) _ui.update { it.copy(error = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066)) }
             refresh()
         }
     }
@@ -175,7 +175,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                     out.path
                 }.getOrNull()
             }
-            _ui.update { it.copy(initImage = path, error = if (path == null) "无法读取参考图" else null) }
+            _ui.update { it.copy(initImage = path, error = if (path == null) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a7f86a) else null) }
         }
     }
 
@@ -188,7 +188,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, seed = req.seed.toString()) }
         job = viewModelScope.launch {
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
-            if (model.backend == com.iris.localai.imagegen.Backend.QNN) runCatching { container.engine.unload("生图") }
+            if (model.backend == com.iris.localai.imagegen.Backend.QNN) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
             val r = withContext(Dispatchers.Default) {
                 engine.generate(req, model) { step, total -> _ui.update { it.copy(step = step, total = total) } }
             }

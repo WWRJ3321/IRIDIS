@@ -42,7 +42,7 @@ object GlassPolicy {
     const val LEVEL_ECO = 0
     const val LEVEL_BALANCED = 1
     const val LEVEL_RICH = 2
-    val LEVEL_LABELS = listOf("省电", "均衡", "华丽")
+    val LEVEL_LABELS = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_f07d8f), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_83bf12))
 
     /** PowerManager.THERMAL_STATUS_* (kept as ints so this stays a plain unit-tested object). */
     const val THERMAL_MODERATE = 2

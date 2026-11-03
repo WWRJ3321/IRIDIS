@@ -50,33 +50,33 @@ import kotlinx.coroutines.withContext
 
 /** 1.10.0 texts of 设置 › 记忆 (unit-tested). */
 object MemoryText {
-    const val NAV = "上下文、记忆和知识库"
-    const val MASTER = "关闭后不再注入记忆，智能体也不能使用「长期记忆」工具"
-    const val INJECT_AGENT = "每个新对话开始时把记忆快照放进智能体的系统提示"
-    const val INJECT_CHAT = "对话模式也带上记忆快照（会占用一些上下文）"
-    const val DOC_NOTE = "记忆只存在本机，最多 200 条。聊天里说「记住：…」或点「记住？」即可添加，新对话起生效。"
-    const val LIST = "记忆"
-    const val SUGGEST = "聊天时提议记住"
-    const val SUGGEST_SUB = "你说到自己的情况或偏好时，在回复下方提示「记住？」，点了才保存"
+    val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_84fa29)
+    val MASTER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1415ca)
+    val INJECT_AGENT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d63f7c)
+    val INJECT_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4edca2)
+    val DOC_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1025dc)
+    val LIST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7)
+    val SUGGEST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d5fb8d)
+    val SUGGEST_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f7329b)
     fun listSubtitle(n: Int, pending: Int): String =
-        (if (n == 0) "还没有记住任何事" else "记得你 $n 件事") + if (pending > 0) " · $pending 条等你确认" else ""
-    const val COMPACT_AGENT = "智能体模式超出上下文时，把较早的对话按规则压缩成摘要（不调用模型）"
-    const val COMPACT_CHAT = "对话模式同样自动压缩；仅在「按 token 预算」策略下生效"
+        (if (n == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c13df5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_15ec09, n)) + if (pending > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_11e7a2, pending) else ""
+    val COMPACT_AGENT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e2d210)
+    val COMPACT_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7114d8)
     /** 2.2.9 E: the merged switch, as seen in 开发者选项. */
-    const val COMPACT_ONE = "上下文快满时，把较早的对话整理成要点"
+    val COMPACT_ONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23641b)
     fun injectBudget(contextTokens: Int): String =
-        "上下文的 1/5，当前约 ${com.iris.localai.memory.MemoryPrompt.budget(contextTokens)} tokens（按 $contextTokens 计）；关于你/偏好放系统提示，相关事实每轮最多用一半"
-    const val COMPACT_NOTE = "整理不删除消息，原文仍保存在本机。点上下文用量可手动整理或撤销。"
-    const val CLEAR = "清空记忆"
+        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ba6880, com.iris.localai.memory.MemoryPrompt.budget(contextTokens), contextTokens)
+    val COMPACT_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ef6f5e)
+    val CLEAR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_54309c)
 
-    fun usage(len: Int, cap: Int = MemoryOps.CAP): String = "$len / $cap 字"
+    fun usage(len: Int, cap: Int = MemoryOps.CAP): String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_37f497, len, cap)
 }
 
 @Composable
 fun MemorySettingsPage(
     onBack: () -> Unit,
     /** 2.1.3: 「上下文与记忆」 and 「记忆」 are one page, 「记忆与上下文」 (the context sections come first). */
-    title: String = "记忆与上下文",
+    title: String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dfeb13),
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
     header: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
 ) {
@@ -113,22 +113,22 @@ fun MemorySettingsPage(
     SubpageScaffold(title, onBack, actions = actions) {
         ScrollBody {
             header()
-            SectionTitle("长期记忆")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7))
             SettingsGroup {
-                SwitchRow("长期记忆", ms.enabled, subtitle = MemoryText.MASTER, icon = com.iris.localai.ui.icons.IrisIcons.Memory) { on ->
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), ms.enabled, subtitle = MemoryText.MASTER, icon = com.iris.localai.ui.icons.IrisIcons.Memory) { on ->
                     agent.memorySettings.update { it.copy(enabled = on) }
                 }
                 Divider()
-                SwitchRow("智能体模式注入", ms.injectAgent, subtitle = MemoryText.INJECT_AGENT, icon = com.iris.localai.ui.icons.IrisIcons.Agent, enabled = ms.enabled) { on ->
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fcd608), ms.injectAgent, subtitle = MemoryText.INJECT_AGENT, icon = com.iris.localai.ui.icons.IrisIcons.Agent, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(injectAgent = on) }
                 }
                 Divider()
-                SwitchRow("对话模式注入", ms.injectChat, subtitle = MemoryText.INJECT_CHAT, icon = com.iris.localai.ui.icons.IrisIcons.Chat, enabled = ms.enabled) { on ->
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ec50c7), ms.injectChat, subtitle = MemoryText.INJECT_CHAT, icon = com.iris.localai.ui.icons.IrisIcons.Chat, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(injectChat = on) }
                 }
             }
 
-            SectionTitle("记忆")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7))
             SettingsGroup {
                 SettingsRow(
                     MemoryText.LIST, icon = Icons.Outlined.Face,
@@ -144,7 +144,7 @@ fun MemorySettingsPage(
                 SettingsRow(
                     MemoryText.CLEAR, icon = Icons.Outlined.DeleteSweep,
                     titleColor = Iris.colors.danger,
-                    subtitle = "删除全部已记住的内容",
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ab89b3),
                     enabled = counts.first > 0 || counts.second > 0,
                     onClick = { clearing = true },
                 )
@@ -153,26 +153,26 @@ fun MemorySettingsPage(
 
             KnowledgeEntry(onOpen = { showKb = true })
 
-            SectionTitle("上下文压缩")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_593d49))
             SettingsGroup {
                 // 2.2.9 E: 智能体自动压缩 + 对话自动压缩 → one switch (= 主页面「快满时自动整理」).
-                SwitchRow("自动压缩", ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc0f2e), ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
                     agent.memorySettings.update { it.withAutoCompact(on) }
                 }
                 Divider()
                 SettingsRow(
-                    "历史检索索引", icon = com.iris.localai.ui.icons.IrisIcons.Layers,
-                    subtitle = indexed?.let { "已索引 ${it.first} 条消息与工具记录 · SQLite ${it.second}" } ?: "数据库不可用，「回忆」工具已隐藏",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_38d78c), icon = com.iris.localai.ui.icons.IrisIcons.Layers,
+                    subtitle = indexed?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3ac76a, it.first, it.second) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc9d89),
                 )
             }
             GroupFootnote(MemoryText.COMPACT_NOTE)
 
             // 2.2.9 F: index / budget details that used to sit on the normal page.
-            SectionTitle("索引与注入")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23b687))
             SettingsGroup {
                 SettingsRow(
                     KnowledgeText.TITLE + " · " + KnowledgeText.REBUILD, icon = com.iris.localai.ui.icons.IrisIcons.Reload, enabled = !rebuilding,
-                    subtitle = if (rebuilding) "正在重建…" else "重新读取知识库全部文件，一般不需要：文件变化会自动更新",
+                    subtitle = if (rebuilding) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_34a084) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ac06c2),
                     onClick = {
                         rebuilding = true
                         scope.launch {
@@ -182,16 +182,16 @@ fun MemorySettingsPage(
                     },
                 )
                 Divider()
-                SettingsRow("记忆注入预算", icon = com.iris.localai.ui.icons.IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a67bd), icon = com.iris.localai.ui.icons.IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
             }
         }
     }
 
     if (clearing) {
         ConfirmDialog(
-            title = "清空长期记忆？",
-            message = "全部记忆会被删除，无法恢复。已经开始的对话不再注入记忆。",
-            confirmText = "清空",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5ad835),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_49ac8d),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
             onConfirm = {
                 scope.launch {
                     withContext(Dispatchers.IO) { agent.memoryDocs.clear() }

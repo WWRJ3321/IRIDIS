@@ -109,7 +109,7 @@ class Translator(
         if (handle != 0L) { BergamotNative.nativeFree(handle); handle = 0L; loadedPack = null }
         val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
         val h = BergamotNative.nativeLoad(BergamotConfig.yaml(pack, packs.dir(pack), threads))
-        if (h == 0L) throw IllegalStateException("离线翻译模型加载失败，可在 设置 › 语音与翻译 删除后重新下载")
+        if (h == 0L) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.translate_50b9cf))
         handle = h; loadedPack = pack
         h
     }
@@ -120,7 +120,7 @@ class Translator(
         val out = StringBuilder()
         Paragraphs.split(text).forEachIndexed { i, p ->
             if (i > 0) out.append('\n')
-            out.append(if (Paragraphs.passThrough(p)) p else BergamotNative.nativeTranslate(h, p.toByteArray()) ?: throw IllegalStateException("离线翻译失败"))
+            out.append(if (Paragraphs.passThrough(p)) p else BergamotNative.nativeTranslate(h, p.toByteArray()) ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.translate_c65060)))
             emit(out.toString().trimEnd())
         }
     }.flowOn(Dispatchers.IO)
@@ -142,7 +142,7 @@ class Translator(
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                _messages.update { m -> m[id]?.let { m + (id to it.copy(running = false, error = e.message ?: "翻译失败")) } ?: m }
+                _messages.update { m -> m[id]?.let { m + (id to it.copy(running = false, error = e.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_032ee1))) } ?: m }
             }
         }
     }

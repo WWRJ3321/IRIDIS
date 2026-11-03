@@ -35,9 +35,9 @@ class GpuLoadWatchdog(val timeoutMs: Long = TIMEOUT_MS) {
             ((progress.coerceIn(0f, 1f) * 1000).toLong() shl 42) or
                 ((ticks.toLong() and 0x1FFFFF) shl 21) or (cacheFiles.toLong() and 0x1FFFFF)
 
-        const val HANG_NOTICE = "GPU（OpenCL）加载卡住，已改用 CPU。可在模型设置里重试 GPU"
+        val HANG_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_496c6c)
 
         fun hangDetail(ticks: Int, lastLog: String, stalledMs: Long): String =
-            "OpenCL ${stalledMs / 1000}s 无进展 · 进度 $ticks" + lastLog.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
+            com.iris.localai.I18n.s(com.iris.localai.R.string.engine_65bbe5, stalledMs / 1000, ticks) + lastLog.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
     }
 }

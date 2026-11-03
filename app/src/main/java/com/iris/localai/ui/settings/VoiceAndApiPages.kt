@@ -84,7 +84,7 @@ import com.iris.localai.voice.VoiceKind
 import com.iris.localai.voice.VoicePack
 import java.util.Locale
 
-private val ASR_LANGUAGES = listOf("auto" to "自动", "zh" to "普通话", "yue" to "粤语", "en" to "英语")  // 2.0.1: 日语 / 韩语 removed (user)
+private val ASR_LANGUAGES = listOf("auto" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), "zh" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2006be), "yue" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_319dbf), "en" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4145d4))  // 2.0.1: 日语 / 韩语 removed (user)
 
 @Composable
 fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
@@ -93,26 +93,26 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
     val packs by vm.voicePacks.collectAsStateWithLifecycle()
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.stopPreview() } }
 
-    SubpageScaffold("语音与翻译", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), onBack) {
         ScrollBody {
-            PageDescription("语音识别、合成与翻译都在本机运行，首次使用需下载模型。")
+            PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e3b3ef))
             // 2.0.x: everyday settings first (朗读, 识别), then the model packs; the rarely touched
             // ones (音色编号, 打断, 下载源) fold away.
-            SectionTitle("朗读")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f))
             SettingsGroup {
                 // 2.2.10: 朗读引擎 — 本机模型（含克隆音色）or Android 系统 TTS.
                 val sys = s.ttsEngine == com.iris.localai.voice.TTS_ENGINE_SYSTEM
                 SegmentedRow(
-                    "朗读引擎", listOf("本机模型", "系统 TTS"), if (sys) 1 else 0,
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cf7e7f), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78587c), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f3dc4b)), if (sys) 1 else 0,
                     { i -> vm.stopPreview(); vm.update { it.copy(ttsEngine = if (i == 1) com.iris.localai.voice.TTS_ENGINE_SYSTEM else com.iris.localai.voice.TTS_ENGINE_LOCAL) } },
-                    subtitle = if (sys) "使用系统默认的语音引擎和音色，无需下载模型" else "使用下方下载的语音合成模型或克隆音色",
+                    subtitle = if (sys) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be76a6) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ae43),
                 )
                 Divider()
                 if (sys) {
                     val hasEngine = remember(s.ttsEngine) { vm.systemTtsAvailable() }
                     SettingsRow(
-                        if (hasEngine) "系统 TTS 设置" else "未找到系统 TTS 引擎",
-                        subtitle = if (hasEngine) "在系统设置中更换引擎、音色或下载中文语音包" else "请在系统设置中安装或启用文字转语音引擎（如 Google 语音服务、厂商自带引擎）",
+                        if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_486d41) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da54a4),
+                        subtitle = if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0e304e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6a57d5),
                         titleColor = if (hasEngine) c.text else c.danger,
                         onClick = vm::openSystemTtsSettings,
                         trailing = { Chevron() },
@@ -124,15 +124,15 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     val female = s.ttsSpeakerId in 3..57
                     val male = s.ttsSpeakerId >= 58
                     SettingsRow(
-                        "音色",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d09e4a),
                         subtitle = when {
-                            s.ttsSpeakerId < 3 -> "英文音色 #${s.ttsSpeakerId}"
-                            female -> "中文女声 #${s.ttsSpeakerId - 2}"
-                            else -> "中文男声 #${s.ttsSpeakerId - 57}"
+                            s.ttsSpeakerId < 3 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_09f9a7, s.ttsSpeakerId)
+                            female -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_77bca1, s.ttsSpeakerId - 2)
+                            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aaac47, s.ttsSpeakerId - 57)
                         },
                         trailing = {
                             SegmentedControl(
-                                listOf("女声", "男声"),
+                                listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c0e77), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ed7a11)),
                                 selectedIndex = when { female -> 0; male -> 1; else -> -1 },
                                 onSelect = { i -> vm.update { it.copy(ttsSpeakerId = if (i == 0) 3 else 58) } },
                                 modifier = Modifier.width(128.dp),
@@ -141,39 +141,39 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     )
                     Divider()
                 }
-                SliderRow("语速", s.ttsSpeed, 0.6f..1.6f, String.format(Locale.US, "%.1fx", s.ttsSpeed)) { v -> vm.update { it.copy(ttsSpeed = (v * 10).toInt() / 10f) } }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_595d51), s.ttsSpeed, 0.6f..1.6f, String.format(Locale.US, "%.1fx", s.ttsSpeed)) { v -> vm.update { it.copy(ttsSpeed = (v * 10).toInt() / 10f) } }
                 Divider()
                 val preview by vm.preview.collectAsStateWithLifecycle()
                 SettingsRow(
                     when (preview) {
-                        SettingsViewModel.Preview.Loading -> "正在加载音色…"
-                        SettingsViewModel.Preview.Playing -> "播放中，点按停止"
-                        else -> "试听"
+                        SettingsViewModel.Preview.Loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_661b77)
+                        SettingsViewModel.Preview.Playing -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_498987)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352)
                     },
                     subtitle = (preview as? SettingsViewModel.Preview.Failed)?.message,
                     onClick = vm::previewVoice,
                     trailing = {
                         when (preview) {
                             SettingsViewModel.Preview.Loading -> com.iris.localai.ui.components.TypingDots()
-                            SettingsViewModel.Preview.Playing -> Icon(Icons.Outlined.StopCircle, "停止试听", tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
-                            else -> Icon(Icons.Outlined.PlayArrow, "试听", tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
+                            SettingsViewModel.Preview.Playing -> Icon(Icons.Outlined.StopCircle, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d22e11), tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
+                            else -> Icon(Icons.Outlined.PlayArrow, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352), tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
                         }
                     },
                 )
                 Divider()
-                SwitchRow("文字对话也自动朗读", s.autoSpeak, subtitle = "语音对话总是朗读") { on -> vm.update { it.copy(autoSpeak = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_84b7cb), s.autoSpeak, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ccdd00)) { on -> vm.update { it.copy(autoSpeak = on) } }
             }
-            SectionTitle("识别")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_72eff8))
             SettingsGroup {
                 SegmentedRow(
-                    "识别语言",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e57f3c),
                     options = ASR_LANGUAGES.map { it.second },
                     selectedIndex = ASR_LANGUAGES.indexOfFirst { it.first == s.asrLanguage },
                     onSelect = { i -> vm.update { it.copy(asrLanguage = ASR_LANGUAGES[i].first) } },
                 )
             }
 
-            for ((kind, label) in listOf(VoiceKind.ASR to "语音识别模型", VoiceKind.TTS to "语音合成模型")) {
+            for ((kind, label) in listOf(VoiceKind.ASR to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a6541c), VoiceKind.TTS to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27eaa4))) {
                 SectionTitle(label)
                 val active = remember(packs, s.asrPack, s.ttsPack) { vm.activePack(kind) }
                 SettingsGroup {
@@ -190,35 +190,35 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
             CloneVoiceSection(vm)
             TranslateSection(vm, s)
 
-            com.iris.localai.ui.components.SectionFold("voice-adv", "高级：音色编号、打断与下载源") {
+            com.iris.localai.ui.components.SectionFold("voice-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9efdd4)) {
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
                 if (ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
-                    SectionTitle("音色编号")
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10))
                     SettingsGroup {
-                        SliderRow("音色编号", s.ttsSpeakerId.toFloat(), 0f..102f, "#${s.ttsSpeakerId}") { v -> vm.update { it.copy(ttsSpeakerId = v.toInt()) } }
+                        SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10), s.ttsSpeakerId.toFloat(), 0f..102f, "#${s.ttsSpeakerId}") { v -> vm.update { it.copy(ttsSpeakerId = v.toInt()) } }
                     }
                 }
-                SectionTitle("语音对话打断")
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8d7696))
                 SettingsGroup {
                     SegmentedRow(
-                        "说话打断回复的灵敏度",
-                        options = listOf("低", "中", "高"),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a1c52),
+                        options = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ac67), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aed1df), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4296d7)),
                         selectedIndex = s.bargeInSensitivity,
                         onSelect = { i -> vm.update { it.copy(bargeInSensitivity = i) } },
                         subtitle = when (s.bargeInSensitivity) {
-                            0 -> "低：要说得更大声、更久才打断，适合嘈杂环境"
-                            2 -> "高：轻声也能打断，偶尔会被回复声误触"
-                            else -> "中：正常音量说话即可打断"
-                        } + "。外放时为防止自问自答，说话不打断，点光球打断；戴耳机或用听筒时生效",
+                            0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f51084)
+                            2 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_372984)
+                            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d68e5f)
+                        } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_906f6a),
                     )
                     Divider()
                     SwitchRow(
-                        "更易打断（回复按通话播放）", s.bargeInVoiceComm,
-                        subtitle = "打断更灵敏，但音量改由通话音量控制、音质略差",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_959016), s.bargeInVoiceComm,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_02fac3),
                     ) { on -> vm.update { it.copy(bargeInVoiceComm = on) } }
                 }
 
-                SectionTitle("下载源")
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
                 SettingsGroup {
                     DownloadSource.entries.forEachIndexed { i, src ->
                         if (i > 0) Divider()
@@ -226,7 +226,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
 
-                GroupFootnote("和「模型与加载」里的下载源是同一个设置。Matcha 声码器与 ZipVoice 从 GitHub 下载。")
+                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a492f))
             }
         }
     }
@@ -235,8 +235,8 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
 /** 1.14.7: model-license note shown in a voice pack's subtitle (null = permissive, no tag). */
 internal val VoicePack.licenseTag: String?
     get() = when (this) {
-        VoicePack.CLONE_ZIPVOICE, VoicePack.TTS_MATCHA_BAKER -> "仅限非商业"
-        VoicePack.TTS_PIPER_XIAOYA -> "见模型许可"
+        VoicePack.CLONE_ZIPVOICE, VoicePack.TTS_MATCHA_BAKER -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_855f7b)
+        VoicePack.TTS_PIPER_XIAOYA -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7e41cf)
         else -> null
     }
 
@@ -250,27 +250,27 @@ internal fun PackRow(
 @Composable
 private fun TranslateSection(vm: SettingsViewModel, s: com.iris.localai.data.AppSettings) {
     val packs by vm.translatePacks.collectAsStateWithLifecycle()
-    SectionTitle("翻译")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607))
     SettingsGroup {
         val targets = com.iris.localai.translate.TranslateSettings.TARGETS
         SegmentedRow(
-            "译成", targets.map { it.second.substringBefore("（") }, targets.indexOfFirst { it.first == s.translateTarget }.coerceAtLeast(0),
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_46ffe3), targets.map { it.second.substringBefore("（") }, targets.indexOfFirst { it.first == s.translateTarget }.coerceAtLeast(0),
             { i -> vm.update { it.copy(translateTarget = targets[i].first) } },
-            subtitle = "自动：中文译成英文，其他语言译成中文。长按消息或在输入框「+」里翻译",
+            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_009e7a),
         )
         Divider()
         val engines = com.iris.localai.translate.TranslateSettings.ENGINES
         SegmentedRow(
-            "翻译引擎", engines.map { it.second }, engines.indexOfFirst { it.first == s.translateEngine }.coerceAtLeast(0),
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_51fc23), engines.map { it.second }, engines.indexOfFirst { it.first == s.translateEngine }.coerceAtLeast(0),
             { i -> vm.update { it.copy(translateEngine = engines[i].first) } },
             subtitle = when (s.translateEngine) {
-                com.iris.localai.translate.TranslateSettings.ENGINE_MODEL -> "只用已加载的模型翻译（不带工具、记忆和上下文，关闭思考）"
-                com.iris.localai.translate.TranslateSettings.ENGINE_OFFLINE -> "只用下方的离线翻译包，不占用对话模型"
-                else -> "已加载模型时用模型翻译，否则用离线翻译包"
+                com.iris.localai.translate.TranslateSettings.ENGINE_MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_24f86e)
+                com.iris.localai.translate.TranslateSettings.ENGINE_OFFLINE -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_498e86)
+                else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be176d)
             },
         )
     }
-    SectionTitle("离线翻译包")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_113ce8))
     SettingsGroup {
         com.iris.localai.translate.TranslatePack.entries.forEachIndexed { i, pack ->
             if (i > 0) Divider()
@@ -282,8 +282,8 @@ private fun TranslateSection(vm: SettingsViewModel, s: com.iris.localai.data.App
         }
     }
     GroupFootnote(
-        if (vm.offlineEngineAvailable) "离线引擎为 Mozilla Bergamot（Firefox 翻译同款），中英各一个方向，没加载模型时也能翻译。"
-        else "本机未能加载离线翻译引擎，只能用已加载的模型翻译。",
+        if (vm.offlineEngineAvailable) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_09d681)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f9ab2),
     )
 }
 
@@ -307,11 +307,11 @@ internal fun PackRow(
                 Text(blurb, style = IrisType.caption, color = c.textSecondary)
                 Text(
                     when (state) {
-                        PackState.Installed -> if (selected) "使用中 · ${Format.bytes(bytes)}" else "已安装 · 点按切换"
-                        is PackState.Downloading -> "下载中 ${Format.bytes(state.downloaded)} / ${Format.bytes(state.total)}"
-                        PackState.Extracting -> "正在校验并解压…"
+                        PackState.Installed -> if (selected) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_50c32a, Format.bytes(bytes)) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_20ea42)
+                        is PackState.Downloading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_90c647, Format.bytes(state.downloaded), Format.bytes(state.total))
+                        PackState.Extracting -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c2ec7d)
                         is PackState.Failed -> state.message
-                        PackState.NotInstalled -> "约 ${Format.bytes(bytes)}"
+                        PackState.NotInstalled -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a9abfc, Format.bytes(bytes))
                     },
                     style = IrisType.caption,
                     color = when {
@@ -324,10 +324,10 @@ internal fun PackRow(
             }
             Spacer(Modifier.width(IrisDimens.space8))
             when (state) {
-                PackState.Installed -> IrisButton("删除", onDelete, style = IrisButtonStyle.Text, compact = true, destructive = true)
-                is PackState.Downloading -> IrisButton("暂停", onCancel, style = IrisButtonStyle.Text, compact = true)
+                PackState.Installed -> IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onDelete, style = IrisButtonStyle.Text, compact = true, destructive = true)
+                is PackState.Downloading -> IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_8d63ef), onCancel, style = IrisButtonStyle.Text, compact = true)
                 PackState.Extracting -> com.iris.localai.ui.components.TypingDots()
-                else -> IrisButton(if (state is PackState.Failed) "重试" else "下载", onDownload, style = IrisButtonStyle.Outline, compact = true)
+                else -> IrisButton(if (state is PackState.Failed) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9), onDownload, style = IrisButtonStyle.Outline, compact = true)
             }
         }
         AnimatedVisibility(
@@ -355,18 +355,18 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
     val portValid = portText.toIntOrNull()?.let { it in 1024..65535 } == true
     fun applyPort() { if (portValid) { portText.toIntOrNull()?.let(vm::setPort); focus.clearFocus() } }
 
-    SubpageScaffold("API 服务", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), onBack) {
         ScrollBody {
             PageDescription(
-                "让 ChatBox、沉浸式翻译、Open WebUI 等 App 调用本机正在用的模型。支持 OpenAI 和 Ollama 接口。",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c7b64c),
             )
             SettingsGroup {
                 SwitchRow(
-                    "启用 API 服务", s.apiEnabled,
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8668b0), s.apiEnabled,
                     subtitle = when {
                         status.error != null -> status.error
-                        status.running -> "运行中"
-                        else -> "已关闭"
+                        status.running -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d679ae)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9c5850)
                     },
                 ) { on ->
                     if (on && Build.VERSION.SDK_INT >= 33) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -377,7 +377,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).padding(start = IrisDimens.rowPadding, end = IrisDimens.space8, top = IrisDimens.space8, bottom = IrisDimens.space8),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("端口", style = IrisType.row, color = c.text, modifier = Modifier.weight(1f))
+                    Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c76cfe), style = IrisType.row, color = c.text, modifier = Modifier.weight(1f))
                     OutlinedTextField(
                         portText, { v -> portText = v.filter(Char::isDigit).take(5) },
                         singleLine = true,
@@ -390,12 +390,12 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                         keyboardActions = KeyboardActions(onDone = { applyPort() }),
                     )
                     IrisButton(
-                        "保存", ::applyPort, style = IrisButtonStyle.Text, compact = true,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb), ::applyPort, style = IrisButtonStyle.Text, compact = true,
                         enabled = portValid && portText != s.apiPort.toString(),
                     )
                 }
                 Divider()
-                SwitchRow("允许局域网访问", s.apiAllowLan, subtitle = "同一 Wi-Fi 下的电脑、平板也能连接，需要 API Key") { vm.setLan(it) }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_29f028), s.apiAllowLan, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cab136)) { vm.setLan(it) }
             }
 
             SectionTitle("API Key")
@@ -412,7 +412,7 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     OutlinedTextField(
                         keyText, { v -> keyText = ApiAuth.sanitizeKey(v) },
                         singleLine = true,
-                        placeholder = { Text("未设置 · 只在本机用可以不设", style = IrisType.secondary, color = c.textTertiary) },
+                        placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4ee3ed), style = IrisType.secondary, color = c.textTertiary) },
                         textStyle = IrisType.mono.copy(color = c.text),
                         visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         shape = IrisRadius.mediumShape,
@@ -422,31 +422,31 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                         keyboardActions = KeyboardActions(onDone = { applyKey() }),
                     )
                     PressableIcon(
-                        if (keyVisible) IrisIcons.EyeOff else IrisIcons.Eye, if (keyVisible) "隐藏" else "显示",
+                        if (keyVisible) IrisIcons.EyeOff else IrisIcons.Eye, if (keyVisible) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dce537) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4d775d),
                         iconSize = 18.dp, tint = c.textSecondary,
                     ) { keyVisible = !keyVisible }
                     if (s.apiKey.isNotBlank()) {
-                        PressableIcon(IrisIcons.Copy, "复制", iconSize = 18.dp, tint = c.textSecondary, haptic = true) {
+                        PressableIcon(IrisIcons.Copy, com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab), iconSize = 18.dp, tint = c.textSecondary, haptic = true) {
                             clipboard.setText(AnnotatedString(s.apiKey))
                         }
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, bottom = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
-                    IrisButton("生成随机", { vm.regenerateKey(); keyVisible = true }, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Reload)
+                    IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5fa42d), { vm.regenerateKey(); keyVisible = true }, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Reload)
                     Spacer(Modifier.weight(1f))
                     IrisButton(
-                        "保存", ::applyKey, style = IrisButtonStyle.Text, compact = true,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb), ::applyKey, style = IrisButtonStyle.Text, compact = true,
                         enabled = keyDirty && (keyText.isNotBlank() || !s.apiAllowLan),
                     )
                 }
                 if (s.apiKey.isNotBlank() && !s.apiAllowLan) {
                     Divider()
-                    SettingsRow("清除 API Key", titleColor = c.danger, onClick = vm::clearKey)
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_22355d), titleColor = c.danger, onClick = vm::clearKey)
                 }
             }
             GroupFootnote(
-                if (s.apiKey.isBlank()) "不设 Key 时本机 App 可直接调用，浏览器网页会被拒绝。"
-                else "调用时带上请求头 Authorization: Bearer <Key>（或 x-api-key: <Key>），否则返回 401。",
+                if (s.apiKey.isBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b058c9)
+                else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f3744e),
             )
 
             AnimatedVisibility(
@@ -455,24 +455,24 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                 exit = fadeOut(IrisMotion.standard()) + shrinkVertically(IrisMotion.standard()),
             ) {
                 Column {
-                    SectionTitle("地址（Base URL）")
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d3ab61))
                     SettingsGroup {
                         status.addresses.forEachIndexed { i, a ->
                             if (i > 0) Divider()
                             SettingsRow(a, trailing = {
-                                PressableIcon(Icons.Outlined.ContentCopy, "复制地址", iconSize = 18.dp, tint = c.textSecondary, haptic = true) {
+                                PressableIcon(Icons.Outlined.ContentCopy, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d4bf75), iconSize = 18.dp, tint = c.textSecondary, haptic = true) {
                                     clipboard.setText(AnnotatedString(a))
                                 }
                             })
                         }
                     }
-                    SectionTitle("示例")
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1a63ac))
                     val base = status.addresses.firstOrNull()?.removeSuffix("/v1") ?: ""
                     val auth = if (s.apiKey.isNotBlank()) " \\\n  -H \"Authorization: Bearer ${s.apiKey}\"" else ""
-                    val example = "curl $base/v1/chat/completions$auth \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"default\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}'"
+                    val example = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e767f5, base, auth)
                     CodeSurface(example, Modifier.padding(horizontal = IrisDimens.groupGutter))
                     Row(Modifier.padding(start = IrisDimens.space8, top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
-                        IrisButton("复制示例", { clipboard.setText(AnnotatedString(example)) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.ContentCopy)
+                        IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d8a8a4), { clipboard.setText(AnnotatedString(example)) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.ContentCopy)
                     }
                 }
             }

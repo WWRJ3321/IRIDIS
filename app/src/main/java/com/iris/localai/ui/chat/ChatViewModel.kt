@@ -114,7 +114,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private fun viewingOther(): Boolean {
         if (viewing.value == null) return false
-        notice.value = "「" + conversation.value.title.ifBlank { "另一个对话" } + "」还在运行，完成或停止后才能在这里操作"
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d9eb6f) + conversation.value.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_83aa8a) } + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9edf20)
         return true
     }
     private val streamingId = MutableStateFlow<String?>(null)
@@ -280,8 +280,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         viewModelScope.launch {
             c.engine.state.collect { st ->
                 when (st) {
-                    is EngineState.Failed -> com.iris.localai.util.HintLog.add("加载失败：" + st.message, com.iris.localai.util.HintLog.Source.MODEL)
-                    is EngineState.Ready -> st.details.fallbackNote?.let { com.iris.localai.util.HintLog.add(st.model.displayName + "：" + it, com.iris.localai.util.HintLog.Source.MODEL) }
+                    is EngineState.Failed -> com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c4fa9b) + st.message, com.iris.localai.util.HintLog.Source.MODEL)
+                    is EngineState.Ready -> st.details.fallbackNote?.let { com.iris.localai.util.HintLog.add(st.model.displayName + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec892) + it, com.iris.localai.util.HintLog.Source.MODEL) }
                     else -> {}
                 }
             }
@@ -360,7 +360,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     private fun noteBackground() {
-        notice.value = "「" + conversation.value.title.ifBlank { "上一个对话" } + "」在后台继续运行，可在侧边栏切回查看"
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d9eb6f) + conversation.value.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_73aba3) } + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_51bf65)
     }
 
     /** 1.12.3: the background run ended — the conversation on screen becomes the working one. */
@@ -410,11 +410,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 2.1.7: the load started from this screen (picker / logo), cancellable by 「取消」. */
     private var loadJob: Job? = null
     fun loadModel(model: LocalModel): Job = viewModelScope.launch {
-        if (genJob?.isActive == true) { notice.value = "正在回复，停止后再切换模型"; return@launch }
+        if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7a0481); return@launch }
         c.engine.load(model)
     }.also { loadJob = it }
     fun unloadModel() = viewModelScope.launch {
-        if (genJob?.isActive == true) { notice.value = "正在回复，停止后再卸载模型"; return@launch }
+        if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4a1a73); return@launch }
         c.engine.unload()
     }
     /** Writes to the loaded model's own thinking switch when it has one, otherwise the global one. */
@@ -468,7 +468,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         conversation.update { it.copy(contextStartAfterId = last.id) }
         measured.update { it - conversation.value.id }
         persist()
-        notice.value = "已分隔：之后的回复不再参考上面的对话"
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_adc46a)
     }
 
     fun clearContextBreak() {
@@ -614,12 +614,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 「压缩上下文」 in the context sheet. */
     fun compactNow() {
         if (viewingOther()) return
-        if (busy()) { notice.value = "正在回复，稍后再整理"; return }
+        if (busy()) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_94d50d); return }
         val agentMode = c.agent.settings.current.agentMode
         val ready = c.engine.state.value as? EngineState.Ready
         val maxNew = if (agentMode) minOf(c.engine.effective().maxNewTokens, AGENT_MAX_NEW) else c.engine.effective().maxNewTokens
         val n = compactIfNeeded(agentMode, ready, maxNew, manual = true)
-        notice.value = if (n > 0) ContextText.compactNotice(n) else "没有可整理的内容：只有最近一轮对话"
+        notice.value = if (n > 0) ContextText.compactNotice(n) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5aa0db)
     }
 
     /** Puts the compacted messages back into the context (they were never deleted). */
@@ -628,7 +628,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         conversation.update { it.copy(compaction = null) }
         measured.update { it - conversation.value.id }
         persist()
-        notice.value = "已撤销压缩：较早的对话重新交给模型（受上下文长度限制）"
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d4d648)
     }
     fun onUserActivity() = c.engine.touch()
     fun markNotificationAsked() = c.settings.update { it.copy(askedNotificationPermission = true) }
@@ -709,14 +709,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 if (conversation.value.id != convId || viewingOther()) return@launch
                 // A stop that has not landed yet: wait a moment for the reply to wind down.
                 repeat(40) { if (busy()) kotlinx.coroutines.delay(50) }
-                if (busy()) { notice.value = "上一条回复还没停下，请稍后再发"; return@launch }
+                if (busy()) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_ac970f); return@launch }
                 send(text, attachments, refs)
             }
             return
         }
         val forAgent = agentRunning
         _queued.value = sendQueue.add(QueuedMessage(convId = convId, text = text, forAgent = forAgent))
-        notice.value = if (forAgent) "已记下补充：智能体下一步会看到（点按可取消）" else SendIntent.QUEUED_HINT
+        notice.value = if (forAgent) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_25760a) else SendIntent.QUEUED_HINT
     }
 
     /** The 补充 the running 智能体 has not read yet → one note for its next step (also kept on the request). */
@@ -748,7 +748,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             uris.take(com.iris.localai.util.Attachments.MAX_PER_MESSAGE).mapNotNull { u ->
                 runCatching { com.iris.localai.util.Attachments.import(getApplication(), u) }
-                    .onFailure { notice.value = it.message ?: "附件读取失败" }.getOrNull()
+                    .onFailure { notice.value = it.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d85dac) }.getOrNull()
             }
         }
 
@@ -765,7 +765,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             val out = java.io.File(com.iris.localai.util.Attachments.dir(getApplication()), java.util.UUID.randomUUID().toString().take(8) + "-" + src.name)
             src.copyTo(out, overwrite = true)
             com.iris.localai.data.Attachment(name = src.name, path = out.path, mime = "image/png", sizeBytes = out.length(), kind = com.iris.localai.data.AttachmentKind.IMAGE)
-        }.onFailure { notice.value = "无法附加图片：${it.message}" }.getOrNull()
+        }.onFailure { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_88889b, it.message) }.getOrNull()
     }
 
     fun discardAttachments(list: List<com.iris.localai.data.Attachment>) {
@@ -854,7 +854,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 2.0.x: ‹ › under a message with several versions; a user message brings its own branch back. */
     fun switchVersion(messageId: String, target: Int) {
         if (viewingOther()) return
-        if (busy()) { notice.value = "正在回复，稍后再切换版本"; return }
+        if (busy()) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_308cc5); return }
         val next = com.iris.localai.data.MessageVersions.switchTo(conversation.value.messages, messageId, target) ?: return
         conversation.update { it.copy(messages = next) }
         measured.update { it - conversation.value.id }
@@ -955,7 +955,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (!ag.isEnabled(tool) || ag.permission(tool) == com.iris.localai.agent.Permission.DENY) return false
         val apps = runCatching { c.agent.phone.apps() }.getOrDefault(emptyList())
         val hit = com.iris.localai.agent.AppMatcher.match(app, apps) ?: return false
-        val reply = runCatching { c.agent.phone.openApp(hit.second); "已打开「${hit.first}」。" }.getOrElse { "打开「${hit.first}」失败：${it.message}" }
+        val reply = runCatching { c.agent.phone.openApp(hit.second); com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7c8416, hit.first) }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d6224, hit.first, it.message) }
         append(ChatMessage(role = Role.USER, content = userText))
         append(ChatMessage(role = Role.ASSISTANT, content = reply))
         return true
@@ -1143,7 +1143,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     private suspend fun summarize(plan: com.iris.localai.util.ContextPlan): Boolean {
         if (plan.toSummarize.isEmpty()) return true
         summarizing.value = true
-        act("压缩上下文")
+        act(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_42e4d5))
         try {
             val conv = conversation.value
             val cfg = c.engine.effective().let { it.copy(temperature = 0.3f, maxNewTokens = 512, repeatPenalty = 1.05f) }
@@ -1222,14 +1222,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                             conversation.update { conv ->
                                 conv.copy(messages = conv.messages.map {
                                     if (it.id != b.id) it
-                                    else if (modelPending) it.copy(error = failed?.let { m -> "$LOAD_FAILED：$m" } ?: LOAD_FAILED)
-                                    else it.copy(error = failed?.let { m -> "模型重新加载失败：$m" } ?: "模型未加载")
+                                    else if (modelPending) it.copy(error = failed?.let { m -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, LOAD_FAILED, m) } ?: LOAD_FAILED)
+                                    else it.copy(error = failed?.let { m -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_615c32, m) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468))
                                 })
                             }
                             if (streamingId.value == b.id) streamingId.value = null
                             persist()
                         } else {
-                            notice.value = failed?.let { "模型加载失败：$it" } ?: "请先在顶部选择并加载一个模型"
+                            notice.value = failed?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fedfea, it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ae88d)
                         }
                         return@request
                     }
@@ -1385,7 +1385,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 fun accept(clean: String) {
                     if (clean.isEmpty() || stopAsked) return
                     passSplitter.push(clean).forEach { p ->
-                        act(if (p.thinking) "思考中" else "生成回答")
+                        act(if (p.thinking) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dc269a) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2ee53b))
                         if (p.thinking) {
                             if (!answerOnly) { raw.append(p.text); if (thinkStart == 0L) thinkStart = System.currentTimeMillis() }
                         } else {
@@ -1399,7 +1399,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 val sampling = c.engine.samplingFor(noThinking, contextShift = p.contextShift, keepTokens = p.keepTokens)
                 promptLog.record(reply.id, if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages)
                 replyWatchdog?.prompt(p.estimatedTokens)
-                act(if (answerOnly) "继续生成回答" else if (p.messages.lastOrNull { it.role == PromptMessage.USER }?.let { pickImages(it) } == true) "读取图片与提示（视觉编码 + 预填充）" else "读取提示（预填充）")
+                act(if (answerOnly) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dd9f3c) else if (p.messages.lastOrNull { it.role == PromptMessage.USER }?.let { pickImages(it) } == true) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5ab804) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8a3813))
                 c.engine.generate(
                     withImages(if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages),
                     if (meter != null) sampling.copy(maxNewTokens = meter.engineLimit()) else sampling,
@@ -1427,7 +1427,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                                 // The stored text keeps the tags exactly as streamed (ThinkParser reads them).
                                 raw.append(clean)
                                 passSplitter.push(clean).forEach { p ->
-                                    act(if (p.thinking) "思考中" else "生成回答")
+                                    act(if (p.thinking) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dc269a) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2ee53b))
                                     if (p.thinking) {
                                         if (thinkStart == 0L) thinkStart = System.currentTimeMillis()
                                     } else {
@@ -1468,7 +1468,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                                 notice.value = ev.error ?: com.iris.localai.engine.LengthRule.contextFullMessage(ev.stats?.generatedTokens ?: 0, eff0.maxNewTokens)
                             }
                             if (ev.stats?.droppedMessages ?: 0 > 0) {
-                                notice.value = "对话较长，已自动省略最早的 ${ev.stats!!.droppedMessages} 条消息以适配上下文"
+                                notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6c919b, ev.stats!!.droppedMessages)
                             }
                             recordUsage(convId, p, ev.stats, raw.toString(), ready)
                         }
@@ -1488,7 +1488,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 }
                 if (plan.toSummarize.isNotEmpty() && requester == Requester.CHAT) {
                     if (summarize(plan)) plan = planFor(conversation.value, ready, voice = false, thinkingBudget = budget)
-                    else notice.value = "早期对话摘要失败，本次按 token 预算截断"
+                    else notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_469284)
                 }
                 awaitingEngine = false
                 pass(disableThinking, answerOnly = false)
@@ -1635,13 +1635,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         return when (tool.name) {
             "write_file" -> "文件：$path\n内容（${com.iris.localai.agent.Args.str(a, "content", "text", "data")?.length ?: 0} 字）：\n" +
                 (com.iris.localai.agent.Args.str(a, "content", "text", "data") ?: "").take(400)
-            "edit_file" -> "文件：$path\n查找：\n" + (com.iris.localai.agent.Args.str(a, "old", "old_string", "old_text", "search", "find") ?: "").take(200) +
-                "\n替换为：\n" + (com.iris.localai.agent.Args.str(a, "new", "new_string", "new_text", "replace", "replacement") ?: "").take(200)
-            "delete_file" -> "删除：$path"
-            "web_fetch" -> "网址：" + (com.iris.localai.agent.Args.str(a, "url", "link", "href") ?: "")
+            "edit_file" -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5691f8, path) + (com.iris.localai.agent.Args.str(a, "old", "old_string", "old_text", "search", "find") ?: "").take(200) +
+                com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d2bc44) + (com.iris.localai.agent.Args.str(a, "new", "new_string", "new_text", "replace", "replacement") ?: "").take(200)
+            "delete_file" -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_469651, path)
+            "web_fetch" -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7caf26) + (com.iris.localai.agent.Args.str(a, "url", "link", "href") ?: "")
             "memory" -> com.iris.localai.agent.memoryPreview(call)
-            else -> if (tool is com.iris.localai.agent.mcp.McpTool) "首次调用 MCP 服务「${tool.server.name}」\n地址：${tool.server.url}\n工具：${tool.info.name}\n参数：" +
-                com.iris.localai.agent.Args.summary(a, 300) + "\n选「总是允许」后这个服务的工具不再询问。" else com.iris.localai.agent.Args.summary(a, 300)
+            else -> if (tool is com.iris.localai.agent.mcp.McpTool) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e5c66d, tool.server.name, tool.server.url, tool.info.name) +
+                com.iris.localai.agent.Args.summary(a, 300) + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_afc4c6) else com.iris.localai.agent.Args.summary(a, 300)
         }
     }
 
@@ -1697,8 +1697,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             promptLog.record(reply.id, messages)
             agentCalls++
             voiceStream?.startTurn()
-            val stepTag = if (agentCalls > 1) "第 $agentCalls 轮 · " else ""
-            act(stepTag + "读取提示（预填充）")
+            val stepTag = if (agentCalls > 1) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e04ec0, agentCalls) else ""
+            act(stepTag + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8a3813))
             replyWatchdog?.prompt(messages.sumOf { com.iris.localai.util.TokenEstimator.message(it.content) })
             c.engine.generate(withImages(messages), sampling, Requester.CHAT, engineOwner).collect { ev ->
                 when (ev) {
@@ -1737,7 +1737,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (d != null && d.reason == StopReason.CANCELLED && !cut) throw kotlinx.coroutines.CancellationException("stopped by user")
             return com.iris.localai.agent.ModelTurn(
                 prefix + sb.toString(),
-                error = d?.takeIf { it.reason == StopReason.ERROR && sb.isBlank() }?.let { it.error ?: "生成失败" },
+                error = d?.takeIf { it.reason == StopReason.ERROR && sb.isBlank() }?.let { it.error ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7f7de8) },
             )
           }
         }
@@ -1746,7 +1746,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 // 2.1.7: no dialog in a voice call — decline, and say it needs the screen.
                 if (voiceOut != null) {
                     voiceCue?.invoke(com.iris.localai.voice.VoiceCues.CONFIRM_ON_SCREEN)
-                    notice.value = "语音对话中不执行需要确认的操作（${tool.label}），请在屏幕上发送后确认"
+                    notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_ba2bd4, tool.label)
                     return com.iris.localai.agent.UserDecision.DENY
                 }
                 val d = kotlinx.coroutines.CompletableDeferred<com.iris.localai.agent.UserDecision>()
@@ -1762,8 +1762,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 steps.lastOrNull()?.let { st ->
                     val label = com.iris.localai.agent.AgentTools.all.firstOrNull { it.name == st.tool }?.label ?: st.tool
                     when (st.status) {
-                        com.iris.localai.agent.StepStatus.ASKING -> act("等待你确认：$label")
-                        com.iris.localai.agent.StepStatus.RUNNING -> act("运行工具：$label" + st.result.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty())
+                        com.iris.localai.agent.StepStatus.ASKING -> act(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2aede, label))
+                        com.iris.localai.agent.StepStatus.RUNNING -> act(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_10df0b, label) + st.result.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty())
                         else -> {}
                     }
                 }
@@ -1851,7 +1851,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             // already went out while it streamed; finish speaks what is still unsaid, once.
             voiceStream?.finish(ThinkParser.parse(o.finalText, expectThinking = prefix.isNotEmpty()).answer)
             android.util.Log.i(GEN_TAG, "agent: stop=${o.stop} steps=${o.steps.size} tools=${tools.size}" + (o.error?.let { " error=$it" } ?: ""))
-            if (o.stop == com.iris.localai.agent.AgentStop.MAX_STEPS) notice.value = "已达到最大步数（${ag.maxSteps} 步），智能体已停止调用工具"
+            if (o.stop == com.iris.localai.agent.AgentStop.MAX_STEPS) notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_18bd6b, ag.maxSteps)
         } catch (e: kotlinx.coroutines.CancellationException) {
             cancelled = true
             throw e
@@ -1868,7 +1868,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             val finalText = com.iris.localai.agent.StepImages.appendTo((o?.finalText ?: (_stream.value?.text ?: "")).trim(), steps)
             val finalSteps = steps.map { st ->
                 if (st.status == com.iris.localai.agent.StepStatus.RUNNING || st.status == com.iris.localai.agent.StepStatus.ASKING)
-                    st.copy(status = com.iris.localai.agent.StepStatus.ERROR, result = if (cancelled) "已停止" else "未完成")
+                    st.copy(status = com.iris.localai.agent.StepStatus.ERROR, result = if (cancelled) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cf0a3e))
                 else st
             }
             val err = failure ?: o?.error
@@ -1925,7 +1925,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             val prompt = runCatching { warmPrompt(conv, ready, agent) }.getOrNull() ?: return@launch
             val disableThinking = !c.engine.effective().thinking
             val sampling = c.engine.samplingFor(disableThinking).copy(maxNewTokens = 1, contextShift = false)
-            _warming.value = com.iris.localai.util.Activity("预热上下文（换模型后首次预填充）")
+            _warming.value = com.iris.localai.util.Activity(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f0ffdf))
             val t0 = System.currentTimeMillis()
             try {
                 c.engine.generate(prompt, sampling, Requester.CHAT, engineOwner).collect { ev -> if (ev is GenEvent.Piece) c.engine.cancel(engineOwner) }
@@ -2010,7 +2010,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         measured.update { it + (convId to used) }
         val limit = ready?.details?.contextLength ?: return
         if (limit > 0 && used >= limit * ContextUsage.NEAR_FULL && nearFullWarned.add(convId)) {
-            notice.value = "上下文已用 ${used * 100 / limit}%：可在输入框上方的上下文菜单里改用「自动摘要」，或「从这里开始新上下文」"
+            notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4e6f51, used * 100 / limit)
         }
     }
 
@@ -2019,7 +2019,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     override fun ask(userText: String): Flow<String> = channelFlow {
         // 1.13.0: never a second reply into a chat that is still running in the background.
         if (viewing.value != null || genJob?.isActive == true) {
-            notice.value = "另一个对话还在运行，完成或停止后再用语音"
+            notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_aa1ed6)
             return@channelFlow
         }
         append(ChatMessage(role = Role.USER, content = userText))
@@ -2044,7 +2044,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         stopSpeaking()
         val msg = (viewing.value ?: conversation.value).messages.firstOrNull { it.id == messageId } ?: return
         if (!c.synthesizer.isAvailable) {
-            notice.value = if (c.synthesizer.systemSelected()) "没有可用的系统 TTS 引擎：在 设置 › 语音 中打开系统 TTS 设置安装或启用" else "朗读需要先在 设置 › 语音 中下载语音合成模型"
+            notice.value = if (c.synthesizer.systemSelected()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5b9c6c) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_120479)
             return
         }
         val text = ThinkParser.parse(msg.content).answer
@@ -2070,7 +2070,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 throw e
             } catch (t: Throwable) {
                 android.util.Log.w("ChatViewModel", "read aloud failed", t)
-                notice.value = "朗读出错：${t.message ?: t.javaClass.simpleName}"
+                notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_21ec6b, t.message ?: t.javaClass.simpleName)
             } finally {
                 // Only clean up our own state: when another message's 朗读 replaced this one, the
                 // old finally used to run after the new start and wipe the new speaking indicator.
@@ -2103,16 +2103,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         const val FRAME_MS = 33L
         const val GEN_TAG = "IrisGen"
         /** 1.7.7: shown in the reply bubble while the request waits for a tier reload. */
-        const val RELOADING_STATUS = "正在重载模型…"
+        val RELOADING_STATUS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_54e6e3)
         /** 2.1.8: the reply waits for a model load (bubble shown right away, 停止 works). */
-        const val LOADING_STATUS = "正在加载模型…"
-        const val LOAD_FAILED = "模型加载失败"
+        val LOADING_STATUS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_69b99c)
+        val LOAD_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5eb967)
         /** 2.1.8: shown on a reply the watchdog ended. */
-        const val STALL_ERROR = "长时间没有输出，已停止。可重试或换模型"
+        val STALL_ERROR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_24e46f)
         const val PERSIST_MS = 3_000L
         /** 1.9.0: reply cap per agent turn (tool calls are short; small windows need the room for results). */
         const val AGENT_MAX_NEW = 1536
         const val WARM_DELAY_MS = 600L
-        const val ATTACH_NO_VISION = "当前模型看不到图片，只会收到图片的文件名。换一个支持视觉的模型（如 Gemma 3n、Qwen-VL）后可识图"
+        val ATTACH_NO_VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5e0b54)
     }
 }

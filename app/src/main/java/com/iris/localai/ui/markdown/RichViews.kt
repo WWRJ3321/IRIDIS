@@ -96,22 +96,22 @@ internal fun rememberRichSettings(): RichSettings {
 }
 
 private object RichText {
-    const val PREVIEW = "网页预览"
-    const val OPEN_IMAGE = "查看大图"
-    const val SVG = "SVG 预览"
-    const val SOURCE = "源码"
-    const val SHOW_PREVIEW = "预览"
-    const val FULLSCREEN = "全屏"
-    const val COPY = "复制"
-    const val COPIED = "已复制"
-    const val CLOSE = "关闭"
-    const val SAVE = "保存到相册"
-    const val SHARE = "分享"
-    const val SAVED = "已保存到相册"
-    const val SAVE_FAILED = "保存失败"
-    const val SHARE_FAILED = "无法分享"
-    const val LOAD_FAILED = "图片加载失败"
-    const val CRASHED = "预览已停止，点「全屏」重新打开"
+    val PREVIEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_7056bd)
+    val OPEN_IMAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_3bc999)
+    val SVG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_e077ad)
+    val SOURCE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_5b804b)
+    val SHOW_PREVIEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_645dbc)
+    val FULLSCREEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_185926)
+    val COPY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab)
+    val COPIED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab)
+    val CLOSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91)
+    val SAVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_a3c86e)
+    val SHARE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48)
+    val SAVED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c1a317)
+    val SAVE_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6de920)
+    val SHARE_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c0fda5)
+    val LOAD_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_b3b83e)
+    val CRASHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_bbf012)
 }
 
 private val PREVIEW_MAX = 360.dp

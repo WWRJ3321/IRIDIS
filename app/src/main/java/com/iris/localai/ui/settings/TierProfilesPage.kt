@@ -58,16 +58,16 @@ fun TierProfilesPage(vm: SettingsViewModel, onBack: () -> Unit) {
     val kind = ResourceBackendKind.entries[kindIndex]
     var confirmReset by rememberSaveable { mutableStateOf(false) }
     SubpageScaffold(
-        "资源档配置", onBack,
-        actions = { IrisButton("恢复默认", { confirmReset = true }, style = IrisButtonStyle.Text, compact = true) },
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6eba78), onBack,
+        actions = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), { confirmReset = true }, style = IrisButtonStyle.Text, compact = true) },
     ) {
         ScrollBody {
-            PageDescription("每个档位使用的线程、核心和优先级，默认值按本机芯片生成。")
+            PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f08a87))
             SettingsGroup {
                 SegmentedRow(
-                    "后端", listOf("CPU", "GPU / NPU"), kindIndex, { kindIndex = it },
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6), listOf("CPU", "GPU / NPU"), kindIndex, { kindIndex = it },
                     icon = Icons.Outlined.DeveloperBoard,
-                    subtitle = if (kind == ResourceBackendKind.CPU) "CPU 后端：档位决定推理线程数、核心与优先级"
+                    subtitle = if (kind == ResourceBackendKind.CPU) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6fc6f4)
                     else LiveResourcePolicy.GPU_SCOPE_NOTE,
                 )
             }
@@ -75,20 +75,20 @@ fun TierProfilesPage(vm: SettingsViewModel, onBack: () -> Unit) {
             ResourceTier.entries.forEach { tier ->
                 val stored = TierProfiles.resolve(s.tierProfiles, kind, tier, vm.topology)
                 val custom = stored != vm.defaultProfile(kind, tier)
-                SectionTitle(tier.label + (if (tier == current) "（当前）" else "") + (if (custom) " · 已修改" else ""))
+                SectionTitle(tier.label + (if (tier == current) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7588ab) else "") + (if (custom) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e2e459) else ""))
                 TierProfileEditor(vm, kind, tier, stored, custom)
             }
             GroupFootnote(
-                "线程数要在 1 到所选核心数之间，nice 在 ${TierProfiles.NICE_MIN} 到 ${TierProfiles.NICE_MAX} 之间（越小优先级越高），至少选 1 个核心。" +
-                    "修改正在使用的档位，空闲时自动应用（必要时重新加载模型）。",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_70e3ce, TierProfiles.NICE_MIN, TierProfiles.NICE_MAX) +
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e81f54),
             )
         }
     }
     if (confirmReset) {
         ConfirmDialog(
-            title = "恢复默认？",
-            message = "${kind.label}的三个档位都恢复为本机默认值。",
-            confirmText = "恢复",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_965e0e),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5bd849, kind.label),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7db6d),
             onConfirm = { vm.resetProfiles(kind) },
             onDismiss = { confirmReset = false },
         )
@@ -111,13 +111,13 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
     val all = TierProfiles.allCores(vm.topology)
 
     SettingsGroup {
-        SettingsRow("线程数", subtitle = "1 到所选核心数（${cpus.size}）", trailing = {
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_aadb83), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5fa8cb, cpus.size), trailing = {
             Stepper(threads, onMinus = { threads-- }, onPlus = { threads++ }, minusEnabled = threads > 1, plusEnabled = threads < maxOf(1, cpus.size))
         })
         Divider()
         Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
-            Text("核心", style = IrisType.row, color = c.text)
-            Text("按核心簇快速选择，或逐个勾选 cpu 编号：${TierProfiles.coreLabel(cpus.sorted(), vm.topology)} · ${TierProfiles.cpuRange(cpus.sorted())}", style = IrisType.caption, color = c.textTertiary)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e), style = IrisType.row, color = c.text)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f2f321, TierProfiles.coreLabel(cpus.sorted(), vm.topology), TierProfiles.cpuRange(cpus.sorted())), style = IrisType.caption, color = c.textTertiary)
             Spacer(Modifier.width(0.dp).padding(top = IrisDimens.space8))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8), modifier = Modifier.padding(top = IrisDimens.space8)) {
                 TierProfiles.clusterChoices(vm.topology).forEach { (name, cl) ->
@@ -125,7 +125,7 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
                         cpus = cl.toSet()
                     }
                 }
-                ToggleChip("全部核心", Icons.Outlined.DeveloperBoard, selected = cpus.size == all.size) { cpus = all.toSet() }
+                ToggleChip(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927), Icons.Outlined.DeveloperBoard, selected = cpus.size == all.size) { cpus = all.toSet() }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8), modifier = Modifier.padding(top = IrisDimens.space8)) {
                 all.forEach { id ->
@@ -136,7 +136,7 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
             }
         }
         Divider()
-        SettingsRow("优先级（nice）", subtitle = "${TierProfiles.NICE_MIN} 到 ${TierProfiles.NICE_MAX}；越小越优先，太小会和界面抢 CPU", trailing = {
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_26e98b), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a9f9de, TierProfiles.NICE_MIN, TierProfiles.NICE_MAX), trailing = {
             Stepper(nice, onMinus = { nice-- }, onPlus = { nice++ }, minusEnabled = nice > TierProfiles.NICE_MIN, plusEnabled = nice < TierProfiles.NICE_MAX)
         })
         if (kind == ResourceBackendKind.GPU) {
@@ -144,14 +144,14 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
             val hints = com.iris.localai.data.GpuPerfHint.entries
             val sel = gpuHint ?: TierProfiles.defaultGpuHint(tier)
             SegmentedRow(
-                "GPU 性能提示", hints.map { it.label }, hints.indexOf(sel), { gpuHint = hints[it] },
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_117661), hints.map { it.label }, hints.indexOf(sel), { gpuHint = hints[it] },
                 icon = Icons.Outlined.DeveloperBoard,
-                subtitle = "Adreno 的 OpenCL 性能提示（默认 省电档→省电、中→普通、高→高）。MNN 走 GPU 时加载模型时生效；LiteRT 没有这个选项，不起作用",
+                subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_febd08),
             )
         }
         if (problems.isNotEmpty()) {
             Text(
-                problems.joinToString("；"), style = IrisType.caption, color = c.danger,
+                problems.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d)), style = IrisType.caption, color = c.danger,
                 modifier = Modifier.padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, bottom = IrisDimens.space8),
             )
         }
@@ -161,12 +161,12 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (custom || dirty) IrisButton("恢复默认", {
+            if (custom || dirty) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), {
                 val d = vm.defaultProfile(kind, tier)
                 threads = d.threads; cpus = d.cpus.toSet(); nice = d.nice; gpuHint = d.gpuHint
                 vm.resetProfile(kind, tier)
             }, style = IrisButtonStyle.Text, compact = true)
-            IrisButton("保存", { vm.saveProfile(kind, tier, draft) }, style = IrisButtonStyle.Tonal, compact = true, enabled = dirty && problems.isEmpty())
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb), { vm.saveProfile(kind, tier, draft) }, style = IrisButtonStyle.Tonal, compact = true, enabled = dirty && problems.isEmpty())
         }
     }
 }

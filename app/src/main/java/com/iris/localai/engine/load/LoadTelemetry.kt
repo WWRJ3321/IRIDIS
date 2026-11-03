@@ -103,19 +103,19 @@ object LoadTelemetry {
     fun seconds(ms: Long): Long = ((ms + 500) / 1000).coerceAtLeast(1)
 
     fun cacheLabel(c: CacheUse): String? = when (c) {
-        CacheUse.HIT -> "已用缓存"
-        CacheUse.MISS -> "首次编译"
+        CacheUse.HIT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_256a0f)
+        CacheUse.MISS -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1d33a0)
         CacheUse.NONE -> null
     }
 
     /** Model sheet line: 「上次加载 12 秒 · 已用缓存」 / 「上次加载 48 秒 · 首次编译」 / 「上次加载 3 秒」. */
     fun summary(r: LoadRecord): String {
-        val base = if (r.ok) "上次加载 ${seconds(r.ms)} 秒" else "上次加载失败（${seconds(r.ms)} 秒）"
+        val base = if (r.ok) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_687cb5, seconds(r.ms)) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_7db56c, seconds(r.ms))
         return cacheLabel(r.cache)?.let { "$base · $it" } ?: base
     }
 
     /** Elapsed time while a load runs: 「已用 7 秒」. */
-    fun elapsed(ms: Long): String = "已用 ${(ms / 1000).coerceAtLeast(0)} 秒"
+    fun elapsed(ms: Long): String = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_263f18, (ms / 1000).coerceAtLeast(0))
 
     fun mb(bytes: Long): String = String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1_048_576.0)
 

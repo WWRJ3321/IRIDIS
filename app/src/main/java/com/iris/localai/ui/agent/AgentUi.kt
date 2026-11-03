@@ -60,11 +60,11 @@ import com.iris.localai.ui.theme.IrisType
 /** 1.9.0: Chinese status words of a step card (unit-tested). */
 object StepText {
     fun status(s: StepStatus): String = when (s) {
-        StepStatus.RUNNING -> "执行中"
-        StepStatus.ASKING -> "等待确认"
-        StepStatus.OK -> "完成"
-        StepStatus.ERROR -> "失败"
-        StepStatus.DENIED -> "已拒绝"
+        StepStatus.RUNNING -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_46e386)
+        StepStatus.ASKING -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_70f361)
+        StepStatus.OK -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_769d88)
+        StepStatus.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_acd5cb)
+        StepStatus.DENIED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_81233d)
     }
 
     fun label(tool: String): String = AgentTools.byName(tool)?.label ?: tool
@@ -75,13 +75,13 @@ object StepText {
     /** 2.1.0: the card header — 计划 · 标题 · 1/5, 搜索「q」…; old saved steps keep label + args. */
     fun header(step: AgentStep): String {
         val p = step.plan
-        if (isPlan(step) && p != null) return listOfNotNull("计划", p.title.takeIf { it.isNotBlank() }, "${p.done}/${p.steps.size}").joinToString(" · ")
-        if (step.tool == "plan" || step.tool == "todo") return step.title.ifBlank { "计划" }
+        if (isPlan(step) && p != null) return listOfNotNull(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0debf5), p.title.takeIf { it.isNotBlank() }, "${p.done}/${p.steps.size}").joinToString(" · ")
+        if (step.tool == "plan" || step.tool == "todo") return step.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0debf5) }
         if (step.title.isNotBlank()) return step.title
         return label(step.tool) + if (step.args.isNotBlank()) "  " + step.args else ""
     }
 
-    const val PLAN_HINT = "智能体把任务拆成步骤，逐步完成"
+    val PLAN_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9af3f4)
 }
 
 /** The tool steps of one agent reply, above its answer. */
@@ -113,10 +113,10 @@ object StepFold {
     const val KEEP = 2
     fun visible(total: Int): Int = if (total <= KEEP + 1) total else KEEP
     fun summary(hidden: List<AgentStep>, expanded: Boolean): String {
-        if (expanded) return "收起前 ${hidden.size} 步"
+        if (expanded) return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_63855c, hidden.size)
         val failed = hidden.count { it.status == StepStatus.ERROR || it.status == StepStatus.DENIED }
-        val names = hidden.map { StepText.label(it.tool) }.distinct().take(3).joinToString("、")
-        return "已执行 ${hidden.size} 步 · $names" + if (failed > 0) " · $failed 步未成功" else ""
+        val names = hidden.map { StepText.label(it.tool) }.distinct().take(3).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566))
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_64db29, hidden.size, names) + if (failed > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bb83aa, failed) else ""
     }
 }
 
@@ -125,7 +125,7 @@ private fun StepFoldRow(text: String, expanded: Boolean, onClick: () -> Unit) {
     val c = Iris.colors
     val turn by animateFloatAsState(if (expanded) 180f else 0f, com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Snappy), label = "foldChevron")
     Row(
-        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape).clickable(onClickLabel = if (expanded) "收起" else "展开", onClick = onClick)
+        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape).clickable(onClickLabel = if (expanded) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde), onClick = onClick)
             .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -182,7 +182,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
             .graphicsLayer { translationX = shake.value * density }
             .clip(IrisRadius.mediumShape)
             .background(c.surfaceVariant)
-            .clickable(enabled = expandable, onClickLabel = if (open) "收起" else "展开") { open = !open }
+            .clickable(enabled = expandable, onClickLabel = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { open = !open }
             .padding(horizontal = IrisDimens.space12, vertical = 9.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -247,11 +247,11 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
         title = {
-            Text("允许智能体「$toolLabel」？", style = IrisType.title, color = c.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7bdbd6, toolLabel), style = IrisType.title, color = c.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                Text("工具 $toolName 想执行：", style = IrisType.secondary, color = c.textSecondary)
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc6cc8, toolName), style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.size(IrisDimens.space8))
                 Box(
                     Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
@@ -263,9 +263,9 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
         },
         confirmButton = {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                IrisButton("允许一次", { onAnswer(UserDecision.ALLOW_ONCE) }, modifier = Modifier.fillMaxWidth())
-                IrisButton(alwaysPrefix?.let { "总是允许「${it.take(24)}」开头的命令" } ?: "总是允许", { onAnswer(UserDecision.ALWAYS_ALLOW) }, style = IrisButtonStyle.Tonal, modifier = Modifier.fillMaxWidth())
-                IrisButton("拒绝", { onAnswer(UserDecision.DENY) }, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth())
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_31a39e), { onAnswer(UserDecision.ALLOW_ONCE) }, modifier = Modifier.fillMaxWidth())
+                IrisButton(alwaysPrefix?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0d2227, it.take(24)) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_60f7e7), { onAnswer(UserDecision.ALWAYS_ALLOW) }, style = IrisButtonStyle.Tonal, modifier = Modifier.fillMaxWidth())
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7173f8), { onAnswer(UserDecision.DENY) }, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth())
             }
         },
         dismissButton = null,

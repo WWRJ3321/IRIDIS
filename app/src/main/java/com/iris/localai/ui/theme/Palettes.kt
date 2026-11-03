@@ -9,11 +9,11 @@ import androidx.compose.ui.graphics.Color
  * surface (checked in V214ThemesTest).
  */
 enum class IrisPalette(val id: String, val label: String, val light: IrisColors, val dark: IrisColors) {
-    DEFAULT("default", "默认", IrisLightColors, IrisDarkColors),
-    SAKURA("sakura", "樱花粉", SakuraLight, SakuraDark),
-    MINT("mint", "薄荷绿", MintLight, MintDark),
-    LILAC("lilac", "丁香紫", LilacLight, LilacDark),
-    CREAM("cream", "奶油黄", CreamLight, CreamDark);
+    DEFAULT("default", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_18c634), IrisLightColors, IrisDarkColors),
+    SAKURA("sakura", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_fe96de), SakuraLight, SakuraDark),
+    MINT("mint", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_d72c6c), MintLight, MintDark),
+    LILAC("lilac", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_dc19f4), LilacLight, LilacDark),
+    CREAM("cream", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_ff1a86), CreamLight, CreamDark);
 
     fun colors(dark: Boolean): IrisColors = if (dark) this.dark else light
 

@@ -59,7 +59,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     private fun ensureHandle(npu: Boolean = false): Long {
         LlamaNative.unavailableReason?.let { throw EngineException(it) }
         val want = if (npu) {
-            val ctx = context ?: throw EngineException("此版本不含内置 NPU 运行库")
+            val ctx = context ?: throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fabc89))
             LlamaHtpRuntime.ensureLoaded(ctx)?.let { throw EngineException(it) }
             LlamaJnis.htp
         } else LlamaJnis.cpuGpu
@@ -98,7 +98,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             if (gpu && m.gpu.isBlank()) {
                 loaded = false
                 jni.unload(h)
-                throw EngineException(if (npu) "没有找到可用的 Hexagon NPU 设备" else "没有找到可用的 OpenCL GPU 设备")
+                throw EngineException(if (npu) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1ac99d) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4b134d))
             }
             // 2.2.17: vision projector via mtmd (GPU when the model is on the GPU, CPU otherwise / on failure).
             // A projector that fails to load leaves the model text-only; it never fails the load.
@@ -106,9 +106,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             var visionNote: String? = null
             config.mmprojPath?.let { mp ->
                 val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), gpu && !npu) }
-                    .getOrElse { "mmproj 加载异常：${it.message ?: it.javaClass.simpleName}" }
+                    .getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
                 if (e == null) vision = true
-                else { visionNote = "视觉投影未加载：$e"; android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
+                else { visionNote = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
             }
             visionLoaded = vision
             val vm = if (vision) runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }.getOrDefault(m) else m
@@ -126,7 +126,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                     m.gpu.isBlank() -> "CPU · llama.cpp"
                     npu -> "NPU · ${m.gpu} · llama.cpp Hexagon"
                     else -> "GPU · ${m.gpu} · OpenCL"
-                } + if (vision && vm.vision) " · 识图 " + (if (vm.visionGpu) "GPU" else "CPU") else "",
+                } + if (vision && vm.vision) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fba350) + (if (vm.visionGpu) "GPU" else "CPU") else "",
                 activeBackend = if (m.gpu.isNotBlank()) accel else com.iris.localai.engine.Backend.CPU,
             )
         }
@@ -134,7 +134,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun generate(history: List<PromptMessage>, params: SamplingConfig): Flow<GenEvent> = channelFlow {
         if (!loaded) {
-            send(GenEvent.Done(StopReason.ERROR, null, "模型未加载"))
+            send(GenEvent.Done(StopReason.ERROR, null, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)))
             return@channelFlow
         }
         val req = Request()
@@ -196,7 +196,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         }
         channel.push("", final = true).takeIf { it.isNotEmpty() }?.let { send(GenEvent.Piece(it)) }
         if (result == null) {
-            send(GenEvent.Done(StopReason.ERROR, null, "模型未加载"))
+            send(GenEvent.Done(StopReason.ERROR, null, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)))
             return@channelFlow
         }
         val s = runCatching { json.decodeFromString(NativeStats.serializer(), result) }.getOrDefault(NativeStats())
@@ -221,7 +221,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         )
         if (s.liveSwitches > 0) android.util.Log.i(LOG_TAG, "reply finished with ${s.liveSwitches} live switch(es) applied by the decoder")
         val error = s.error.ifBlank { null } ?: when (reason) {
-            StopReason.ERROR -> "推理失败"
+            StopReason.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c95271)
             StopReason.CONTEXT_FULL -> com.iris.localai.engine.LengthRule.contextFullMessage(s.generatedTokens, params.maxNewTokens)
             else -> null
         }
@@ -261,7 +261,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         android.util.Log.i(LOG_TAG, "live switch requested: ${plan.tier.label} threads=${change.threads} " +
             "cpus=${if (change.cpus.isEmpty()) "all" else change.cpus.joinToString(",")} nice=${change.nice}" +
             com.iris.localai.engine.LiveResourcePolicy.deferredParts(runningPlan, plan, com.iris.localai.engine.LiveApply.IMMEDIATE)
-                .takeIf { it.isNotEmpty() }?.joinToString("、", prefix = "; next reply only: ").orEmpty())
+                .takeIf { it.isNotEmpty() }?.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566), prefix = "; next reply only: ").orEmpty())
         runningPlan = plan
         return true
     }

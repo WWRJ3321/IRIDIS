@@ -158,10 +158,10 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun freed(bytes: Long, what: String) { _note.value = "$what，释放 ${Format.bytes(bytes)}" }
+    private fun freed(bytes: Long, what: String) { _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4de0d0, what, Format.bytes(bytes)) }
 
     private fun io(block: suspend () -> Unit) = viewModelScope.launch {
-        runCatching { withContext(Dispatchers.IO) { block() } }.onFailure { _note.value = "操作失败：${it.message ?: it.javaClass.simpleName}" }
+        runCatching { withContext(Dispatchers.IO) { block() } }.onFailure { _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48dd00, it.message ?: it.javaClass.simpleName) }
         refresh()
     }
 
@@ -178,31 +178,31 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteLeftover(path: String) = io {
         val l = currentLeftovers().firstOrNull { it.file.absolutePath == path }
         when {
-            l == null -> _note.value = "文件已不在，或已归属某个模型"
-            l.active -> _note.value = "${l.name} 属于正在进行或已暂停的下载，不能删除"
-            else -> freed(StorageUsage.deleteTree(l.file), "已删除 ${l.name}")
+            l == null -> _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f639b)
+            l.active -> _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_15003a, l.name)
+            else -> freed(StorageUsage.deleteTree(l.file), com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b0b6b9, l.name))
         }
     }
 
     /** 「清理未完成的下载」: every partial file except those of a download running or paused right now. */
     fun clearPartials() = io {
         val list = StorageUsage.clearablePartials(currentLeftovers())
-        freed(list.sumOf { StorageUsage.deleteTree(it.file) }, "已清理 ${list.size} 个未完成的下载")
+        freed(list.sumOf { StorageUsage.deleteTree(it.file) }, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c3e35f, list.size))
     }
 
     fun clearModelCache(fileName: String) = io {
         val (n, b) = ModelCache.clear(ctx, fileName)
-        freed(b, "已清除 $n 个缓存文件")
+        freed(b, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e47130, n))
     }
 
     fun clearOrphanCaches() = io {
         // Fresh list (never a stale / empty one), so a present model's cache is never taken for an orphan.
         val names = c.models.refresh().map { it.fileName }
         val files = StorageUsage.orphanCaches(File(ctx.filesDir, ModelCache.LITERT_DIR), File(ctx.cacheDir, "mnn"), names)
-        freed(files.sumOf { StorageUsage.deleteTree(it) }, "已清除已删除模型的缓存")
+        freed(files.sumOf { StorageUsage.deleteTree(it) }, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5aa6dc))
     }
 
-    fun clearOpenCl() = io { freed(StorageUsage.clearChildren(File(ctx.cacheDir, "opencl")), "已清除 GPU 内核缓存") }
+    fun clearOpenCl() = io { freed(StorageUsage.clearChildren(File(ctx.cacheDir, "opencl")), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_28ee5d)) }
 
 
     fun clearUndo() = io {
@@ -210,7 +210,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         val b = StorageUsage.sizeOf(dir)
         c.agent.undo.clear()
         c.agent.changed()
-        freed(b, "已清除撤销记录")
+        freed(b, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94bf40))
     }
 
     fun clearCaches() = io {
@@ -218,7 +218,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         var b = StorageUsage.clearChildren(p.cacheDir, p.cacheKeep) + StorageUsage.clearChildren(p.externalCache)
         p.logFiles.forEach { b += StorageUsage.deleteTree(it) }
         b += StorageUsage.deleteTree(p.restoreStage)
-        freed(b, "已清除缓存与日志")
+        freed(b, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d5ade4))
     }
 
     /** Absolute paths of every attachment a saved message points at. */
@@ -232,12 +232,12 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearOrphanAttachments() = io {
         val files = StorageUsage.orphanAttachments(File(ctx.filesDir, "attachments"), referencedAttachments(), System.currentTimeMillis())
-        freed(files.sumOf { StorageUsage.deleteTree(it) }, "已清理 ${files.size} 个未引用的附件")
+        freed(files.sumOf { StorageUsage.deleteTree(it) }, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a34d76, files.size))
     }
 
     fun deleteAllAttachments() = io {
         val files = StorageUsage.removableAttachments(File(ctx.filesDir, "attachments"), referencedAttachments(), System.currentTimeMillis())
-        freed(files.sumOf { StorageUsage.deleteTree(it) }, "已删除 ${files.size} 个附件")
+        freed(files.sumOf { StorageUsage.deleteTree(it) }, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_04107d, files.size))
     }
 
     /** Every conversation (ConversationRepository.deleteAll, which also empties the history index) and their attachments. */
@@ -246,7 +246,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         val before = StorageUsage.sizeOf(File(ctx.filesDir, "conversations"))
         c.conversations.deleteAll(permanent = true)
         val files = StorageUsage.removableAttachments(File(ctx.filesDir, "attachments"), refs, System.currentTimeMillis())
-        freed(before + files.sumOf { StorageUsage.deleteTree(it) }, "已删除全部聊天记录")
+        freed(before + files.sumOf { StorageUsage.deleteTree(it) }, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1d6756))
     }
 
     fun noteDone(text: String) { _note.value = text }
@@ -279,10 +279,10 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
             c.models.clearMoveError()
             runCatching { withContext(Dispatchers.IO) { c.models.moveToShared(inUse()) } }
                 .onSuccess { (moved, skipped) ->
-                    _note.value = "已把 $moved 个模型移到 ${com.iris.localai.data.ModelDirs.SHARED_LABEL}" +
-                        if (skipped > 0) "（$skipped 个同名或正在使用，未移动）" else ""
+                    _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd26cc, moved, com.iris.localai.data.ModelDirs.SHARED_LABEL) +
+                        if (skipped > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_174ae7, skipped) else ""
                 }
-                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _note.value = "移动失败：${it.message ?: it.javaClass.simpleName}" }
+                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _note.value = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fe6c61, it.message ?: it.javaClass.simpleName) }
             refreshFolder()
             refresh()
         }
@@ -305,8 +305,8 @@ private sealed interface StoragePending {
 
 object StorageText {
     /** Typed into the 「删除全部聊天记录」 dialog to unlock it. */
-    const val WIPE_WORD = "删除"
-    const val IN_USE = "正在使用，不能删除"
+    val WIPE_WORD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
+    val IN_USE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aaa128)
 }
 
 /** The model is loaded or loading (chat, voice, the API or a scheduled run may be using it): never deletable here. */
@@ -353,7 +353,7 @@ fun StoragePage(
     val anyLoading = engine is EngineState.Loading
     val r = report
 
-    SubpageScaffold("存储空间", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), onBack) {
         ScrollBody {
             StorageSummary(r, free, scanning, note)
 
@@ -363,7 +363,7 @@ fun StoragePage(
                     if (i > 0) Divider()
                     if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
                         SettingsRow(
-                            e.label, subtitle = "${sizeLine(e)} · 中断的导入 / 下载，或无法识别的文件",
+                            e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d07d97, sizeLine(e)),
                             onClick = { leftoverSheet = e.id == Ids.MODEL_LEFTOVER_SHARED }, trailing = { Chevron() },
                         )
                     } else {
@@ -372,26 +372,26 @@ fun StoragePage(
                         SettingsRow(
                             e.label,
                             subtitle = listOfNotNull(
-                                Format.bytes(e.bytes), m?.format?.label, if (e.withProjector) "含看图组件" else null,
+                                Format.bytes(e.bytes), m?.format?.label, if (e.withProjector) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec5b6) else null,
                                 if (inUse) StorageText.IN_USE else null,
-                                if (e.external) "在 ${com.iris.localai.data.ModelDirs.SHARED_LABEL}" else null,
+                                if (e.external) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b044a5, com.iris.localai.data.ModelDirs.SHARED_LABEL) else null,
                             ).joinToString(" · "),
                             subtitleMaxLines = 2,
                             trailing = {
                                 IrisButton(
-                                    "删除", { m?.let { pending = StoragePending.Model(it) } },
+                                    com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { m?.let { pending = StoragePending.Model(it) } },
                                     style = IrisButtonStyle.Text, compact = true, destructive = true, enabled = m != null && !inUse,
                                 )
                             },
                         )
                     }
                 }
-                if (g.entries.isEmpty()) SettingsRow("还没有模型", subtitle = "在「模型与加载」中下载或导入")
+                if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d38003), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e2b81b))
                 Divider()
-                SettingsRow("模型与加载", subtitle = "下载、导入、卸载模型", onClick = onModels, trailing = { Chevron() })
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
                 ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
-            GroupFootnote("正在使用的模型不能在这里删除，请先在「模型与加载」中卸载。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
             folder?.let { GroupFootnote(it.path, monospace = true) }
 
             // ---- 模型缓存 ----
@@ -399,10 +399,10 @@ fun StoragePage(
                 g.entries.forEachIndexed { i, e ->
                     if (i > 0) Divider()
                     when {
-                        e.id == Ids.CACHE_ORPHAN -> ActionRow(e, "清除", enabled = !anyLoading, detail = "模型已删除，缓存不再使用") { pending = StoragePending.OrphanCaches }
-                        e.id == Ids.CACHE_OPENCL -> ActionRow(e, "清除", enabled = !anyLoading, detail = "llama.cpp OpenCL 编译结果；清除后下次 GPU 加载重新编译") { storage.clearOpenCl() }
+                        e.id == Ids.CACHE_ORPHAN -> ActionRow(e, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), enabled = !anyLoading, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_37c271)) { pending = StoragePending.OrphanCaches }
+                        e.id == Ids.CACHE_OPENCL -> ActionRow(e, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), enabled = !anyLoading, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94f1cb)) { storage.clearOpenCl() }
                         e.id == Ids.CACHE_NPU -> SettingsRow(
-                            e.label, subtitle = "${sizeLine(e)} · 在「模型与加载」中管理",
+                            e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_17a5e2, sizeLine(e)),
                             onClick = { onOpen(SettingsPage.MODEL_BACKEND) }, trailing = { Chevron() },
                         )
                         else -> {
@@ -410,17 +410,17 @@ fun StoragePage(
                             val loading = (engine as? EngineState.Loading)?.model?.path == m?.path
                             val loaded = m != null && (engine as? EngineState.Ready)?.model?.path == m.path
                             ActionRow(
-                                e, "清除", enabled = m != null && !loading,
+                                e, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), enabled = m != null && !loading,
                                 detail = when {
-                                    loading -> "正在加载，稍后再清除"
-                                    loaded -> "GPU 编译结果 / 权重缓存（已加载，不影响本次运行）"
-                                    else -> "GPU 编译结果 / 权重缓存；清除后下次加载会重新编译"
+                                    loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a0c7d7)
+                                    loaded -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6b149e)
+                                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7f95af)
                                 },
                             ) { m?.let { storage.clearModelCache(it.fileName) } }
                         }
                     }
                 }
-                if (g.entries.isEmpty()) SettingsRow("没有缓存", subtitle = "GGUF 模型不生成缓存；LiteRT / MNN 首次加载后才会有")
+                if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_373e22), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bc44bd))
             }
 
             // ---- 语音模型 ----
@@ -429,7 +429,7 @@ fun StoragePage(
                     if (i > 0) Divider()
                     when (e.id) {
                         Ids.VOICE_CLONES -> SettingsRow(
-                            e.label, subtitle = "${e.count ?: 0} 个音色 · ${Format.bytes(e.bytes)}",
+                            e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ecdf9c, e.count ?: 0, Format.bytes(e.bytes)),
                             onClick = { onOpen(SettingsPage.VOICE) }, trailing = { Chevron() },
                         )
                         Ids.VOICE_OTHER -> SettingsRow(e.label, subtitle = sizeLine(e) + if (e.external) " · " + StorageLayoutText.VOICE_SHARED else "")
@@ -438,21 +438,21 @@ fun StoragePage(
                             val st = pack?.let { voiceStates[it] }
                             val busy = st is PackState.Downloading || st == PackState.Extracting
                             val kind = when (pack?.kind) {
-                                com.iris.localai.voice.VoiceKind.ASR -> "识别"
-                                com.iris.localai.voice.VoiceKind.TTS -> "朗读"
-                                com.iris.localai.voice.VoiceKind.CLONE -> "克隆"
+                                com.iris.localai.voice.VoiceKind.ASR -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_72eff8)
+                                com.iris.localai.voice.VoiceKind.TTS -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f)
+                                com.iris.localai.voice.VoiceKind.CLONE -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_25fe25)
                                 null -> null
                             }
                             val state = when {
-                                busy -> "下载中"
+                                busy -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2d455c)
                                 st == PackState.Installed -> null
-                                else -> "未下载完成"
+                                else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5d44a3)
                             }
                             SettingsRow(
                                 e.label, subtitle = listOfNotNull(Format.bytes(e.bytes), kind, state, StorageLayoutText.VOICE_SHARED.takeIf { e.external }).joinToString(" · "),
                                 trailing = {
                                     IrisButton(
-                                        "删除", { pack?.let { pending = StoragePending.Voice(it) } },
+                                        com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { pack?.let { pending = StoragePending.Voice(it) } },
                                         style = IrisButtonStyle.Text, compact = true, destructive = true, enabled = pack != null && !busy,
                                     )
                                 },
@@ -460,7 +460,7 @@ fun StoragePage(
                         }
                     }
                 }
-                if (g.entries.isEmpty()) SettingsRow("没有下载语音模型", subtitle = "在「语音」中下载识别和朗读模型", onClick = { onOpen(SettingsPage.VOICE) }, trailing = { Chevron() })
+                if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b6a94c), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b39d0f), onClick = { onOpen(SettingsPage.VOICE) }, trailing = { Chevron() })
             }
 
             // ---- 技能 / 工作区文件 ----
@@ -473,20 +473,20 @@ fun StoragePage(
                             subtitleMaxLines = 2, onClick = onOpenFiles, trailing = { Chevron() },
                         )
                         Ids.WS_SKILLS -> SettingsRow(
-                            e.label, subtitle = "${e.count ?: 0} 个技能 · ${Format.bytes(e.bytes)}" + if (e.external) " · " + StorageLayoutText.SKILLS_SHARED else "",
+                            e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e6115d, e.count ?: 0, Format.bytes(e.bytes)) + if (e.external) " · " + StorageLayoutText.SKILLS_SHARED else "",
                             subtitleMaxLines = 2,
                         )
                         Ids.WS_KNOWLEDGE -> SettingsRow(
-                            e.label, subtitle = "${e.count ?: 0} 个文件 · ${Format.bytes(e.bytes)}" + if (e.external) " · " + StorageLayoutText.KNOWLEDGE_SHARED else "",
+                            e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, e.count ?: 0, Format.bytes(e.bytes)) + if (e.external) " · " + StorageLayoutText.KNOWLEDGE_SHARED else "",
                             subtitleMaxLines = 2,
                         )
-                        Ids.WS_UNDO -> ActionRow(e, "清除", detail = "智能体改文件前保存的旧版本") { pending = StoragePending.Undo }
+                        Ids.WS_UNDO -> ActionRow(e, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), detail = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ed4ae3)) { pending = StoragePending.Undo }
                         Ids.WS_MEMORY -> SettingsRow(e.label, subtitle = sizeLine(e), onClick = { onOpen(SettingsPage.MEMORY) }, trailing = { Chevron() })
-                        else -> SettingsRow(e.label, subtitle = "${sizeLine(e)} · 切换工作区位置前留下的文件", subtitleMaxLines = 2)
+                        else -> SettingsRow(e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_164a6b, sizeLine(e)), subtitleMaxLines = 2)
                     }
                 }
             }
-            GroupFootnote("工作区文件不提供一键清空，请在「文件」中管理。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cb4eb0))
             GroupFootnote(StorageLayoutText.SUMMARY)
 
             // ---- 聊天记录 ----
@@ -494,8 +494,8 @@ fun StoragePage(
                 g.entries.forEachIndexed { i, e ->
                     if (i > 0) Divider()
                     val sub = when (e.id) {
-                        Ids.CHATS -> "${e.count ?: conversations.size} 个对话 · ${Format.bytes(e.bytes)}"
-                        Ids.ATTACHMENTS -> "${e.count ?: 0} 个文件 · ${Format.bytes(e.bytes)}"
+                        Ids.CHATS -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a7e9a, e.count ?: conversations.size, Format.bytes(e.bytes))
+                        Ids.ATTACHMENTS -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, e.count ?: 0, Format.bytes(e.bytes))
                         else -> sizeLine(e)
                     }
                     SettingsRow(e.label, subtitle = sub)
@@ -504,17 +504,17 @@ fun StoragePage(
                 val hasAttachments = (att?.files ?: 0) > 0
                 Divider()
                 SettingsRow(
-                    "清理未引用的附件", subtitle = "删除已不属于任何对话的附件文件",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d17392), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d7124c),
                     enabled = hasAttachments, onClick = { pending = StoragePending.OrphanAttachments },
                 )
                 Divider()
                 SettingsRow(
-                    "删除全部附件", titleColor = Iris.colors.danger, subtitle = "对话文字保留，其中的图片和文件将无法再打开",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e67e6), titleColor = Iris.colors.danger, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a6f4e),
                     enabled = hasAttachments, onClick = { pending = StoragePending.AllAttachments },
                 )
                 Divider()
                 SettingsRow(
-                    "删除全部聊天记录", titleColor = Iris.colors.danger, subtitle = "永久删除所有对话及其附件，无法恢复",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b7050e), titleColor = Iris.colors.danger, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a937c5),
                     enabled = conversations.isNotEmpty() || hasAttachments, onClick = { pending = StoragePending.AllHistory },
                 )
             }
@@ -527,7 +527,7 @@ fun StoragePage(
                 }
                 Divider()
                 SettingsRow(
-                    "清除缓存与日志", subtitle = "不影响模型、模型缓存、对话和设置",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_50c43a), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_50e95d),
                     enabled = g.bytes > 0, onClick = { pending = StoragePending.Caches },
                 )
             }
@@ -554,12 +554,12 @@ fun StoragePage(
     when (val p = pending) {
         null -> Unit
         is StoragePending.LeftoverFile -> ConfirmDialog(
-            title = "删除这个文件？", message = "${p.item.name}（${Format.bytes(p.item.bytes)}）将被删除，无法恢复。",
-            confirmText = "删除", onConfirm = { storage.deleteLeftover(p.item.file.absolutePath); pending = null }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6589f9), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a8f0b6, p.item.name, Format.bytes(p.item.bytes)),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onConfirm = { storage.deleteLeftover(p.item.file.absolutePath); pending = null }, onDismiss = { pending = null },
         )
         is StoragePending.Partials -> ConfirmDialog(
-            title = "清理未完成的下载？", message = "删除 ${p.count} 个中断的下载 / 导入文件，释放约 ${Format.bytes(p.bytes)}。正在进行或已暂停的下载不受影响。",
-            confirmText = "清理", onConfirm = { storage.clearPartials(); pending = null }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99e12a), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_15e818, p.count, Format.bytes(p.bytes)),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e47bb1), onConfirm = { storage.clearPartials(); pending = null }, onDismiss = { pending = null },
         )
         is StoragePending.Model -> ModelDeleteDialog(
             p.model,
@@ -571,31 +571,31 @@ fun StoragePage(
             onDismiss = { pending = null },
         )
         is StoragePending.Voice -> ConfirmDialog(
-            title = "删除语音模型？",
-            message = "将删除「${p.pack.title}」，需要时可以重新下载。",
-            confirmText = "删除",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0a35ee),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_578347, p.pack.title),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { vm.deletePack(p.pack).invokeOnCompletion { storage.refresh() } },
             onDismiss = { pending = null },
         )
         StoragePending.Undo -> ConfirmDialog(
-            title = "清除撤销记录？", message = "之后无法再撤销智能体此前对文件的修改。",
-            confirmText = "清除", onConfirm = { storage.clearUndo() }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_46aa9a), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_64d5d0),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), onConfirm = { storage.clearUndo() }, onDismiss = { pending = null },
         )
         StoragePending.Caches -> ConfirmDialog(
-            title = "清除缓存与日志？", message = "删除临时文件、日志和崩溃记录。模型缓存、对话和设置不受影响。",
-            confirmText = "清除", onConfirm = { storage.clearCaches() }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4b37e9), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71427c),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), onConfirm = { storage.clearCaches() }, onDismiss = { pending = null },
         )
         StoragePending.OrphanCaches -> ConfirmDialog(
-            title = "清除旧缓存？", message = "这些缓存属于已删除的模型。重新导入同一个模型时会重新编译。",
-            confirmText = "清除", onConfirm = { storage.clearOrphanCaches() }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2e578b), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ccd81b),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), onConfirm = { storage.clearOrphanCaches() }, onDismiss = { pending = null },
         )
         StoragePending.OrphanAttachments -> ConfirmDialog(
-            title = "清理未引用的附件？", message = "只删除不属于任何已保存对话的附件（最近一小时内添加的会保留）。",
-            confirmText = "清理", onConfirm = { storage.clearOrphanAttachments() }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2df9b8), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_502471),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e47bb1), onConfirm = { storage.clearOrphanAttachments() }, onDismiss = { pending = null },
         )
         StoragePending.AllAttachments -> ConfirmDialog(
-            title = "删除全部附件？", message = "对话文字会保留，但其中的图片和文件将无法再打开，无法恢复。",
-            confirmText = "删除", onConfirm = { storage.deleteAllAttachments() }, onDismiss = { pending = null },
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71c3cc), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b079e),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onConfirm = { storage.deleteAllAttachments() }, onDismiss = { pending = null },
         )
         StoragePending.AllHistory -> StrongWipeDialog(
             count = conversations.size,
@@ -607,9 +607,9 @@ fun StoragePage(
 
 /** 2.3.1: kind label of a leftover in the models folder. */
 internal fun leftoverKindLabel(l: StorageUsage.Leftover): String = when (l.kind) {
-    StorageUsage.LeftoverKind.PARTIAL -> if (l.active) "未完成下载 · 正在下载或已暂停" else "未完成下载"
-    StorageUsage.LeftoverKind.PROJECTOR -> "看图组件 mmproj · 未配对模型"
-    StorageUsage.LeftoverKind.UNKNOWN -> "无法识别"
+    StorageUsage.LeftoverKind.PARTIAL -> if (l.active) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ddc5f0) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f57ca2)
+    StorageUsage.LeftoverKind.PROJECTOR -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_961998)
+    StorageUsage.LeftoverKind.UNKNOWN -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad160b)
 }
 
 /** 2.3.1: what is in 「未完成的导入与其他文件」, with per-file delete and 「清理未完成的下载」. */
@@ -623,10 +623,10 @@ private fun LeftoverSheet(
     val c = Iris.colors
     val clearable = StorageUsage.clearablePartials(items)
     com.iris.localai.ui.components.IrisSheet(onDismiss = onDismiss) {
-        com.iris.localai.ui.components.SheetHeader("未完成的导入与其他文件")
+        com.iris.localai.ui.components.SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f70b9))
         Column(Modifier.padding(horizontal = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-            Text("已配对模型的看图组件计入对应模型，不在这里。", style = IrisType.caption, color = c.textTertiary)
-            if (items.isEmpty()) Text("没有多余的文件", style = IrisType.caption, color = c.textSecondary)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_22a44d), style = IrisType.caption, color = c.textTertiary)
+            if (items.isEmpty()) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e18bc7), style = IrisType.caption, color = c.textSecondary)
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 items.forEachIndexed { i, l ->
                     if (i > 0) Divider()
@@ -635,14 +635,14 @@ private fun LeftoverSheet(
                         subtitle = "${Format.bytes(l.bytes)} · ${leftoverKindLabel(l)}",
                         subtitleMaxLines = 2,
                         trailing = {
-                            IrisButton("删除", { onDelete(l) }, style = IrisButtonStyle.Text, compact = true, destructive = true, enabled = !l.active)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { onDelete(l) }, style = IrisButtonStyle.Text, compact = true, destructive = true, enabled = !l.active)
                         },
                     )
                 }
             }
             if (clearable.isNotEmpty()) {
                 IrisButton(
-                    "清理未完成的下载（${Format.bytes(clearable.sumOf { it.bytes })}）", { onClearPartials(clearable) },
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc251b, Format.bytes(clearable.sumOf { it.bytes })), { onClearPartials(clearable) },
                     style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -652,7 +652,7 @@ private fun LeftoverSheet(
 }
 
 private fun sizeLine(e: StorageUsage.Entry): String =
-    Format.bytes(e.bytes) + if (e.files > 1) " · ${e.files} 个文件" else ""
+    Format.bytes(e.bytes) + if (e.files > 1) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8d4d33, e.files) else ""
 
 /** Size, a short explanation and one action button. */
 @Composable
@@ -734,8 +734,8 @@ private fun StorageSummary(r: StorageUsage.Report?, free: Long?, scanning: Boole
             Spacer(Modifier.height(IrisDimens.space6))
             Text(
                 when {
-                    r == null -> "正在计算…"
-                    else -> "IRIDIS 共占用" + (free?.let { " · 手机剩余 ${Format.bytes(it)}" } ?: "") + if (scanning) " · 正在更新…" else ""
+                    r == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_00ff10)
+                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e433ac) + (free?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_080d83, Format.bytes(it)) } ?: "") + if (scanning) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_03e3be) else ""
                 },
                 style = IrisType.secondary, color = c.textSecondary,
             )
@@ -816,15 +816,15 @@ private fun StrongWipeDialog(count: Int, onConfirm: () -> Unit, onDismiss: () ->
     var typed by rememberSaveable { mutableStateOf("") }
     IrisDialog(
         onDismiss = onDismiss,
-        title = "删除全部聊天记录？",
-        confirmText = "永久删除",
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5005da),
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_96d2b7),
         onConfirm = { onConfirm(); onDismiss() },
         destructive = true,
         confirmEnabled = typed.trim() == StorageText.WIPE_WORD,
     ) {
         Column {
             Text(
-                "将永久删除全部 $count 个对话及其附件，无法恢复。确认请输入「${StorageText.WIPE_WORD}」。",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_02f436, count, StorageText.WIPE_WORD),
                 style = IrisType.secondary, color = c.textSecondary,
             )
             Spacer(Modifier.height(IrisDimens.space12))
@@ -867,10 +867,10 @@ private fun ColumnScope.ModelsFolderRows(folder: StorageViewModel.ModelsFolder?,
         Divider()
         SettingsRow(
             ModelFolderText.MOVE, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
-            subtitle = "${f.pendingCount} 个模型 · ${Format.bytes(f.pendingBytes)} · 移过去后重装也不会丢" +
-                (move?.error?.let { " · 上次失败：$it" } ?: ""),
+            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a7c89, f.pendingCount, Format.bytes(f.pendingBytes)) +
+                (move?.error?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_85bada, it) } ?: ""),
             subtitleMaxLines = 3,
-            trailing = { IrisButton("移动", onMove, style = IrisButtonStyle.Text, compact = true) },
+            trailing = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_68d982), onMove, style = IrisButtonStyle.Text, compact = true) },
         )
     }
 }
@@ -878,16 +878,16 @@ private fun ColumnScope.ModelsFolderRows(folder: StorageViewModel.ModelsFolder?,
 /** 2.1.1: Download/IRIDIS is the app's resource root; only workspace/ belongs to the agent. */
 object StorageLayoutText {
     private val L = com.iris.localai.agent.StorageLayout
-    val SUMMARY = L.SUMMARY + "。智能体只能访问 ${L.WORKSPACE}。"
-    val WORKSPACE_SHARED = "在 ${L.label(L.WORKSPACE)}，不计入应用占用"
-    val SKILLS_SHARED = "在 ${L.label(L.SKILLS)}，不计入应用占用"
-    val KNOWLEDGE_SHARED = "在 ${L.label(L.KNOWLEDGE)}，不计入应用占用"
-    val VOICE_SHARED = "在 ${L.label(L.VOICE)}"
+    val SUMMARY: String get() = L.SUMMARY + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_788fe7, L.WORKSPACE)
+    val WORKSPACE_SHARED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a64c10, L.label(L.WORKSPACE))
+    val SKILLS_SHARED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a64c10, L.label(L.SKILLS))
+    val KNOWLEDGE_SHARED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a64c10, L.label(L.KNOWLEDGE))
+    val VOICE_SHARED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b044a5, L.label(L.VOICE))
 }
 
 object ModelFolderText {
-    const val MOVE = "把模型移到下载目录"
-    const val MOVING = "正在移动模型…"
-    const val GRANT_TITLE = "改存到下载目录"
-    const val GRANT_HINT = "现在存在 App 里，卸载会一起删除。改存后放在 下载/IRIDIS，重装也不会丢"
+    val MOVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_027203)
+    val MOVING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b633a)
+    val GRANT_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_0b5542)
+    val GRANT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_506943)
 }

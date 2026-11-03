@@ -84,14 +84,14 @@ fun LicensesPage(onBack: () -> Unit) {
         return
     }
     BackHandler(onBack = onBack)
-    SubpageScaffold("许可证全文", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4236d8), onBack) {
         ScrollBody {
             val list = entries
             when {
                 list == null -> {}
-                list.isEmpty() -> PageDescription("未找到许可证文件。各组件的许可证见上一页的开源组件列表。")
+                list.isEmpty() -> PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ee089e))
                 else -> {
-                    PageDescription("IRIDIS 使用的第三方组件及其许可证全文。点按查看。")
+                    PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a638b9))
                     SettingsGroup {
                         list.forEachIndexed { i, e ->
                             if (i > 0) Divider()
@@ -115,14 +115,14 @@ private fun LicenseTextPage(entry: LicenseEntry, onBack: () -> Unit) {
     val context = LocalContext.current
     val c = Iris.colors
     val text by produceState<String?>(null, entry.file) {
-        value = withContext(Dispatchers.IO) { LicenseIndex.text(context, entry.file) } ?: "未找到许可证文件：${entry.file}"
+        value = withContext(Dispatchers.IO) { LicenseIndex.text(context, entry.file) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2cd607, entry.file)
     }
     SubpageScaffold(entry.name, onBack) {
         ScrollBody {
             if (entry.license.isNotBlank()) PageDescription(entry.license)
             if (entry.url.isNotBlank()) {
                 IrisButton(
-                    "项目主页", {
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e910f), {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(entry.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     },
                     style = IrisButtonStyle.Text, compact = true,

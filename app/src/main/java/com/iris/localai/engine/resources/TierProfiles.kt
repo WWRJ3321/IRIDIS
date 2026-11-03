@@ -111,12 +111,12 @@ object TierProfiles {
         val out = ArrayList<String>(3)
         val all = allCores(topo).toSet()
         val cpus = p.cpus.distinct()
-        if (cpus.isEmpty()) out += "至少选 1 个核心"
+        if (cpus.isEmpty()) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_06408f)
         val missing = cpus.filter { it !in all }
         if (missing.isNotEmpty()) out += "本机没有 ${missing.joinToString("、") { "cpu$it" }}"
-        if (cpus.isNotEmpty() && p.threads !in 1..cpus.size) out += "线程数要在 1 到 ${cpus.size}（所选核心数）之间"
-        if (cpus.isEmpty() && p.threads < 1) out += "线程数至少为 1"
-        if (p.nice !in NICE_MIN..NICE_MAX) out += "nice 要在 $NICE_MIN 到 $NICE_MAX 之间"
+        if (cpus.isNotEmpty() && p.threads !in 1..cpus.size) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b25e22, cpus.size)
+        if (cpus.isEmpty() && p.threads < 1) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_169dce)
+        if (p.nice !in NICE_MIN..NICE_MAX) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_cf98c5, NICE_MIN, NICE_MAX)
         return out
     }
 
@@ -160,10 +160,10 @@ object TierProfiles {
     }
 
     private fun clusterName(index: Int, count: Int): String = when {
-        count == 1 -> "全部核心"
-        index == count - 1 -> "超大核"
-        index == 0 && count >= 3 -> "能效核"
-        else -> "性能核"
+        count == 1 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927)
+        index == count - 1 -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_608e08)
+        index == 0 && count >= 3 -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_25c14e)
+        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_eef149)
     }
 
     /** "超大核 ×2", "性能核 ×1", "全部核心 ×8", "核心 ×3". */
@@ -172,14 +172,14 @@ object TierProfiles {
         val all = cl.flatten().toSet()
         val set = cores.toSet()
         val name = when {
-            set == all || set.isEmpty() -> "全部核心"
+            set == all || set.isEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927)
             else -> {
                 val idx = cl.indexOfFirst { it.containsAll(set) }
                 when {
                     idx >= 0 -> clusterName(idx, cl.size)
-                    cl.size >= 3 && set == (all - cl.last().toSet()) -> "非超大核"
-                    cl.size >= 3 && set == (all - cl.first().toSet()) -> "性能核"
-                    else -> "核心"
+                    cl.size >= 3 && set == (all - cl.last().toSet()) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_695c23)
+                    cl.size >= 3 && set == (all - cl.first().toSet()) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_eef149)
+                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
                 }
             }
         }
@@ -188,7 +188,7 @@ object TierProfiles {
 
     /** "cpu0-5", "cpu5", "cpu0-2,6" for compact display. */
     fun cpuRange(cpus: List<Int>): String {
-        if (cpus.isEmpty()) return "全部"
+        if (cpus.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a8b0c2)
         val s = cpus.distinct().sorted()
         val parts = ArrayList<String>()
         var a = s[0]; var b = s[0]

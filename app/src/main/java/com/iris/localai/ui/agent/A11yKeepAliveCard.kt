@@ -27,12 +27,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal object KeepAliveText {
-    const val TITLE = "无障碍保活"
-    const val NOTE = "授权后，App 启动、开机和无障碍被系统关掉时，IRIDIS 会自动把「IRIDIS GUI 智能体」重新打开。" +
-        "只写入无障碍开关两项设置，不做其他事。"
-    const val SHIZUKU_ON = "一键授权（Shizuku 已运行）"
-    const val SHIZUKU_OFF = "未检测到 Shizuku：安装并启动 Shizuku 后点这里；或用下方 adb 命令"
-    const val ADB = "电脑连接（USB 调试）或开发者选项 › 无线调试后，在电脑上执行："
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_abc12e)
+    val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cf7099)
+    val SHIZUKU_ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_614956)
+    val SHIZUKU_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_852ed5)
+    val ADB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f8858d)
 }
 
 /** 2.2.14 设置 › 智能体 › 无障碍保活. */
@@ -59,7 +58,7 @@ fun A11yKeepAliveCard() {
     SectionTitle(KeepAliveText.TITLE)
     SettingsGroup {
         SettingsRow(
-            "状态", icon = IrisIcons.Power,
+            com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3fea7c), icon = IrisIcons.Power,
             subtitle = status.label,
             subtitleColor = if (status == KeepAliveStatus.ACTIVE) Iris.colors.success else Iris.colors.textTertiary,
             onClick = { if (granted) { A11yKeepAlive.ensure(context); tick++ } },
@@ -67,16 +66,16 @@ fun A11yKeepAliveCard() {
         if (!granted) {
             Divider()
             SettingsRow(
-                "Shizuku 授权", icon = IrisIcons.Bolt,
+                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_84a580), icon = IrisIcons.Bolt,
                 subtitle = msg ?: if (shizuku) KeepAliveText.SHIZUKU_ON else KeepAliveText.SHIZUKU_OFF,
                 onClick = {
                     if (!A11yKeepAlive.shizukuRunning()) { msg = KeepAliveText.SHIZUKU_OFF; tick++; return@SettingsRow }
                     A11yKeepAlive.requestShizuku { ok ->
-                        if (!ok) { msg = "Shizuku 拒绝了授权"; return@requestShizuku }
+                        if (!ok) { msg = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2c0bbf); return@requestShizuku }
                         scope.launch {
-                            msg = "授权中…"
+                            msg = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d81eec)
                             val r = withContext(Dispatchers.IO) { A11yKeepAlive.grantViaShizuku(context) }
-                            msg = r.fold({ "已授权" }, { "失败：${it.message}" })
+                            msg = r.fold({ com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1324e4) }, { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d8f208, it.message) })
                             tick++
                         }
                     }
@@ -84,27 +83,27 @@ fun A11yKeepAliveCard() {
             )
             Divider()
             SettingsRow(
-                "复制 adb 命令", icon = IrisIcons.Copy,
+                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_735df4), icon = IrisIcons.Copy,
                 subtitle = KeepAliveText.ADB + "\n" + cmd,
                 onClick = {
                     context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("adb", cmd))
-                    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab), Toast.LENGTH_SHORT).show()
                 },
             )
             Divider()
-            SettingsRow("打开开发者选项", icon = IrisIcons.Settings,
-                subtitle = "开启 USB 调试或无线调试（未开启开发者选项：关于手机 › 连点版本号 7 次）",
+            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_013dd6), icon = IrisIcons.Settings,
+                subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_da791a),
                 onClick = { A11yKeepAlive.openDeveloperOptions(context) },
                 trailing = { com.iris.localai.ui.components.Chevron() })
         }
         Divider()
-        SettingsRow("允许自启动", icon = IrisIcons.Settings,
-            subtitle = "开机后才能自动恢复无障碍",
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7397e9), icon = IrisIcons.Settings,
+            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_94ccef),
             onClick = { A11yKeepAlive.openAutostart(context) },
             trailing = { com.iris.localai.ui.components.Chevron() })
         Divider()
-        SettingsRow("电池不限制", icon = IrisIcons.Bolt,
-            subtitle = if (battery) "已设为不限制" else "点按设为不限制（无限制 / 不优化）",
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7c33fd), icon = IrisIcons.Bolt,
+            subtitle = if (battery) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc3883) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0843eb),
             onClick = { A11yKeepAlive.openBatterySettings(context) },
             trailing = { com.iris.localai.ui.components.Chevron() })
     }

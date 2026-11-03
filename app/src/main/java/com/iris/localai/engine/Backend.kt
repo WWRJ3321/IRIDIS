@@ -91,7 +91,7 @@ object BackendCapabilities {
     fun npuKv(fileName: String): Int? = NpuIds.kvCapacity(fileName)
 
     fun options(format: ModelFormat, fileName: String, env: BackendEnvironment, engine: String? = null): List<BackendOption> {
-        val noCl = "本机没有可用的 OpenCL 驱动"
+        val noCl = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2d318f)
         return when (format) {
             // 2.1.3: no engine given (the normal case) → the backend decides the engine (NPU = GenieX).
             ModelFormat.GGUF -> if (engine == null) {
@@ -100,23 +100,23 @@ object BackendCapabilities {
                 com.iris.localai.engine.geniex.GenieXRules.ggufOptions(env)
             } else listOf(
                 BackendOption(Backend.CPU, true, detail = "llama.cpp · ARM KleidiAI"),
-                BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "Adreno · OpenCL（Q4_0 / Q8_0 最快）"),
-                BackendOption(Backend.NPU, false, "llama.cpp 没有高通 NPU 后端；NPU 请用 _sm8750 编译的 .litertlm 模型"),
+                BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4abf01)),
+                BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5d3c02)),
             )
             ModelFormat.LITERT -> {
                 if (!env.fullFlavor) return listOf(
-                    BackendOption(Backend.CPU, false, "此版本不含 LiteRT-LM"),
-                    BackendOption(Backend.GPU, false, "此版本不含 LiteRT-LM"),
-                    BackendOption(Backend.NPU, false, "此版本不含 LiteRT-LM"),
+                    BackendOption(Backend.CPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
+                    BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
+                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
                 )
                 val target = npuTarget(fileName)
                 if (target != null) {
                     // AOT-compiled for one NPU: the graph cannot run anywhere else.
-                    val onlyNpu = "这是 ${target.uppercase()} NPU 专用编译的模型，只能在 NPU 上运行"
+                    val onlyNpu = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_38a7f5, target.uppercase())
                     val npuReason = when {
-                        env.npuSoc == null -> "本机芯片没有受支持的高通 NPU"
-                        !NpuIds.socMatches(target, env.npuSoc) -> "模型为 ${target.uppercase()} 编译，本机是 ${env.npuSoc.uppercase()}"
-                        !env.npuRuntimeInstalled -> "需要先在 设置 › 模型与加载 下载 NPU 运行库"
+                        env.npuSoc == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_03e4b1)
+                        !NpuIds.socMatches(target, env.npuSoc) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_81efa3, target.uppercase(), env.npuSoc.uppercase())
+                        !env.npuRuntimeInstalled -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f2f7b2)
                         else -> null
                     }
                     listOf(
@@ -133,14 +133,14 @@ object BackendCapabilities {
             }
             ModelFormat.MNN -> {
                 if (!env.fullFlavor) return listOf(
-                    BackendOption(Backend.CPU, false, "此版本不含 MNN"),
-                    BackendOption(Backend.GPU, false, "此版本不含 MNN"),
-                    BackendOption(Backend.NPU, false, "此版本不含 MNN"),
+                    BackendOption(Backend.CPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
+                    BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
+                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
                 )
                 listOf(
                     BackendOption(Backend.CPU, true, detail = "ARMv8.2 FP16 · KleidiAI"),
                     BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "OpenCL"),
-                    BackendOption(Backend.NPU, false, "未编入 MNN 的 QNN 后端（需按芯片离线转换的专用模型）"),
+                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e7293d)),
                 )
             }
             ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieXRules.qairtOptions(env)
@@ -164,9 +164,9 @@ object BackendCapabilities {
     /** Reason context shift is unavailable for this engine, or null when it is supported. */
     fun contextShiftUnsupported(format: ModelFormat?): String? = when (format) {
         ModelFormat.GGUF, null -> null
-        ModelFormat.LITERT -> "LiteRT-LM 的会话 KV 由运行时管理，不支持上下文平移；将按 token 预算截断"
-        ModelFormat.MNN -> "MNN 的 prompt cache 不支持位置平移；将按 token 预算截断"
-        ModelFormat.QAIRT -> "QAIRT 包的 KV 缓存在编译时固定，不支持上下文平移；将按 token 预算截断"
+        ModelFormat.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee01f1)
+        ModelFormat.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4d508e)
+        ModelFormat.QAIRT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c7c233)
     }
 
     /**
@@ -195,7 +195,7 @@ object BackendCapabilities {
         explicit ?: autoBackend(format, fileName, options, allowGpu = true)
 
     /** 1.10.3: shown on the LiteRT GPU option (model settings / default backend). */
-    const val LITERT_GPU_WARNING = "首次加载需编译，可能要几分钟"
+    val LITERT_GPU_WARNING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2bac8a)
 
     /**
      * LiteRT models 自动 keeps on the CPU. Qwen3.5 (≤ 1.8.0) and, 1.9.0, Agents-A1 (a Qwen3.5-based

@@ -116,10 +116,10 @@ sealed interface ImageSource {
 }
 
 object ImageRefs {
-    const val NETWORK_OFF = "网络图片已关闭"
-    const val HTTP_ONLY = "仅支持 https 图片"
-    const val UNSUPPORTED = "不支持的图片地址"
-    const val LOCAL_ADDRESS = "不允许的地址"
+    val NETWORK_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c9a595)
+    val HTTP_ONLY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_2d0a38)
+    val UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_89b4ff)
+    val LOCAL_ADDRESS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_78a4bf)
     /** ~6 MB of image bytes as base64. */
     const val MAX_DATA_CHARS = 8_000_000
 

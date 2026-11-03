@@ -31,9 +31,9 @@ object NativeLoadCrash {
 }
 
 object LoadCrashGate {
-    const val SKIP_NOTICE = "上次加载模型时原生库崩溃，已跳过自动加载。可以手动重新加载。"
+    val SKIP_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5fe370)
     /** Native crash during load, but the tombstone did not contain the JNI symbol. */
-    const val SKIP_NOTICE_NO_SYMBOL = "上次加载模型时应用在原生代码里崩溃，已跳过自动加载。可以手动重新加载。"
+    val SKIP_NOTICE_NO_SYMBOL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_33b3b1)
 
     fun notice(breadcrumbOnly: Boolean): String = if (breadcrumbOnly) SKIP_NOTICE_NO_SYMBOL else SKIP_NOTICE
 

@@ -37,7 +37,14 @@ object I18n {
     fun init(context: Context) {
         app = context.applicationContext
         if (Build.VERSION.SDK_INT < 33) override = stored(app).takeIf { it.isNotEmpty() }?.let { localized(app, it).resources }
+        if (bootLang == null) bootLang = runCatching { res.getString(R.string.lang_code) }.getOrNull()
     }
+
+    /** 2.3.1: UI language this process started in. Enum labels and object-level texts are read once and keep it. */
+    @Volatile private var bootLang: String? = null
+
+    /** 2.3.1: the language changed since the process started → MainActivity restarts the process so cached labels follow. */
+    fun langChangedSinceStart(): Boolean = ::app.isInitialized && bootLang != null && runCatching { res.getString(R.string.lang_code) }.getOrNull() != bootLang
 
     private val res: Resources get() = override ?: app.resources
 

@@ -57,10 +57,10 @@ object Backup {
     /** Parses and validates a manifest; throws [IllegalArgumentException] with a Chinese message. */
     fun parseManifest(text: String): Manifest {
         val m = runCatching { json.decodeFromString(Manifest.serializer(), text) }
-            .getOrElse { throw IllegalArgumentException("备份清单损坏") }
-        if (m.format != FORMAT) throw IllegalArgumentException("不是 IRIDIS 备份文件")
-        if (m.formatVersion < 1) throw IllegalArgumentException("备份格式无效")
-        if (m.formatVersion > FORMAT_VERSION) throw IllegalArgumentException("备份来自更新版本的 IRIDIS（格式 ${m.formatVersion}），请先升级 App")
+            .getOrElse { throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_10f88b)) }
+        if (m.format != FORMAT) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_4cb4dd))
+        if (m.formatVersion < 1) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_bfb93b))
+        if (m.formatVersion > FORMAT_VERSION) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_c7042d, m.formatVersion))
         return m
     }
 
@@ -127,7 +127,7 @@ object Backup {
         }
         val m = manifest
         if (m != null) return Info(m, n, legacy = false)
-        if (!marked) throw IllegalArgumentException("不是 IRIDIS / IRIS 备份文件")
+        if (!marked) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_584fd2))
         return Info(Manifest(formatVersion = 1, app = "IRIS LocalAI", files = n, includesApiKey = true), n, legacy = true)
     }
 
@@ -173,7 +173,7 @@ object Backup {
                     staged += tmp to dest; n++
                 }
             }
-            if (!marked) throw IllegalArgumentException("不是 IRIDIS / IRIS 备份文件")
+            if (!marked) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_584fd2))
             // Replace whole folders so deleted conversations do not come back half-merged.
             ITEMS.filter { item -> staged.any { (_, d) -> d.path.startsWith(File(root, item).path) } }
                 .map { File(root, it) }.filter { it.isDirectory }.forEach { it.deleteRecursively() }

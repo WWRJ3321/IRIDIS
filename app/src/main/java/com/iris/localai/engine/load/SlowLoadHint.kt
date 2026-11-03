@@ -18,16 +18,16 @@ object SlowLoadHint {
     /** Subtitle under the model name: 「加载中 · GPU · 63 秒」. */
     fun subtitle(backend: Backend?, secs: Long): String {
         val b = backend?.takeIf { it != Backend.CPU }?.let { " · ${it.label}" } ?: ""
-        return if (secs > 0) "加载中$b · $secs 秒" else "加载中$b"
+        return if (secs > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fb9f29, b, secs) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c94fef, b)
     }
 
     /** The explanation card, or null while the wait is still normal / not on the GPU. */
     fun notice(backend: Backend?, secs: Long): String? = when {
         backend != Backend.GPU || secs < NOTICE_SECS -> null
-        secs < LONG_SECS -> "GPU 首次加载要编译着色器并写入缓存，可能需要几分钟，之后再加载会快很多。这一步无法中途取消。"
-        else -> "GPU 已加载 ${secs / 60} 分 ${secs % 60} 秒仍未完成。部分模型（如 Qwen3.5、Agents-A1）在 GPU 上初始化很慢，建议改用 CPU。"
+        secs < LONG_SECS -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_28da7c)
+        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_243197, secs / 60, secs % 60)
     }
 
-    const val ACTION = "改用 CPU"
-    const val SWITCHED = "已把这个模型的后端设为 CPU：当前这次加载一结束，就会自动用 CPU 重新加载"
+    val ACTION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f)
+    val SWITCHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ff73c5)
 }

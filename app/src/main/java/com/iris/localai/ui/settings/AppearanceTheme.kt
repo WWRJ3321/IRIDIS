@@ -31,13 +31,13 @@ import com.iris.localai.ui.theme.IrisType
 
 /** 2.1.4 外观 copy. */
 object AppearanceText {
-    const val PALETTE = "整体配色，浅色和深色都会跟着变"
-    const val BACKGROUND_NONE = "选一张图片放在对话页后面"
-    const val BACKGROUND_SET = "已设置，点按可换一张"
-    const val BACKGROUND_FAILED = "这张图片读不出来，换一张试试"
-    const val BLUR = "让背景图更柔和，不抢文字"
-    const val SCRIM = "越深，文字越清楚"
-    const val REMOVE = "恢复为纯色背景"
+    val PALETTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_56fad7)
+    val BACKGROUND_NONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_90a050)
+    val BACKGROUND_SET: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_74d7bb)
+    val BACKGROUND_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_776483)
+    val BLUR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e3cb6)
+    val SCRIM: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ed865)
+    val REMOVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_621ba4)
 }
 
 /** 配色: one round swatch per [IrisPalette]; the selected one carries a ring and a check mark. */
@@ -45,7 +45,7 @@ object AppearanceText {
 fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-        SettingsRow("配色", subtitle = AppearanceText.PALETTE, icon = com.iris.localai.ui.icons.IrisIcons.Contrast)
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = com.iris.localai.ui.icons.IrisIcons.Contrast)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding).selectableGroup(),
             horizontalArrangement = Arrangement.SpaceBetween,

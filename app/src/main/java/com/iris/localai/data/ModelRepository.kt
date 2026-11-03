@@ -118,7 +118,7 @@ class ModelRepository(private val context: Context) {
      */
     suspend fun moveToShared(keep: Set<String> = emptySet()): Pair<Int, Int> = withContext(Dispatchers.IO) {
         val loc = location()
-        if (!loc.shared) throw IOException("需要先开启「全部文件访问」")
+        if (!loc.shared) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_44db6e))
         val plan = ModelDirs.planMove(loc.privateDir, loc.dir, { entryOf(it) != null }, keep)
         val total = plan.move.sumOf { ModelDirs.totalBytes(it) }
         var base = 0L
@@ -181,18 +181,18 @@ class ModelRepository(private val context: Context) {
 
         val modelsDir = this@ModelRepository.modelsDir
         val target = File(modelsDir, fileName)
-        if (target.exists() || find(fileName) != null) throw IOException("已存在同名模型：$fileName")
+        if (target.exists() || find(fileName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, fileName))
         if (size > 0) {
             val free = StatFs(modelsDir.absolutePath).availableBytes
             if (free < size + 256L * 1024 * 1024) {
-                throw IOException("存储空间不足：需要 ${Format.bytes(size)}，可用 ${Format.bytes(free)}")
+                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(size), Format.bytes(free)))
             }
         }
 
         val part = File(modelsDir, fileName + PART_SUFFIX)
-        if (!activeParts.add(part.name)) throw IOException("该文件正在导入中：$fileName")
+        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ba8e0, fileName))
         try {
-            val input = resolver.openInputStream(uri) ?: throw IOException("无法读取所选文件")
+            val input = resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c15415))
             input.use { ins ->
                 part.outputStream().buffered(1 shl 20).use { out ->
                     val buf = ByteArray(1 shl 20)
@@ -207,7 +207,7 @@ class ModelRepository(private val context: Context) {
                             first = false
                             if (n < 4 || buf[0] != 'G'.code.toByte() || buf[1] != 'G'.code.toByte() ||
                                 buf[2] != 'U'.code.toByte() || buf[3] != 'F'.code.toByte()
-                            ) throw IOException("文件不是有效的 GGUF 模型")
+                            ) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0f2c7d))
                         }
                         out.write(buf, 0, n)
                         copied += n
@@ -218,7 +218,7 @@ class ModelRepository(private val context: Context) {
                     }
                 }
             }
-            if (!part.renameTo(target)) throw IOException("无法写入模型目录")
+            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
             onProgress(1f)
         } catch (t: Throwable) {
             part.delete()
@@ -237,7 +237,7 @@ class ModelRepository(private val context: Context) {
      * MNN model — config.json + llm.mnn + weights + tokenizer — into the models directory.
      */
     suspend fun importFolder(tree: Uri, onProgress: (Float) -> Unit): LocalModel = withContext(Dispatchers.IO) {
-        if (ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException("此版本不支持 MNN 模型")
+        if (ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c1bcc7))
         val qairt = ModelFormat.QAIRT in EngineFactory.supportedFormats
         val resolver = context.contentResolver
         val rootId = android.provider.DocumentsContract.getTreeDocumentId(tree)
@@ -274,8 +274,8 @@ class ModelRepository(private val context: Context) {
             MnnModels.isModelFileSet(topNames) -> ModelFormat.MNN
             qairt && com.iris.localai.engine.geniex.QairtBundle.isFileSet(topNames) -> ModelFormat.QAIRT
             else -> throw IOException(
-                "所选文件夹不是 MNN 模型：需要包含 config.json 和 llm.mnn（例如 taobao-mnn/Qwen3-1.7B-MNN 仓库的全部文件）" +
-                    if (qairt) "；也不是 AI Hub QAIRT 包（需要 genie_config.json / metadata.json 和 .bin 分片）" else "",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.data_ac190c) +
+                    if (qairt) com.iris.localai.I18n.s(com.iris.localai.R.string.data_840d31) else "",
             )
         }
         val folderName = sanitizeFileName(
@@ -285,14 +285,14 @@ class ModelRepository(private val context: Context) {
         )
         val modelsDir = this@ModelRepository.modelsDir
         val target = File(modelsDir, folderName)
-        if (target.exists() || find(folderName) != null) throw IOException("已存在同名模型：$folderName")
+        if (target.exists() || find(folderName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, folderName))
         val total = entries.sumOf { it.size.coerceAtLeast(0) }
         if (total > 0) {
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < total + 256L * 1024 * 1024) throw IOException("存储空间不足：需要 ${Format.bytes(total)}，可用 ${Format.bytes(free)}")
+            if (free < total + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total), Format.bytes(free)))
         }
         val part = File(modelsDir, folderName + PART_SUFFIX)
-        if (!activeParts.add(part.name)) throw IOException("该文件夹正在导入中：$folderName")
+        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_8a5901, folderName))
         try {
             part.deleteRecursively()
             part.mkdirs()
@@ -302,7 +302,7 @@ class ModelRepository(private val context: Context) {
             for (e in entries) {
                 val out = File(part, e.rel).apply { parentFile?.mkdirs() }
                 val uri = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, e.docId)
-                (resolver.openInputStream(uri) ?: throw IOException("无法读取 ${e.rel}")).use { ins ->
+                (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, e.rel))).use { ins ->
                     out.outputStream().buffered(1 shl 20).use { os ->
                         while (true) {
                             coroutineContext.ensureActive()
@@ -318,7 +318,7 @@ class ModelRepository(private val context: Context) {
                     }
                 }
             }
-            if (!part.renameTo(target)) throw IOException("无法写入模型目录")
+            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
             onProgress(1f)
         } catch (t: Throwable) {
             part.deleteRecursively()

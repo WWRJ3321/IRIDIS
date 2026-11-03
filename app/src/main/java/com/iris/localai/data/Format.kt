@@ -25,15 +25,15 @@ object Format {
         val today = startOfDay(now)
         val day = 24L * 3600 * 1000
         return when {
-            ts >= today -> "今天"
-            ts >= today - day -> "昨天"
-            ts >= today - 7 * day -> "7 天内"
-            ts >= today - 30 * day -> "30 天内"
+            ts >= today -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_800dfd)
+            ts >= today - day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_2f8d6f)
+            ts >= today - 7 * day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_b08715)
+            ts >= today - 30 * day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_fc5752)
             else -> {
                 val c = Calendar.getInstance().apply { timeInMillis = ts }
                 val n = Calendar.getInstance().apply { timeInMillis = now }
-                if (c.get(Calendar.YEAR) == n.get(Calendar.YEAR)) "${c.get(Calendar.MONTH) + 1} 月"
-                else "${c.get(Calendar.YEAR)} 年"
+                if (c.get(Calendar.YEAR) == n.get(Calendar.YEAR)) com.iris.localai.I18n.s(com.iris.localai.R.string.data_69d5be, c.get(Calendar.MONTH) + 1)
+                else com.iris.localai.I18n.s(com.iris.localai.R.string.data_b8949d, c.get(Calendar.YEAR))
             }
         }
     }

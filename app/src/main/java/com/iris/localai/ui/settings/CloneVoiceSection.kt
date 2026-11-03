@@ -78,7 +78,7 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
     var creating by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<ClonedVoice?>(null) }
 
-    SectionTitle("克隆音色")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c548f))
     SettingsGroup {
         PackRow(
             pack, state, vm.packBytes(pack), selected = installed && s.cloneVoiceId.isNotEmpty(),
@@ -87,7 +87,7 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
         if (installed) {
             Divider()
             VoiceChoiceRow(
-                title = "不用克隆音色", subtitle = "使用上面选中的朗读模型",
+                title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bf998), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41db47),
                 selected = s.cloneVoiceId.isEmpty() || voices.none { it.id == s.cloneVoiceId },
                 onSelect = { vm.useClone("") },
             )
@@ -98,41 +98,41 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
                     title = v.name,
                     subtitle = if (previewTarget == v.id && preview is SettingsViewModel.Preview.Failed)
                         (preview as SettingsViewModel.Preview.Failed).message
-                    else String.format(Locale.US, "%.1f 秒 · ", v.durationMs / 1000f) + v.text,
+                    else String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_56de7d), v.durationMs / 1000f) + v.text,
                     selected = s.cloneVoiceId == v.id,
                     onSelect = { vm.useClone(v.id) },
                 ) {
                     if (playing && preview == SettingsViewModel.Preview.Loading) TypingDots(Modifier.padding(horizontal = IrisDimens.space8))
                     else PressableIcon(
-                        if (playing) Icons.Outlined.StopCircle else Icons.Outlined.PlayArrow, if (playing) "停止" else "试听",
+                        if (playing) Icons.Outlined.StopCircle else Icons.Outlined.PlayArrow, if (playing) com.iris.localai.I18n.s(com.iris.localai.R.string.service_095e93) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352),
                         iconSize = 22.dp, tint = c.text,
                     ) { vm.previewVoice(v) }
-                    PressableIcon(Icons.Outlined.DeleteOutline, "删除", iconSize = IrisDimens.space20, tint = c.textSecondary) { deleting = v }
+                    PressableIcon(Icons.Outlined.DeleteOutline, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), iconSize = IrisDimens.space20, tint = c.textSecondary) { deleting = v }
                 }
             }
             Divider()
-            SettingsRow("新建克隆音色", subtitle = "录 5–15 秒自己的声音，或选一个音频文件", titleColor = c.accent, onClick = { creating = true })
+            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fc271e), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4d9193), titleColor = c.accent, onClick = { creating = true })
         }
     }
 
     if (installed) {
-        SectionTitle("克隆音色：快 / 像")
+        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3cc941))
         SettingsGroup {
             SegmentedRow(
-                "生成方式",
-                options = listOf("快", "像"),
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ba3c48),
+                options = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8fcedb), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2774eb)),
                 selectedIndex = s.cloneFidelity,
                 onSelect = { i -> vm.update { it.copy(cloneFidelity = i) } },
-                subtitle = if (s.cloneFidelity == 0) "快：步数少，开口快，音色略差一点"
-                else "像：步数多，更像参考声音，但每句开口更慢（约为「快」的 2–3 倍）",
+                subtitle = if (s.cloneFidelity == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_39508e)
+                else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_184e71),
             )
             Divider()
             if (s.cloneFidelity == 0) {
-                SliderRow("步数", s.cloneStepsFast.toFloat(), 2f..8f, "${s.cloneStepsFast}", subtitle = "默认 4", steps = 5) { v ->
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_896303), s.cloneStepsFast.toFloat(), 2f..8f, "${s.cloneStepsFast}", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_64acf2), steps = 5) { v ->
                     vm.update { it.copy(cloneStepsFast = v.toInt()) }
                 }
             } else {
-                SliderRow("步数", s.cloneStepsFine.toFloat(), 6f..24f, "${s.cloneStepsFine}", subtitle = "默认 12", steps = 17) { v ->
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_896303), s.cloneStepsFine.toFloat(), 6f..24f, "${s.cloneStepsFine}", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cd53ff), steps = 17) { v ->
                     vm.update { it.copy(cloneStepsFine = v.toInt()) }
                 }
             }
@@ -142,7 +142,7 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
     if (creating) CloneDialog(vm, onClose = { creating = false; vm.discardCloneDraft() }, onSaved = { creating = false })
     deleting?.let { v ->
         ConfirmDialog(
-            title = "删除音色「${v.name}」？", message = "参考录音会一起删除。", confirmText = "删除",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_77062e, v.name), message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_61763a), confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { vm.deleteClone(v.id) }, onDismiss = { deleting = null },
         )
     }
@@ -186,24 +186,24 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
 
     IrisDialog(
         onDismiss = onClose,
-        title = "新建克隆音色",
-        confirmText = "保存并使用",
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fc271e),
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e8ba81),
         confirmEnabled = ready != null && text.isNotBlank(),
         onConfirm = {
-            vm.saveClone(name.ifBlank { "我的音色 ${voices.size + 1}" }, text)
+            vm.saveClone(name.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8c687c, voices.size + 1) }, text)
             onSaved()
         },
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                "在安静的地方，用平常的语气连续说 5–15 秒（例如读一段文章）。声音会保存在本机，只用于本机合成。",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d2e526),
                 style = IrisType.secondary, color = c.textSecondary,
             )
             when (val d = draft) {
                 is SettingsViewModel.CloneDraft.Recording -> {
-                    Text(String.format(Locale.US, "录音中 %.1f / 15 秒", d.seconds), style = IrisType.rowStrong, color = c.text)
+                    Text(String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_479b73), d.seconds), style = IrisType.rowStrong, color = c.text)
                     IrisProgressBar(progress = (d.seconds / 15f).coerceIn(0f, 1f))
-                    IrisButton("停止录音", vm::stopCloneRecording, icon = Icons.Outlined.StopCircle, modifier = Modifier.fillMaxWidth())
+                    IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2d6864), vm::stopCloneRecording, icon = Icons.Outlined.StopCircle, modifier = Modifier.fillMaxWidth())
                 }
                 is SettingsViewModel.CloneDraft.Processing -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -215,7 +215,7 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
                     if (d is SettingsViewModel.CloneDraft.Failed) Text(d.message, style = IrisType.secondary, color = c.danger)
                     Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                         IrisButton(
-                            if (ready != null) "重录" else "录音", {
+                            if (ready != null) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_385595) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_beacda), {
                                 if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startCloneRecording()
                                 else mic.launch(Manifest.permission.RECORD_AUDIO)
                             },
@@ -223,7 +223,7 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
                             modifier = Modifier.weight(1f),
                         )
                         IrisButton(
-                            "选音频文件", { pick.launch(arrayOf("audio/*")) }, icon = Icons.Outlined.AudioFile,
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71f07b), { pick.launch(arrayOf("audio/*")) }, icon = Icons.Outlined.AudioFile,
                             style = IrisButtonStyle.Outline, modifier = Modifier.weight(1f),
                         )
                     }
@@ -231,19 +231,19 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
             }
             if (ready != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(String.format(Locale.US, "样本 %.1f 秒", ready.seconds), style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f))
-                    IrisButton("听一下", vm::playDraft, icon = Icons.Outlined.PlayArrow, style = IrisButtonStyle.Text, compact = true)
+                    Text(String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d8a081), ready.seconds), style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f))
+                    IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ab387f), vm::playDraft, icon = Icons.Outlined.PlayArrow, style = IrisButtonStyle.Text, compact = true)
                 }
                 ready.note?.let { Text(it, style = IrisType.caption, color = c.textTertiary) }
                 OutlinedTextField(
-                    text, { text = it }, label = { Text("参考文本（这段录音说了什么）") },
+                    text, { text = it }, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3e3f34)) },
                     textStyle = IrisType.body.copy(color = c.text), shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
                     minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("由语音识别自动填写，有错字请改正：越准，克隆越像", style = IrisType.caption) },
+                    supportingText = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_05e288), style = IrisType.caption) },
                 )
                 OutlinedTextField(
-                    name, { name = it.take(20) }, label = { Text("音色名称") }, singleLine = true,
-                    placeholder = { Text("我的音色 ${voices.size + 1}") },
+                    name, { name = it.take(20) }, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2682ee)) }, singleLine = true,
+                    placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8c687c, voices.size + 1)) },
                     textStyle = IrisType.body.copy(color = c.text), shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )

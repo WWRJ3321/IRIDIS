@@ -361,10 +361,10 @@ data class AppSettings(
 
 /** How a conversation's history is fitted into the model's context window. */
 enum class ContextStrategy(val label: String, val hint: String) {
-    SLIDING_WINDOW("滑动窗口", "只保留最近 N 轮对话（成对裁剪）"),
-    TOKEN_BUDGET("按 token 预算", "保留系统提示、第一轮和尽量多的最近对话"),
-    SUMMARY("自动摘要", "超过阈值时用当前模型把早期对话总结成一段，作为前置上下文"),
-    KV_SHIFT("KV 上下文平移", "写满时丢弃中间一半 KV、保留开头（attention sink），不重算；仅 GGUF");
+    SLIDING_WINDOW(com.iris.localai.I18n.s(com.iris.localai.R.string.data_28cd8a), com.iris.localai.I18n.s(com.iris.localai.R.string.data_275fef)),
+    TOKEN_BUDGET(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b8f718), com.iris.localai.I18n.s(com.iris.localai.R.string.data_64a081)),
+    SUMMARY(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b929ee), com.iris.localai.I18n.s(com.iris.localai.R.string.data_ab6492)),
+    KV_SHIFT(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6649d1), com.iris.localai.I18n.s(com.iris.localai.R.string.data_e80b39));
 
     companion object {
         fun of(i: Int?): ContextStrategy = entries.getOrElse(i ?: -1) { TOKEN_BUDGET }

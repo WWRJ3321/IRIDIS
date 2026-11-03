@@ -17,13 +17,13 @@ import java.nio.file.attribute.BasicFileAttributes
 object StorageUsage {
 
     enum class Category(val title: String) {
-        MODELS("模型"),
-        MODEL_CACHE("模型缓存"),
-        VOICE("语音模型"),
-        WORKSPACE("技能 / 工作区文件"),
-        CHATS("聊天记录"),
-        CACHE_LOGS("缓存与日志"),
-        OTHER("其他"),
+        MODELS(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)),
+        MODEL_CACHE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_034fcf)),
+        VOICE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_589dad)),
+        WORKSPACE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_772bfe)),
+        CHATS(com.iris.localai.I18n.s(com.iris.localai.R.string.util_71f3e3)),
+        CACHE_LOGS(com.iris.localai.I18n.s(com.iris.localai.R.string.util_f12faf)),
+        OTHER(com.iris.localai.I18n.s(com.iris.localai.R.string.util_0d98c7)),
     }
 
     /** Stable ids of the entries the screen attaches actions to. */
@@ -292,8 +292,8 @@ object StorageUsage {
             val sharedLeftover = shr.sumOf { it.bytes }
             groups += Group(Category.MODELS, list.sortedByDescending { it.bytes } +
                 listOfNotNull(
-                    Entry(Ids.MODEL_LEFTOVER, "未完成的导入与其他文件", leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
-                    Entry(Ids.MODEL_LEFTOVER_SHARED, "未完成的导入与其他文件（下载/IRIDIS）", sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
+                    Entry(Ids.MODEL_LEFTOVER, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f70b9), leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
+                    Entry(Ids.MODEL_LEFTOVER_SHARED, com.iris.localai.I18n.s(com.iris.localai.R.string.util_45d2eb), sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
                 ))
         }
 
@@ -307,9 +307,9 @@ object StorageUsage {
             val opencl = usage(p.openclCache)
             val npu = usage(p.npuRuntime)
             groups += Group(Category.MODEL_CACHE, per.sortedByDescending { it.bytes } + listOfNotNull(
-                Entry(Ids.CACHE_ORPHAN, "已删除模型留下的缓存", orphan.bytes, orphan.files).takeIf { orphan.files > 0 },
-                Entry(Ids.CACHE_OPENCL, "GGUF GPU 内核缓存", opencl.bytes, opencl.files).takeIf { opencl.files > 0 },
-                Entry(Ids.CACHE_NPU, "NPU 运行库", npu.bytes, npu.files).takeIf { npu.files > 0 },
+                Entry(Ids.CACHE_ORPHAN, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1a637f), orphan.bytes, orphan.files).takeIf { orphan.files > 0 },
+                Entry(Ids.CACHE_OPENCL, com.iris.localai.I18n.s(com.iris.localai.R.string.util_237874), opencl.bytes, opencl.files).takeIf { opencl.files > 0 },
+                Entry(Ids.CACHE_NPU, com.iris.localai.I18n.s(com.iris.localai.R.string.util_e55c25), npu.bytes, npu.files).takeIf { npu.files > 0 },
             ))
         }
 
@@ -323,8 +323,8 @@ object StorageUsage {
             val other = (sizeOf(p.voiceRoot) - inRoot -
                 (if (isUnder(p.voiceClones, p.voiceRoot)) clones.bytes else 0L)).coerceAtLeast(0)
             groups += Group(Category.VOICE, list.sortedByDescending { it.bytes } + listOfNotNull(
-                Entry(Ids.VOICE_CLONES, "克隆的音色", clones.bytes, clones.files, count = cloneCount).takeIf { clones.files > 0 },
-                Entry(Ids.VOICE_OTHER, "其他语音文件", other, external = outside(p.voiceRoot)).takeIf { other > 0 },
+                Entry(Ids.VOICE_CLONES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_689281), clones.bytes, clones.files, count = cloneCount).takeIf { clones.files > 0 },
+                Entry(Ids.VOICE_OTHER, com.iris.localai.I18n.s(com.iris.localai.R.string.util_98b920), other, external = outside(p.voiceRoot)).takeIf { other > 0 },
             ))
         }
 
@@ -343,12 +343,12 @@ object StorageUsage {
             val undo = usage(p.undo)
             val mem = usage(p.memory)
             groups += Group(Category.WORKSPACE, listOfNotNull(
-                Entry(Ids.WS_FILES, "工作区文件", ws.bytes, ws.files, external = ext),
-                Entry(Ids.WS_SKILLS, "技能", skills.bytes, skills.files, count = skillCount, external = outside(skillsDir)).takeIf { skills.files > 0 },
-                kb?.let { Entry(Ids.WS_KNOWLEDGE, "知识库", kbUsage.bytes, kbUsage.files, count = kbUsage.files, external = outside(it)) }?.takeIf { kbUsage.files > 0 },
-                Entry(Ids.WS_PRIVATE, "应用私有目录中的旧工作区", priv.bytes, priv.files).takeIf { priv.files > 0 },
-                Entry(Ids.WS_UNDO, "撤销记录", undo.bytes, undo.files).takeIf { undo.files > 0 },
-                Entry(Ids.WS_MEMORY, "长期记忆", mem.bytes, mem.files).takeIf { mem.files > 0 },
+                Entry(Ids.WS_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), ws.bytes, ws.files, external = ext),
+                Entry(Ids.WS_SKILLS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143), skills.bytes, skills.files, count = skillCount, external = outside(skillsDir)).takeIf { skills.files > 0 },
+                kb?.let { Entry(Ids.WS_KNOWLEDGE, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e4333), kbUsage.bytes, kbUsage.files, count = kbUsage.files, external = outside(it)) }?.takeIf { kbUsage.files > 0 },
+                Entry(Ids.WS_PRIVATE, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1f6d24), priv.bytes, priv.files).takeIf { priv.files > 0 },
+                Entry(Ids.WS_UNDO, com.iris.localai.I18n.s(com.iris.localai.R.string.util_10f81c), undo.bytes, undo.files).takeIf { undo.files > 0 },
+                Entry(Ids.WS_MEMORY, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), mem.bytes, mem.files).takeIf { mem.files > 0 },
             ))
         }
 
@@ -360,9 +360,9 @@ object StorageUsage {
             val att = usage(p.attachments)
             val idx = p.historyDb.fold(Usage.ZERO) { a, f -> a + usage(f) }
             groups += Group(Category.CHATS, listOfNotNull(
-                Entry(Ids.CHATS, "对话", conv.bytes, conv.files, count = count),
-                Entry(Ids.ATTACHMENTS, "附件", att.bytes, att.files, count = att.files),
-                Entry(Ids.HISTORY_INDEX, "历史搜索索引", idx.bytes, idx.files).takeIf { idx.files > 0 },
+                Entry(Ids.CHATS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362), conv.bytes, conv.files, count = count),
+                Entry(Ids.ATTACHMENTS, com.iris.localai.I18n.s(com.iris.localai.R.string.util_c9a6ee), att.bytes, att.files, count = att.files),
+                Entry(Ids.HISTORY_INDEX, com.iris.localai.I18n.s(com.iris.localai.R.string.util_6e9c11), idx.bytes, idx.files).takeIf { idx.files > 0 },
             ))
         }
 
@@ -372,16 +372,16 @@ object StorageUsage {
             val logs = p.logFiles.fold(Usage.ZERO) { a, f -> a + usage(f) }
             val stage = usage(p.restoreStage)
             groups += Group(Category.CACHE_LOGS, listOfNotNull(
-                Entry(Ids.CACHE_FILES, "临时缓存", cache.bytes, cache.files),
-                Entry(Ids.LOG_FILES, "日志与崩溃记录", logs.bytes, logs.files).takeIf { logs.files > 0 },
-                Entry(Ids.RESTORE_STAGE, "未完成的恢复备份", stage.bytes, stage.files).takeIf { stage.files > 0 },
+                Entry(Ids.CACHE_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_b0d417), cache.bytes, cache.files),
+                Entry(Ids.LOG_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_b9dad5), logs.bytes, logs.files).takeIf { logs.files > 0 },
+                Entry(Ids.RESTORE_STAGE, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1d0149), stage.bytes, stage.files).takeIf { stage.files > 0 },
             ))
         }
 
         // 其他 — settings, databases, WebView data, …: what the total has that no category claimed.
         val claimed = groups.sumOf { it.appBytes }
         val other = (total - claimed).coerceAtLeast(0)
-        groups += Group(Category.OTHER, listOf(Entry(Ids.OTHER, "设置、数据库、WebView 等", other)))
+        groups += Group(Category.OTHER, listOf(Entry(Ids.OTHER, com.iris.localai.I18n.s(com.iris.localai.R.string.util_30bbce), other)))
         return Report(total, groups, leftoverList)
     }
 

@@ -118,15 +118,15 @@ object LiveResourcePolicy {
     /** 1.7.5: the one short status line under the tier bar (null = nothing changed yet). */
     fun statusText(r: TierApplyResult?): String? = when (r) {
         null -> null
-        TierApplyResult.LIVE -> "实时生效"
-        TierApplyResult.LIVE_THREADS_ON_RELOAD -> "实时生效 · 线程数空闲时重载"
-        TierApplyResult.RELOAD -> "空闲时重载生效"
-        TierApplyResult.NEXT_REPLY -> "下一条回复生效"
-        TierApplyResult.RELOADING -> "正在重载模型…"
-        TierApplyResult.RELOADED -> "已重载生效"
-        TierApplyResult.RELOAD_FAILED -> "重载失败，已恢复原档"
-        TierApplyResult.NO_MODEL -> "加载模型时生效"
-        TierApplyResult.NEXT_LOAD -> "下次加载模型时生效"
+        TierApplyResult.LIVE -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4633d9)
+        TierApplyResult.LIVE_THREADS_ON_RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c18fb3)
+        TierApplyResult.RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_998c99)
+        TierApplyResult.NEXT_REPLY -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_08d6a2)
+        TierApplyResult.RELOADING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_54e6e3)
+        TierApplyResult.RELOADED -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6d5736)
+        TierApplyResult.RELOAD_FAILED -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_acede9)
+        TierApplyResult.NO_MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b89512)
+        TierApplyResult.NEXT_LOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_862082)
     }
 
     /**
@@ -141,11 +141,11 @@ object LiveResourcePolicy {
 
     /** Parts of the new plan that this reply will not use (shown / logged honestly). */
     fun deferredParts(current: ResourcePlan?, next: ResourcePlan, mode: LiveApply): List<String> {
-        if (mode != LiveApply.IMMEDIATE) return listOf("全部")
+        if (mode != LiveApply.IMMEDIATE) return listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a8b0c2))
         if (current == null) return emptyList()
         val out = ArrayList<String>(2)
-        if (current.batch != next.batch) out += "批量"
-        if (current.allowGpu != next.allowGpu) out += "自动选 GPU"
+        if (current.batch != next.batch) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e099c2)
+        if (current.allowGpu != next.allowGpu) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1c2f26)
         return out
     }
 
@@ -155,23 +155,23 @@ object LiveResourcePolicy {
      * right away when idle, after the current reply when generating. Never "立即生效" for them.
      */
     fun note(mode: LiveApply, generating: Boolean): String = when {
-        mode == LiveApply.LIVE_POLICY && !generating -> "推理可用的资源 · 核心/优先级实时调整，线程数空闲时重新加载"
-        mode == LiveApply.LIVE_POLICY -> "生成中 · 核心/优先级实时调整，线程数本条结束后重新加载"
-        mode == LiveApply.RELOAD && !generating -> "推理可用的资源 · 空闲时自动重新加载模型生效（约几秒）"
-        mode == LiveApply.RELOAD -> "生成中 · 本条结束后重新加载生效"
-        !generating -> "推理可用的资源 · 下一条回复生效"
-        mode == LiveApply.IMMEDIATE -> "生成中 · 线程/核心/优先级立即生效（批量下一条）"
-        else -> "生成中 · GPU 推理，下一条回复生效"
+        mode == LiveApply.LIVE_POLICY && !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_062c7f)
+        mode == LiveApply.LIVE_POLICY -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_3e24d4)
+        mode == LiveApply.RELOAD && !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e39bbb)
+        mode == LiveApply.RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8e41e9)
+        !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_bcc05e)
+        mode == LiveApply.IMMEDIATE -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0a66ca)
+        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_7f77bf)
     }
 
     /** 1.7.8: short card status when the model runs on the GPU / NPU (null on the CPU). */
-    fun backendNote(active: Backend?): String? = if (active == null || active == Backend.CPU) null else "GPU：只影响宿主线程"
+    fun backendNote(active: Backend?): String? = if (active == null || active == Backend.CPU) null else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_243289)
 
     /** 1.7.8: the full sentence for settings pages. */
-    const val GPU_SCOPE_NOTE = "GPU / NPU 后端：档位只影响宿主线程（提交计算、采样、分词和驱动线程），推理本身在 GPU / NPU 上；线程数基本不起作用"
+    val GPU_SCOPE_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2203f1)
 
     /** 1.7.4: while the same model reloads to apply a tier. */
-    const val RELOADING_NOTE = "正在重新加载模型，应用新的资源档…"
+    val RELOADING_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ccf322)
 }
 
 /**
@@ -193,8 +193,8 @@ class PendingLive<T : Any> {
 object ResourceLog {
     /** What the tier controls on each backend, said once per line so nobody reads too much into it. */
     fun scope(active: Backend?): String = when (active) {
-        Backend.CPU, null -> "CPU 后端：档位决定推理线程数、核心与优先级"
-        else -> "GPU/NPU 后端：档位只影响宿主线程（提交、采样、分词与驱动线程），线程数基本不起作用"
+        Backend.CPU, null -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6fc6f4)
+        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a6ac8b)
     }
 
     /**

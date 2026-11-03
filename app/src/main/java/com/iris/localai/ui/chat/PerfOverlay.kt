@@ -59,9 +59,9 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
             .padding(horizontal = 10.dp, vertical = IrisDimens.space6),
     ) {
         val style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight)
-        Text("速度 " + (speed?.let { String.format(Locale.US, "%.1f 字/秒", it) } ?: "—"), style = style, color = c.text)
+        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4485a1) + (speed?.let { String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_292451), it) } ?: "—"), style = style, color = c.text)
         Text("CPU " + (r?.cpuPercent?.let { String.format(Locale.US, "%.0f%%", it) } ?: "—"), style = style, color = c.textSecondary)
-        Text("内存 " + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
-        r?.gpuPercent?.let { Text("GPU $it%（整机）", style = style, color = c.textSecondary) }
+        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bcf4c8) + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
+        r?.gpuPercent?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4cb9bb, it), style = style, color = c.textSecondary) }
     }
 }

@@ -35,11 +35,11 @@ import com.iris.localai.ui.theme.IrisType
  */
 @Composable
 internal fun GenieXSection(vm: SettingsViewModel, gx: GenieXSupport) {
-    SectionTitle("GenieX（高通）")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0ab786))
     SettingsGroup {
         GenieXRuntimeRow(gx, onInstall = vm::installGeniex, onCancel = vm::cancelGeniex, onDelete = vm::deleteGeniex)
     }
-    GroupFootnote("GGUF 模型选 NPU 时用 GenieX 运行。AI Hub QAIRT 模型文件夹可直接导入，仅在 NPU 上运行。")
+    GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9a3ae4))
 }
 
 @Composable
@@ -59,24 +59,24 @@ private fun GenieXRuntimeRow(gx: GenieXSupport, onInstall: () -> Unit, onCancel:
     val (subtitle, action) = when (val s = st) {
         is NpuState.Unsupported -> s.reason to null
         NpuState.NotInstalled ->
-            "$chip。GenieX 引擎所需；约 ${mb(gx.downloadBytes)} MB 下载，只保留本机用到的库，安装后约 ${mb(gx.installedBytes)} MB" +
-                (if (gx.qairtSupported) "" else "（本机不支持 QAIRT 包，仅 GGUF）") to ("下载" to install)
-        is NpuState.Downloading -> "正在下载 ${mb(s.downloaded)} / ${mb(s.total)} MB" to ("取消" to onCancel)
-        NpuState.Installed -> "$chip · 已安装（GenieX ${GenieX.VERSION}）" to ("删除" to onDelete)
-        is NpuState.Failed -> s.message to ("重试" to install)
-        is NpuState.NeedsRepair -> "$chip · 需要修复（${s.reason}）。重新下载即可修复" to ("修复" to install)
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc39b3, chip, mb(gx.downloadBytes), mb(gx.installedBytes)) +
+                (if (gx.qairtSupported) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cd84be)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) to install)
+        is NpuState.Downloading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b5c7e, mb(s.downloaded), mb(s.total)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2) to onCancel)
+        NpuState.Installed -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d58a87, chip, GenieX.VERSION) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) to onDelete)
+        is NpuState.Failed -> s.message to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) to install)
+        is NpuState.NeedsRepair -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5a6769, chip, s.reason) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f82661) to install)
     }
     Column {
         SettingsRow(
-            "GenieX 运行库",
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5bff1c),
             subtitle = subtitle,
             subtitleColor = if (st is NpuState.Failed || st is NpuState.NeedsRepair) Iris.colors.danger else Iris.colors.textTertiary,
             trailing = action?.let { (label, fn) ->
                 {
                     IrisButton(
                         label, fn, compact = true,
-                        style = if (label == "删除" || label == "取消") IrisButtonStyle.Text else IrisButtonStyle.Outline,
-                        destructive = label == "删除",
+                        style = if (label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) || label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)) IrisButtonStyle.Text else IrisButtonStyle.Outline,
+                        destructive = label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
                     )
                 }
             },
@@ -95,11 +95,11 @@ internal object GenieXConsent {
     @Volatile var accepted: Boolean = false
 }
 
-internal const val GENIEX_LICENSE_TITLE = "高通 GenieX 运行库许可"
-internal const val GENIEX_LICENSE_BODY =
-    "GenieX 的 Kotlin 接口层按 BSD-3-Clause 开源；它的原生运行库（含 Qualcomm AI Engine Direct / QNN、Hexagon 内核）为高通专有软件，" +
-        "不属于本项目开源部分，将从 Maven Central（com.qualcomm.qti:geniex-android:${GenieX.VERSION}，失败时用阿里云镜像）下载，校验 SHA-256 后只保留本机需要的库。" +
-        "下载即表示你同意高通的使用条款（Qualcomm Terms of Use）。"
+internal val GENIEX_LICENSE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6b9f80)
+internal val GENIEX_LICENSE_BODY: String get() =
+    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f4b3f) +
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c97ff7, GenieX.VERSION) +
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_358252)
 internal const val GENIEX_LICENSE_URL = "https://www.qualcomm.com/site/terms-of-use"
 
 @Composable
@@ -108,15 +108,15 @@ private fun GenieXLicenseDialog(onAccept: () -> Unit, onDismiss: () -> Unit) {
     IrisDialog(
         onDismiss = onDismiss,
         title = GENIEX_LICENSE_TITLE,
-        confirmText = "同意并下载",
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad7951),
         onConfirm = onAccept,
-        dismissText = "取消",
+        dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2),
     ) {
         Column {
             Text(GENIEX_LICENSE_BODY, style = IrisType.secondary, color = Iris.colors.textSecondary)
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(
-                "查看条款", {
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81d193), {
                     runCatching {
                         context.startActivity(
                             android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(GENIEX_LICENSE_URL))

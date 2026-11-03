@@ -69,22 +69,22 @@ import java.io.File
 
 /** 1.9.0 one-line texts of 设置 › 智能体 (unit-tested). */
 object AgentText {
-    const val PLAN_FIRST = "多步任务先列步骤，你确认后再执行"
-    const val LAZY = "工具用法用到时再载入，省上下文、首字更快"
-    const val NAV = "工具、权限与工作区"
-    const val MODE = "输入框也可切换；关闭则不调用工具"
-    const val STEPS = "一次回复最多调用几次工具"
-    const val PERMISSION_NOTE = "点工具右侧的权限可切换：允许 = 直接执行，询问 = 每次确认，拒绝 = 不执行。"
-    const val TOOLS = "工具与权限"
-    const val WORKSPACE_NOTE = "智能体只能访问这个工作区；修改前自动备份，可撤销最近 20 步。"
+    val PLAN_FIRST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_82dbde)
+    val LAZY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_088993)
+    val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7b8eeb)
+    val MODE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7228e9)
+    val STEPS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_171de9)
+    val PERMISSION_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_08d02e)
+    val TOOLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_82e503)
+    val WORKSPACE_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3c92e3)
     /** 1.10.0 workspace location texts. */
-    const val LOCATION = "工作区位置"
-    const val LOCATION_NOTE = "默认在「下载/IRIDIS/workspace」，文件管理器可见；切换位置不会搬动已有文件。"
-    const val SAF = "授权访问这个文件夹（备选）"
-    const val SAF_HINT = "授权 Download/IRIDIS 一次，智能体才能读写你放进 workspace 的文件；已开「全部文件访问」时不需要。"
-    const val SAF_DONE = "已授权：智能体可读写你放进去的文件"
-    const val SAF_WRONG = "请选择 Download/IRIDIS 这个文件夹（选其他文件夹不会生效；智能体只会访问其中的 workspace）"
-    fun path(p: String) = "实际路径：$p"
+    val LOCATION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c637d6)
+    val LOCATION_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6b1d8b)
+    val SAF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4365e4)
+    val SAF_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_51ab4f)
+    val SAF_DONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_107ee5)
+    val SAF_WRONG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4c8ee5)
+    fun path(p: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f89c73, p)
     val PERMISSION_OPTIONS = listOf(Permission.ALLOW, Permission.ASK, Permission.DENY)
 
     fun size(bytes: Long): String = when {
@@ -144,25 +144,25 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
         value = withContext(Dispatchers.IO) { agent.undo.count() to agent.undo.peek()?.let { "${it.action} ${it.path}" } }
     }
 
-    SubpageScaffold("智能体", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), onBack) {
         ScrollBody {
-            SectionTitle("模式")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f0789e))
             SettingsGroup {
-                SwitchRow("智能体模式", s.agentMode, subtitle = AgentText.MODE, icon = com.iris.localai.ui.icons.IrisIcons.Agent) { on ->
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c), s.agentMode, subtitle = AgentText.MODE, icon = com.iris.localai.ui.icons.IrisIcons.Agent) { on ->
                     agent.settings.update { it.copy(agentMode = on) }
                 }
                 Divider()
                 SliderRow(
-                    "最大步数", s.maxSteps.toFloat(), AgentSettings.MIN_STEPS.toFloat()..AgentSettings.MAX_STEPS.toFloat(),
-                    "${s.maxSteps} 步", subtitle = AgentText.STEPS,
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c3e1c1), s.maxSteps.toFloat(), AgentSettings.MIN_STEPS.toFloat()..AgentSettings.MAX_STEPS.toFloat(),
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8fdb54, s.maxSteps), subtitle = AgentText.STEPS,
                     steps = AgentSettings.MAX_STEPS - AgentSettings.MIN_STEPS - 1,
                 ) { v -> agent.settings.update { it.copy(maxSteps = v.toInt()) } }
                 // 2.0.x: the less-used switches fold away.
                 Divider()
                 com.iris.localai.ui.components.AdvancedFold("agent-mode") {
-                    SwitchRow("计划模式", s.planFirst, subtitle = AgentText.PLAN_FIRST) { on -> agent.settings.update { it.copy(planFirst = on) } }
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_97de54), s.planFirst, subtitle = AgentText.PLAN_FIRST) { on -> agent.settings.update { it.copy(planFirst = on) } }
                     Divider()
-                    SwitchRow("按需载入工具", s.lazyTools, subtitle = AgentText.LAZY) { on -> agent.settings.update { it.copy(lazyTools = on) } }
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e816f9), s.lazyTools, subtitle = AgentText.LAZY) { on -> agent.settings.update { it.copy(lazyTools = on) } }
                 }
             }
 
@@ -189,14 +189,14 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             SettingsGroup {
                 val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
                 SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
-                    subtitle = if (mcpServers.isEmpty()) McpText.NAV else "${mcpServers.count { it.enabled }} / ${mcpServers.size} 个服务已启用",
+                    subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
                     onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
             }
 
             // the agent's in-app browser.
-            SectionTitle("浏览器")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302))
             SettingsGroup {
-                SettingsRow("浏览器", icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
                     onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
             }
 
@@ -206,7 +206,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             // search provider, skills, backup and logs.
             AgentExtraSections()
 
-            SectionTitle("工作区")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1))
             SettingsGroup {
                 // 1.10.0: 下载/IRIDIS/workspace (2.1.1, default) or 应用私有目录, with the real path.
                 Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
@@ -245,9 +245,9 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                         onDispose { lifecycle.removeObserver(obs) }
                     }
                     SettingsRow(
-                        "全部文件访问（推荐）", icon = com.iris.localai.ui.icons.IrisIcons.Folder,
-                        subtitle = if (allFiles) "已开启 · 可读写工作区里的任何文件"
-                        else "未开启 · 点按去系统设置开启，否则你放进工作区的文件可能读不到",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5cd94f), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+                        subtitle = if (allFiles) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_174efe)
+                        else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_eea705),
                         onClick = {
                             runCatching {
                                 context.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
@@ -264,12 +264,12 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 }
                 Divider()
                 SettingsRow(
-                    "撤销上次修改", icon = Icons.AutoMirrored.Outlined.Undo,
-                    subtitle = undoInfo.second?.let { "撤销「$it」 · 还可撤销 ${undoInfo.first} 步" } ?: "没有可撤销的修改",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e9f3fb), icon = Icons.AutoMirrored.Outlined.Undo,
+                    subtitle = undoInfo.second?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_506e19, it, undoInfo.first) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_40caf8),
                     enabled = undoInfo.first > 0,
                     onClick = {
                         scope.launch {
-                            message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { "撤销失败：${it.message}" } } ?: "没有可撤销的修改"
+                            message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6336b9, it.message) } } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_40caf8)
                             agent.changed()
                         }
                     },
@@ -277,8 +277,8 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 Divider()
                 // 1.13.0: one row into the 文件 page (the inline list duplicated it and read whole files into memory).
                 SettingsRow(
-                    "工作区文件", icon = com.iris.localai.ui.icons.IrisIcons.Folder,
-                    subtitle = (if (files.isEmpty()) "还没有文件 · 智能体写入的文件会出现在这里" else "${files.size} 个文件 · ${AgentText.size(files.sumOf { it.size })}") +
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+                    subtitle = (if (files.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d22dc6) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, files.size, AgentText.size(files.sumOf { it.size }))) +
                         "\n" + ws.root.path,
                     onClick = onOpenFiles,
                     trailing = { com.iris.localai.ui.components.Chevron() },
@@ -316,7 +316,7 @@ private fun ToolRow(
                         permission.label + " ▾", style = IrisType.secondary, color = Iris.colors.textSecondary, maxLines = 1,
                         modifier = Modifier
                             .clip(IrisRadius.pillShape)
-                            .clickable(onClickLabel = "更改权限") { menu = true }
+                            .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_82635d)) { menu = true }
                             .padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
                     )
                     com.iris.localai.ui.components.IrisMenu(menu, { menu = false }) {

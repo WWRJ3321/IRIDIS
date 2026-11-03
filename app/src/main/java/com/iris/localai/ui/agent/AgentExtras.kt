@@ -65,10 +65,10 @@ fun AgentExtraSections() {
     val c = Iris.colors
 
     // ---- 联网搜索 ----
-    SectionTitle("联网搜索")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7ad823))
     SettingsGroup {
         Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space6)) {
-            SettingsRow("搜索服务", subtitle = s.search.label)
+            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1e3939), subtitle = s.search.label)
             // 2.0.0: six services no longer fit a segmented control: one check row each.
             SearchProvider.entries.forEach { p ->
                 Divider()
@@ -81,24 +81,24 @@ fun AgentExtraSections() {
                 OutlinedTextField(
                     url, { url = it; agent.settings.update { st -> st.copy(searxUrl = it.trim()) } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8),
-                    singleLine = true, label = { Text("SearXNG 地址，如 https://searx.example.org") },
+                    singleLine = true, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a31d9b)) },
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
                 )
             }
         }
     }
-    GroupFootnote("「谷歌/必应（浏览器）」用内置浏览器搜索，遇到人机验证请在浏览器页完成一次。其他服务只收到搜索词。自建 SearXNG 需公网地址。")
+    GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_add6ac))
 
     // ---- 技能 ----
-    SectionTitle("技能")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143))
     val skills by produceState(emptyList<com.iris.localai.agent.SkillInfo>(), s) {
         value = withContext(Dispatchers.IO) { agent.skills.invalidate(); agent.skills.all() }
     }
     SettingsGroup {
-        if (skills.isEmpty()) SettingsRow("没有技能")
+        if (skills.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3d3223))
         skills.forEachIndexed { i, sk ->
             if (i > 0) Divider()
-            SettingsRow(sk.name, subtitle = sk.description.ifBlank { "（无说明）" } + " · " + sk.source, subtitleMaxLines = 2)
+            SettingsRow(sk.name, subtitle = sk.description.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_69d2be) } + " · " + sk.source, subtitleMaxLines = 2)
         }
     }
     GroupFootnote(SkillText.FOLDER)
@@ -120,7 +120,7 @@ fun BackupSection() {
     var includeApiKey by remember { mutableStateOf(false) }
     val c = Iris.colors
     // ---- 备份与日志 ----
-    SectionTitle("备份与日志")
+    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b56fbe))
     val exportBackup = rememberLauncherForActivityResult(CreateDocumentInConfig("application/zip")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val withKey = includeApiKey
@@ -131,7 +131,7 @@ fun BackupSection() {
                         Backup.export(Backup.dataDir(context), it, com.iris.localai.BuildConfig.VERSION_NAME,
                             workspace = agent.appRoot, includeApiKey = withKey)
                     }
-                }.fold({ "已备份 $it 个文件" + if (withKey) "（含 API 密钥，请妥善保管）" else "" }, { "备份失败：${it.message}" })
+                }.fold({ com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dfdfa5, it) + if (withKey) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_732b53) else "" }, { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc5948, it.message) })
             }
         }
     }
@@ -139,7 +139,7 @@ fun BackupSection() {
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val info = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openInputStream(uri)!!.use { Backup.inspect(it) } } }
-            info.onSuccess { confirmRestore = uri to it }.onFailure { message = "无法读取备份：${it.message}" }
+            info.onSuccess { confirmRestore = uri to it }.onFailure { message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c2e70a, it.message) }
         }
     }
     val exportLogs = rememberLauncherForActivityResult(CreateDocumentInConfig("text/plain")) { uri ->
@@ -147,69 +147,69 @@ fun BackupSection() {
         scope.launch {
             message = withContext(Dispatchers.IO) {
                 runCatching { context.contentResolver.openOutputStream(uri)!!.use { it.write(LogExport.collect().toByteArray()) } }
-                    .fold({ "日志已导出" }, { "导出失败：${it.message}" })
+                    .fold({ com.iris.localai.I18n.s(com.iris.localai.R.string.agent_af33a3) }, { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e3fdcf, it.message) })
             }
         }
     }
     SettingsGroup {
-        SettingsRow("导出备份", subtitle = "对话、记忆、技能、模型配置和设置（不含模型与语音包）", onClick = { includeApiKey = false; askExport = true })
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9344b8), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3febe2), onClick = { includeApiKey = false; askExport = true })
         Divider()
-        SettingsRow("导入备份", subtitle = "会替换现在的对话和设置，完成后 IRIDIS 自动重启", onClick = { pickRestore.launch(arrayOf("application/zip", "application/octet-stream")) })
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_90c045), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9023e9), onClick = { pickRestore.launch(arrayOf("application/zip", "application/octet-stream")) })
         Divider()
-        SettingsRow("导出日志", subtitle = "本次运行的日志，反馈问题时附上", onClick = {
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_609e15), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ad19c0), onClick = {
             exportLogs.launch("IRIS-log-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".txt")
         })
     }
 
     if (askExport) {
         IrisDialog(
-            onDismiss = { askExport = false }, title = "导出备份",
-            confirmText = "选择保存位置",
+            onDismiss = { askExport = false }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9344b8),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b08bb8),
             onConfirm = {
                 askExport = false
                 exportBackup.launch("IRIDIS-backup-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".zip")
             },
         ) {
             Column {
-                Text("包含对话、记忆、技能、模型配置和设置。", style = IrisType.secondary, color = c.textSecondary)
-                com.iris.localai.ui.components.SwitchRow("包含 API 密钥", checked = includeApiKey,
-                    subtitle = "本地 API 服务的密钥；默认不导出") { includeApiKey = it }
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e4ad4f), style = IrisType.secondary, color = c.textSecondary)
+                com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_436b96), checked = includeApiKey,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ee037a)) { includeApiKey = it }
             }
         }
     }
     confirmRestore?.let { (uri, info) ->
         val m = info.manifest
-        val date = if (m.createdAt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT).format(java.util.Date(m.createdAt)) else "未知"
-        val version = m.appVersion.ifBlank { if (info.legacy) "IRIS LocalAI（旧版）" else "未知" }
+        val date = if (m.createdAt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT).format(java.util.Date(m.createdAt)) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1622dc)
+        val version = m.appVersion.ifBlank { if (info.legacy) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c1e1ee) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1622dc) }
         IrisDialog(
-            onDismiss = { confirmRestore = null }, title = "导入备份？",
-            confirmText = "导入并重启", destructive = true,
+            onDismiss = { confirmRestore = null }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_441799),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_449fd7), destructive = true,
             onConfirm = {
                 confirmRestore = null
                 scope.launch {
                     val r = withContext(Dispatchers.IO) {
                         runCatching { context.contentResolver.openInputStream(uri)!!.use { Backup.restore(Backup.dataDir(context), it, workspace = agent.appRoot) } }
                     }
-                    r.onSuccess { Backup.restart(context) }.onFailure { message = "导入失败：${it.message}" }
+                    r.onSuccess { Backup.restart(context) }.onFailure { message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5afd82, it.message) }
                 }
             },
         ) {
             Text(
-                "版本：$version\n日期：$date\n文件数：${info.dataFiles}" + (if (m.includesApiKey && !info.legacy) "\n包含 API 密钥" else "") +
-                    "\n\n现在的对话、记忆和设置会被备份里的内容替换，导入完成后 IRIDIS 会自动重启。",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c2a42c, version, date, info.dataFiles) + (if (m.includesApiKey && !info.legacy) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_05df6c) else "") +
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f7cd9b),
                 style = IrisType.secondary, color = c.textSecondary,
             )
         }
     }
     message?.let { m ->
-        IrisDialog(onDismiss = { message = null }, title = m, confirmText = "好", onConfirm = { message = null }, dismissText = null)
+        IrisDialog(onDismiss = { message = null }, title = m, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ac2c8f), onConfirm = { message = null }, dismissText = null)
     }
 }
 
 object SkillText {
     /** 2.1.1: user skills are an app resource beside the workspace (the agent reads them only through the 技能 tool). */
-    val FOLDER = "自定义技能放在 ${com.iris.localai.agent.StorageLayout.label(com.iris.localai.agent.StorageLayout.SKILLS)}/<名字>/SKILL.md" +
-        "（应用私有目录模式下在应用内部）。智能体只能用「技能」工具读取，不能修改。"
+    val FOLDER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c48c91, com.iris.localai.agent.StorageLayout.label(com.iris.localai.agent.StorageLayout.SKILLS)) +
+        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0062b5)
 }
 
 /**
