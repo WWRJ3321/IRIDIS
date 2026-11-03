@@ -340,6 +340,10 @@ object GenerateImageTool : SuspendTool {
     override val description = "用本机模型生成或修改图片（约 1 分钟），保存到工作区 images/"
     // 2.1.7: negative_prompt, seed, strength, width, height, steps, cfg are accepted but not advertised (prompt budget).
     override val promptLine = "generate_image(prompt, image?): on-device picture; omit image for a new picture; image ONLY to edit an existing file the user attached or named"
+    /** 2.3.2 角色卡: the card's image style, put in front of the prompt in that card's chats ("" = none). */
+    @Volatile var imageStyle: String = ""
+    fun withStyle(p: Parsed, style: String): Parsed =
+        if (style.isBlank() || p.prompt.startsWith(style.trim())) p else p.copy(prompt = style.trim().trimEnd(',') + ", " + p.prompt)
     override val risk = ToolRisk.WRITE
     /** Only ever creates a new file (never overwrites), so it runs without asking. */
     override val defaultPermission: Permission get() = Permission.ALLOW
@@ -397,7 +401,7 @@ object GenerateImageTool : SuspendTool {
             ?: return ToolResult(false, "Error: the available image model cannot edit a picture; call without image", "该模型暂不支持参考图")
         else models.first()
         val backend = env.imageGen!!
-        val req = request(p, model, init?.path)
+        val req = request(withStyle(p, imageStyle), model, init?.path)
         // 2.2.14: the model in use is always named.
         progress("${model.name} 生成中…")
         val png = try {

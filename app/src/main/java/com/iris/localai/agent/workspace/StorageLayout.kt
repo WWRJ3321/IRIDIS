@@ -27,11 +27,13 @@ object StorageLayout {
     const val KNOWLEDGE = "knowledge"
     const val CONFIG = "config"
     const val WORKSPACE = "workspace"
+    /** 2.3.2 角色卡 (CharacterStore). */
+    const val CHARACTERS = "characters"
     /** 应用私有目录 mode: `filesDir/iridis` holds skills/ and knowledge/ (beside `filesDir/workspace`). */
     const val PRIVATE_APP_DIR = "iridis"
 
     /** Names at the root that belong to the app and are never moved into the workspace. */
-    val RESERVED = listOf(MODELS, VOICE, SKILLS, KNOWLEDGE, CONFIG, WORKSPACE)
+    val RESERVED = listOf(MODELS, VOICE, SKILLS, KNOWLEDGE, CONFIG, WORKSPACE, CHARACTERS)
 
     /** Written at the root after a complete migration. */
     const val MARKER = ".iridis-layout-v2"

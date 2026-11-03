@@ -91,7 +91,7 @@ IRIDIS/
 - 采样参数变更：对 MNN 打了一个小补丁 `Llm::reset_sampler()`（scripts/mnn-port-patch.py）。线程数在加载时确定（MNN 不支持运行中改线程，自适应线程对 MNN 不生效，限速 pacer 仍生效）。
 - 思考：加载时用模板渲染探测是否支持 `enable_thinking`、是否在生成提示里预开 `<think>`；与 llama.cpp 路径一致地交给 StreamingThinkSplitter。
 - 后端：设置 → 性能 → MNN 后端（CPU / GPU OpenCL）。OpenCL 不可用 / 加载失败 → CPU；OpenCL 加载或首轮生成导致进程崩溃 → 该模型以后自动用 CPU（MnnGpuGuard）。
-- NPU（QNN / Hexagon）未编入：MNN 的 NPU 路径需要用高通 QNN SDK 的 x86 工具按芯片离线转换专门导出的模型，taobao-mnn 通用模型不能直接上 NPU。
+- MNN 的 NPU（QNN / Hexagon）未编入：MNN 的 NPU 路径需要用高通 QNN SDK 的 x86 工具按芯片离线转换专门导出的模型，taobao-mnn 通用模型不能直接上 NPU。
 
 ## 1.7.1：统一后端 / 资源档 / 按模型配置 / 上下文管理
 - **后端**（`engine/Backend.kt`）：`Backend { CPU, GPU, NPU }`；`BackendCapabilities.options(format, file, env)` 列出每个引擎对该模型可用的后端及不可用原因（GGUF：CPU/GPU-OpenCL；LiteRT：通用文件 CPU/GPU，`_sm8750` 编译文件只能 NPU；MNN：CPU/GPU-OpenCL）。`EngineManager.load` 按 `BackendPlanner.chain`（所选后端起，NPU→GPU→CPU，跳过崩溃过的）逐个尝试；引擎内部不再回退。`BackendCrashMemory` 在加载与首次生成前后 arm/disarm，上次退出确为崩溃（ApplicationExitInfo）才记为坏后端。`ModelDetails.activeBackend/fallbackNote` 给界面显示实际后端。旧的 GGUF OpenCL 开关、LiteRT 后端、MNN 后端、NpuCrashGuard、MnnGpuGuard 已移除，旧值由 `AppSettings.migrated()` 迁到 `defaultBackends`。
@@ -99,3 +99,15 @@ IRIDIS/
 - **按模型配置**（`data/ModelConfig.kt`）：`ModelOverrides`（全可空）存 `files/model_configs.json`；`EffectiveModelConfig.resolve(settings, format, overrides)` 合并。UI：`ui/models/ModelConfigSheet.kt`（模型选择器 ⚙、模型管理 ⚙）。
 - **上下文**（`util/ContextPlanner.kt`，纯函数）：滑动窗口 / token 预算 / 自动摘要 / KV 平移（llama.cpp `shift_context`，其他引擎退化为预算截断）+ 手动分隔 `Conversation.contextStartAfterId`。裁剪按整轮、按块移动以保持前缀稳定（KV/prompt cache 复用）。用量显示 `ContextMeter`（输入框上方），菜单 `ContextSheet`。
 - **llama.cpp 新参数**：presence/frequency 惩罚、种子、惩罚窗口、KV F16/Q8_0/Q4_0、mmap、批大小、context shift（`n_keep`）。
+
+## 2.2–2.3 新模块一览
+- **GGUF 走 NPU**：`engine/geniex/`（GenieX 0.8.0，高通闭源运行库由用户下载）与 `engine/llama/LlamaHtp.kt`（内置 `libiris_lhtp.so` + llama.cpp Hexagon 运行库，首用按 versionCode 解压到 filesDir）。`GgufEngineRule.npuEngines` 决定 GenieX → 内置运行库的尝试顺序，失败回退 GPU/CPU。
+- **低比特 GGUF**（2.3.2）：`engine/GgufQuant.kt` 加载前读 GGUF 张量类型；Q1_0/Q2_0 从后端链中去掉 NPU；未知类型（PrismML PQ2_0=142 / PTQ1_0=143）直接报错，不交给原生加载器。
+- **看图**：GGUF + mmproj 走 llama.cpp mtmd（2.2.17，`libiris_llama.so`）；GenieX 视觉另有 `GenieXVision`。
+- **生图**：`imagegen/`（QNN SD1.5 / Anything V5，`libiris_imagegen.so`，部分源自 Local Dream，CC BY-NC 4.0）；智能体工具 `generate_image`。
+- **翻译**：`translate/`（当前模型或 Bergamot 离线包，`libiris_bergamot.so`）。
+- **GUI 智能体（测试）**：`agent/gui/`（无障碍服务、截图 + UI 树 + ML Kit OCR 兜底、Mika 借鉴的恢复逻辑）。
+- **MCP**：`agent/mcp/`（远程 MCP 服务的工具接入智能体）。
+- **角色卡**（2.3.2）：`character/`（`CharacterCard` 保留完整 V3 JSON、`CardCodec` PNG tEXt chara/ccv3 + JSON + CHARX、`CardPrompt` 宏与系统提示词组装、`Lorebook` 关键词世界书、`CharacterStore` 存于 Download/IRIDIS/characters），界面 `ui/character/`；`Conversation.characterId` 绑定对话。
+- **i18n**：`I18n.kt` + `res/values-*/strings.xml`（7 种语言，工具在仓库外的 i18n 目录生成）。
+- **下载**：`data/DownloadSources.kt`（魔搭 / hf-mirror / HF 自动选源）、`data/GgufSearch.kt`、`data/RecommendedCatalog.kt`。

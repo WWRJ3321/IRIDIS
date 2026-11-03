@@ -85,6 +85,18 @@ object RecommendedCatalog {
             Kind.Gguf(CODER_REPO, "Qwen3.5-4B-3D-Coder-Q4_K_M.gguf", 2_708_804_096L, "mmproj-Qwen3.5-4B-BF16.gguf", 675_568_768L),
             top = true, quant = "Q4_K_M", licence = APACHE, demoPrompt = CODER_DEMO,
         ),
+        // 2.3.2 Bonsai 2 (PrismML, Qwen3.5 ternary): only the upstream Q2_0 files (PQ2_0 / PTQ1_0 need PrismML's fork).
+        // HF prism-ml/Ternary-Bonsai-2-{2B,4B}-gguf checked 2026-11-04 (sizes from the tree API). 测试: CPU / OpenCL only, text only.
+        Item(
+            "prism-ml/Ternary-Bonsai-2-2B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "2B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            546_689_504L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-2B-gguf", "Ternary-Bonsai-2-2B-Q2_0.gguf", 546_689_504L),
+            quant = "Q2_0", licence = APACHE,
+        ),
+        Item(
+            "prism-ml/Ternary-Bonsai-2-4B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "4B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            1_212_103_520L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-4B-gguf", "Ternary-Bonsai-2-4B-Q2_0.gguf", 1_212_103_520L),
+            quant = "Q2_0", licence = APACHE,
+        ),
         // ---- 生图 ----
         Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
         Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", com.iris.localai.I18n.s(com.iris.localai.R.string.data_479b48), gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),

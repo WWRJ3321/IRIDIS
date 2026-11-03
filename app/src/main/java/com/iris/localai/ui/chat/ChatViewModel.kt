@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -611,9 +613,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val baseSystem = if (agentMode) {
             val ag = c.agent.settings.current
             com.iris.localai.agent.AgentTools.all.filter { ag.isEnabled(it) }.let { t ->
-                agentSystem(t, eff.systemPrompt, ready?.model?.fileName)
+                agentSystem(t, cardSystem(conv, eff.systemPrompt, ready), ready?.model?.fileName)
             }
-        } else withLang(eff.systemPrompt.trim())
+        } else withLang(cardSystem(conv, eff.systemPrompt, ready).trim())
         val memory = com.iris.localai.context.ContextAssembly.memoryBlock(conv, memoryInjectFor(agentMode), ctx, c.agent.memorySettings.current.epoch)
         val fixed = com.iris.localai.util.TokenEstimator.message(listOf(baseSystem, memory).filter { it.isNotBlank() }.joinToString("\n\n"))
         val reserve = maxNew.coerceIn(64, ctx / 2)
@@ -1118,7 +1120,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val eff = c.engine.effective(ready?.model).let { e -> if (maxNewOverride != null) e.copy(maxNewTokens = maxNewOverride) else e }
         // 2.1.9: in a voice call the instruction is appended to the system prompt at send time
         // (VoiceStyle.withVoiceSystem), so the history stays as stored and the KV prefix holds.
-        val baseSystem = withLang(eff.systemPrompt.trim())
+        val baseSystem = withLang(cardSystem(conv, eff.systemPrompt, ready).trim())
         // 1.10.0: 智能体 history carries earlier tool steps (rolled up); a compaction summary replaces
         // the folded messages; the frozen long-term memory joins the system prompt.
         val active = com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, withTools = agent, vision = ready?.details?.supportsVision == true)
@@ -1418,7 +1420,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
                 replyWatchdog?.prompt(p.estimatedTokens)
                 act(if (answerOnly) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dd9f3c) else if (p.messages.lastOrNull { it.role == PromptMessage.USER }?.let { pickImages(it) } == true) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5ab804) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8a3813))
                 c.engine.generate(
-                    withImages(if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages),
+                    withImages(cardTurn(conversation.value, if (requester == Requester.VOICE) com.iris.localai.voice.VoiceStyle.withVoiceSystem(p.messages) else p.messages)),
                     if (meter != null) sampling.copy(maxNewTokens = meter.engineLimit()) else sampling,
                     requester,
                     engineOwner,
@@ -1590,10 +1592,75 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 2.3.1: non-Chinese UI → one line asking for replies in that language by default. */
     private fun withLang(system: String) = com.iris.localai.I18nPure.withReplyLine(system, com.iris.localai.I18n.uiLang())
 
+    // ------------------------------------------------------------------ 2.3.2 角色卡
+
+    private fun cardOf(conv: Conversation): com.iris.localai.character.CharacterCard? =
+        conv.characterId?.let { id -> runCatching { c.characters.get(id)?.card }.getOrNull() }
+
+    private fun cardUser(): String = com.iris.localai.I18n.s(com.iris.localai.R.string.ch232_user_default)
+
+    /** The card's assembled system prompt for a card chat, else [own] (the user's system prompt). */
+    private fun cardSystem(conv: Conversation, own: String, ready: EngineState.Ready?): String {
+        val card = cardOf(conv) ?: return own
+        val ctx = contextTokensFor(ready)
+        return com.iris.localai.character.CardPrompt.system(card, cardUser(), own.trim(), conv.id.hashCode(),
+            maxExampleTokens = (ctx * 0.15).toInt().coerceIn(200, 1500))
+    }
+
+    /** Card chat: lorebook entries + post-history instructions go on the newest user turn (not stored). */
+    private fun cardTurn(conv: Conversation, msgs: List<PromptMessage>): List<PromptMessage> {
+        val card = cardOf(conv) ?: return msgs
+        val i = msgs.indexOfLast { it.role == PromptMessage.USER }
+        if (i < 0) return msgs
+        val recent = msgs.filter { it.role != PromptMessage.SYSTEM }.map { it.content }
+        val budget = com.iris.localai.character.CardPrompt.loreBudget(card, contextTokensFor(c.engine.state.value as? EngineState.Ready))
+        val suffix = com.iris.localai.character.CardPrompt.turnSuffix(card, cardUser(), recent, budget, conv.id.hashCode())
+        if (suffix.isEmpty()) return msgs
+        return msgs.toMutableList().also { it[i] = it[i].copy(content = it[i].content + "\n\n" + suffix) }
+    }
+
+    /** Card of the conversation on screen (avatar + name in the top bar and on replies). */
+    val character: StateFlow<com.iris.localai.character.CharacterStore.Entry?> = shown
+        .map { it.characterId }.distinctUntilChanged()
+        .map { id -> id?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.characters.get(it) }.getOrNull() } } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Starts a new chat with card [id]: the card is bound to it, the greeting(s) become the opening
+     * assistant message (alternates as its versions, switched with ‹ ›), and the card's bound model /
+     * voice are applied when they exist on this device (otherwise the current ones stay).
+     */
+    fun startCharacterChat(id: String) = viewModelScope.launch {
+        val entry = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.characters.get(id) }.getOrNull() } ?: return@launch
+        val card = entry.card
+        val conv0 = Conversation(characterId = entry.id, title = card.name.ifBlank { entry.id }, titled = true)
+        val greets = com.iris.localai.character.CardPrompt.greetings(card, cardUser(), conv0.id.hashCode())
+        val opening = greets.firstOrNull()?.let { g ->
+            ChatMessage(role = Role.ASSISTANT, content = g, modelName = card.name,
+                versions = if (greets.size > 1) listOf(com.iris.localai.data.MessageVersion()) + greets.drop(1).map { com.iris.localai.data.MessageVersion(content = it) } else emptyList(),
+                activeVersion = 0)
+        }
+        val conv = conv0.copy(messages = listOfNotNull(opening))
+        save(conv)
+        if (runningInBackground()) { viewing.value = conv; noteBackground() } else { viewing.value = null; conversation.value = conv }
+        // Bindings (only to what exists; missing → keep the current setting).
+        card.bindModel.takeIf { it.isNotBlank() }?.let { file ->
+            val m = c.models.models.value.firstOrNull { it.fileName == file }
+            if (m != null && c.engine.readyModel?.path != m.path && genJob?.isActive != true) loadModel(m)
+        }
+        if (card.bindTtsPack.isNotBlank()) {
+            val pack = com.iris.localai.voice.VoicePack.entries.firstOrNull { it.id == card.bindTtsPack }
+            if (pack != null && c.voiceStore.isInstalled(pack)) c.settings.update { s ->
+                s.copy(ttsPack = pack.id, ttsSpeakerId = card.bindTtsSpeaker.takeIf { it >= 0 } ?: s.ttsSpeakerId,
+                    cloneVoiceId = card.bindCloneVoice.takeIf { v -> v.isNotBlank() && c.cloneVoices.get(v) != null } ?: "")
+            }
+        }
+    }
+
     /** 2.3: the 智能体 system prompt for [conv]: the user's instructions and the frozen memory as their own sections. */
     private fun agentSystemFor(conv: Conversation, ready: EngineState.Ready?, tools: List<com.iris.localai.agent.AgentTool>): String {
         val memory = com.iris.localai.context.ContextAssembly.memoryBlock(conv, memoryInjectFor(true), contextTokensFor(ready), c.agent.memorySettings.current.epoch)
-        return agentSystem(tools, c.engine.effective(ready?.model).systemPrompt, ready?.model?.fileName, memory)
+        return agentSystem(tools, cardSystem(conv, c.engine.effective(ready?.model).systemPrompt, ready), ready?.model?.fileName, memory)
     }
 
     /** 1.14.0: the open conversation's plan (计划卡片). */
@@ -1669,6 +1736,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      * into later turns' history (small context windows).
      */
     private suspend fun runAgentReply(reply: ChatMessage, voiceOut: ((String) -> Unit)? = null) {
+        com.iris.localai.agent.GenerateImageTool.imageStyle = cardOf(conversation.value)?.bindImageStyle.orEmpty()
         val s = c.settings.current
         val ag = c.agent.settings.current
         val ready = c.engine.state.value as? EngineState.Ready

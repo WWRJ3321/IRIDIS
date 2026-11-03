@@ -133,11 +133,13 @@ fun ChatScreen(
     onOpenSettings: () -> Unit,
     onOpenFiles: () -> Unit = {},
     onOpenImageGen: () -> Unit = {},
+    onOpenCharacters: () -> Unit = {},
     onOpenVoiceSettings: () -> Unit,
     onOpenApi: () -> Unit,
 ) {
     val c = Iris.colors
     val ui by vm.state.collectAsStateWithLifecycle()
+    val character by vm.character.collectAsStateWithLifecycle() // 2.3.2 角色卡
     // 2.1.0: feedback when a reply finishes, only while the app is in the foreground.
     val feedback = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -284,6 +286,7 @@ fun ChatScreen(
                 onApi = { scope.launch { drawer.close() }; onOpenApi() },
                 onFiles = { scope.launch { drawer.close() }; onOpenFiles() },
                 onImageGen = { scope.launch { drawer.close() }; onOpenImageGen() },
+                onCharacters = { scope.launch { drawer.close() }; onOpenCharacters() },
                 runningId = backgroundRunId,
                 open = drawer.targetValue == DrawerValue.Open,
                 trash = trash,
@@ -429,6 +432,14 @@ fun ChatScreen(
                                         onSwitchVersion = { v -> vm.switchVersion(m.id, v) },
                                     )
                                 } else {
+                                    // 2.3.2 角色卡: the card's avatar + name above each of its replies.
+                                    character?.let { ch ->
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                                            com.iris.localai.ui.character.CharacterAvatar(ch.avatar, ch.card.name, 26.dp)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(ch.card.name, style = com.iris.localai.ui.theme.IrisType.secondary, color = com.iris.localai.ui.theme.Iris.colors.textSecondary, maxLines = 1)
+                                        }
+                                    }
                                     AssistantMessage(
                                         message = m,
                                         streaming = m.id == ui.streamingId,
@@ -503,6 +514,19 @@ fun ChatScreen(
                             // hidden while the morphing surface stands in for it
                             .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
                     ) { hideKeyboard(); modelMenu = true }
+                    // 2.3.2 角色卡: the bound card (avatar + name) left of the new-chat button.
+                    character?.let { ch ->
+                        Row(
+                            Modifier.align(Alignment.CenterEnd).padding(end = IrisDimens.topBarControl + IrisDimens.space8)
+                                .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(ch.card.name, style = com.iris.localai.ui.theme.IrisType.secondary, color = com.iris.localai.ui.theme.Iris.colors.text, maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp))
+                            Spacer(Modifier.width(6.dp))
+                            com.iris.localai.ui.character.CharacterAvatar(ch.avatar, ch.card.name, 32.dp)
+                        }
+                    }
                     com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the

@@ -40,6 +40,8 @@ class AppContainer(app: Application) {
         override suspend fun run(task: String, progress: (String) -> Unit) = gui.run(task, progress)
     } }
     val voiceStore = VoiceModelStore(app)
+    /** 2.3.2 角色卡: Download/IRIDIS/characters (or filesDir/iridis/characters). */
+    val characters = com.iris.localai.character.CharacterStore({ agent.appRoot }, File(app.filesDir, "iridis/characters"))
     /** 2.3.0 ③ 本地翻译. */
     val translator by lazy { com.iris.localai.translate.Translator(engine, settings, com.iris.localai.translate.TranslatePackStore(app), scope) }
     val recognizer = SpeechRecognizer(app, voiceStore, settings)

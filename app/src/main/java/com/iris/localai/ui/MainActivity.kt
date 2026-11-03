@@ -68,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS }
+private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS }
 
 class MainActivity : ComponentActivity() {
 
@@ -253,7 +253,10 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpenApi = { push(Route.API) },
             onOpenFiles = { push(Route.APP_FILES) }, // 2.2: sidebar 文件 = the whole Download/IRIDIS
             onOpenImageGen = { push(Route.IMAGEGEN) },
+            onOpenCharacters = { push(Route.CHARACTERS) },
         )
+        // 2.3.2 角色卡: tap a card = new chat with it, back on the chat screen
+        Route.CHARACTERS -> com.iris.localai.ui.character.CharactersPage(onBack = pop, onStartChat = { id -> chat.startCharacterChat(id); home() })
         Route.IMAGEGEN -> com.iris.localai.ui.imagegen.ImageGenScreen(onBack = pop, onSendToChat = { path -> chat.attachGeneratedImage(path); pop() })
         // 2.2.16: one 「模型与加载」 page (models + 档位 + load settings); 设置 › 模型与加载 opens it too
         Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm, onOpenDownload = { push(Route.DOWNLOAD_MODELS) })

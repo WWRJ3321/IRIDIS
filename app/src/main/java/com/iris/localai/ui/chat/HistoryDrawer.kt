@@ -100,6 +100,8 @@ fun HistoryDrawer(
     onApi: () -> Unit,
     onFiles: () -> Unit = {},
     onImageGen: () -> Unit = {},
+    /** 2.3.2 角色卡 */
+    onCharacters: () -> Unit = {},
     runningId: String? = null,
     open: Boolean = true,
     trash: List<com.iris.localai.data.TrashEntry> = emptyList(),
@@ -256,6 +258,7 @@ fun HistoryDrawer(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Cube, DrawerNavText.MODELS, onClick = onModels)
+            DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Person, DrawerNavText.CHARACTERS, onClick = onCharacters)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Image, DrawerNavText.IMAGEGEN, onClick = onImageGen)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Folder, DrawerNavText.FILES, onClick = onFiles)
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Plug, DrawerNavText.API, badge = apiRunning, onClick = onApi)
@@ -301,6 +304,7 @@ internal object DrawerNavText {
     val MODELS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)
     /** 2.1.7 */
     val IMAGEGEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)
+    val CHARACTERS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ch232_nav)
     val FILES: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
     const val API = "API"
     val SETTINGS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e366cc)

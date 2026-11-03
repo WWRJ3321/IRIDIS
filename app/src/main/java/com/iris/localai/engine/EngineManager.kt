@@ -385,7 +385,9 @@ class EngineManager(
                 v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
-            val chain = if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed)
+            // 2.3.2 Bonsai: Q1_0 / Q2_0 GGUF never go to the NPU; unknown types (PrismML PQ2_0 / PTQ1_0) are refused below.
+            val quant = if (model.format == ModelFormat.GGUF) GgufQuant.of(java.io.File(model.path)) else null
+            val chain = GgufQuant.chainFor(if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed), quant)
             val errors = StringBuilder()
             options.firstOrNull { it.backend == preferred && !it.available }?.let {
                 errors.append("[${preferred.label}] ${it.reason}\n")
@@ -396,6 +398,10 @@ class EngineManager(
             com.iris.localai.util.CrashReporter.breadcrumb("加载模型 ${model.fileName}")
             try {
             try {
+                quant?.takeIf { it.unknown.isNotEmpty() }?.let { q ->
+                    throw EngineException(if (q.prism) com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_prism, q.label) else com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_unknown, q.unknown.sorted().joinToString()))
+                }
+                if (quant?.lowBit == true && preferred == Backend.NPU) _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_lowbit, quant.label))
                 if (chain.isEmpty()) throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_214c8c) + options.joinToString("\n") { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, it.backend.label, it.reason ?: com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ad6b70)) })
                 var details: ModelDetails? = null
                 // 2.2.15: a GGUF on the NPU may get two tries — GenieX, then the built-in llama.cpp Hexagon runtime.

@@ -75,6 +75,8 @@ object IrisIcons {
     val Clock: ImageVector by lazy { icon("Clock", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 7.5V12l3 2") }
 
     /** 对话 */
+    /** 2.3.2 角色卡 */
+    val Person: ImageVector by lazy { icon("Person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4.5 20a7.5 7.5 0 0 1 15 0") }
     val Chat: ImageVector by lazy { icon("Chat", "M6 5h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-6l-4.5 3.5V17H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z") }
 
     /** 自定义指令 */

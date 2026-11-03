@@ -72,3 +72,6 @@ for chunk in client.chat.completions.create(
 | 502 | 推理模型只输出了思考、没有正文（已自动关闭思考重试一次） |
 | 503 | 没有可用模型或模型加载失败；或要切换模型但引擎正忙 |
 | 500 | 生成失败（`type` 为 `server_error`） |
+
+## 说明（2.3.2）
+- 消息内容目前只处理文本；`image_url` 等多模态内容不会传给模型（App 内对话里的 GGUF + mmproj 看图不经过 API）。

@@ -127,6 +127,8 @@ data class Conversation(
     val memorySnapshot: String? = null,
     /** [com.iris.localai.memory.MemorySettings.epoch] when [memorySnapshot] was taken. */
     val memoryEpoch: Int = 0,
+    /** 2.3.2 角色卡: the card this chat was started with (folder id under characters/); null = none. */
+    val characterId: String? = null,
 )
 
 /** Lightweight index entry so the drawer never has to load full conversations. */
