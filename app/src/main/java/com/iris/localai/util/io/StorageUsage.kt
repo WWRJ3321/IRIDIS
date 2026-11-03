@@ -69,6 +69,8 @@ object StorageUsage {
         val files: Int = 0,
         val count: Int? = null,
         val external: Boolean = false,
+        /** 2.3.1: a model entry whose size includes a paired vision projector (mmproj). */
+        val withProjector: Boolean = false,
     )
 
     data class Group(val category: Category, val entries: List<Entry>) {
@@ -78,11 +80,76 @@ object StorageUsage {
         fun entry(id: String) = entries.firstOrNull { it.id == id }
     }
 
-    data class Report(val total: Long, val groups: List<Group>) {
+    data class Report(val total: Long, val groups: List<Group>, val leftovers: List<Leftover> = emptyList()) {
         fun group(c: Category): Group? = groups.firstOrNull { it.category == c }
     }
 
     data class ModelRef(val id: String, val label: String, val fileName: String, val path: File)
+
+    // ---------------------------------------------------------------- 2.3.1 leftovers in the models dirs
+
+    enum class LeftoverKind { PARTIAL, PROJECTOR, UNKNOWN }
+
+    /**
+     * One file / folder in a models dir that is not a model and not paired with one.
+     * [active] = a .part of a download that is running or paused (never deleted by 「清理未完成的下载」).
+     * [shared] = in Download/IRIDIS/models (entry [Ids.MODEL_LEFTOVER_SHARED]).
+     */
+    data class Leftover(val file: File, val bytes: Long, val kind: LeftoverKind, val active: Boolean, val shared: Boolean) {
+        val name: String get() = file.name
+    }
+
+    private val PARTIAL_SUFFIXES = listOf(".part", ".tmp", ".temp", ".download", ".crdownload", ".partial")
+
+    /** Interrupted download / import: `.part` (ModelRepository / MnnHub / HttpDownload) or another temp name. */
+    fun isPartialName(name: String): Boolean {
+        val n = name.lowercase()
+        return PARTIAL_SUFFIXES.any { n.endsWith(it) } || n.startsWith(".tmp") || n.startsWith(".pending-")
+    }
+
+    /**
+     * Files next to [model] that belong to it: split parts 2..N and the vision projector llama.cpp would pair
+     * with it (same rules as [com.iris.localai.engine.llama.MmprojPairing.pick]). Names only; pure.
+     */
+    fun companions(model: String, siblings: Collection<String>): Set<String> {
+        val out = siblings.filter { com.iris.localai.data.companionOf(model, it) }.toMutableSet()
+        com.iris.localai.engine.llama.MmprojPairing.pick(model, siblings)?.let { out += it }
+        return out
+    }
+
+    /** Model file → its companion files in [dir] (projector / split parts), for the models directly in [dir]. */
+    fun pairedIn(dir: File?, models: List<ModelRef>): Map<String, List<File>> {
+        if (dir == null) return emptyMap()
+        val children = dir.listFiles().orEmpty().filter { it.isFile }
+        val names = children.map { it.name }
+        return models.filter { canon(it.path.parentFile ?: it.path) == canon(dir) }.associate { m ->
+            val c = companions(m.fileName, names)
+            m.id to children.filter { it.name in c }
+        }
+    }
+
+    /**
+     * What sits in [dir] besides the models (and their companions): classified. [protectedParts] = names of
+     * `.part` files / folders of downloads running or paused right now.
+     */
+    fun leftovers(dir: File?, models: List<ModelRef>, protectedParts: Set<String>, shared: Boolean): List<Leftover> {
+        if (dir == null) return emptyList()
+        val owned = pairedIn(dir, models).values.flatten().map { canon(it) }.toSet()
+        return dir.listFiles().orEmpty()
+            .filter { f -> canon(f) !in owned && models.none { isUnder(it.path, f) || isUnder(f, it.path) } && f.name != ".nomedia" }
+            .map { f ->
+                val kind = when {
+                    isPartialName(f.name) -> LeftoverKind.PARTIAL
+                    com.iris.localai.data.isProjectorFile(f.name) -> LeftoverKind.PROJECTOR
+                    else -> LeftoverKind.UNKNOWN
+                }
+                Leftover(f, sizeOf(f), kind, active = kind == LeftoverKind.PARTIAL && f.name in protectedParts, shared = shared)
+            }
+            .sortedByDescending { it.bytes }
+    }
+
+    /** Leftovers 「清理未完成的下载」 removes: partial files not belonging to a running / paused download. */
+    fun clearablePartials(list: List<Leftover>): List<Leftover> = list.filter { it.kind == LeftoverKind.PARTIAL && !it.active }
     data class VoiceRef(val id: String, val label: String, val dir: File)
 
     /**
@@ -200,24 +267,33 @@ object StorageUsage {
         models: List<ModelRef>,
         voices: List<VoiceRef>,
         conversationCount: Int? = null,
+        protectedParts: Set<String> = emptySet(),
     ): Report {
         val roots = p.roots.filter { it.exists() }
         fun outside(f: File) = f.exists() && roots.none { isUnder(f, it) }
         val total = roots.sumOf { sizeOf(it) }
         val groups = ArrayList<Group>()
 
-        // 模型 — every model file / folder, then whatever else sits in the models dir (unfinished imports).
+        // 模型 — every model file / folder (2.3.1: + its paired projector / split parts), then the leftovers.
+        val leftoverList = ArrayList<Leftover>()
         run {
-            val list = models.map { m -> val u = usage(m.path); Entry(Ids.MODEL_PREFIX + m.id, m.label, u.bytes, u.files, external = outside(m.path)) }
-            fun leftoverIn(dir: File?): Long = if (dir == null) 0L else
-                (sizeOf(dir) - models.filter { isUnder(it.path, dir) }.sumOf { sizeOf(it.path) }).coerceAtLeast(0)
             val sharedDir = p.sharedModelsDir?.takeIf { canon(it) != canon(p.modelsDir) }
-            val leftover = leftoverIn(p.modelsDir)
-            val sharedLeftover = leftoverIn(sharedDir)
+            val paired = pairedIn(p.modelsDir, models) + pairedIn(sharedDir, models)
+            val list = models.map { m ->
+                val extra = paired[m.id].orEmpty()
+                val u = extra.fold(usage(m.path)) { a, f -> a + usage(f) }
+                Entry(Ids.MODEL_PREFIX + m.id, m.label, u.bytes, u.files, external = outside(m.path),
+                    withProjector = extra.any { com.iris.localai.data.isProjectorFile(it.name) })
+            }
+            val own = leftovers(p.modelsDir, models, protectedParts, shared = false)
+            val shr = leftovers(sharedDir, models, protectedParts, shared = true)
+            leftoverList += own; leftoverList += shr
+            val leftover = own.sumOf { it.bytes }
+            val sharedLeftover = shr.sumOf { it.bytes }
             groups += Group(Category.MODELS, list.sortedByDescending { it.bytes } +
                 listOfNotNull(
-                    Entry(Ids.MODEL_LEFTOVER, "未完成的导入与其他文件", leftover, external = outside(p.modelsDir)).takeIf { leftover > 0 },
-                    Entry(Ids.MODEL_LEFTOVER_SHARED, "未完成的导入与其他文件（下载/IRIDIS）", sharedLeftover, external = true).takeIf { sharedLeftover > 0 },
+                    Entry(Ids.MODEL_LEFTOVER, "未完成的导入与其他文件", leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
+                    Entry(Ids.MODEL_LEFTOVER_SHARED, "未完成的导入与其他文件（下载/IRIDIS）", sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
                 ))
         }
 
@@ -306,7 +382,7 @@ object StorageUsage {
         val claimed = groups.sumOf { it.appBytes }
         val other = (total - claimed).coerceAtLeast(0)
         groups += Group(Category.OTHER, listOf(Entry(Ids.OTHER, "设置、数据库、WebView 等", other)))
-        return Report(total, groups)
+        return Report(total, groups, leftoverList)
     }
 
     /** Bar segments: each category's share of [Report.total] (app storage only), in [Category] order; sums to ≤ 1. */

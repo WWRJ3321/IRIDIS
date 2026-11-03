@@ -52,7 +52,7 @@ class ModelRepository(private val context: Context) {
         val listings = loc.listDirs.map { dir ->
             val files = dir.listFiles().orEmpty()
             // Remove leftovers from interrupted imports (but never one that is being written right now).
-            files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
+            files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts && it.name !in heldParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
             files.mapNotNull { f -> entryOf(f, mnn) }
                 // 2.2.5: projector files (mmproj) belong to their parent model; never listed as models
                 // anywhere (home menu, 档位与加载, 模型管理, GUI pickers). They stay on disk (and move
@@ -333,6 +333,14 @@ class ModelRepository(private val context: Context) {
     /** Lets [MnnHub] write `<name>.part` folders without [refresh] deleting them underneath it. */
     internal fun claimPart(name: String): Boolean = activeParts.add(name)
     internal fun releasePart(name: String) { activeParts.remove(name) }
+
+    /** 2.3.1: `.part` names of a paused download (MnnHub 「暂停」): kept by [refresh] until it resumes or is cancelled. */
+    private val heldParts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    internal fun holdParts(names: Collection<String>) { heldParts.clear(); heldParts.addAll(names) }
+    internal fun unholdParts() { heldParts.clear() }
+
+    /** 2.3.1: `.part` names that must not be deleted now (imports / downloads running, or paused). */
+    fun protectedParts(): Set<String> = activeParts.toSet() + heldParts
 
     internal companion object {
         const val PART_SUFFIX = ".part"

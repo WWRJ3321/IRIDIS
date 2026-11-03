@@ -66,6 +66,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (target.exists() || repo.find(name) != null) throw IOException("已存在同名模型：$name")
         val partName = name + ModelRepository.PART_SUFFIX
         if (!repo.claimPart(partName)) throw IOException("$repoId 正在下载中")
+        repo.unholdParts(); curParts = listOf(partName)
         _state.value = State(repoId = repoId, active = true, file = "读取文件列表…")
         try {
             // 2.2.16: list the repo on every candidate source (自动: in parallel, the listing doubles as the
@@ -126,6 +127,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (target.exists() || repo.find(fileName) != null) throw IOException("已存在同名模型：$fileName")
         val partName = fileName + ModelRepository.PART_SUFFIX
         if (!repo.claimPart(partName)) throw IOException("$repoId 正在下载中")
+        curParts = listOf(partName)
         try {
             val have = HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L
             val free = StatFs(modelsDir.absolutePath).availableBytes
@@ -253,6 +255,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException("已存在同名模型：$mainName")
         val claimed = files.map { it.third + ModelRepository.PART_SUFFIX }
         if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException("${hit.id} 正在下载中") }
+        repo.unholdParts(); curParts = claimed
         val total = files.sumOf { it.second }
         _state.value = State(repoId = hit.id, active = true, totalBytes = total, file = mainName)
         try {
@@ -294,7 +297,7 @@ class MnnHub(private val repo: ModelRepository) {
     val canRetry: Boolean get() = retry != null
 
     /** User 「取消」: stop and clear the card (the .part files stay, a later download of the same model resumes). */
-    fun cancel() { pausing = false; job?.cancel() }
+    fun cancel() { pausing = false; job?.cancel(); if (_state.value.paused) { repo.unholdParts(); _state.value = State() } }
 
     /** 2.2.17 C 「暂停」: stop, keep the progress; [resume] continues from the .part files on the same sources. */
     fun pause() { if (job?.isActive == true) { pausing = true; job?.cancel() } }
@@ -302,16 +305,19 @@ class MnnHub(private val repo: ModelRepository) {
 
     @Volatile private var pausing = false
 
+    /** 2.3.1: `.part` names of the current download; held in [ModelRepository] while paused so cleanup keeps them. */
+    @Volatile private var curParts: List<String> = emptyList()
+
     /** State after a download ended with [t]: paused, cancelled (cleared) or failed. */
     private fun stopped(repoId: String, t: Throwable): State {
         val cur = _state.value
         return if (t is kotlinx.coroutines.CancellationException) {
-            if (pausing) { pausing = false; State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
+            if (pausing) { pausing = false; repo.holdParts(curParts); State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
         } else State(repoId = repoId, error = t.message ?: "下载失败", source = cur.source)
             .also { com.iris.localai.util.HintLog.add(repoId + " 下载失败：" + it.error, com.iris.localai.util.HintLog.Source.DOWNLOAD) }
     }
 
-    fun clearError() { if (!_state.value.active) _state.value = State() }
+    fun clearError() { if (!_state.value.active) { if (_state.value.paused) repo.unholdParts(); _state.value = State() } }
 
     companion object {
         const val GATED = "这个仓库需要登录或申请访问权限，IRIDIS 暂不支持下载。请换一个仓库（例如 unsloth、bartowski、lmstudio-community 的同名模型）"

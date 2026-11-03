@@ -4,7 +4,10 @@ import com.iris.localai.ui.theme.IrisChartColors
 import android.app.Application
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -146,7 +149,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
                     val modelRefs = list.map { StorageUsage.ModelRef(it.id, it.displayName, it.fileName, File(it.path)) }
                     val voiceRefs = VoicePack.entries.map { StorageUsage.VoiceRef(it.id, it.title, c.voiceStore.dir(it)) }
                     _free.value = runCatching { android.os.StatFs(ctx.filesDir.path).availableBytes }.getOrNull()
-                    StorageUsage.scan(paths(), modelRefs, voiceRefs, c.conversations.summaries.value.size)
+                    StorageUsage.scan(paths(), modelRefs, voiceRefs, c.conversations.summaries.value.size, c.models.protectedParts())
                 }
                 _report.value = r
             } finally {
@@ -160,6 +163,31 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
     private fun io(block: suspend () -> Unit) = viewModelScope.launch {
         runCatching { withContext(Dispatchers.IO) { block() } }.onFailure { _note.value = "操作失败：${it.message ?: it.javaClass.simpleName}" }
         refresh()
+    }
+
+    /** 2.3.1: leftovers in the models dirs, re-read now (the list on screen may be stale). */
+    private suspend fun currentLeftovers(): List<StorageUsage.Leftover> {
+        val refs = c.models.refresh().map { StorageUsage.ModelRef(it.id, it.displayName, it.fileName, File(it.path)) }
+        val p = paths()
+        val prot = c.models.protectedParts()
+        val shared = p.sharedModelsDir?.takeIf { runCatching { it.canonicalPath != p.modelsDir.canonicalPath }.getOrDefault(true) }
+        return StorageUsage.leftovers(p.modelsDir, refs, prot, shared = false) + StorageUsage.leftovers(shared, refs, prot, shared = true)
+    }
+
+    /** Deletes one leftover file / folder, only if it is still a leftover and not part of a running / paused download. */
+    fun deleteLeftover(path: String) = io {
+        val l = currentLeftovers().firstOrNull { it.file.absolutePath == path }
+        when {
+            l == null -> _note.value = "文件已不在，或已归属某个模型"
+            l.active -> _note.value = "${l.name} 属于正在进行或已暂停的下载，不能删除"
+            else -> freed(StorageUsage.deleteTree(l.file), "已删除 ${l.name}")
+        }
+    }
+
+    /** 「清理未完成的下载」: every partial file except those of a download running or paused right now. */
+    fun clearPartials() = io {
+        val list = StorageUsage.clearablePartials(currentLeftovers())
+        freed(list.sumOf { StorageUsage.deleteTree(it.file) }, "已清理 ${list.size} 个未完成的下载")
     }
 
     fun clearModelCache(fileName: String) = io {
@@ -271,6 +299,8 @@ private sealed interface StoragePending {
     data object OrphanAttachments : StoragePending
     data object AllAttachments : StoragePending
     data object AllHistory : StoragePending
+    data class LeftoverFile(val item: StorageUsage.Leftover) : StoragePending
+    data class Partials(val count: Int, val bytes: Long) : StoragePending
 }
 
 object StorageText {
@@ -305,6 +335,8 @@ fun StoragePage(
     val conversations by storage.conversations.collectAsStateWithLifecycle()
     val voiceStates by vm.voicePacks.collectAsStateWithLifecycle()
     var pending by remember { mutableStateOf<StoragePending?>(null) }
+    /** 2.3.1: leftovers sheet open for the app dir (false) or Download/IRIDIS (true). */
+    var leftoverSheet by remember { mutableStateOf<Boolean?>(null) }
     val folder by storage.folder.collectAsStateWithLifecycle()
     val move by storage.move.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { storage.refresh() }
@@ -330,14 +362,18 @@ fun StoragePage(
                 g.entries.forEachIndexed { i, e ->
                     if (i > 0) Divider()
                     if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
-                        SettingsRow(e.label, subtitle = "${sizeLine(e)} · 中断的导入 / 下载，或无法识别的文件")
+                        SettingsRow(
+                            e.label, subtitle = "${sizeLine(e)} · 中断的导入 / 下载，或无法识别的文件",
+                            onClick = { leftoverSheet = e.id == Ids.MODEL_LEFTOVER_SHARED }, trailing = { Chevron() },
+                        )
                     } else {
                         val m = models.firstOrNull { Ids.MODEL_PREFIX + it.id == e.id }
                         val inUse = m != null && modelInUse(m.path, engine)
                         SettingsRow(
                             e.label,
                             subtitle = listOfNotNull(
-                                Format.bytes(e.bytes), m?.format?.label, if (inUse) StorageText.IN_USE else null,
+                                Format.bytes(e.bytes), m?.format?.label, if (e.withProjector) "含看图组件" else null,
+                                if (inUse) StorageText.IN_USE else null,
                                 if (e.external) "在 ${com.iris.localai.data.ModelDirs.SHARED_LABEL}" else null,
                             ).joinToString(" · "),
                             subtitleMaxLines = 2,
@@ -505,8 +541,26 @@ fun StoragePage(
         }
     }
 
+    leftoverSheet?.let { shared ->
+        val items = r?.leftovers.orEmpty().filter { it.shared == shared }
+        LeftoverSheet(
+            items,
+            onDelete = { pending = StoragePending.LeftoverFile(it) },
+            onClearPartials = { list -> pending = StoragePending.Partials(list.size, list.sumOf { it.bytes }) },
+            onDismiss = { leftoverSheet = null },
+        )
+    }
+
     when (val p = pending) {
         null -> Unit
+        is StoragePending.LeftoverFile -> ConfirmDialog(
+            title = "删除这个文件？", message = "${p.item.name}（${Format.bytes(p.item.bytes)}）将被删除，无法恢复。",
+            confirmText = "删除", onConfirm = { storage.deleteLeftover(p.item.file.absolutePath); pending = null }, onDismiss = { pending = null },
+        )
+        is StoragePending.Partials -> ConfirmDialog(
+            title = "清理未完成的下载？", message = "删除 ${p.count} 个中断的下载 / 导入文件，释放约 ${Format.bytes(p.bytes)}。正在进行或已暂停的下载不受影响。",
+            confirmText = "清理", onConfirm = { storage.clearPartials(); pending = null }, onDismiss = { pending = null },
+        )
         is StoragePending.Model -> ModelDeleteDialog(
             p.model,
             onConfirm = {
@@ -548,6 +602,52 @@ fun StoragePage(
             onConfirm = { storage.deleteAllHistory() },
             onDismiss = { pending = null },
         )
+    }
+}
+
+/** 2.3.1: kind label of a leftover in the models folder. */
+internal fun leftoverKindLabel(l: StorageUsage.Leftover): String = when (l.kind) {
+    StorageUsage.LeftoverKind.PARTIAL -> if (l.active) "未完成下载 · 正在下载或已暂停" else "未完成下载"
+    StorageUsage.LeftoverKind.PROJECTOR -> "看图组件 mmproj · 未配对模型"
+    StorageUsage.LeftoverKind.UNKNOWN -> "无法识别"
+}
+
+/** 2.3.1: what is in 「未完成的导入与其他文件」, with per-file delete and 「清理未完成的下载」. */
+@Composable
+private fun LeftoverSheet(
+    items: List<StorageUsage.Leftover>,
+    onDelete: (StorageUsage.Leftover) -> Unit,
+    onClearPartials: (List<StorageUsage.Leftover>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val c = Iris.colors
+    val clearable = StorageUsage.clearablePartials(items)
+    com.iris.localai.ui.components.IrisSheet(onDismiss = onDismiss) {
+        com.iris.localai.ui.components.SheetHeader("未完成的导入与其他文件")
+        Column(Modifier.padding(horizontal = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+            Text("已配对模型的看图组件计入对应模型，不在这里。", style = IrisType.caption, color = c.textTertiary)
+            if (items.isEmpty()) Text("没有多余的文件", style = IrisType.caption, color = c.textSecondary)
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                items.forEachIndexed { i, l ->
+                    if (i > 0) Divider()
+                    SettingsRow(
+                        l.name,
+                        subtitle = "${Format.bytes(l.bytes)} · ${leftoverKindLabel(l)}",
+                        subtitleMaxLines = 2,
+                        trailing = {
+                            IrisButton("删除", { onDelete(l) }, style = IrisButtonStyle.Text, compact = true, destructive = true, enabled = !l.active)
+                        },
+                    )
+                }
+            }
+            if (clearable.isNotEmpty()) {
+                IrisButton(
+                    "清理未完成的下载（${Format.bytes(clearable.sumOf { it.bytes })}）", { onClearPartials(clearable) },
+                    style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(IrisDimens.space16))
+        }
     }
 }
 
