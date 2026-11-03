@@ -223,7 +223,7 @@ fun CheckRow(title: String, selected: Boolean, subtitle: String? = null, onClick
                 enter = if (LocalReduceMotion.current) EnterTransition.None else IrisMotion.popIn(0.4f),
                 exit = if (LocalReduceMotion.current) ExitTransition.None else IrisMotion.popOut(0.4f),
             ) {
-                Icon(Icons.Outlined.Check, "已选择", tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
+                Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
             }
         }
     }
@@ -292,14 +292,14 @@ fun Fold(visible: Boolean, modifier: Modifier = Modifier, content: @Composable (
  * survives rotation ([key] must be unique per page). The chevron turns with the Snappy spring.
  */
 @Composable
-fun AdvancedFold(key: String, title: String = "高级", content: @Composable ColumnScope.() -> Unit) {
+fun AdvancedFold(key: String, title: String = com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15), content: @Composable ColumnScope.() -> Unit) {
     var open by androidx.compose.runtime.saveable.rememberSaveable(key) { androidx.compose.runtime.mutableStateOf(false) }
     val turn by animateFloatAsState(if (open) 180f else 0f, motionSpec(IrisMotion.Snappy), label = "advChevron")
     SettingsRow(
         title, onClick = { open = !open }, role = Role.Button,
         trailing = {
             Icon(
-                androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) "收起" else "展开",
+                androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde),
                 tint = Iris.colors.textTertiary,
                 modifier = Modifier.size(IrisDimens.iconMedium).graphicsLayer { rotationZ = turn },
             )
@@ -322,7 +322,7 @@ fun SectionFold(key: String, title: String, content: @Composable ColumnScope.() 
             title, onClick = { open = !open }, role = Role.Button,
             trailing = {
                 Icon(
-                    androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) "收起" else "展开",
+                    androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde),
                     tint = Iris.colors.textTertiary,
                     modifier = Modifier.size(IrisDimens.iconMedium).graphicsLayer { rotationZ = turn },
                 )

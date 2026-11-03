@@ -61,7 +61,7 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
         modifier
             .clip(com.iris.localai.ui.theme.IrisRadius.pillShape)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = "上下文用量 ${usage.used} / ${usage.limit}" }
+            .semantics { contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_82e5eb, usage.used, usage.limit) }
             .padding(horizontal = 10.dp, vertical = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
@@ -74,7 +74,7 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
         }
         Text(
             (if (usage.exact) "" else "≈") + "${short(usage.used)} / ${if (usage.limit > 0) short(usage.limit) else "?"}" +
-                (if (usage.summarizing) " · 正在摘要…" else "") + ContextText.meterSuffix(usage),
+                (if (usage.summarizing) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_744a56) else "") + ContextText.meterSuffix(usage),
             style = IrisType.caption, color = tint, maxLines = 1,
         )
     }
@@ -103,7 +103,7 @@ fun ContextSheet(
 ) {
     val c = Iris.colors
     IrisSheet(onDismiss = onDismiss) {
-        SheetHeader("上下文")
+        SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_50f198))
         Column(Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4)) {
             Text(ContextText.usageTitle(usage), style = IrisType.body, color = if (usage.nearFull) c.danger else c.text)
             Spacer(Modifier.height(IrisDimens.space4))
@@ -118,9 +118,9 @@ fun ContextSheet(
             }
         }
         if (showStrategy || usage.overridden) {
-        SectionTitle("本对话的策略")
+        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2436d1))
         SettingsGroup {
-            StrategyRow("跟随全局默认", "现在是「${globalStrategy.label}」", selected = !usage.overridden, enabled = true) { onStrategy(null) }
+            StrategyRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_82ef16), com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6100c4, globalStrategy.label), selected = !usage.overridden, enabled = true) { onStrategy(null) }
             ContextStrategy.entries.forEach { st ->
                 Divider()
                 val unsupported = st == ContextStrategy.KV_SHIFT && usage.shiftUnsupported != null
@@ -128,7 +128,7 @@ fun ContextSheet(
                     st.label,
                     when {
                         unsupported -> usage.shiftUnsupported!!
-                        st == ContextStrategy.SLIDING_WINDOW -> "保留最近 $keepTurns 轮（设置里可改）"
+                        st == ContextStrategy.SLIDING_WINDOW -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_efeb27, keepTurns)
                         else -> st.hint
                     },
                     selected = usage.overridden && usage.strategy == st,
@@ -137,24 +137,24 @@ fun ContextSheet(
             }
         }
         }
-        SectionTitle("分隔与摘要")
+        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1107b5))
         SettingsGroup {
             SettingsRow(
-                "从这里开始新上下文", icon = Icons.Outlined.ContentCut, enabled = hasMessages,
-                subtitle = "上面的对话仍然显示，但之后的回复不再参考它们",
+                com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2e622), icon = Icons.Outlined.ContentCut, enabled = hasMessages,
+                subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b31514),
                 onClick = { onBreakHere(); onDismiss() },
             )
             if (usage.hasBreak) {
                 Divider()
-                SettingsRow("取消分隔", icon = Icons.Outlined.LinkOff, subtitle = "重新把全部对话交给模型（受上下文长度限制）", onClick = { onClearBreak(); onDismiss() })
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_97702e), icon = Icons.Outlined.LinkOff, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_87afd1), onClick = { onClearBreak(); onDismiss() })
             }
             if (usage.hasSummary) {
                 Divider()
-                SettingsRow("清除摘要", icon = Icons.Outlined.DeleteSweep, subtitle = summary, subtitleMaxLines = 4, onClick = { onClearSummary(); onDismiss() })
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d20427), icon = Icons.Outlined.DeleteSweep, subtitle = summary, subtitleMaxLines = 4, onClick = { onClearSummary(); onDismiss() })
             }
         }
         // 1.10.0: deterministic compaction (no model call).
-        SectionTitle("整理")
+        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1b6c77))
         SettingsGroup {
             SettingsRow(
                 ContextText.COMPACT, icon = Icons.Outlined.Compress, enabled = hasMessages,
@@ -170,7 +170,7 @@ fun ContextSheet(
                 )
             }
         }
-        GroupFootnote("较早的内容只是浓缩成要点，原文都还在。" + if (usage.memoryInjected) "\n本对话已带上你的记忆。" else "")
+        GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f0c202) + if (usage.memoryInjected) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d33fc) else "")
     }
 }
 
@@ -178,31 +178,31 @@ fun ContextSheet(
 private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-            if (selected) Icon(Icons.Outlined.Check, "已选择", tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+            if (selected) Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
         }
     }
 }
 
 /** 1.10.0 texts of compaction (unit-tested). */
 object ContextText {
-    const val COMPACT = "现在整理"
-    const val COMPACT_HINT = "把最近一轮之前的对话浓缩成要点，不调用模型，原文不删，需要时能找回"
-    const val UNDO_COMPACT = "撤销整理"
+    val COMPACT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_16a350)
+    val COMPACT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_84cbc7)
+    val UNDO_COMPACT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a442e8)
     /** 2.2.9 E: the one switch. */
-    const val AUTO = "快满时自动整理"
-    const val AUTO_SUB = "把较早内容浓缩成要点，原文不删，需要时能找回"
-    fun compacted(u: ContextUsage): String = "已整理 ${u.compactedMessages} 条消息" + if (u.compactions > 1) "（${u.compactions} 次）" else ""
-    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) " · 已整理" else ""
-    fun divider(n: Int): String = "较早的 $n 条已整理成要点 · 原文仍在 · 撤销"
-    fun compactNotice(n: Int): String = "已整理较早的 $n 条消息，原文没删，需要时能找回"
+    val AUTO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bbba84)
+    val AUTO_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_25e748)
+    fun compacted(u: ContextUsage): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ac1c, u.compactedMessages) + if (u.compactions > 1) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_71b5d7, u.compactions) else ""
+    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fcc0f3) else ""
+    fun divider(n: Int): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e4733e, n)
+    fun compactNotice(n: Int): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a29a4d, n)
     /** 2.2.9 E: 「这次对话用了 41%」 (no conversation / no model → 「这次对话还没开始」). */
-    fun usageTitle(u: ContextUsage): String = if (u.limit > 0 && u.used > 0) "这次对话用了 ${(u.fraction * 100).toInt()}%" else "这次对话还没开始"
+    fun usageTitle(u: ContextUsage): String = if (u.limit > 0 && u.used > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5cde4e, (u.fraction * 100).toInt()) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_98486a)
     /** 「这次对话用了 41% · 模型现在能看到最近 26 条」. */
-    fun usageLine(u: ContextUsage): String = usageTitle(u) + if (u.visibleMessages > 0) " · 模型现在能看到最近 ${u.visibleMessages} 条" else ""
+    fun usageLine(u: ContextUsage): String = usageTitle(u) + if (u.visibleMessages > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_25ff72, u.visibleMessages) else ""
     /** Detail line under the bar: 「约 3.4k / 8k · 模型现在能看到最近 26 条」. */
     fun usageDetail(u: ContextUsage): String = listOfNotNull(
-        if (u.limit > 0) (if (u.exact) "" else "约 ") + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else "加载模型后显示用量",
-        u.visibleMessages.takeIf { it > 0 }?.let { "模型现在能看到最近 $it 条" },
+        if (u.limit > 0) (if (u.exact) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35)) + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3c47ff),
+        u.visibleMessages.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a20e8a, it) },
     ).joinToString(" · ")
 }
 
@@ -248,7 +248,7 @@ fun ContextBreakDivider(onClear: () -> Unit) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline) }
         }
         Text(
-            "新上下文从这里开始 · 撤销", style = IrisType.caption, color = c.textTertiary,
+            com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7217c), style = IrisType.caption, color = c.textTertiary,
             modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
         )
         Box(Modifier.weight(1f).height(1.dp).padding(start = IrisDimens.space8)) {

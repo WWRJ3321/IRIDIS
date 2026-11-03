@@ -32,7 +32,7 @@ class LoadKeepAliveService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, "模型加载", NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(CHANNEL, com.iris.localai.I18n.s(com.iris.localai.R.string.service_a3db60), NotificationManager.IMPORTANCE_LOW))
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:model-load")
             .apply { setReferenceCounted(false); acquire(MAX_WAKE_MS) }
@@ -105,7 +105,7 @@ class LoadKeepAliveService : LifecycleService() {
 
 /** Notification wording (unit-tested). */
 object LoadKeepAliveText {
-    const val TITLE = "正在加载模型"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.service_e79aea)
 
     fun text(model: String?, backend: String?): String =
         "${model ?: "模型"}${backend?.let { " · $it" } ?: ""} · 编译完成前请让 IRIDIS 保持运行"

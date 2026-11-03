@@ -45,17 +45,17 @@ fun TrashSheet(
     var confirmEmpty by remember { mutableStateOf(false) }
     val now = remember { System.currentTimeMillis() }
     IrisSheet(onDismiss = onDismiss) {
-        SheetHeader("回收站") {
-            IrisButton("清空", { confirmEmpty = true }, style = IrisButtonStyle.Text, compact = true, enabled = entries.isNotEmpty(), destructive = true)
+        SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2896bd)) {
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c), { confirmEmpty = true }, style = IrisButtonStyle.Text, compact = true, enabled = entries.isNotEmpty(), destructive = true)
         }
         Text(
-            "删除的对话保留 ${TrashPolicy.KEEP_DAYS} 天，之后自动删除",
+            com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2b9512, TrashPolicy.KEEP_DAYS),
             style = IrisType.caption, color = c.textTertiary,
             modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4),
         )
         if (entries.isEmpty()) {
             Text(
-                "回收站是空的", style = IrisType.body, color = c.textSecondary,
+                com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4a409f), style = IrisType.body, color = c.textSecondary,
                 modifier = Modifier.fillMaxWidth().padding(IrisDimens.pageGutter),
             )
         } else {
@@ -66,13 +66,13 @@ fun TrashSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(e.title.ifBlank { "新对话" }, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${TrashPolicy.daysLeft(e.deletedAt, now)} 天后删除", style = IrisType.caption, color = c.textTertiary)
+                            Text(e.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cab824, TrashPolicy.daysLeft(e.deletedAt, now)), style = IrisType.caption, color = c.textTertiary)
                         }
                         Spacer(Modifier.width(IrisDimens.space8))
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
-                            IrisButton("恢复", { onRestore(e.id) }, style = IrisButtonStyle.Tonal, compact = true)
-                            IrisButton("删除", { onPurge(e.id) }, style = IrisButtonStyle.Text, compact = true, destructive = true)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7db6d), { onRestore(e.id) }, style = IrisButtonStyle.Tonal, compact = true)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { onPurge(e.id) }, style = IrisButtonStyle.Text, compact = true, destructive = true)
                         }
                     }
                 }
@@ -82,9 +82,9 @@ fun TrashSheet(
     }
     if (confirmEmpty) {
         ConfirmDialog(
-            title = "清空回收站？",
-            message = "${entries.size} 个对话将被永久删除，无法恢复。",
-            confirmText = "清空",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2563fa),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c04740, entries.size),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
             onConfirm = { onEmpty() },
             onDismiss = { confirmEmpty = false },
         )

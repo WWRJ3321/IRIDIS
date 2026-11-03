@@ -89,14 +89,14 @@ import com.iris.localai.voice.VoicePack
 
 /** 2.2.17 C 下载模型 page texts and small pure helpers (unit-tested). */
 object DownloadText {
-    const val TITLE = "下载模型"
-    val TABS = listOf("推荐", "热门", "最新", "适合本机")
-    const val ONE_AT_A_TIME = "一次下载一个，当前的下完再下这个"
-    const val PAUSE = "暂停"
-    const val CANCEL = "取消"
-    const val VISION_TITLE = "同时下载看图组件"
-    const val TRY = "试一试"
-    const val TRY_HINT = "下载并加载后，点上面的示例发到对话"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_329255)
+    val TABS get() = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3f9810), com.iris.localai.I18n.s(com.iris.localai.R.string.models_2b62ab), com.iris.localai.I18n.s(com.iris.localai.R.string.models_8818d4), com.iris.localai.I18n.s(com.iris.localai.R.string.models_726731))
+    val ONE_AT_A_TIME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d7c432)
+    val PAUSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8d63ef)
+    val CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)
+    val VISION_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_25cef9)
+    val TRY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8c0dd3)
+    val TRY_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_6ebc23)
 
     /** Tab index → online list (null = 推荐). */
     fun modeOf(tab: Int): GgufSearch.Browse? = when (tab) { 1 -> GgufSearch.Browse.HOT; 2 -> GgufSearch.Browse.NEW; 3 -> GgufSearch.Browse.FIT; else -> null }
@@ -109,27 +109,27 @@ object DownloadText {
 
     /** One line for the 模型与加载 page (null = nothing downloading / paused / failed). */
     fun statusLine(hub: MnnHub.State): String? = when {
-        hub.active -> "正在下载 ${displayName(hub.repoId)}" + (if (hub.totalBytes > 0) " · ${(hub.progress * 100).toInt()}%" else "")
-        hub.paused -> "已暂停 ${displayName(hub.repoId)}"
-        hub.error != null -> "下载失败：" + RecommendedCatalog.shortReason(hub.error)
+        hub.active -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_51b52e, displayName(hub.repoId)) + (if (hub.totalBytes > 0) " · ${(hub.progress * 100).toInt()}%" else "")
+        hub.paused -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_87c0cf, displayName(hub.repoId))
+        hub.error != null -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_d2cb87) + RecommendedCatalog.shortReason(hub.error)
         else -> null
     }
 
     /** "1.2 GB / 2.5 GB · 魔搭 ModelScope". */
     fun progressLine(done: Long, total: Long, source: String = ""): String =
-        listOfNotNull(if (total > 0) "${Format.bytes(done)} / ${Format.bytes(total)}" else "准备中…", source.ifBlank { null }).joinToString(" · ")
+        listOfNotNull(if (total > 0) "${Format.bytes(done)} / ${Format.bytes(total)}" else com.iris.localai.I18n.s(com.iris.localai.R.string.models_dcfb68), source.ifBlank { null }).joinToString(" · ")
 
     /** What the detail sheet says the download fetches. */
     fun filesLine(item: RecommendedCatalog.Item): String = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Gguf -> k.file
         is RecommendedCatalog.Kind.Hub -> when (item.engine) {
-            RecommendedCatalog.Engine.MNN -> "整个 MNN 模型文件夹"
-            RecommendedCatalog.Engine.LITERT -> "通用版 .litertlm 文件"
-            else -> "自动选 Q4_K_M 的 .gguf 文件"
+            RecommendedCatalog.Engine.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_ddd4f5)
+            RecommendedCatalog.Engine.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_b351da)
+            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_89d8e3)
         }
-        is RecommendedCatalog.Kind.Image -> "模型文件包（下载后在 生图 页使用）"
-        is RecommendedCatalog.Kind.Voice -> "语音模型文件包（在 设置 › 语音与翻译 里切换）"
-        is RecommendedCatalog.Kind.Translate -> "离线翻译模型（模型、词表、词汇短表）"
+        is RecommendedCatalog.Kind.Image -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_aa40ac)
+        is RecommendedCatalog.Kind.Voice -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_73e385)
+        is RecommendedCatalog.Kind.Translate -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_947d0a)
     }
 }
 
@@ -171,7 +171,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
         }
         is RecommendedCatalog.Kind.Image -> when (val s = imageStates[k.modelId]) {
             is ImageDl.Downloading -> RecStatus.Downloading(s.done, s.total, s.source, pausable = false)
-            is ImageDl.Extracting -> RecStatus.Downloading(s.done, s.total, "正在解压", pausable = false)
+            is ImageDl.Extracting -> RecStatus.Downloading(s.done, s.total, com.iris.localai.I18n.s(com.iris.localai.R.string.models_b8894f), pausable = false)
             is ImageDl.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
             else -> if (k.modelId in imageDone) RecStatus.Installed() else RecStatus.Idle
         }
@@ -179,7 +179,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             val p = VoicePack.byId(k.packId)
             when (val s = p?.let { voiceStates[it] }) {
                 is PackState.Downloading -> RecStatus.Downloading(s.downloaded, s.total, pausable = false)
-                PackState.Extracting -> RecStatus.Downloading(0, 0, "正在解压", pausable = false)
+                PackState.Extracting -> RecStatus.Downloading(0, 0, com.iris.localai.I18n.s(com.iris.localai.R.string.models_b8894f), pausable = false)
                 is PackState.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
                 PackState.Installed -> RecStatus.Installed(vm.voiceInUse(p))
                 else -> RecStatus.Idle
@@ -256,7 +256,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         placeholder = { Text(SearchText.HINT, style = IrisType.body, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingIcon = { Icon(Icons.Outlined.Search, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.iconMedium)) },
                         trailingIcon = if (query.isNotEmpty()) ({
-                            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, "清空") { query = ""; if (tab > 0) vm.browse(DownloadText.modeOf(tab)!!, "") }
+                            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c)) { query = ""; if (tab > 0) vm.browse(DownloadText.modeOf(tab)!!, "") }
                         }) else null,
                         shape = IrisRadius.pillShape,
                         colors = com.iris.localai.ui.components.irisTextFieldColors(),
@@ -283,7 +283,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                                 Text(hub.repoId.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(hub.repoId.substringBefore('/'), style = IrisType.caption, color = c.textTertiary, maxLines = 1)
                             }
-                            if (s is RecStatus.Paused) IrisButton("继续", vm::resumeDownload, compact = true)
+                            if (s is RecStatus.Paused) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56), vm::resumeDownload, compact = true)
                         }
                         DownloadBlock(s, onPause = vm::pauseDownload, onRetry = vm::retryOtherSource, onCancel = vm::cancelDownload, onImport = importFile)
                     }
@@ -302,7 +302,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
                         item(key = "more-" + sec.name, contentType = "more") {
                             IrisButton(
-                                if (open) "收起" else "展开全部（${all.size}）",
+                                if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c77b8, all.size),
                                 { expanded = if (open) expanded - sec else expanded + sec },
                                 style = IrisButtonStyle.Text, compact = true,
                                 icon = Icons.Outlined.ExpandMore,
@@ -316,7 +316,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         Text(SourceText.IMPORT_HINT, style = IrisType.secondary, color = c.textSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(SourceText.IMPORT, importFile, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add)
-                            IrisButton("导入文件夹", { folderPicker.launch(null) }, style = IrisButtonStyle.Tonal, compact = true, icon = com.iris.localai.ui.icons.IrisIcons.Folder)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_238420), { folderPicker.launch(null) }, style = IrisButtonStyle.Tonal, compact = true, icon = com.iris.localai.ui.icons.IrisIcons.Folder)
                         }
                         Text(SourceText.AUTO_SWITCH, style = IrisType.caption, color = c.textTertiary)
                     }
@@ -332,7 +332,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 items(search.hits, key = { "hit-" + it.site.name + it.id }, contentType = { "hit" }) { h -> OnlineCard(h, ram) { vm.openRepo(h) } }
                 item(key = "more-online", contentType = "hint") {
                     Text(
-                        when { search.loading -> "正在加载 HuggingFace 和 魔搭…"; search.hasMore && search.hits.isNotEmpty() -> "上滑加载更多"; search.hits.isNotEmpty() -> "没有更多了"; else -> "" },
+                        when { search.loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_25878e); search.hasMore && search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_9248b2); search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fe900); else -> "" },
                         style = IrisType.caption, color = c.textTertiary,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
                     )
@@ -395,7 +395,7 @@ private fun ramTone(hint: String): Color = if (hint == "内存够用") Iris.colo
 @Composable
 private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
-        if (size > 0) Badge("约 " + Format.bytes(size))
+        if (size > 0) Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(size))
         Badge(item.engine.label)
         ramHint?.let { Badge(it, ramTone(it)) }
     }
@@ -451,7 +451,7 @@ private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit
         is RecStatus.Paused -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
             IrisProgressBar(progress = if (s.total > 0) (s.done.toDouble() / s.total).toFloat() else 0f)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("已暂停 · " + DownloadText.progressLine(s.done, s.total), style = IrisType.caption, color = c.textSecondary,
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_80e506) + DownloadText.progressLine(s.done, s.total), style = IrisType.caption, color = c.textSecondary,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Text, compact = true)
                 IrisButton(DownloadText.CANCEL, onCancel, style = IrisButtonStyle.Text, compact = true)
@@ -480,9 +480,9 @@ private fun OnlineCard(h: GgufSearch.RepoHit, ram: Long, onOpen: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
             Badge("GGUF")
             Badge(h.site.tag)
-            h.sizeRange?.let { r -> Badge("约 " + Format.bytes(r.first) + " 起") }
+            h.sizeRange?.let { r -> Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(r.first) + com.iris.localai.I18n.s(com.iris.localai.R.string.models_d59693)) }
             if (ram > 0) h.sizeRange?.let { r -> GgufSearch.fitHint(r.first, ram).let { Badge(it, ramTone(it)) } }
-            if (h.gated) Badge("需申请", Iris.colors.warning)
+            if (h.gated) Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.models_dc6722), Iris.colors.warning)
         }
     }
 }
@@ -502,17 +502,17 @@ private fun RecDetailSheet(
             Badges(item, size, ramHint)
         }
         Spacer(Modifier.height(IrisDimens.space8))
-        ValueRow("文件", DownloadText.filesLine(item))
-        item.quant?.let { ValueRow("量化", it) }
-        item.licence?.let { ValueRow("许可证", it) }
-        ValueRow("来源", item.repoId ?: when (val k = item.kind) {
+        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47), DownloadText.filesLine(item))
+        item.quant?.let { ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_03860b), it) }
+        item.licence?.let { ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_20a284), it) }
+        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ca20), item.repoId ?: when (val k = item.kind) {
             is RecommendedCatalog.Kind.Image -> com.iris.localai.imagegen.ImageCatalog.byId(k.modelId)?.hfRepo ?: "Qualcomm AI Hub"
-            is RecommendedCatalog.Kind.Translate -> "Mozilla Firefox Translations（${com.iris.localai.translate.TranslatePack.REPO}）"
-            else -> "sherpa-onnx（k2-fsa）"
+            is RecommendedCatalog.Kind.Translate -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_3788b3, com.iris.localai.translate.TranslatePack.REPO)
+            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_e88a00)
         })
         val g = item.kind as? RecommendedCatalog.Kind.Gguf
         if (g?.mmproj != null && s == RecStatus.Idle) {
-            CheckRow(DownloadText.VISION_TITLE, withVision, subtitle = "${g.mmproj} · ${Format.bytes(g.mmprojSize)} · 加载后可以发图片给它") { withVision = !withVision }
+            CheckRow(DownloadText.VISION_TITLE, withVision, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_10ffff, g.mmproj, Format.bytes(g.mmprojSize))) { withVision = !withVision }
         }
         item.demoPrompt?.let { prompt ->
             Column(Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {

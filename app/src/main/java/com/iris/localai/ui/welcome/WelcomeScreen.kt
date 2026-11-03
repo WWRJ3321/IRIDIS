@@ -47,15 +47,15 @@ import kotlinx.coroutines.launch
 
 /** 1.14.7: texts of the first-launch welcome (kept here so tests can check them). */
 object WelcomeText {
-    const val TAGLINE = "完全运行在你手机上的 AI"
-    const val START = "开始使用"
-    const val DISCLAIMER =
-        "本应用按原样提供，不提供任何担保。AI 生成内容可能有误，请勿用于医疗、法律或金融决策；智能体操作的后果由你自行承担。"
+    val TAGLINE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_aed7c2)
+    val START: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_85d22d)
+    val DISCLAIMER: String get() =
+        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_ddc5a4)
     /** Title to one-line description, in display order. */
-    val FEATURES = listOf(
-        "本地推理" to "对话与语音都在本机完成，对话不会上传",
-        "智能体" to "可读写工作区文件、运行命令、联网搜索（需你开启）",
-        "开源" to "Apache-2.0 许可，第三方组件见 设置 › 关于",
+    val FEATURES get() = listOf(
+        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_63cfe9) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_003e25),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_874dfe),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_6f1765) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_0a2ebb),
     )
 }
 

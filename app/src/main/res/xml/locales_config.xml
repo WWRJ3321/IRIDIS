@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2.3.1: per-app language list (Android 13+ system settings). Keep in sync with I18n.LANGS. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="zh-CN" />
+    <locale android:name="zh-TW" />
+    <locale android:name="zh-HK" />
+    <locale android:name="zh-MO" />
+    <locale android:name="en" />
+    <locale android:name="ja" />
+    <locale android:name="de" />
+    <locale android:name="es" />
+    <locale android:name="hi" />
+</locale-config>

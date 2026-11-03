@@ -53,6 +53,7 @@ class IrisApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.iris.localai.I18n.init(this) // 2.3.1
         // 2.2.14: the tiny restart process (AppRestart) needs none of the app.
         if (android.os.Build.VERSION.SDK_INT >= 28 && android.app.Application.getProcessName().endsWith(":restart")) return
         com.iris.localai.util.CrashReporter.install(this)

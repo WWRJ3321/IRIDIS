@@ -192,7 +192,7 @@ fun ChatScreen(
     fun addPicked(uris: List<android.net.Uri>) {
         if (uris.isNotEmpty()) scope.launch {
             val room = com.iris.localai.util.Attachments.MAX_PER_MESSAGE - pending.size
-            if (room <= 0) { vm.showNotice("每条消息最多 ${com.iris.localai.util.Attachments.MAX_PER_MESSAGE} 个附件"); return@launch }
+            if (room <= 0) { vm.showNotice(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_926679, com.iris.localai.util.Attachments.MAX_PER_MESSAGE)); return@launch }
             pending = pending + vm.importAttachments(uris.take(room))
         }
     }
@@ -202,7 +202,7 @@ fun ChatScreen(
     LaunchedEffect(incomingImage) {
         val path = incomingImage ?: return@LaunchedEffect
         vm.consumeIncomingImage()
-        if (pending.size >= com.iris.localai.util.Attachments.MAX_PER_MESSAGE) { vm.showNotice("每条消息最多 ${com.iris.localai.util.Attachments.MAX_PER_MESSAGE} 个附件"); return@LaunchedEffect }
+        if (pending.size >= com.iris.localai.util.Attachments.MAX_PER_MESSAGE) { vm.showNotice(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_926679, com.iris.localai.util.Attachments.MAX_PER_MESSAGE)); return@LaunchedEffect }
         vm.importLocalImage(path)?.let { pending = pending + it }
     }
     // 1.10.13: 照片 opens the system photo picker (no storage permission needed).
@@ -492,7 +492,7 @@ fun ChatScreen(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
                     contentAlignment = Alignment.Center,
                 ) {
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, "历史对话", Modifier.align(Alignment.CenterStart), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8dce1), Modifier.align(Alignment.CenterStart), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
                     ModelTitle(
                         ui.engine,
                         Modifier
@@ -503,7 +503,7 @@ fun ChatScreen(
                             // hidden while the morphing surface stands in for it
                             .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
                     ) { hideKeyboard(); modelMenu = true }
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, "新对话", Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.
@@ -529,7 +529,7 @@ fun ChatScreen(
                     .padding(bottom = with(density) { composerHeight.toDp() } + 8.dp),
             ) {
                 PressableIcon(
-                    Icons.Outlined.KeyboardArrowDown, "回到底部", size = 40.dp, iconSize = 22.dp,
+                    Icons.Outlined.KeyboardArrowDown, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d94f1), size = 40.dp, iconSize = 22.dp,
                     modifier = Modifier.glass(backdrop, CircleShape, GlassStyle(tint = c.glassTintOpaque)),
                 ) { follow = true; scope.launch { scrollToEnd(true) } }
             }
@@ -616,7 +616,7 @@ fun ChatScreen(
                         draftJob = scope.launch {
                             try { translator.translate(original, target).collect { if (it.isNotEmpty()) input = it } }
                             catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                            catch (e: Throwable) { input = original; draftOriginal = null; vm.showNotice(e.message ?: "翻译失败") }
+                            catch (e: Throwable) { input = original; draftOriginal = null; vm.showNotice(e.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_032ee1)) }
                             finally { draftJob = null }
                         }
                     },
@@ -657,7 +657,7 @@ fun ChatScreen(
                                     throw e
                                 } catch (t: Throwable) {
                                     android.util.Log.w("ChatScreen", "dictation failed", t)
-                                    vm.showNotice("语音识别出错：${t.message ?: t.javaClass.simpleName}")
+                                    vm.showNotice(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fcf82a, t.message ?: t.javaClass.simpleName))
                                     ""
                                 } finally {
                                     transcribing = false
@@ -724,9 +724,9 @@ fun ChatScreen(
     promptView?.let { text ->
         val clip = androidx.compose.ui.platform.LocalClipboardManager.current
         com.iris.localai.ui.components.IrisDialog(
-            onDismiss = { promptView = null }, title = "发送给模型的提示内容",
-            confirmText = "关闭", onConfirm = { promptView = null },
-            dismissText = "复制", onDismissClick = { clip.setText(androidx.compose.ui.text.AnnotatedString(text)) },
+            onDismiss = { promptView = null }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7c46c),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { promptView = null },
+            dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab), onDismissClick = { clip.setText(androidx.compose.ui.text.AnnotatedString(text)) },
         ) {
             Box(
                 Modifier.fillMaxWidth().clip(com.iris.localai.ui.theme.IrisRadius.smallShape).background(com.iris.localai.ui.theme.Iris.colors.codeBackground)
@@ -742,7 +742,7 @@ fun ChatScreen(
     guiSetup?.let { b -> com.iris.localai.ui.agent.GuiSetupDialog(b, onDismiss = vm::dismissGuiSetup, onPickModel = { vm.dismissGuiSetup(); onOpenModels() }) }
     // 1.13.0: a tool of the chat running in the background asks only once that chat is on screen.
     LaunchedEffect(permissionAsk != null && backgroundRunId != null) {
-        if (permissionAsk != null && backgroundRunId != null) vm.showNotice("后台对话在等你确认权限，去侧边栏查看")
+        if (permissionAsk != null && backgroundRunId != null) vm.showNotice(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3b8d7a))
     }
     permissionAsk?.takeIf { backgroundRunId == null }?.let { ask ->
         com.iris.localai.ui.agent.AgentPermissionDialog(ask.toolLabel, ask.toolName, ask.preview, alwaysPrefix = ask.alwaysPrefix, onAnswer = vm::answerPermission)
@@ -779,7 +779,7 @@ private fun ModelTitle(engine: EngineState, modifier: Modifier = Modifier, onCli
     com.iris.localai.ui.components.IrisPill(
         modifier,
         height = IrisDimens.topBarControl,
-        onClick = onClick, onClickLabel = "选择模型",
+        onClick = onClick, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373),
     ) { ModelPillContent(engine, chevronTurn = 0f) }
 }
 
@@ -812,7 +812,7 @@ private fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, h
             else -> null
         }?.let { com.iris.localai.data.ModelNames.short(it.displayName) }
         Text(
-            name ?: "模型", style = IrisType.pillTitle, color = c.text, maxLines = 1,
+            name ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), style = IrisType.pillTitle, color = c.text, maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 168.dp),
         )
@@ -915,7 +915,7 @@ private fun ModelMorphPanel(
                             .width(w.toDp()).height(headerH.toDp())
                             .clickable(
                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                indication = null, onClickLabel = "收起",
+                                indication = null, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9),
                             ) { onDismiss() },
                         verticalAlignment = Alignment.CenterVertically,
                     ) { ModelPillContent(engine, chevronTurn = p, hPad = hPad) }
@@ -950,7 +950,7 @@ private fun ModelMorphPanel(
                         // 2.2.16: one entry for the merged 模型与加载 page (models + 档位 + load settings)
                         CompactMenuRow(ModelMenuText.MODELS_AND_LOADING, Icons.Outlined.Tune) { if (expanded) onManage() }
                         if (engine is EngineState.Ready) {
-                            CompactMenuRow("卸载模型", Icons.Outlined.Eject, enabled = unloadEnabled) { if (expanded) onUnload() }
+                            CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_41cb75), Icons.Outlined.Eject, enabled = unloadEnabled) { if (expanded) onUnload() }
                         }
                     }
                 }
@@ -995,7 +995,7 @@ private fun SlowLoadBanner(engine: EngineState, backdrop: com.iris.localai.ui.gl
         BannerCard(backdrop, Modifier.padding(bottom = IrisDimens.space8).fillMaxWidth()) {
             Text(text.orEmpty(), style = IrisType.secondary, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             com.iris.localai.ui.components.IrisButton(com.iris.localai.engine.SlowLoadHint.ACTION, { dismissedFor = loading?.since; onUseCpu() }, style = com.iris.localai.ui.components.IrisButtonStyle.Text, compact = true)
-            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, "关闭", size = IrisDimens.space32, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
+            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), size = IrisDimens.space32, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
         }
     }
 }
@@ -1017,7 +1017,7 @@ private fun BannerCard(
         modifier
             .glass(backdrop, shape, GlassStyle(tint = c.glassTintOpaque))
             .border(IrisDimens.hairline, c.outline.copy(alpha = 0.5f), shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick, onClickLabel = "关闭提示") else Modifier)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c335e9)) else Modifier)
             .padding(start = IrisDimens.space12, end = IrisDimens.space12, top = IrisDimens.space8, bottom = IrisDimens.space8)
             .heightIn(min = IrisDimens.space32),
         verticalAlignment = Alignment.CenterVertically,
@@ -1040,7 +1040,7 @@ private fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.ut
     val c = Iris.colors
     val loading = engine as? EngineState.Loading
     val target: String? = when {
-        loading != null -> if (loading.applyingTier != null) "正在重载模型" else "正在加载 ${loading.model.displayName}"
+        loading != null -> if (loading.applyingTier != null) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_213e62) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2040f7, loading.model.displayName)
         else -> activity?.label
     }
     val since = loading?.since ?: activity?.since ?: 0L
@@ -1074,14 +1074,14 @@ private fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.ut
                 ) { l -> Text(l, style = tnum, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 val pct = loading?.progress?.takeIf { it > 0.01f && it < 1f }?.let { " ${(it * 100).toInt()}%" }.orEmpty()
                 val secs = ((now - shownSince) / 1000).coerceAtLeast(0)
-                val tail = pct + if (secs >= 2) " · ${secs} 秒" else ""
+                val tail = pct + if (secs >= 2) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8f0d77, secs) else ""
                 if (tail.isNotEmpty()) com.iris.localai.ui.motion.RollingText(tail, style = tnum, color = c.textTertiary)
                 if (loading != null && loading.applyingTier == null) {
                     Spacer(Modifier.size(4.dp))
                     // Fits the 22 dp capsule (a 36 dp IrisButton overflowed the fixed-height row).
                     Text(
-                        "取消", style = IrisType.caption, color = c.accent,
-                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClickLabel = "取消加载", onClick = onCancelLoad)
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2), style = IrisType.caption, color = c.accent,
+                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e60d2), onClick = onCancelLoad)
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     )
                 }
@@ -1160,7 +1160,7 @@ private fun ChatEmptyState(
                 .pulse(engine is EngineState.Loading, min = 0.35f, periodMs = 1100),
         )
         Spacer(Modifier.height(IrisDimens.space20))
-        Text("有什么可以帮你？", style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
+        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_61295b), style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
     }
 }
 
@@ -1184,7 +1184,7 @@ private fun RememberDialog(
     var text by remember { mutableStateOf(initial) }
     var target by remember { mutableStateOf(suggested) }
     com.iris.localai.ui.components.IrisDialog(
-        onDismiss = onDismiss, title = VersionText.REMEMBER, confirmText = "记住",
+        onDismiss = onDismiss, title = VersionText.REMEMBER, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f7d9d3),
         confirmEnabled = text.isNotBlank(),
         onConfirm = { onSave(text, target); onDismiss() },
     ) {
@@ -1223,7 +1223,7 @@ private fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCanc
                 Modifier
                     .clip(com.iris.localai.ui.theme.IrisRadius.bubbleShape)
                     .background(c.surfaceVariant.copy(alpha = 0.55f))
-                    .clickable(onClickLabel = "取消这条") { onCancel() }
+                    .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9ad32d)) { onCancel() }
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
                 Text(q.text, style = com.iris.localai.ui.theme.IrisType.message, color = c.textSecondary)
@@ -1232,7 +1232,7 @@ private fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCanc
                 Icon(com.iris.localai.ui.icons.IrisIcons.Clock, null, tint = c.textTertiary, modifier = Modifier.size(12.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    (if (q.forAgent) SendIntent.QUEUED_AGENT_LABEL else SendIntent.QUEUED_LABEL) + " · 点按取消",
+                    (if (q.forAgent) SendIntent.QUEUED_AGENT_LABEL else SendIntent.QUEUED_LABEL) + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6edc06),
                     style = com.iris.localai.ui.theme.IrisType.labelSmall, color = c.textTertiary,
                 )
             }
@@ -1242,5 +1242,5 @@ private fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCanc
 
 /** 2.2.16: the home model menu's single entry to the merged page (unit-tested). */
 object ModelMenuText {
-    const val MODELS_AND_LOADING = "模型与加载"
+    val MODELS_AND_LOADING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516)
 }

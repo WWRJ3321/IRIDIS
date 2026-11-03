@@ -45,16 +45,16 @@ import kotlinx.coroutines.delay
 
 /** 2.3.0 ③ 本地翻译: texts (unit-tested). */
 object TranslateText {
-    const val TRANSLATE = "翻译"
-    const val SHOW_ORIGINAL = "显示原文"
-    const val SHOW_TRANSLATION = "显示译文"
-    const val CLOSE = "关闭译文"
-    const val TRANSLATING = "正在翻译…"
-    const val UNDO = "撤销翻译"
-    const val DRAFT_AUTO = "翻译（自动 中↔英）"
-    const val DRAFT_ZH = "译成中文"
-    const val DRAFT_EN = "译成英文"
-    fun header(target: String) = "译文 · $target"
+    val TRANSLATE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)
+    val SHOW_ORIGINAL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7fa213)
+    val SHOW_TRANSLATION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_284fd4)
+    val CLOSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bab184)
+    val TRANSLATING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d03cc1)
+    val UNDO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_107cac)
+    val DRAFT_AUTO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a72abb)
+    val DRAFT_ZH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1501c2)
+    val DRAFT_EN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_aa8715)
+    fun header(target: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8254a7, target)
 }
 
 @Composable
@@ -92,7 +92,7 @@ internal fun TranslationBlock(id: String, modifier: Modifier = Modifier) {
                     { translator.toggleOriginal(id) }, style = IrisButtonStyle.Text, compact = true,
                 )
                 if (!t.folded && t.text.isNotEmpty()) PressableIcon(
-                    if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) "已复制" else "复制译文",
+                    if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cee9c3),
                     size = 32.dp, iconSize = 16.dp, tint = c.textSecondary,
                 ) { clipboard.setText(AnnotatedString(t.text)); copied = true }
                 PressableIcon(Icons.Outlined.Close, TranslateText.CLOSE, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary) { translator.close(id) }

@@ -133,7 +133,7 @@ fun AttachmentStrip(
                 if (onRemove != null) {
                     Box(Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                         PressableIcon(
-                            Icons.Rounded.Close, "移除 ${a.name}", size = 22.dp, iconSize = 13.dp,
+                            Icons.Rounded.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8506eb, a.name), size = 22.dp, iconSize = 13.dp,
                             tint = Iris.colors.onAccent, background = Iris.colors.text.copy(alpha = 0.55f),
                             onClick = { onRemove(a) },
                         )
@@ -194,7 +194,7 @@ private fun FileChip(a: Attachment) {
         Column(Modifier.padding(end = 14.dp)) {
             Text(a.name, style = IrisType.labelSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                Attachments.ext(a.name).uppercase().ifBlank { "文件" } + " · " + Attachments.sizeLabel(a.sizeBytes),
+                Attachments.ext(a.name).uppercase().ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47) } + " · " + Attachments.sizeLabel(a.sizeBytes),
                 style = IrisType.caption, color = c.textSecondary, maxLines = 1,
             )
         }

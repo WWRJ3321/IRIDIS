@@ -596,7 +596,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             com.iris.localai.agent.AgentTools.all.filter { ag.isEnabled(it) }.let { t ->
                 agentSystem(t, eff.systemPrompt, ready?.model?.fileName)
             }
-        } else eff.systemPrompt.trim()
+        } else withLang(eff.systemPrompt.trim())
         val memory = com.iris.localai.context.ContextAssembly.memoryBlock(conv, memoryInjectFor(agentMode), ctx, c.agent.memorySettings.current.epoch)
         val fixed = com.iris.localai.util.TokenEstimator.message(listOf(baseSystem, memory).filter { it.isNotBlank() }.joinToString("\n\n"))
         val reserve = maxNew.coerceIn(64, ctx / 2)
@@ -1101,7 +1101,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val eff = c.engine.effective(ready?.model).let { e -> if (maxNewOverride != null) e.copy(maxNewTokens = maxNewOverride) else e }
         // 2.1.9: in a voice call the instruction is appended to the system prompt at send time
         // (VoiceStyle.withVoiceSystem), so the history stays as stored and the KV prefix holds.
-        val baseSystem = eff.systemPrompt.trim()
+        val baseSystem = withLang(eff.systemPrompt.trim())
         // 1.10.0: 智能体 history carries earlier tool steps (rolled up); a compaction summary replaces
         // the folded messages; the frozen long-term memory joins the system prompt.
         val active = com.iris.localai.context.ContextAssembly.active(conv.messages, conv.contextStartAfterId, withTools = agent, vision = ready?.details?.supportsVision == true)
@@ -1565,10 +1565,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val ag = c.agent.settings.current
         // 2.3: no plan here any more (it rides on the newest user turn, see AgentPrompt.withPlanNote).
         return com.iris.localai.agent.AgentPrompt.build(
-            tools, userSystem, com.iris.localai.agent.AgentPrompt.styleFor(modelFile), skillsFor(tools),
+            tools, withLang(userSystem), com.iris.localai.agent.AgentPrompt.styleFor(modelFile), skillsFor(tools),
             lazy = ag.lazyTools, planFirst = ag.planFirst, memory = memory,
         )
     }
+
+    /** 2.3.1: non-Chinese UI → one line asking for replies in that language by default. */
+    private fun withLang(system: String) = com.iris.localai.I18nPure.withReplyLine(system, com.iris.localai.I18n.uiLang())
 
     /** 2.3: the 智能体 system prompt for [conv]: the user's instructions and the frozen memory as their own sections. */
     private fun agentSystemFor(conv: Conversation, ready: EngineState.Ready?, tools: List<com.iris.localai.agent.AgentTool>): String {

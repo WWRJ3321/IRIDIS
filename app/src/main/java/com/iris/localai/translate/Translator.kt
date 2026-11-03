@@ -75,7 +75,7 @@ class Translator(
      * user-facing message when no engine can translate.
      */
     fun translate(text: String, targetSetting: String? = null): Flow<String> {
-        val target = LangDetect.target(text, targetSetting ?: settings.current.translateTarget)
+        val target = LangDetect.target(text, targetSetting ?: settings.current.translateTarget, com.iris.localai.I18n.uiLang().substringBefore('-'))
         val source = LangDetect.source(text, target)
         return when (val c = choose(source, target)) {
             is EngineChoice.Unavailable -> flow { throw IllegalStateException(c.message) }
@@ -83,7 +83,7 @@ class Translator(
         }
     }
 
-    fun targetFor(text: String): TransLang = LangDetect.target(text, settings.current.translateTarget)
+    fun targetFor(text: String): TransLang = LangDetect.target(text, settings.current.translateTarget, com.iris.localai.I18n.uiLang().substringBefore('-'))
 
     private fun viaModel(text: String, target: TransLang): Flow<String> = flow {
         val params = engine.samplingFor(disableThinking = true).copy(

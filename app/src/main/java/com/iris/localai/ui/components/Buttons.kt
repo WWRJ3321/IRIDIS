@@ -361,7 +361,7 @@ fun IrisSwitch(checked: Boolean, enabled: Boolean = true, interaction: MutableIn
     Box(
         modifier
             .size(width = 50.dp, height = 30.dp)
-            .semantics { contentDescription = if (checked) "开" else "关" }
+            .semantics { contentDescription = if (checked) com.iris.localai.I18n.s(com.iris.localai.R.string.components_849320) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_d58a55) }
             .drawBehind {
                 val p = pos.value
                 val t = p.coerceIn(0f, 1f)

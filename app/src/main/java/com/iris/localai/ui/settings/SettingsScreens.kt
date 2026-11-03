@@ -73,6 +73,7 @@ import com.iris.localai.ui.components.SectionTitle
 import com.iris.localai.ui.components.SegmentedRow
 import com.iris.localai.ui.components.GroupFootnote
 import com.iris.localai.ui.components.CheckRow
+import androidx.compose.foundation.verticalScroll
 import com.iris.localai.ui.components.SettingsGroup
 import com.iris.localai.ui.components.SettingsRow
 import com.iris.localai.ui.components.SliderRow
@@ -96,43 +97,43 @@ import kotlin.math.roundToInt
 /** 2.1.3: DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
 enum class SettingsPage { APPEARANCE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT }
 
-private val THEME_OPTIONS = listOf(ThemeMode.SYSTEM to "跟随系统", ThemeMode.LIGHT to "浅色", ThemeMode.DARK to "深色")
+private val THEME_OPTIONS get() = listOf(ThemeMode.SYSTEM to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71bbc7), ThemeMode.LIGHT to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48d0a0), ThemeMode.DARK to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41e8e8))
 
 /** One-line descriptions, kept in one place so the wording stays consistent (unit-tested). */
 object SettingsText {
-    const val MODEL_BACKEND = "下载、导入、资源档位和加载设置"
-    const val GENERATION = "指令、思考与采样"
-    const val CONTEXT = "上下文长度与超出处理"
+    val MODEL_BACKEND: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_90aa74)
+    val GENERATION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_28a1cc)
+    val CONTEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0f3195)
     /** 2.1.3: one entry for the merged 记忆与上下文 page. */
-    const val MEMORY_CONTEXT = "上下文长度、长期记忆与压缩"
+    val MEMORY_CONTEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9284b2)
     /** 2.1.3: 关于 IRIDIS › 开发者选项. */
-    const val DEVELOPER = "资源档配置、资源诊断与调试显示"
-    const val PERFORMANCE = "资源档与功耗"
-    const val VOICE = "识别、朗读与翻译"
-    const val API_OFF = "供其他 App 调用（未开启）"
-    const val THEME = "浅色、深色或跟随系统"
-    const val APPEARANCE = "主题、视觉效果、触感与音效"
-    const val DELETE_ALL = "永久删除所有历史对话，无法恢复"
+    val DEVELOPER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d6e5b3)
+    val PERFORMANCE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3969dc)
+    val VOICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_078b04)
+    val API_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_21d98a)
+    val THEME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_37200b)
+    val APPEARANCE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b4c216)
+    val DELETE_ALL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4566dc)
     /** 1.14.3 设置 › 存储空间. */
-    const val STORAGE = "各类数据占用、备份与恢复"
-    const val DIAGNOSTICS = "速度、功耗与故障排查"
-    const val TIER_PROFILES = "分别设置 CPU 与 GPU 后端三档的线程、核心和优先级"
-    const val THINKING_BUDGET = "思考最多用多少 token，不占用正文的最大回复长度；用完后直接写正文"
-    const val MAX_NEW = "正文最多生成多少 token；思考另算"
-    const val ADVANCED = "高级"
+    val STORAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7c3347)
+    val DIAGNOSTICS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2f5693)
+    val TIER_PROFILES: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cbe1b9)
+    val THINKING_BUDGET: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4e15bc)
+    val MAX_NEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_53a86d)
+    val ADVANCED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)
     /** Second line of the centred version footer on the settings home page (1.8.0). */
-    const val TAGLINE = "本地大模型，对话不离开你的手机"
+    val TAGLINE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b702b)
 
     /** First line of the version footer: "IRIDIS 1.8.0-full" (1.14.5 rename). */
     fun versionLine(versionName: String) = "IRIDIS $versionName"
 
     /** The pages HOME links to, with their titles: the structure the 1.7.8 tests check. */
-    val HOME_GROUPS: List<Pair<String, List<String>>> = listOf(
-        "模型与推理" to listOf("模型与加载", "生成", ContextMemoryText.NAV, "性能与资源"),
-        "语音与服务" to listOf("语音与翻译", "API 服务"),
-        "界面与外观" to listOf("外观"),
-        "数据" to listOf("存储空间", "删除全部对话"),
-        "关于与调试" to listOf("关于 IRIDIS"), // 2.1.3: 资源诊断 moved to 关于 IRIDIS › 开发者选项
+    val HOME_GROUPS: List<Pair<String, List<String>>> get() = listOf(
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3dc3df) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), ContextMemoryText.NAV, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b)),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f492c) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7)),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_379b88) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2)),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0d8307) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe)),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78944f) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379)), // 2.1.3: 资源诊断 moved to 关于 IRIDIS › 开发者选项
     )
 }
 
@@ -153,10 +154,10 @@ internal fun CrashDumpRow() {
     var busy by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<com.iris.localai.util.CrashDump.Result?>(null) }
     SettingsRow(
-        "导出上次崩溃日志", icon = Icons.Outlined.BugReport,
-        subtitle = if (busy) "正在收集…" else result?.let { r ->
-            r.note + "：" + r.items.joinToString("；") { it.name + if (it.bytes > 0) " (${it.bytes / 1024} KB)" else " (无)" + (it.note?.let { n -> "（$n）" } ?: "") }
-        } ?: "闪退记录与日志片段 → 下载文件夹",
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e45c28), icon = Icons.Outlined.BugReport,
+        subtitle = if (busy) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0b6cea) else result?.let { r ->
+            r.note + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec892) + r.items.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d)) { it.name + if (it.bytes > 0) " (${it.bytes / 1024} KB)" else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ac85da) + (it.note?.let { n -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_67f810, n) } ?: "") }
+        } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1ca943),
         subtitleMaxLines = 6,
         enabled = !busy,
         onClick = {
@@ -175,55 +176,55 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
     val api by vm.apiStatus.collectAsStateWithLifecycle()
     var confirmWipe by rememberSaveable { mutableStateOf(false) }
 
-    SubpageScaffold("设置", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e366cc), onBack) {
         ScrollBody {
             // 2.1.3: the 运行状态 rack moved to 关于 IRIDIS › 开发者选项 (DeveloperPage).
-            SectionTitle("模型与推理")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3dc3df))
             SettingsGroup {
-                NavItem("模型与加载", SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
                 Divider()
-                NavItem("生成", SettingsText.GENERATION, com.iris.localai.ui.icons.IrisIcons.Spark) { onOpen(SettingsPage.GENERATION) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), SettingsText.GENERATION, com.iris.localai.ui.icons.IrisIcons.Spark) { onOpen(SettingsPage.GENERATION) }
                 Divider()
                 NavItem(
-                    "性能与资源", "当前：${com.iris.localai.engine.ResourceTier.of(s.resourceTier).label}",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_40a98a, com.iris.localai.engine.ResourceTier.of(s.resourceTier).label),
                     com.iris.localai.ui.icons.IrisIcons.Gauge,
                 ) { onOpen(SettingsPage.PERFORMANCE) }
                 Divider()
                 // 1.9.0: 智能体 (tools, permissions, workspace). Not part of the 1.7.8 HOME_GROUPS structure test.
-                NavItem("智能体", com.iris.localai.ui.agent.AgentText.NAV, com.iris.localai.ui.icons.IrisIcons.Agent) { onOpen(SettingsPage.AGENT) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), com.iris.localai.ui.agent.AgentText.NAV, com.iris.localai.ui.icons.IrisIcons.Agent) { onOpen(SettingsPage.AGENT) }
                 Divider()
                 // 2.1.3: 「上下文与记忆」 + 「记忆」 → one entry 「记忆与上下文」 (one page, context sections first).
                 NavItem(ContextMemoryText.NAV, ContextMemoryText.NAV_SUB, com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.MEMORY) }
             }
 
-            SectionTitle("语音与服务")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f492c))
             SettingsGroup {
-                NavItem("语音与翻译", SettingsText.VOICE, com.iris.localai.ui.icons.IrisIcons.Voice) { onOpen(SettingsPage.VOICE) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), SettingsText.VOICE, com.iris.localai.ui.icons.IrisIcons.Voice) { onOpen(SettingsPage.VOICE) }
                 Divider()
-                NavItem("API 服务", if (api.running) "运行中 · 端口 ${api.port}" else SettingsText.API_OFF, com.iris.localai.ui.icons.IrisIcons.Plug) { onOpen(SettingsPage.API) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), if (api.running) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27de1c, api.port) else SettingsText.API_OFF, com.iris.localai.ui.icons.IrisIcons.Plug) { onOpen(SettingsPage.API) }
             }
 
-            SectionTitle("界面与外观")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_379b88))
             SettingsGroup {
-                NavItem("外观", SettingsText.APPEARANCE, com.iris.localai.ui.icons.IrisIcons.Contrast) { onOpen(SettingsPage.APPEARANCE) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), SettingsText.APPEARANCE, com.iris.localai.ui.icons.IrisIcons.Contrast) { onOpen(SettingsPage.APPEARANCE) }
             }
 
-            SectionTitle("数据")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0d8307))
             SettingsGroup {
                 // 1.14.3: 存储空间 (sizes by category, clear / delete per item).
-                NavItem("存储空间", SettingsText.STORAGE, com.iris.localai.ui.icons.IrisIcons.Storage) { onOpen(SettingsPage.STORAGE) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), SettingsText.STORAGE, com.iris.localai.ui.icons.IrisIcons.Storage) { onOpen(SettingsPage.STORAGE) }
                 Divider()
                 // 1.8.0: HyperOS destructive row: red text, no icon.
                 SettingsRow(
-                    "删除全部对话", titleColor = Iris.colors.danger,
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe), titleColor = Iris.colors.danger,
                     subtitle = SettingsText.DELETE_ALL, onClick = { confirmWipe = true },
                 )
             }
 
-            SectionTitle("关于与调试")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78944f))
             SettingsGroup {
                 // 2.1.3: 资源诊断 (with 故障排查) moved to 关于 IRIDIS › 开发者选项.
-                NavItem("关于 IRIDIS", "版本 ${BuildConfig.VERSION_NAME}", com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
             }
             VersionFooter(SettingsText.versionLine(BuildConfig.VERSION_NAME), SettingsText.TAGLINE)
         }
@@ -231,9 +232,9 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
 
     if (confirmWipe) {
         ConfirmDialog(
-            title = "删除全部对话？",
-            message = "所有历史对话将被永久删除，无法恢复。",
-            confirmText = "删除",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1db0aa),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c63448),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { vm.deleteAllConversations() },
             onDismiss = { confirmWipe = false },
         )
@@ -248,24 +249,24 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
 fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
     val s by vm.settings.collectAsStateWithLifecycle()
             Row(Modifier.fillMaxWidth().padding(end = IrisDimens.groupGutter), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { SectionTitle("加载") }
-                IrisButton("恢复默认", vm::resetLoadOptions, style = IrisButtonStyle.Text, compact = true)
+                Box(Modifier.weight(1f)) { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea)) }
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), vm::resetLoadOptions, style = IrisButtonStyle.Text, compact = true)
             }
             SettingsGroup {
                 SwitchRow(
-                    "启动时预加载上次的模型", s.autoLoadLastModel, icon = com.iris.localai.ui.icons.IrisIcons.Power,
-                    subtitle = "打开 App 时就在后台加载上次用的模型，进入对话即可使用；关闭可省一点电和内存",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1c8600), s.autoLoadLastModel, icon = com.iris.localai.ui.icons.IrisIcons.Power,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b6c8f1),
                 ) { on -> vm.update { it.copy(autoLoadLastModel = on) } }
                 Divider()
                 DefaultModelRow(vm, s.defaultModelFile)
                 Divider()
                 VisionQualityRow(vm, s.visionSide)
                 Divider()
-                SettingsRow("立即重新加载模型", icon = com.iris.localai.ui.icons.IrisIcons.Reload, subtitle = "让需要重新加载才生效的修改马上生效", onClick = { vm.reloadModel() })
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41ba97), icon = com.iris.localai.ui.icons.IrisIcons.Reload, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1a7844), onClick = { vm.reloadModel() })
             }
 
             // 2.2.16: model / voice / 生图 downloads; 自动 picks the fastest reachable source and falls through.
-            SectionTitle("下载源")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
             SettingsGroup {
                 com.iris.localai.data.DownloadSource.entries.forEachIndexed { i, src ->
                     if (i > 0) Divider()
@@ -274,7 +275,7 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
             }
             GroupFootnote(com.iris.localai.ui.models.SourceText.FOOTNOTE)
 
-            SectionTitle("默认后端")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_494ef0))
             SettingsGroup {
                 // 2.2.0: QAIRT bundles only run on the NPU — nothing to choose.
                 val formats = com.iris.localai.engine.EngineFactory.supportedFormats.filter { it != com.iris.localai.data.ModelFormat.QAIRT }
@@ -287,19 +288,19 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
                     val htpOk = f == com.iris.localai.data.ModelFormat.GGUF && com.iris.localai.engine.llama.LlamaHtpRuntime.available(androidx.compose.ui.platform.LocalContext.current)
                     val withNpu = f == com.iris.localai.data.ModelFormat.GGUF && (htpOk || vm.geniex != null && (gxReady || cur == "NPU"))
                     SegmentedRow(
-                        f.label, if (withNpu) listOf("自动", "CPU", "GPU", "NPU") else listOf("自动", "CPU", "GPU"),
+                        f.label, if (withNpu) listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), "CPU", "GPU", "NPU") else listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), "CPU", "GPU"),
                         when (cur) { "CPU" -> 1; "GPU" -> 2; "NPU" -> if (withNpu) 3 else 0; else -> 0 },
                         { idx -> vm.setDefaultBackend(f, when (idx) { 1 -> "CPU"; 2 -> "GPU"; 3 -> "NPU"; else -> null }) },
                         subtitle = when (f) {
-                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) (if (gxReady) "自动 = CPU。GPU 首次加载要编译；NPU 用 GenieX（不支持的模型改用内置 Hexagon）" else "自动 = CPU。GPU 首次加载要编译；NPU 用内置 llama.cpp Hexagon") else if (vm.geniex != null) "自动 = CPU。GPU 首次加载要编译；NPU ${com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX}" else "自动 = CPU。GPU 首次加载需要较长时间"
-                            com.iris.localai.data.ModelFormat.LITERT -> "自动 = GPU（Qwen3.5、Agents-A1 用 CPU）。GPU ${com.iris.localai.engine.BackendCapabilities.LITERT_GPU_WARNING}，之后会用缓存。文件名带 _sm8750 的 NPU 编译模型始终用 NPU"
-                            com.iris.localai.data.ModelFormat.MNN -> "自动 = CPU。GPU 走 OpenCL"
-                            com.iris.localai.data.ModelFormat.QAIRT -> "只能用 NPU"
+                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) (if (gxReady) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c3e012) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_681358)) else if (vm.geniex != null) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_92b631, com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3d65ab)
+                            com.iris.localai.data.ModelFormat.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b329a5, com.iris.localai.engine.BackendCapabilities.LITERT_GPU_WARNING)
+                            com.iris.localai.data.ModelFormat.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a3e9ec)
+                            com.iris.localai.data.ModelFormat.QAIRT -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bf960)
                         },
                     )
                 }
             }
-            GroupFootnote("加载失败会自动按 NPU → GPU → CPU 回退并提示；导致过崩溃的后端会被跳过。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7dcdd9))
 
             vm.npu?.let { npu ->
                 SectionTitle("NPU")
@@ -309,29 +310,29 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
             vm.geniex?.let { gx -> GenieXSection(vm, gx) }
 
             // 2.1.3: every load option sits behind 「高级」 (defaults unchanged).
-            SectionTitle("加载选项")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_04e3d1))
             SettingsGroup {
                 AdvancedFold("load", SettingsText.ADVANCED) {
-                    SwitchRow("Flash Attention", s.flashAttention, subtitle = "降低长上下文的内存与功耗（GGUF）") { on -> vm.update { it.copy(flashAttention = on) } }
+                    SwitchRow("Flash Attention", s.flashAttention, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c67060)) { on -> vm.update { it.copy(flashAttention = on) } }
                     Divider()
                     SegmentedRow(
-                        "KV 缓存量化", listOf("F16", "Q8_0", "Q4_0"), s.kvCacheType.coerceIn(0, 2),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1747d7), listOf("F16", "Q8_0", "Q4_0"), s.kvCacheType.coerceIn(0, 2),
                         { i -> vm.update { it.copy(kvCacheType = i) } },
-                        subtitle = if (s.flashAttention) "GGUF 专用。Q8_0 内存减半、质量几乎不变；Q4_0 更省但可能变差" else "需开启 Flash Attention",
+                        subtitle = if (s.flashAttention) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9637e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1cf9cd),
                     )
                     Divider()
                     SliderRow(
-                        "批大小", s.batchSize.toFloat(), 0f..2048f,
-                        if (s.batchSize == 0) "跟随资源档（${vm.tierBatch(s.resourceTier)}）" else "${s.batchSize}",
-                        subtitle = "GGUF 预填充一次处理的 token 数",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b65a0d), s.batchSize.toFloat(), 0f..2048f,
+                        if (s.batchSize == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, vm.tierBatch(s.resourceTier)) else "${s.batchSize}",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6935d2),
                     ) { v -> vm.update { it.copy(batchSize = (v / 64).toInt() * 64) } }
                     Divider()
-                    SwitchRow("mmap 加载", s.useMmap, subtitle = "按需分页读取权重（GGUF / MNN）") { on -> vm.update { it.copy(useMmap = on) } }
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_475473), s.useMmap, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_300fac)) { on -> vm.update { it.copy(useMmap = on) } }
                     Divider()
-                    SwitchRow("加载后预热", s.warmup, subtitle = "加载完先跑 1 个 token，首条回复更快") { on -> vm.update { it.copy(warmup = on) } }
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), s.warmup, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27)) { on -> vm.update { it.copy(warmup = on) } }
                 }
             }
-            GroupFootnote("修改后需重新加载模型。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a309b))
 }
 
 /** 设置 › 生成. */
@@ -341,69 +342,69 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
     var editPrompt by rememberSaveable { mutableStateOf(false) }
     fun f2(v: Float) = String.format(Locale.US, "%.2f", v)
     SubpageScaffold(
-        "生成", onBack,
-        actions = { IrisButton("恢复默认", vm::resetGeneration, style = IrisButtonStyle.Text, compact = true) },
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), onBack,
+        actions = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), vm::resetGeneration, style = IrisButtonStyle.Text, compact = true) },
     ) {
         ScrollBody {
-            SectionTitle("指令与思考")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4579b7))
             SettingsGroup {
                 SettingsRow(
-                    "自定义指令（System Prompt）", icon = com.iris.localai.ui.icons.IrisIcons.Prompt,
-                    subtitle = s.systemPrompt.ifBlank { "未设置；每次对话开头发给模型的说明" }, subtitleMaxLines = 2, onClick = { editPrompt = true },
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fba64a), icon = com.iris.localai.ui.icons.IrisIcons.Prompt,
+                    subtitle = s.systemPrompt.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_55a43c) }, subtitleMaxLines = 2, onClick = { editPrompt = true },
                 )
                 Divider()
                 SwitchRow(
-                    "深度思考", s.deepThinking, icon = com.iris.localai.ui.icons.IrisIcons.Think,
-                    subtitle = "支持思考的模型先推理再回答；与输入框上的「深度思考」按钮是同一个开关",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_1d878d), s.deepThinking, icon = com.iris.localai.ui.icons.IrisIcons.Think,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_18c5b3),
                 ) { on -> vm.update { it.copy(deepThinking = on) } }
                 Divider()
                 SliderRow(
-                    "思考预算", s.thinkingBudget.toFloat(), 0f..8192f,
-                    if (s.thinkingBudget == 0) "与正文共用" else "${s.thinkingBudget} tokens",
-                    subtitle = SettingsText.THINKING_BUDGET + "。设为 0 则与正文共用最大回复长度",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1727e1), s.thinkingBudget.toFloat(), 0f..8192f,
+                    if (s.thinkingBudget == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7ce421) else "${s.thinkingBudget} tokens",
+                    subtitle = SettingsText.THINKING_BUDGET + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d852f9),
                     steps = 31,
                 ) { v -> vm.update { it.copy(thinkingBudget = (v / 256).toInt() * 256) } }
             }
 
-            SectionTitle("长度与采样")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_74de60))
             SettingsGroup {
-                SliderRow("最大回复长度", com.iris.localai.data.TokenLimit.toSlider(s.maxNewTokens, 8192, 256), 256f..8448f, com.iris.localai.data.TokenLimit.label(s.maxNewTokens, " tokens"), subtitle = SettingsText.MAX_NEW) { v -> vm.update { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 256)) } }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fa7b28), com.iris.localai.data.TokenLimit.toSlider(s.maxNewTokens, 8192, 256), 256f..8448f, com.iris.localai.data.TokenLimit.label(s.maxNewTokens, " tokens"), subtitle = SettingsText.MAX_NEW) { v -> vm.update { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 256)) } }
                 Divider()
-                SliderRow("温度", s.temperature, 0f..2f, f2(s.temperature), subtitle = "越高越有创意，越低越稳定；0 为确定性输出") { v -> vm.update { it.copy(temperature = (v * 20).toInt() / 20f) } }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c9bf0b), s.temperature, 0f..2f, f2(s.temperature), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_752316)) { v -> vm.update { it.copy(temperature = (v * 20).toInt() / 20f) } }
                 Divider()
                 AdvancedFold("sampling", SettingsText.ADVANCED) {
                     Divider()
-                    SliderRow("Top-P", s.topP, 0.05f..1f, f2(s.topP), subtitle = "只在累计概率前 P 的候选词里取词") { v -> vm.update { it.copy(topP = (v * 20).toInt() / 20f) } }
+                    SliderRow("Top-P", s.topP, 0.05f..1f, f2(s.topP), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0f59ca)) { v -> vm.update { it.copy(topP = (v * 20).toInt() / 20f) } }
                     Divider()
-                    SliderRow("Top-K", s.topK.toFloat(), 0f..100f, if (s.topK == 0) "关闭" else s.topK.toString(), subtitle = "只在概率最高的 K 个候选词里取词；0 为关闭") { v -> vm.update { it.copy(topK = v.toInt()) } }
+                    SliderRow("Top-K", s.topK.toFloat(), 0f..100f, if (s.topK == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91) else s.topK.toString(), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b7795b)) { v -> vm.update { it.copy(topK = v.toInt()) } }
                     Divider()
-                    SliderRow("Min-P", s.minP, 0f..0.3f, f2(s.minP), subtitle = "去掉概率低于最高者 P 倍的候选词") { v -> vm.update { it.copy(minP = (v * 100).toInt() / 100f) } }
+                    SliderRow("Min-P", s.minP, 0f..0.3f, f2(s.minP), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a915d4)) { v -> vm.update { it.copy(minP = (v * 100).toInt() / 100f) } }
                     Divider()
-                    SliderRow("重复惩罚", s.repeatPenalty, 1f..1.5f, f2(s.repeatPenalty), subtitle = "降低重复用词；1.00 为不惩罚") { v -> vm.update { it.copy(repeatPenalty = (v * 100).toInt() / 100f) } }
+                    SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_43a45e), s.repeatPenalty, 1f..1.5f, f2(s.repeatPenalty), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_09ea9f)) { v -> vm.update { it.copy(repeatPenalty = (v * 100).toInt() / 100f) } }
                     Divider()
-                    SliderRow("惩罚窗口", s.repeatLastN.toFloat(), 0f..512f, "${s.repeatLastN} tokens", subtitle = "重复、Presence、Frequency 惩罚统计最近多少个 token（GGUF）") { v -> vm.update { it.copy(repeatLastN = (v / 16).toInt() * 16) } }
+                    SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e4596e), s.repeatLastN.toFloat(), 0f..512f, "${s.repeatLastN} tokens", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_818868)) { v -> vm.update { it.copy(repeatLastN = (v / 16).toInt() * 16) } }
                     Divider()
-                    SliderRow("Presence 惩罚", s.presencePenalty, -2f..2f, f2(s.presencePenalty), subtitle = "正值鼓励换话题（GGUF）") { v -> vm.update { it.copy(presencePenalty = (v * 20).toInt() / 20f) } }
+                    SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8f9adc), s.presencePenalty, -2f..2f, f2(s.presencePenalty), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_69e836)) { v -> vm.update { it.copy(presencePenalty = (v * 20).toInt() / 20f) } }
                     Divider()
-                    SliderRow("Frequency 惩罚", s.frequencyPenalty, -2f..2f, f2(s.frequencyPenalty), subtitle = "正值减少重复用词（GGUF）") { v -> vm.update { it.copy(frequencyPenalty = (v * 20).toInt() / 20f) } }
+                    SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4de5f1), s.frequencyPenalty, -2f..2f, f2(s.frequencyPenalty), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_531e21)) { v -> vm.update { it.copy(frequencyPenalty = (v * 20).toInt() / 20f) } }
                     Divider()
-                    SwitchRow("固定随机种子", s.seed >= 0, subtitle = if (s.seed >= 0) "种子 ${s.seed}：相同输入得到相同输出（GGUF）" else "每次随机") { on ->
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8d2639), s.seed >= 0, subtitle = if (s.seed >= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bc4200, s.seed) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2beef4)) { on ->
                         vm.update { it.copy(seed = if (on) 42 else -1) }
                     }
                 }
             }
-            GroupFootnote("全局默认值。每个模型可在「模型与加载」里点 ⚙ 单独设置。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3b9f4b))
         }
     }
 
     if (editPrompt) {
         TextInputDialog(
-            title = "自定义指令",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dde09),
             initial = s.systemPrompt,
             onConfirm = { text -> vm.update { it.copy(systemPrompt = text.trim()) } },
             onDismiss = { editPrompt = false },
-            confirmText = "保存",
-            placeholder = "例如：你是一位简洁、专业的中文助手。回答尽量使用要点。",
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
+            placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_efaae4),
             singleLine = false,
             allowEmpty = true,
         )
@@ -421,18 +422,18 @@ fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit) {
     // 2.2.9 F: 开发者选项 › 上下文与记忆 — every control of the old 记忆与上下文 page, unchanged.
     com.iris.localai.ui.agent.MemorySettingsPage(
         onBack = onBack,
-        title = "上下文与记忆",
-        actions = { IrisButton("恢复默认", vm::resetContext, style = IrisButtonStyle.Text, compact = true) },
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f7070),
+        actions = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), vm::resetContext, style = IrisButtonStyle.Text, compact = true) },
     ) {
         run {
-            SectionTitle("上下文窗口")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0ebfd1))
             SettingsGroup {
-                SliderRow("上下文长度", s.contextLength.toFloat(), 1024f..32768f, "${s.contextLength} tokens", subtitle = "模型一次能看到的对话长度；越大越占内存，修改后重新加载模型生效") { v ->
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), s.contextLength.toFloat(), 1024f..32768f, "${s.contextLength} tokens", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_474626)) { v ->
                     vm.update { it.copy(contextLength = (v / 1024).toInt() * 1024) }
                 }
             }
 
-            SectionTitle("超出上下文时")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3f1fee))
             SettingsGroup {
                 com.iris.localai.data.ContextStrategy.entries.forEach { st ->
                     if (st.ordinal > 0) Divider()
@@ -441,17 +442,17 @@ fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
                 Divider()
-                SliderRow("滑动窗口保留轮数", s.contextKeepTurns.toFloat(), 1f..32f, "${s.contextKeepTurns} 轮", subtitle = "「滑动窗口」保留最近多少轮对话", steps = 30) { v -> vm.update { it.copy(contextKeepTurns = v.toInt()) } }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc8bfe), s.contextKeepTurns.toFloat(), 1f..32f, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_14f1d0, s.contextKeepTurns), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f2104d), steps = 30) { v -> vm.update { it.copy(contextKeepTurns = v.toInt()) } }
                 Divider()
-                SliderRow("摘要触发阈值", s.summaryTriggerPercent.toFloat(), 40f..95f, "${s.summaryTriggerPercent}%", subtitle = "「自动摘要」在历史超过上下文预算的这个比例时，先总结早期对话") { v -> vm.update { it.copy(summaryTriggerPercent = v.toInt()) } }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0e766b), s.summaryTriggerPercent.toFloat(), 40f..95f, "${s.summaryTriggerPercent}%", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4bc8ad)) { v -> vm.update { it.copy(summaryTriggerPercent = v.toInt()) } }
                 Divider()
                 // 2.2.9 E: 本对话的策略 (chat context sheet) only with this on.
-                SwitchRow("每对话策略", s.developerMode, subtitle = "在聊天的上下文菜单里显示「本对话的策略」，可为单个对话改用其他策略") { on -> vm.update { it.copy(developerMode = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e471c9), s.developerMode, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99314d)) { on -> vm.update { it.copy(developerMode = on) } }
             }
             if (com.iris.localai.context.ContextAssembly.devTakeover(com.iris.localai.data.ContextStrategy.of(s.contextStrategy))) {
-                GroupFootnote("选了「按 token 预算」以外的策略：对话模式不再自动整理，主页面显示「${com.iris.localai.context.ContextAssembly.TAKEOVER}」。")
+                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_97fdbb, com.iris.localai.context.ContextAssembly.TAKEOVER))
             }
-            GroupFootnote("每个对话可在上下文用量处单独设置。上下文平移仅 GGUF 模型支持。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9a4613))
         }
     }
 }
@@ -462,9 +463,9 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
     val context = androidx.compose.ui.platform.LocalContext.current
     val s by vm.settings.collectAsStateWithLifecycle()
     val tierApply by vm.tierApply.collectAsStateWithLifecycle()
-    SubpageScaffold("性能与资源", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b), onBack) {
         ScrollBody {
-            SectionTitle("资源档")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81791e))
             SettingsGroup {
                 // 1.7.6: the same slider as the composer card (1.7.4 form, muted blue fill, one line of text).
                 com.iris.localai.ui.components.TierSlider(
@@ -476,21 +477,21 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                 )
                 // 2.1.3: 资源档配置 moved to 关于 IRIDIS › 开发者选项.
             }
-            GroupFootnote("越低越省电，越高越快" + com.iris.localai.engine.LiveResourcePolicy.GPU_SCOPE_NOTE + "。")
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_25a91d) + com.iris.localai.engine.LiveResourcePolicy.GPU_SCOPE_NOTE + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81197c))
 
-            SectionTitle("功耗")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ed5278))
             SettingsGroup {
                 SliderRow(
-                    "空闲自动卸载模型",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ddb982),
                     s.idleUnloadMinutes.toFloat(), 0f..60f,
-                    if (s.idleUnloadMinutes == 0) "从不" else "${s.idleUnloadMinutes} 分钟",
-                    subtitle = "一段时间不用就释放内存，让芯片进入低功耗状态",
+                    if (s.idleUnloadMinutes == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_487496) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c29004, s.idleUnloadMinutes),
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d52729),
                     steps = 11,
                 ) { v -> vm.update { it.copy(idleUnloadMinutes = (v / 5).toInt() * 5) } }
                 Divider()
                 SwitchRow(
-                    "切到后台继续生成", s.backgroundGeneration, icon = Icons.Outlined.Notifications,
-                    subtitle = "生成时显示进度通知（可停止），完成后通知你；语音对话不受影响",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ab603e), s.backgroundGeneration, icon = Icons.Outlined.Notifications,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_539f31),
                 ) { on -> vm.update { it.copy(backgroundGeneration = on) } }
                 // 1.10.13: HyperOS freezes IRIS in the background unless it may run there.
                 if (s.backgroundGeneration) {
@@ -501,65 +502,65 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                         onPauseOrDispose { }
                     }
                     SettingsRow(
-                        "后台运行",
-                        subtitle = if (exempt) "已允许后台运行。小米/HyperOS 还需把省电策略设为「无限制」"
-                        else "未允许：切到后台后系统可能暂停生成。点按允许后台运行",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_956fee),
+                        subtitle = if (exempt) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_db477e)
+                        else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_29ee72),
                         icon = com.iris.localai.ui.icons.IrisIcons.Bolt,
                         onClick = { com.iris.localai.util.BackgroundGuard.open(context) },
-                        trailing = { com.iris.localai.ui.components.ValueText(if (exempt) "已允许" else "去允许") },
+                        trailing = { com.iris.localai.ui.components.ValueText(if (exempt) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_70c3a1) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94754e)) },
                     )
                 }
                 Divider()
                 val thermal by com.iris.localai.engine.ThermalGovernor.status.collectAsStateWithLifecycle()
-                val nowText = if (thermal.tempC.isNaN()) "读不到温度" else "当前 ${"%.1f".format(thermal.tempC)}°C"
+                val nowText = if (thermal.tempC.isNaN()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_80ef0f) else "当前 ${"%.1f".format(thermal.tempC)}°C"
                 SwitchRow(
-                    "温度限速", s.thermalLimitC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
-                    subtitle = if (s.thermalLimitC == 0) "手机达到设定温度时放慢生成，减少发热（$nowText）"
-                    else if (thermal.throttling) "$nowText · 正在限速（约 ${thermal.capTps} 字/秒）"
-                    else "$nowText · 未限速",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3bee9a), s.thermalLimitC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
+                    subtitle = if (s.thermalLimitC == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f3765, nowText)
+                    else if (thermal.throttling) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b8b90f, nowText, thermal.capTps)
+                    else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f1bd75, nowText),
                 ) { on -> vm.update { it.copy(thermalLimitC = if (on) 42 else 0) } }
                 if (s.thermalLimitC > 0) {
                     SliderRow(
-                        "限速温度", s.thermalLimitC.toFloat(), 35f..50f, "${s.thermalLimitC}°C",
-                        subtitle = "按电池温度判断；超过越多越慢（10 → 2 字/秒），降到设定以下 1°C 恢复",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d31153), s.thermalLimitC.toFloat(), 35f..50f, "${s.thermalLimitC}°C",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d3af4c),
                         steps = 14,
                     ) { v -> vm.update { it.copy(thermalLimitC = v.toInt().coerceIn(35, 50)) } }
                 }
                 Divider()
                 // 2.2.10: 终止温度 — hard stop + unload everything (no auto reload).
                 SwitchRow(
-                    "终止温度", s.thermalCutoffC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Power,
-                    subtitle = if (s.thermalCutoffC == 0) "手机过热时立即停止生成并卸载所有模型（$nowText）"
-                    else "达到 ${s.thermalCutoffC}°C 或系统报告严重过热时停止并卸载全部模型，需手动重新加载",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f5c6c), s.thermalCutoffC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Power,
+                    subtitle = if (s.thermalCutoffC == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e5ffc0, nowText)
+                    else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a5ae10, s.thermalCutoffC),
                 ) { on -> vm.update { it.copy(thermalCutoffC = if (on) com.iris.localai.engine.ThermalCutoff.DEFAULT_C else 0) } }
                 if (s.thermalCutoffC > 0) {
                     SliderRow(
-                        "终止于", s.thermalCutoffC.toFloat(),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_82a989), s.thermalCutoffC.toFloat(),
                         com.iris.localai.engine.ThermalCutoff.MIN_C.toFloat()..com.iris.localai.engine.ThermalCutoff.MAX_C.toFloat(),
                         "${s.thermalCutoffC}°C",
-                        subtitle = "按电池温度判断；停止对话、GUI 智能体和生图，卸载语言/视觉、语音和生图模型",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_153dc8),
                         steps = com.iris.localai.engine.ThermalCutoff.MAX_C - com.iris.localai.engine.ThermalCutoff.MIN_C - 1,
                     ) { v -> vm.update { it.copy(thermalCutoffC = com.iris.localai.engine.ThermalCutoff.sanitize(kotlin.math.round(v).toInt())) } }
                 }
                 Divider()
-                SwitchRow("生成时保持屏幕常亮", s.keepScreenOn, icon = Icons.Outlined.ScreenLockPortrait, subtitle = "回复没写完时屏幕不熄灭") { on -> vm.update { it.copy(keepScreenOn = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3ffddc), s.keepScreenOn, icon = Icons.Outlined.ScreenLockPortrait, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65fb6d)) { on -> vm.update { it.copy(keepScreenOn = on) } }
                 Divider()
                 AdvancedFold("perf", SettingsText.ADVANCED) {
                     Divider()
                     SliderRow(
-                        "推理线程", s.threads.toFloat(), 0f..8f,
-                        if (s.threads == 0) "跟随资源档（${vm.tierThreads(s.resourceTier)}）" else "${s.threads}",
-                        subtitle = "手动设置会替代所有档位的线程数（核心与优先级仍按档位）；一般保持「跟随资源档」",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_539cb2), s.threads.toFloat(), 0f..8f,
+                        if (s.threads == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, vm.tierThreads(s.resourceTier)) else "${s.threads}",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a985e),
                         steps = 7,
                     ) { v -> vm.update { it.copy(threads = v.toInt()) } }
                     Divider()
                     SwitchRow(
-                        "性能浮窗", s.perfOverlay, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
-                        subtitle = "生成时在聊天界面右上角显示速度、CPU、内存（GPU 能读到时才显示）",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a99d5a), s.perfOverlay, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_69a45f),
                     ) { on -> vm.update { it.copy(perfOverlay = on) } }
                     Divider()
                     SettingsRow(
-                        "速度测试", icon = com.iris.localai.ui.icons.IrisIcons.Gauge, subtitle = "用当前模型测预填充和生成速度；CPU 下会对比 4–8 个线程，约 1 分钟",
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c43f5c), icon = com.iris.localai.ui.icons.IrisIcons.Gauge, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a0f92),
                         onClick = { vm.runBenchmark() },
                     )
                 }
@@ -578,7 +579,7 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
         LicensesPage(onBack = { showLicenses = false })
         return
     }
-    SubpageScaffold("关于", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81d9f5), onBack) {
         ScrollBody {
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space16),
@@ -595,23 +596,23 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
                     androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(26.dp).width(134.dp))
                 }
                 Spacer(Modifier.height(IrisDimens.space2))
-                Text("版本 ${BuildConfig.VERSION_NAME}", style = IrisType.caption, color = c.textTertiary)
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), style = IrisType.caption, color = c.textTertiary)
                 Spacer(Modifier.height(IrisDimens.space16))
                 Text(
                     ABOUT_PRIVACY,
                     style = IrisType.secondary, color = c.textSecondary, textAlign = TextAlign.Center,
                 )
             }
-            SectionTitle("许可证")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_20a284))
             SettingsGroup {
-                SettingsRow("本应用许可证 · Apache-2.0", subtitle = "IRIDIS 源码以 Apache License 2.0 开源")
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_50322d), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_521717))
                 Divider()
                 SettingsRow(
-                    "许可证全文", subtitle = "查看各第三方组件的许可证原文",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4236d8), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48b9fe),
                     onClick = { showLicenses = true }, trailing = { Chevron() },
                 )
             }
-            SectionTitle("开源组件")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_843d86))
             SettingsGroup {
                 OPEN_SOURCE.forEachIndexed { i, (name, desc) ->
                     if (i > 0) Divider()
@@ -621,38 +622,38 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
             // 2.1.3: 开发者选项 at the bottom of 关于 IRIDIS.
             Spacer(Modifier.height(IrisDimens.space24))
             SettingsGroup {
-                NavItem("开发者选项", SettingsText.DEVELOPER, com.iris.localai.ui.icons.IrisIcons.Pulse, onDeveloper)
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1b6949), SettingsText.DEVELOPER, com.iris.localai.ui.icons.IrisIcons.Pulse, onDeveloper)
             }
         }
     }
 }
 
-internal const val ABOUT_PRIVACY =
-    "对话、推理、语音识别与合成都在本机完成，对话内容不会上传。联网仅用于：你发起的模型、语音包和运行库下载，" +
-        "智能体开启联网工具时的搜索与网页读取，以及你开启的本地 API。"
+internal val ABOUT_PRIVACY: String get() =
+    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1586eb) +
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2ae972)
 
 /** 1.14.7: every bundled / downloadable third-party component with its license. */
 internal val OPEN_SOURCE = listOf(
-    "llama.cpp" to "MIT · GGUF 推理 · master@785322d (2026-11-01)",
-    "MNN" to "Apache-2.0（已修改）· MNN 推理",
-    "Google LiteRT-LM" to "Apache-2.0 · .litertlm 推理",
-    "LiteRT Dispatch (Qualcomm)" to "Apache-2.0 · NPU 调度层",
-    "Qualcomm GenieX（Kotlin 层）" to "BSD-3-Clause · full 版 GenieX 引擎；原生运行库为高通专有软件，用户自行下载",
-    "sherpa-onnx" to "Apache-2.0 · 语音识别 / 合成 / VAD",
-    "ONNX Runtime" to "MIT · 语音模型运行时",
-    "Khronos OpenCL 头文件" to "Apache-2.0 · GPU 加速",
-    "AndroidX / Jetpack Compose" to "Apache-2.0 · 界面",
-    "Kotlin / kotlinx" to "Apache-2.0 · 语言与基础库",
-    "Apache Commons Compress" to "Apache-2.0 · 模型包解压",
-    "Silero VAD" to "MIT · 人声检测",
-    "SenseVoice" to "FunASR Model License · 语音识别模型",
-    "Kokoro" to "Apache-2.0 · 语音合成模型",
-    "Zipformer CTC" to "Apache-2.0 · 中文语音识别模型",
-    "ZipVoice" to "代码 Apache-2.0 · 模型基于 Emilia（CC BY-NC 4.0，仅限非商业）· 音色克隆",
-    "Matcha baker" to "标贝数据，仅限非商业 · 语音合成模型",
-    "Piper xiao_ya" to "见模型许可 · 语音合成模型",
-    "three.js" to "MIT · r170 · HTML 预览内置 3D 库（three.module.js / OrbitControls / GLTFLoader / BufferGeometryUtils）",
-    "RhineLabUI" to "MIT · Copyright (c) 2026 LBEILC · 设计灵感：「文件」档案模式（未使用其代码）",
+    "llama.cpp" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bdd372),
+    "MNN" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd49fd),
+    "Google LiteRT-LM" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_934216),
+    "LiteRT Dispatch (Qualcomm)" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ac8dbd),
+    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4e0e80) to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_887484),
+    "sherpa-onnx" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_53cc9e),
+    "ONNX Runtime" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c46311),
+    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0bc708) to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_14990b),
+    "AndroidX / Jetpack Compose" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc1c39),
+    "Kotlin / kotlinx" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_77baf4),
+    "Apache Commons Compress" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4369be),
+    "Silero VAD" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_84b6ac),
+    "SenseVoice" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cecfaa),
+    "Kokoro" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d45d0c),
+    "Zipformer CTC" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a358bf),
+    "ZipVoice" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f6afeb),
+    "Matcha baker" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8e93fd),
+    "Piper xiao_ya" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_392cd5),
+    "three.js" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_152596),
+    "RhineLabUI" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f0f2f2),
 )
 
 
@@ -679,18 +680,18 @@ private fun NpuRuntimeRow(
     val (subtitle, action) = when (val s = st) {
         is com.iris.localai.engine.NpuState.Unsupported -> s.reason to null
         com.iris.localai.engine.NpuState.NotInstalled ->
-            "$chip。运行 NPU 专用模型（文件名带芯片型号，如 _sm8750）所需；约 71 MB 下载，安装后占用约 113 MB" to ("下载" to install)
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_001963, chip) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) to install)
         is com.iris.localai.engine.NpuState.Downloading ->
-            "正在下载 ${s.downloaded shr 20} / ${s.total shr 20} MB" to ("取消" to onCancel)
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b5c7e, s.downloaded shr 20, s.total shr 20) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2) to onCancel)
         com.iris.localai.engine.NpuState.Installed ->
-            "$chip · 已安装（QNN 2.50）。加载 NPU 专用模型时自动使用" to ("删除" to onDelete)
-        is com.iris.localai.engine.NpuState.Failed -> "下载失败：${s.message}" to ("重试" to install)
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d9c3a7, chip) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) to onDelete)
+        is com.iris.localai.engine.NpuState.Failed -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ce1a3a, s.message) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) to install)
         is com.iris.localai.engine.NpuState.NeedsRepair ->
-            "$chip · 未安装完整，需要修复（${s.reason}）。重新下载即可修复" to ("修复" to install)
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_501bdb, chip, s.reason) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f82661) to install)
     }
     Column {
         SettingsRow(
-            "NPU 运行库（高通 Hexagon）",
+            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_42e701),
             subtitle = subtitle,
             subtitleColor = if (st is com.iris.localai.engine.NpuState.Failed || st is com.iris.localai.engine.NpuState.NeedsRepair) Iris.colors.danger else Iris.colors.textTertiary,
             trailing = action?.let { (label, fn) ->
@@ -717,9 +718,9 @@ internal object NpuConsent {
     @Volatile var accepted: Boolean = false
 }
 
-internal const val NPU_LICENSE_TITLE = "高通 NPU 运行库许可"
-internal const val NPU_LICENSE_BODY =
-    "该运行库（Qualcomm AI Engine Direct / QNN 2.50）为高通专有软件，不属于本项目开源部分，将从 Maven Central 下载。下载即表示你同意高通的许可条款。"
+internal val NPU_LICENSE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0ccfb8)
+internal val NPU_LICENSE_BODY: String get() =
+    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_513cdf)
 internal const val NPU_LICENSE_URL = "https://www.qualcomm.com/developer/software/qualcomm-ai-engine-direct-sdk"
 
 @Composable
@@ -728,15 +729,15 @@ private fun NpuLicenseDialog(onAccept: () -> Unit, onDismiss: () -> Unit) {
     IrisDialog(
         onDismiss = onDismiss,
         title = NPU_LICENSE_TITLE,
-        confirmText = "同意并下载",
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad7951),
         onConfirm = onAccept,
-        dismissText = "取消",
+        dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2),
     ) {
         Column {
             Text(NPU_LICENSE_BODY, style = IrisType.secondary, color = Iris.colors.textSecondary)
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(
-                "查看条款", {
+                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81d193), {
                     runCatching {
                         context.startActivity(
                             android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(NPU_LICENSE_URL))
@@ -766,13 +767,13 @@ private fun BenchmarkDialog(vm: SettingsViewModel) {
     val onConfirm: () -> Unit
     var dismissText: String? = null
     when {
-        st is SettingsViewModel.Bench.Running -> { confirmText = "取消"; onConfirm = { vm.cancelBenchmark() } }
-        best != null -> { confirmText = "使用 ${best.threads} 线程"; onConfirm = { vm.applyThreads(best.threads) }; dismissText = "关闭" }
-        else -> { confirmText = "好"; onConfirm = { vm.dismissBenchmark() } }
+        st is SettingsViewModel.Bench.Running -> { confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2); onConfirm = { vm.cancelBenchmark() } }
+        best != null -> { confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0964c9, best.threads); onConfirm = { vm.applyThreads(best.threads) }; dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91) }
+        else -> { confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ac2c8f); onConfirm = { vm.dismissBenchmark() } }
     }
     IrisDialog(
         onDismiss = { vm.dismissBenchmark() },
-        title = "速度测试",
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c43f5c),
         confirmText = confirmText,
         onConfirm = onConfirm,
         dismissText = dismissText,
@@ -781,18 +782,18 @@ private fun BenchmarkDialog(vm: SettingsViewModel) {
         when (st) {
             is SettingsViewModel.Bench.Running -> Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (st.done == 0) "预热中" else "测试中 ${st.done}/${st.total}（请保持在本页面）",
+                    if (st.done == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7e19ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_292c29, st.done, st.total),
                     style = IrisType.secondary, color = c.textSecondary,
                 )
                 Spacer(Modifier.size(IrisDimens.space6))
                 TypingDots()
             }
-            is SettingsViewModel.Bench.Failed -> Text("测试失败：${st.message}", style = IrisType.secondary, color = c.textSecondary)
+            is SettingsViewModel.Bench.Failed -> Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4141f7, st.message), style = IrisType.secondary, color = c.textSecondary)
             is SettingsViewModel.Bench.Done -> Column {
                 Text(st.backend, style = IrisType.caption, color = c.textTertiary)
                 Spacer(Modifier.height(IrisDimens.space12))
                 Row(Modifier.fillMaxWidth()) {
-                    for (h in listOf("线程", "预填充", "生成", "首字")) Text(h, Modifier.weight(1f), style = IrisType.caption, color = c.textTertiary)
+                    for (h in listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d27612), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ff8d52), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a0fe1))) Text(h, Modifier.weight(1f), style = IrisType.caption, color = c.textTertiary)
                 }
                 for (r in st.rows) {
                     val highlight = best != null && r.threads == best.threads
@@ -806,7 +807,7 @@ private fun BenchmarkDialog(vm: SettingsViewModel) {
                     }
                 }
                 Spacer(Modifier.height(IrisDimens.space12))
-                Text("单位 tok/s。提示词 ${st.rows.firstOrNull()?.promptTokens ?: 0} tokens，生成 64 tokens。", style = IrisType.caption, color = c.textTertiary)
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fa4fe7, st.rows.firstOrNull()?.promptTokens ?: 0), style = IrisType.caption, color = c.textTertiary)
             }
             else -> {}
         }
@@ -848,7 +849,7 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
         },
         modelDetail = when (val e = engine) {
             is com.iris.localai.engine.EngineState.Ready -> e.details.activeBackend.label
-            is com.iris.localai.engine.EngineState.Loading -> "加载 ${(e.progress * 100).toInt()}%"
+            is com.iris.localai.engine.EngineState.Loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a5cec, (e.progress * 100).toInt())
             is com.iris.localai.engine.EngineState.Failed -> e.message.take(40)
             else -> ""
         },
@@ -889,12 +890,35 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
             if (name != null) vm.update { it.copy(backgroundImage = name) }
         }
     }
-    SubpageScaffold("外观", onBack) {
+    var langSheet by remember { mutableStateOf(false) }
+    val activity = context as? android.app.Activity
+    val langTag = remember { com.iris.localai.I18n.current(context) }
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), onBack) {
         ScrollBody {
-            SectionTitle("主题")
+            // 2.3.1 多语言界面
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title))
+            SettingsGroup {
+                SettingsRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title), icon = com.iris.localai.ui.icons.IrisIcons.Globe,
+                    subtitle = com.iris.localai.I18n.LANGS.firstOrNull { it.first == langTag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system),
+                    onClick = { langSheet = true }, trailing = { Chevron() },
+                )
+            }
+            if (langSheet) com.iris.localai.ui.components.IrisSheet(onDismiss = { langSheet = false }) {
+                com.iris.localai.ui.components.SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title))
+                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    (listOf("" to com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system)) + com.iris.localai.I18n.LANGS).forEach { (tag, name) ->
+                        CheckRow(name, selected = tag == langTag) {
+                            langSheet = false
+                            if (tag != langTag && activity != null) com.iris.localai.I18n.set(activity, tag)
+                        }
+                    }
+                }
+            }
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9970ad))
             SettingsGroup {
                 SegmentedRow(
-                    "主题", icon = com.iris.localai.ui.icons.IrisIcons.Contrast,
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9970ad), icon = com.iris.localai.ui.icons.IrisIcons.Contrast,
                     options = THEME_OPTIONS.map { it.second },
                     selectedIndex = THEME_OPTIONS.indexOfFirst { it.first == s.themeMode },
                     onSelect = { i -> vm.update { it.copy(themeMode = THEME_OPTIONS[i].first) } },
@@ -904,34 +928,34 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 PaletteSwatches(s.themePalette) { p -> vm.update { it.copy(themePalette = p.id) } }
                 Divider()
                 SegmentedRow(
-                    "视觉效果", com.iris.localai.ui.glass.GlassPolicy.LEVEL_LABELS, s.visualEffects.coerceIn(0, 2),
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_917205), com.iris.localai.ui.glass.GlassPolicy.LEVEL_LABELS, s.visualEffects.coerceIn(0, 2),
                     { i -> vm.update { it.copy(visualEffects = i, glassEffects = i > 0) } },
                     icon = com.iris.localai.ui.icons.IrisIcons.Eye,
                     subtitle = when (s.visualEffects) {
-                        0 -> "不做模糊、停用装饰动画；最省电"
-                        2 -> "全分辨率毛玻璃，对话框背后也模糊"
-                        else -> "降采样毛玻璃；日常推荐"
-                    } + "。系统省电或发热时自动降级",
+                        0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f24ad9)
+                        2 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94b767)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41d7e0)
+                    } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2232ee),
                 )
             }
-            SectionTitle("背景")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8e1b94))
             SettingsGroup {
                 val hasBg = s.backgroundImage.isNotEmpty()
                 // 2.2.14
                 SwitchRow(
-                    "纯色背景", s.solidBackground,
-                    subtitle = "只用一种颜色：不用渐变、混色、毛玻璃和背景图",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c847fe), s.solidBackground,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1f71ce),
                     icon = com.iris.localai.ui.icons.IrisIcons.Image,
                 ) { on -> vm.update { it.copy(solidBackground = on) } }
                 Divider()
                 SwitchRow(
-                    "动态混色背景", s.dynamicBlend, enabled = !s.solidBackground,
-                    subtitle = if (hasBg) "首页顶部颜色缓慢流动（使用自定义背景时不显示）" else "首页顶部颜色缓慢流动，跟随主题色；省电时静止",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e2bc30), s.dynamicBlend, enabled = !s.solidBackground,
+                    subtitle = if (hasBg) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d864cc) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_01c110),
                     icon = com.iris.localai.ui.icons.IrisIcons.Image,
                 ) { on -> vm.update { it.copy(dynamicBlend = on) } }
                 Divider()
                 SettingsRow(
-                    "自定义背景",
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ac429c),
                     subtitle = when { bgFailed -> AppearanceText.BACKGROUND_FAILED; hasBg -> AppearanceText.BACKGROUND_SET; else -> AppearanceText.BACKGROUND_NONE },
                     icon = com.iris.localai.ui.icons.IrisIcons.Image,
                     onClick = {
@@ -946,18 +970,18 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 if (hasBg) {
                     Divider()
                     SliderRow(
-                        "模糊程度", s.backgroundBlur.toFloat(), 0f..com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP.toFloat(),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_613ee9), s.backgroundBlur.toFloat(), 0f..com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP.toFloat(),
                         display = "${s.backgroundBlur} dp", subtitle = AppearanceText.BLUR,
                         steps = com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP - 1,
                     ) { v -> vm.update { it.copy(backgroundBlur = kotlin.math.round(v).toInt()) } }
                     Divider()
                     SliderRow(
-                        "遮罩深浅", s.backgroundScrim.toFloat(), 0f..com.iris.localai.ui.theme.BackgroundImage.MAX_SCRIM.toFloat(),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5f8050), s.backgroundScrim.toFloat(), 0f..com.iris.localai.ui.theme.BackgroundImage.MAX_SCRIM.toFloat(),
                         display = "${s.backgroundScrim}%", subtitle = AppearanceText.SCRIM,
                     ) { v -> vm.update { it.copy(backgroundScrim = kotlin.math.round(v).toInt()) } }
                     Divider()
                     SettingsRow(
-                        "移除背景", subtitle = AppearanceText.REMOVE, icon = com.iris.localai.ui.icons.IrisIcons.Trash,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9a17b1), subtitle = AppearanceText.REMOVE, icon = com.iris.localai.ui.icons.IrisIcons.Trash,
                         titleColor = com.iris.localai.ui.theme.Iris.colors.danger,
                         onClick = {
                             bgFailed = false
@@ -968,11 +992,11 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 }
             }
             // 2.1.3: 顶栏按钮底色 / 运行状态机架 / 性能浮窗 moved to 关于 IRIDIS › 开发者选项 (DeveloperPage).
-            SectionTitle("反馈")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1d50fa))
             SettingsGroup {
-                SwitchRow("触感反馈", s.haptics, subtitle = "发送、步骤完成、长按和拖动时轻微振动", icon = com.iris.localai.ui.icons.IrisIcons.Haptic) { on -> vm.update { it.copy(haptics = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_487676), s.haptics, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c5c770), icon = com.iris.localai.ui.icons.IrisIcons.Haptic) { on -> vm.update { it.copy(haptics = on) } }
                 Divider()
-                SwitchRow("提示音", s.sound, subtitle = "发送和回复完成时的轻柔提示音；静音、勿扰或语音对话时不响", icon = com.iris.localai.ui.icons.IrisIcons.Sound) { on -> vm.update { it.copy(sound = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_95ffd3), s.sound, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3666d0), icon = com.iris.localai.ui.icons.IrisIcons.Sound) { on -> vm.update { it.copy(sound = on) } }
             }
             RenderSettingsSection(s, vm::update) // 2.2 渲染网页代码 / 加载网络图片
         }
@@ -987,30 +1011,30 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
 @Composable
 fun DeveloperPage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPage) -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
-    SubpageScaffold("开发者选项", onBack) {
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1b6949), onBack) {
         ScrollBody {
             // 2.2.9 F: every old context / memory / index control moved here.
-            SectionTitle("上下文与记忆")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f7070))
             SettingsGroup {
-                NavItem("上下文与记忆", "上下文长度、超出策略、记忆注入、历史索引、知识库索引与清空记忆", com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.DEV_CONTEXT) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f7070), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2e9be5), com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.DEV_CONTEXT) }
             }
-            SectionTitle("资源")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eee83a))
             SettingsGroup {
-                NavItem("资源档配置", SettingsText.TIER_PROFILES, com.iris.localai.ui.icons.IrisIcons.Bolt) { onOpen(SettingsPage.TIER_PROFILES) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6eba78), SettingsText.TIER_PROFILES, com.iris.localai.ui.icons.IrisIcons.Bolt) { onOpen(SettingsPage.TIER_PROFILES) }
                 Divider()
-                NavItem("资源诊断", SettingsText.DIAGNOSTICS, com.iris.localai.ui.icons.IrisIcons.Pulse) { onOpen(SettingsPage.DIAGNOSTICS) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7ea069), SettingsText.DIAGNOSTICS, com.iris.localai.ui.icons.IrisIcons.Pulse) { onOpen(SettingsPage.DIAGNOSTICS) }
             }
-            SectionTitle("显示")
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4d775d))
             SettingsGroup {
-                SwitchRow("运行状态机架", s.showStatusRack, subtitle = "在本页显示各组件的运行状态") { on -> vm.update { it.copy(showStatusRack = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2bb191), s.showStatusRack, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e41af)) { on -> vm.update { it.copy(showStatusRack = on) } }
                 Divider()
-                SwitchRow("性能浮窗", s.perfOverlay, subtitle = "生成时在聊天页右上角显示速度、CPU 与内存") { on -> vm.update { it.copy(perfOverlay = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a99d5a), s.perfOverlay, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8a2e4e)) { on -> vm.update { it.copy(perfOverlay = on) } }
                 Divider()
-                SwitchRow("顶栏按钮底色", s.topBarCapsules, subtitle = "聊天页顶部的按钮显示灰色底") { on -> vm.update { it.copy(topBarCapsules = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c1040), s.topBarCapsules, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65d1b5)) { on -> vm.update { it.copy(topBarCapsules = on) } }
             }
             // 1.14.0 运行状态 rack (2.1.3: moved here from the settings home).
             if (s.showStatusRack) {
-                SectionTitle("运行状态")
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e4b51d))
                 RuntimeRack(vm, onOpen)
             }
         }
@@ -1027,18 +1051,18 @@ private fun DefaultModelRow(vm: SettingsViewModel, current: String) {
     var open by remember { mutableStateOf(false) }
     val name = models.firstOrNull { current.isNotBlank() && it.fileName == current }?.displayName
     SettingsRow(
-        "默认模型", icon = com.iris.localai.ui.icons.IrisIcons.Cube,
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b11de2), icon = com.iris.localai.ui.icons.IrisIcons.Cube,
         subtitle = when {
-            current.isBlank() -> "上次使用的模型 · 点按对话页中间的图标即可加载"
-            name != null -> "$name · 点按对话页中间的图标即可加载"
-            else -> "已设置的模型不在了，将使用上次使用的模型"
+            current.isBlank() -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dfac96)
+            name != null -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_80717f, name)
+            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65b42a)
         },
         onClick = { vm.refreshModels(); open = true },
     )
     if (open) {
         com.iris.localai.ui.components.IrisSheet(onDismiss = { open = false }) {
-            com.iris.localai.ui.components.SheetHeader("默认模型")
-            com.iris.localai.ui.components.CheckRow("上次使用的模型", current.isBlank(), subtitle = "不指定，沿用上次加载的模型") {
+            com.iris.localai.ui.components.SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b11de2))
+            com.iris.localai.ui.components.CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_098aca), current.isBlank(), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3243cd)) {
                 vm.setDefaultModel(""); open = false
             }
             models.forEach { m ->
@@ -1055,8 +1079,8 @@ private fun DefaultModelRow(vm: SettingsViewModel, current: String) {
 private fun VisionQualityRow(vm: SettingsViewModel, current: Int) {
     val options = com.iris.localai.util.VisionQuality.entries
     SegmentedRow(
-        "识图清晰度", options.map { it.label }, com.iris.localai.util.VisionQuality.of(current).ordinal,
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_524e9e), options.map { it.label }, com.iris.localai.util.VisionQuality.of(current).ordinal,
         { i -> vm.setVisionSide(options[i].side) },
-        subtitle = "图片送给模型的清晰度，越清晰越慢",
+        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f81386),
     )
 }

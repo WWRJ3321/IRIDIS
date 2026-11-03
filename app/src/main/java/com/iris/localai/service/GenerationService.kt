@@ -75,8 +75,8 @@ class GenerationService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_PROGRESS, "后台生成进度", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_DONE, "回复完成提醒", NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_PROGRESS, com.iris.localai.I18n.s(com.iris.localai.R.string.service_48967b), NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_DONE, com.iris.localai.I18n.s(com.iris.localai.R.string.service_e7d00e), NotificationManager.IMPORTANCE_DEFAULT))
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:generation")
             .apply { setReferenceCounted(false); acquire(MAX_WAKE_MS) }
@@ -140,14 +140,14 @@ class GenerationService : LifecycleService() {
         )
         return NotificationCompat.Builder(this, CHANNEL_PROGRESS)
             .setSmallIcon(R.drawable.ic_stat_iris)
-            .setContentTitle("正在生成…")
+            .setContentTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.service_16efd7))
             .setContentText(GenerationText.progress(j?.title, chars))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setProgress(0, 0, true)
             .setContentIntent(openIntent(j?.conversationId))
-            .addAction(0, "停止", stop)
+            .addAction(0, com.iris.localai.I18n.s(com.iris.localai.R.string.service_095e93), stop)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -155,7 +155,7 @@ class GenerationService : LifecycleService() {
     private fun done(j: GenerationMonitor.Job): Notification =
         NotificationCompat.Builder(this, CHANNEL_DONE)
             .setSmallIcon(R.drawable.ic_stat_iris)
-            .setContentTitle(if (j.stopped) "回复已停止" else "回复已完成")
+            .setContentTitle(if (j.stopped) com.iris.localai.I18n.s(com.iris.localai.R.string.service_96131e) else com.iris.localai.I18n.s(com.iris.localai.R.string.service_9937df))
             .setContentText(GenerationText.done(j.title, j.chars))
             .setAutoCancel(true)
             .setContentIntent(openIntent(j.conversationId))
@@ -193,12 +193,12 @@ class GenerationService : LifecycleService() {
 /** Notification wording (unit-tested). */
 object GenerationText {
     fun progress(title: String?, chars: Int): String {
-        val t = title?.takeIf { it.isNotBlank() }?.let { "「${it.take(16)}」 · " } ?: ""
-        return if (chars <= 0) "${t}准备中" else "${t}已生成 $chars 字"
+        val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""
+        return if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.service_fde415, t) else com.iris.localai.I18n.s(com.iris.localai.R.string.service_92cfe0, t, chars)
     }
 
     fun done(title: String?, chars: Int): String {
-        val t = title?.takeIf { it.isNotBlank() }?.let { "「${it.take(16)}」 · " } ?: ""
-        return "${t}共 $chars 字 · 点按查看"
+        val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.service_374df9, t, chars)
     }
 }

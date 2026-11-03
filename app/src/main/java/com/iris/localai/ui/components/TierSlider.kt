@@ -164,7 +164,7 @@ fun TierSlider(
                 .fillMaxWidth()
                 .height(TierSliderStyle.HEIGHT_DP.dp)
                 .semantics {
-                    contentDescription = "资源档位"
+                    contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.components_43448c)
                     stateDescription = labels.getOrElse(cur) { "" }
                     setProgress { v ->
                         move(kotlin.math.round(v * (count - 1)).toInt().coerceIn(0, count - 1)); done(); true

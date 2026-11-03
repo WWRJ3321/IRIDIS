@@ -74,6 +74,8 @@ class MainActivity : ComponentActivity() {
 
     private val chat: ChatViewModel by viewModels()
 
+    override fun attachBaseContext(newBase: android.content.Context) = super.attachBaseContext(com.iris.localai.I18n.wrap(newBase))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 2.1.5: fully transparent system bars (no auto scrim) and no navigation-bar contrast scrim,
         // so the chat background / page colour runs under the gesture pill. Icon light/dark is set
@@ -152,13 +154,13 @@ private fun CrashDialog(report: String, onClose: () -> Unit) {
     val c = Iris.colors
     IrisDialog(
         onDismiss = onClose,
-        title = "上次 IRIDIS 意外退出了",
-        confirmText = "复制",
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_271348),
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab),
         onConfirm = { clipboard.setText(AnnotatedString(report)); onClose() },
-        dismissText = "关闭",
+        dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91),
     ) {
         Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
-            Text("复制下面的信息发给开发者，可以更快定位问题。", style = IrisType.secondary, color = c.textSecondary)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ui_406ea7), style = IrisType.secondary, color = c.textSecondary)
             Spacer(Modifier.height(IrisDimens.space8))
             Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text)
         }

@@ -80,7 +80,7 @@ class ContextV229Test {
         // Old controls are in 开发者选项 › 上下文与记忆.
         val dev = src("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
         val devPage = dev.substringAfter("fun DevContextMemoryPage(").substringBefore("fun PerformancePage(")
-        for (t in listOf("\"上下文长度\"", "ContextStrategy.entries", "\"滑动窗口保留轮数\"", "\"摘要触发阈值\"", "developerMode")) assertTrue(t, devPage.contains(t))
+        for (t in listOf("R.string.models_3b5663", "ContextStrategy.entries", "R.string.settings_dc8bfe", "R.string.settings_0e766b", "developerMode")) // 2.3.1: strings moved to res assertTrue(t, devPage.contains(t))
         assertTrue(dev.substringAfter("fun DeveloperPage(").contains("SettingsPage.DEV_CONTEXT"))
         val mem = src("src/main/java/com/iris/localai/ui/agent/MemorySettingsPage.kt")
         for (t in listOf("\"长期记忆\"", "\"智能体模式注入\"", "\"对话模式注入\"", "\"历史检索索引\"", "KnowledgeText.REBUILD", "\"记忆注入预算\"", "MemoryText.CLEAR")) assertTrue(t, mem.contains(t))

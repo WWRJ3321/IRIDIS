@@ -128,41 +128,41 @@ object ComposerActions {
 
 /** 1.9.0: composer texts (unit-tested). */
 object ComposerText {
-    const val CHAT = "对话"
-    const val AGENT = "智能体"
-    const val PLACEHOLDER = "给 IRIDIS 发送消息"
-    const val AGENT_PLACEHOLDER = "交给 IRIDIS 智能体（可读写工作区文件）"
+    val CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)
+    val AGENT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9)
+    val PLACEHOLDER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6f6822)
+    val AGENT_PLACEHOLDER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_db0873)
     // 1.10.1: minimal composer. 1.10.2: the 「+」 menu is gone — voice input is the press-and-hold
     // mic again (right of the pills) and 语音对话 is the round button when the input is empty.
-    const val THINK = "思考"
-    const val THINK_UNSUPPORTED = "当前模型不支持思考，换一个支持思考的模型后可开启"
-    const val VOICE_INPUT = "语音输入"
-    const val VOICE_MODE = "语音对话"
-    const val HOLD_TO_TALK = "按住说话"
-    const val LISTENING = "正在聆听，松开结束，上滑取消"
-    const val RELEASE_TO_CANCEL = "松开取消"
-    const val TRANSCRIBING = "正在识别…"
-    const val SPEED = "速度"
-    const val ATTACH = "添加图片或文件"
-    const val ATTACH_PHOTOS = "照片"
-    const val ATTACH_FILES = "文件"
+    val THINK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_21d68b)
+    val THINK_UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e3d835)
+    val VOICE_INPUT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_688ad1)
+    val VOICE_MODE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_51e79d)
+    val HOLD_TO_TALK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b5a354)
+    val LISTENING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8bcad)
+    val RELEASE_TO_CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1f31c5)
+    val TRANSCRIBING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_0e89f9)
+    val SPEED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_03f385)
+    val ATTACH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_ca0b5e)
+    val ATTACH_PHOTOS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d2fb1e)
+    val ATTACH_FILES: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
     // 2.2 composer: one voice capsule + 「技能」.
-    const val CALL_HOLD = "通话，长按语音输入"
-    const val SEND = "发送"
-    const val STOP = "停止生成"
-    const val SKILLS = "技能"
-    const val SKILL_SEARCH = "搜索技能或工具"
-    const val SECTION_SKILLS = "已安装的技能"
-    const val SECTION_TOOLS = "智能体工具"
-    const val NO_SKILLS = "暂无技能"
-    const val NO_TOOLS = "没有已开启的工具"
-    const val NO_MATCH = "没有匹配项"
-    const val SKILL_TOOL_OFF = "技能工具已关闭（设置 › 智能体）"
-    const val SKILLS_EMPTY = "暂无可用的技能或工具"
-    const val AGENT_FOR_REF = "已切换到智能体模式：本条消息会使用所选技能/工具"
-    fun removeRef(name: String) = "移除 $name"
+    val CALL_HOLD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_83c923)
+    val SEND: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1535fc)
+    val STOP: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dda4c0)
+    val SKILLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143)
+    val SKILL_SEARCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_74fa39)
+    val SECTION_SKILLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_46c945)
+    val SECTION_TOOLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fb695c)
+    val NO_SKILLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2ce87d)
+    val NO_TOOLS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_05ae1f)
+    val NO_MATCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fb08d1)
+    val SKILL_TOOL_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_568f9a)
+    val SKILLS_EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d9abfd)
+    val AGENT_FOR_REF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_338074)
+    fun removeRef(name: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8506eb, name)
     fun agentNotice(on: Boolean): String =
-        if (on) "已切换到智能体模式：可调用工具读写工作区文件（设置 › 智能体）" else "已切换到对话模式：不调用工具"
+        if (on) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fbf95c) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e9e4d8)
 }
 
 @Composable
@@ -227,8 +227,8 @@ fun Composer(
             ) {
                 Icon(Icons.Outlined.Edit, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("编辑消息", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
-                PressableIcon(Icons.Outlined.Close, "取消编辑", size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onCancelEdit)
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2fb441), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
+                PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cbb465), size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onCancelEdit)
             }
         }
 
@@ -240,7 +240,7 @@ fun Composer(
             Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(com.iris.localai.ui.icons.IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(if (state.translating) TranslateText.TRANSLATING else "已翻译", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
+                Text(if (state.translating) TranslateText.TRANSLATING else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9aa52a), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
                 if (state.translating) com.iris.localai.ui.components.TypingDots()
                 PressableIcon(Icons.Outlined.Close, TranslateText.UNDO, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onUndoTranslate)
             }
@@ -448,7 +448,7 @@ private fun SpeedChip(tier: Int, note: String?, composerTop: () -> Int, onChange
         ComposerPill(
             speed.label, selected = false, toggle = false, onClick = { open = true },
             icon = Icons.Rounded.Bolt, trailingIcon = Icons.Rounded.KeyboardArrowDown,
-            modifier = Modifier.semantics { contentDescription = "${ComposerText.SPEED}：${speed.label}" },
+            modifier = Modifier.semantics { contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, ComposerText.SPEED, speed.label) },
         )
         if (open) {
             androidx.compose.ui.window.Popup(

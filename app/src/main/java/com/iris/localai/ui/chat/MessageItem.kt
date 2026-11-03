@@ -126,9 +126,9 @@ fun UserMessage(
         VersionSwitcher(message, onSwitchVersion)
       }
         com.iris.localai.ui.components.IrisMenu(menu, { menu = false }) {
-            com.iris.localai.ui.components.IrisMenuItem("复制", Icons.Outlined.ContentCopy) { clipboard.setText(AnnotatedString(message.content)); menu = false }
+            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab), Icons.Outlined.ContentCopy) { clipboard.setText(AnnotatedString(message.content)); menu = false }
             com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { menu = false; translator.translateMessage(message.id, message.content) }
-            com.iris.localai.ui.components.IrisMenuItem("编辑后重新发送", Icons.Outlined.Edit) { menu = false; onEdit() }
+            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_27a36e), Icons.Outlined.Edit) { menu = false; onEdit() }
             if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { menu = false; onRemember() }
         }
     }
@@ -307,8 +307,8 @@ private const val REVEAL_GAP_MS = 22L
 
 /** 2.1: labels of the assistant action bar's overflow. */
 internal object ActionRowText {
-    const val MORE = "更多操作"
-    const val SHOW_PROMPT = "查看提示内容"
+    val MORE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fff96e)
+    val SHOW_PROMPT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_48ba23)
 }
 
 @Composable
@@ -332,7 +332,7 @@ private fun ActionRow(
         buildList {
             if (message.edited) add(VersionText.EDITED)
             if (message.kbRefs > 0 && message.kbSources.isEmpty()) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
-            if (message.interrupted) add("已停止")
+            if (message.interrupted) add(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778))
             // Measured for this reply on the device: output speed (first char → end) and total time.
             com.iris.localai.util.ReplySpeed.format(message.outputChars, message.outputMs, message.totalMs,
                 message.stats?.takeIf { it.generatedTokens >= 8 && it.generateMs >= 300 }?.tokensPerSecond ?: 0f)?.let { add(it) }
@@ -342,16 +342,16 @@ private fun ActionRow(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 0.dp).height(40.dp)) {
         val iconSize = 18.dp
         PressableIcon(
-            if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) "已复制" else "复制",
+            if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab),
             size = 40.dp, iconSize = iconSize, tint = c.textSecondary, haptic = true,
             modifier = Modifier.padding(end = IrisDimens.space2),
         ) { clipboard.setText(AnnotatedString(answer)); copied = true }
         if (isLast) {
-            PressableIcon(Icons.Outlined.Refresh, "重新生成", size = 40.dp, iconSize = iconSize, tint = c.textSecondary, onClick = onRegenerate)
+            PressableIcon(Icons.Outlined.Refresh, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a7c232), size = 40.dp, iconSize = iconSize, tint = c.textSecondary, onClick = onRegenerate)
         }
         PressableIcon(
             if (speaking) Icons.Outlined.StopCircle else Icons.AutoMirrored.Outlined.VolumeUp,
-            if (speaking) "停止朗读" else "朗读",
+            if (speaking) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9082b) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f),
             size = 40.dp, iconSize = iconSize, tint = if (speaking) c.text else c.textSecondary,
             modifier = Modifier.pulse(speaking, min = 0.55f),
             onClick = if (speaking) onStopSpeaking else onSpeak,
@@ -402,16 +402,16 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
             Icon(com.iris.localai.ui.icons.IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + IrisDimens.space2))
             Text(
                 when {
-                    thinking -> "思考中…"
-                    elapsedMs > 0 -> "已深度思考（用时 ${Format.seconds(elapsedMs)} 秒）"
-                    else -> "已深度思考"
+                    thinking -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_234bae)
+                    elapsedMs > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_78b04b, Format.seconds(elapsedMs))
+                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6df621)
                 },
                 style = IrisType.label, color = c.textSecondary,
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false).pulse(thinking),
             )
             Icon(
-                Icons.Outlined.KeyboardArrowDown, if (expanded) "收起思考过程" else "展开思考过程",
+                Icons.Outlined.KeyboardArrowDown, if (expanded) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_83cb1e) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fedcac),
                 tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = arrow },
             )
         }
@@ -482,11 +482,11 @@ fun ChatMessage.isUser() = role == Role.USER
 
 /** 2.0.x: labels of the message-version switcher and the new message actions. */
 object VersionText {
-    const val PREV = "上一个版本"
-    const val NEXT = "下一个版本"
-    const val EDIT_REPLY = "编辑回复"
-    const val EDITED = "已编辑"
-    const val REMEMBER = "记住这条"
+    val PREV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b54f81)
+    val NEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4630a8)
+    val EDIT_REPLY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d23ae)
+    val EDITED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9b7287)
+    val REMEMBER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_15bc4e)
     /** 0-based [active] of [count] → "2/3". */
     fun label(active: Int, count: Int): String = "${active + 1}/$count"
 }
@@ -513,7 +513,7 @@ fun VersionSwitcher(message: ChatMessage, onSwitch: (Int) -> Unit, modifier: Mod
 
 /** 2.2.9 texts of the 「记住？」 chip. */
 internal object MemoryChipText {
-    const val DISMISS = "忽略"
+    val DISMISS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c0d5d6)
     fun label(text: String): String = "＋ 记住？「${if (text.length > 24) text.take(23) + "…" else text}」"
 }
 
@@ -551,7 +551,7 @@ private fun WebSourceChips(sources: List<com.iris.localai.agent.Citations.Source
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
     ) {
-        Text("来源", style = IrisType.caption, color = c.textTertiary)
+        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ca20), style = IrisType.caption, color = c.textTertiary)
         sources.forEach { s ->
             Text(
                 "${s.n} · ${s.title.take(18)}${if (s.title.length > 18) "…" else ""} · ${s.domain}",
@@ -600,11 +600,11 @@ private fun KbSourceChips(sources: List<String>) {
             }
         }
         com.iris.localai.ui.components.IrisDialog(
-            onDismiss = { open = null }, title = label, confirmText = "关闭", onConfirm = { open = null }, dismissText = null,
+            onDismiss = { open = null }, title = label, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { open = null }, dismissText = null,
         ) {
             androidx.compose.foundation.layout.Box(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                 Text(
-                    when (val t = text) { null -> "正在读取…"; "" -> "原文已不在知识库里（文件可能已删除或更改）"; else -> t },
+                    when (val t = text) { null -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a); "" -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9a6156); else -> t },
                     style = IrisType.body, color = c.text,
                 )
             }

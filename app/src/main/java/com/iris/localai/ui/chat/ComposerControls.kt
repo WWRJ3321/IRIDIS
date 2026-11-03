@@ -41,9 +41,9 @@ import com.iris.localai.ui.theme.IrisType
  * telemetry and the 1.7.6 tests use them).
  */
 enum class SpeedLevel(val label: String, val tier: ResourceTier) {
-    LOW("低速", ResourceTier.LOW),       // 省电
-    FAST("高速", ResourceTier.MEDIUM),   // 中
-    MAX("极速", ResourceTier.HIGH);      // 高
+    LOW(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_af7e96), ResourceTier.LOW),       // 省电
+    FAST(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8f1208), ResourceTier.MEDIUM),   // 中
+    MAX(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_64fe2c), ResourceTier.HIGH);      // 高
 
     companion object {
         /** Tier ordinal (as stored in settings) → speed. Out-of-range ordinals follow [ResourceTier.of]. */
@@ -123,7 +123,7 @@ internal fun ComposerPill(
             .semantics {
                 if (toggle) {
                     role = Role.Switch
-                    stateDescription = if (on) "已开启" else if (enabled) "已关闭" else "不可用"
+                    stateDescription = if (on) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9db7a8) else if (enabled) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9c5850) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d1e4a7)
                 }
             }
             .clickable(

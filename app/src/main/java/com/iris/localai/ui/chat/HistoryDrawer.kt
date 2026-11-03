@@ -130,7 +130,7 @@ fun HistoryDrawer(
         val pinned = filtered.filter { it.pinned }
         val rest = filtered.filterNot { it.pinned }.groupBy { Format.dateGroup(it.updatedAt) }
         buildList {
-            if (pinned.isNotEmpty()) { add(DrawerEntry.Header("置顶")); pinned.forEach { add(DrawerEntry.Item(it)) } }
+            if (pinned.isNotEmpty()) { add(DrawerEntry.Header(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d43ff))); pinned.forEach { add(DrawerEntry.Item(it)) } }
             rest.forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
         }
     }
@@ -157,19 +157,19 @@ fun HistoryDrawer(
                     Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, top = IrisDimens.space12).heightIn(min = 44.dp + IrisDimens.space4 + 44.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PressableIcon(Icons.Outlined.Close, "退出多选", size = 40.dp, iconSize = IrisDimens.iconMedium, tint = c.text) { selected = emptySet() }
-                    Text("已选 ${selected.size} 项", style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
+                    PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6be271), size = 40.dp, iconSize = IrisDimens.iconMedium, tint = c.text) { selected = emptySet() }
+                    Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1e06ae, selected.size), style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
                     com.iris.localai.ui.components.IrisButton(
-                        if (all) "全不选" else "全选",
+                        if (all) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_101195) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_66eeac),
                         { selected = if (all) selected - visibleIds.toSet() else selected + visibleIds },
                         style = com.iris.localai.ui.components.IrisButtonStyle.Text, compact = true,
                     )
                 }
             } else {
                 Column {
-                    SearchField(query, onChange = { query = it }, placeholder = "搜索对话")
+                    SearchField(query, onChange = { query = it }, placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_92a62b))
                     Spacer(Modifier.height(IrisDimens.space4))
-                    NavRow(Icons.Outlined.EditNote, "新对话", emphasized = true, onClick = onNewChat)
+                    NavRow(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), emphasized = true, onClick = onNewChat)
                 }
             }
         }
@@ -180,8 +180,8 @@ fun HistoryDrawer(
         Box(Modifier.weight(1f)) {
             if (entries.isEmpty()) {
                 EmptyState(
-                    title = if (query.isBlank()) "还没有对话" else "没有匹配的对话",
-                    message = if (query.isBlank()) "开始一段新对话，它会出现在这里" else "换个关键词试试",
+                    title = if (query.isBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_48abff) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_192363),
+                    message = if (query.isBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9502a9) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4000cb),
                     icon = if (query.isBlank()) Icons.Outlined.Forum else Icons.Outlined.SearchOff,
                     modifier = Modifier.padding(top = IrisDimens.space32),
                 )
@@ -229,20 +229,20 @@ fun HistoryDrawer(
                 Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                SelectAction(Icons.Outlined.PushPin, if (allPinned) "取消置顶" else "置顶", enabled = chosen.isNotEmpty()) {
+                SelectAction(Icons.Outlined.PushPin, if (allPinned) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_84e4fa) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d43ff), enabled = chosen.isNotEmpty()) {
                     chosen.forEach { if (it.pinned == allPinned) onPin(it.id, !allPinned) }
                     selected = emptySet()
                 }
-                SelectAction(Icons.Outlined.DriveFileRenameOutline, "重命名", enabled = chosen.size == 1) {
+                SelectAction(Icons.Outlined.DriveFileRenameOutline, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), enabled = chosen.size == 1) {
                     renaming = chosen.first(); selected = emptySet()
                 }
-                SelectAction(Icons.Outlined.DeleteOutline, "删除", enabled = chosen.isNotEmpty(), destructive = true) { deletingMany = true }
+                SelectAction(Icons.Outlined.DeleteOutline, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), enabled = chosen.isNotEmpty(), destructive = true) { deletingMany = true }
             }
         }
         if (!selecting) {
         // 2.2.14: 回收站 entry.
         Text(
-            if (trash.isEmpty()) "回收站" else "回收站 · ${trash.size}",
+            if (trash.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2896bd) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e25eb2, trash.size),
             style = IrisType.caption, color = c.textSecondary,
             modifier = Modifier
                 .padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4)
@@ -268,9 +268,9 @@ fun HistoryDrawer(
     if (deletingMany) {
         val n = selected.size
         ConfirmDialog(
-            title = "删除 $n 个对话？",
-            message = "选中的对话将移到回收站，30 天后自动删除。" + if (runningId != null && runningId in selected) "其中正在运行的对话会先停止。" else "",
-            confirmText = "删除",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7fa0f1, n),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7eba23) + if (runningId != null && runningId in selected) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_15ebef) else "",
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { selected.forEach(onDelete); selected = emptySet() },
             onDismiss = { deletingMany = false },
         )
@@ -278,7 +278,7 @@ fun HistoryDrawer(
 
     renaming?.let { s ->
         TextInputDialog(
-            title = "重命名",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b),
             initial = s.title,
             onConfirm = { onRename(s.id, it.trim()) },
             onDismiss = { renaming = null },
@@ -286,9 +286,9 @@ fun HistoryDrawer(
     }
     deleting?.let { s ->
         ConfirmDialog(
-            title = "删除对话？",
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8de76),
             message = "“${s.title.ifBlank { "新对话" }}”将移到回收站，30 天后自动删除。",
-            confirmText = "删除",
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { onDelete(s.id) },
             onDismiss = { deleting = null },
         )
@@ -298,13 +298,13 @@ fun HistoryDrawer(
 
 /** 2.1: short labels of the drawer's bottom navigation. */
 internal object DrawerNavText {
-    const val MODELS = "模型"
+    val MODELS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)
     /** 2.1.7 */
-    const val IMAGEGEN = "生图"
-    const val FILES = "文件"
+    val IMAGEGEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)
+    val FILES: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
     const val API = "API"
-    const val SETTINGS = "设置"
-    const val API_RUNNING = "API 服务运行中"
+    val SETTINGS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e366cc)
+    val API_RUNNING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_992c3b)
 }
 
 /** Icon over a short label; [badge] puts a live dot on the icon (API server running). */
@@ -356,7 +356,7 @@ internal fun SearchField(value: String, onChange: (String) -> Unit, placeholder:
             },
         )
         AnimatedVisibility(value.isNotEmpty(), enter = com.iris.localai.ui.motion.IrisMotion.fadeIn(), exit = com.iris.localai.ui.motion.IrisMotion.fadeOut()) {
-            PressableIcon(Icons.Outlined.Close, "清除", size = 36.dp, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { onChange("") }
+            PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), size = 36.dp, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { onChange("") }
         }
     }
 }
@@ -395,7 +395,7 @@ private fun ConversationItem(
                     onClick = if (selecting) onToggle else onClick,
                     // 1.13.2: long press starts multi-select (rename / pin / delete live in its bar).
                     onLongClick = { haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.LONG_PRESS); onToggle() },
-                    onLongClickLabel = "多选",
+                    onLongClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_443f46),
                 )
                 .padding(horizontal = IrisDimens.space12),
             verticalAlignment = Alignment.CenterVertically,
@@ -415,19 +415,19 @@ private fun ConversationItem(
                 Spacer(Modifier.width(IrisDimens.space6))
             }
             Text(
-                s.title.ifBlank { "新对话" }, style = if (selected) IrisType.rowStrong else IrisType.body, color = c.text,
+                s.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = if (selected) IrisType.rowStrong else IrisType.body, color = c.text,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             // 1.12.3: this conversation's reply keeps running while another one is shown.
             if (running) {
                 Spacer(Modifier.width(IrisDimens.space6))
-                Text("运行中", style = IrisType.caption, color = c.accent, maxLines = 1)
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d679ae), style = IrisType.caption, color = c.accent, maxLines = 1)
             }
         }
         com.iris.localai.ui.components.IrisMenu(menu, { menu = false }) {
-            com.iris.localai.ui.components.IrisMenuItem("重命名", Icons.Outlined.DriveFileRenameOutline) { menu = false; onRename() }
-            com.iris.localai.ui.components.IrisMenuItem(if (s.pinned) "取消置顶" else "置顶", Icons.Outlined.PushPin) { menu = false; onPin() }
-            com.iris.localai.ui.components.IrisMenuItem("删除", Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
+            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { menu = false; onRename() }
+            com.iris.localai.ui.components.IrisMenuItem(if (s.pinned) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_84e4fa) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d43ff), Icons.Outlined.PushPin) { menu = false; onPin() }
+            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
         }
     }
 }

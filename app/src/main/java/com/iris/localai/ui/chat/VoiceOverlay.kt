@@ -143,12 +143,12 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
         VoicePhase.PREPARING -> c.textTertiary
     }
     val phaseText = when (state.phase) {
-        VoicePhase.PREPARING -> "正在准备语音模型"
-        VoicePhase.LISTENING -> if (muted) "麦克风已静音" else "正在聆听"
-        VoicePhase.RECOGNIZING -> "正在识别"
-        VoicePhase.THINKING -> "正在思考"
-        VoicePhase.SPEAKING -> if (state.awaitingAudio) "正在组织下一句 · 开口即可打断" else "正在回答 · 开口即可打断"
-        VoicePhase.ERROR -> "出错了 · 点按圆圈重试"
+        VoicePhase.PREPARING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f601cb)
+        VoicePhase.LISTENING -> if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_557582) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5cca6a)
+        VoicePhase.RECOGNIZING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b77edf)
+        VoicePhase.THINKING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1b0a9d)
+        VoicePhase.SPEAKING -> if (state.awaitingAudio) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_97058e) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9b174d)
+        VoicePhase.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_985c39)
     }
 
     Box(
@@ -238,7 +238,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                     }
                 } else if (state.lastHeard.isBlank()) {
                     Text(
-                        if (state.phase == VoicePhase.LISTENING && !muted) "说点什么吧，说完停顿一下我就会回答" else "",
+                        if (state.phase == VoicePhase.LISTENING && !muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_0c2a12) else "",
                         style = IrisType.secondary, color = c.textTertiary, textAlign = TextAlign.Center,
                     )
                 }
@@ -250,23 +250,23 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {
-                VoiceControl(if (muted) "取消静音" else "静音") {
+                VoiceControl(if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e1019) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_351cb1)) {
                     PressableIcon(
-                        if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) "取消静音" else "静音",
+                        if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e1019) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_351cb1),
                         size = 64.dp, iconSize = 26.dp,
                         background = if (muted) c.text else c.surfaceVariant,
                         tint = if (muted) c.chatBackground else c.text,
                     ) { muted = !muted; vm.voice.setMuted(muted) }
                 }
-                VoiceControl("打断") {
+                VoiceControl(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7c1e51)) {
                     PressableIcon(
-                        Icons.Outlined.PanTool, "打断", size = 64.dp, iconSize = IrisDimens.space24, background = c.surfaceVariant,
+                        Icons.Outlined.PanTool, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7c1e51), size = 64.dp, iconSize = IrisDimens.space24, background = c.surfaceVariant,
                         enabled = state.phase == VoicePhase.SPEAKING || state.phase == VoicePhase.THINKING,
                     ) { vm.voice.interrupt() }
                 }
-                VoiceControl("结束") {
+                VoiceControl(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_12f1d7)) {
                     PressableIcon(
-                        Icons.Outlined.Close, "结束语音对话", size = 64.dp, iconSize = 26.dp,
+                        Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_137760), size = 64.dp, iconSize = 26.dp,
                         background = c.danger, tint = Color.White, haptic = true, onClick = onClose,
                     )
                 }

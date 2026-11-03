@@ -77,8 +77,8 @@ class ReplyWatchdog(private val now: () -> Long = System::currentTimeMillis) {
         fun message(phase: Phase, idleMs: Long): String {
             val s = idleMs / 1000
             return when (phase) {
-                Phase.MODEL -> "模型加载 $s 秒没有进展，已停止等待。可以重新选择模型再发送，或在模型设置里改用 CPU 后端"
-                Phase.PROMPT -> "$s 秒内没有收到模型输出，已停止（模型或后端可能卡住了）。可以重新发送；反复出现请在模型设置里改用 CPU 后端"
+                Phase.MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_ccf33d, s)
+                Phase.PROMPT -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_efc79e, s)
             }
         }
     }

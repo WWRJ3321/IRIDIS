@@ -44,8 +44,11 @@ object LangDetect {
     }
 
     /** [setting] "auto" = 中↔英 (Chinese → English, everything else → Chinese); "zh"/"en" fixed. */
-    fun target(text: String, setting: String): TransLang =
-        TransLang.byCode(setting) ?: if (detect(text) == TransLang.ZH) TransLang.EN else TransLang.ZH
+    fun target(text: String, setting: String, ui: String = "zh"): TransLang =
+        TransLang.byCode(setting) ?: if (ui == "en") {
+            // 2.3.1: English UI → auto translates into English, English text into Chinese.
+            if (detect(text) == TransLang.EN) TransLang.ZH else TransLang.EN
+        } else if (detect(text) == TransLang.ZH) TransLang.EN else TransLang.ZH
 
     /** Source language for a translation into [target]: the detected one, or the other of 中/英 when they match. */
     fun source(text: String, target: TransLang): TransLang =

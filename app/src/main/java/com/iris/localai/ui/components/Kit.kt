@@ -188,7 +188,7 @@ fun IrisTopBar(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                FloatingIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "返回", onClick = onBack)
+                FloatingIconButton(Icons.AutoMirrored.Outlined.ArrowBack, com.iris.localai.I18n.s(com.iris.localai.R.string.components_5f4112), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 var hasActions by remember { mutableStateOf(false) }
                 CompositionLocalProvider(LocalPressableIconSize provides IrisDimens.floatingButton) {

@@ -345,7 +345,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
             val r = runCatching { com.iris.localai.data.GgufSearch.files(hit, c.settings.current.downloadSource) }
             _search.value = _search.value.copy(
                 filesLoading = false, files = r.getOrNull(),
-                filesError = r.exceptionOrNull()?.let { "读取文件列表失败：" + com.iris.localai.data.DownloadSources.describe(it) },
+                filesError = r.exceptionOrNull()?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.models_58665d) + com.iris.localai.data.DownloadSources.describe(it) },
             )
         }
     }
@@ -410,7 +410,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
     SubpageScaffold(
         title = ModelsText.TITLE,
         onBack = onBack,
-        actions = { PressableIcon(Icons.Outlined.Refresh, "刷新") { vm.refresh() } },
+        actions = { PressableIcon(Icons.Outlined.Refresh, com.iris.localai.I18n.s(com.iris.localai.R.string.models_694fc5)) { vm.refresh() } },
     ) {
         val listState = rememberLazyListState()
         TrackTopBarScroll(listState)
@@ -425,7 +425,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             item(key = "tier", contentType = "tier") {
                 com.iris.localai.ui.components.SettingsGroup {
                     com.iris.localai.ui.components.SegmentedRow(
-                        "资源档位", com.iris.localai.ui.chat.SpeedLevel.labels, appSettings.resourceTier, vm::setResourceTier,
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.components_43448c), com.iris.localai.ui.chat.SpeedLevel.labels, appSettings.resourceTier, vm::setResourceTier,
                         subtitle = com.iris.localai.engine.ResourceTier.of(appSettings.resourceTier).hint,
                     )
                 }
@@ -433,14 +433,14 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             item(key = "import", contentType = "import") {
                 Column(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)) {
                     IrisButton(
-                        "导入模型文件", onClick = { picker.launch(arrayOf("*/*")) },
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
                         enabled = !import.active, icon = Icons.Outlined.Add,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (vm.mnnSupported) {
                         Row(Modifier.padding(top = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(
-                                "导入文件夹", onClick = { folderPicker.launch(null) },
+                                com.iris.localai.I18n.s(com.iris.localai.R.string.models_238420), onClick = { folderPicker.launch(null) },
                                 enabled = !import.active, style = IrisButtonStyle.Tonal, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                                 modifier = Modifier.weight(1f),
                             )
@@ -455,7 +455,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8), verticalAlignment = Alignment.CenterVertically) {
                                 Text(line, style = IrisType.caption, color = if (hub.error != null) c.danger else c.textSecondary,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
-                                IrisButton("查看", onOpenDownload, style = IrisButtonStyle.Text, compact = true)
+                                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_607e7a), onOpenDownload, style = IrisButtonStyle.Text, compact = true)
                             }
                         }
                     }
@@ -475,7 +475,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             }
                             Spacer(Modifier.height(IrisDimens.space8))
                             IrisProgressBar(progress = import.progress)
-                            IrisButton("取消", vm::cancelImport, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2), vm::cancelImport, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
                         }
                     }
                     import.error?.let { Text(it, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8)) }
@@ -483,32 +483,32 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             }
 
             (engine as? EngineState.Ready)?.let { ready ->
-                item(key = "loaded-title", contentType = "title") { SectionTitle("当前已加载") }
+                item(key = "loaded-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_486516)) }
                 item(key = "loaded", contentType = "loaded") {
                     SettingsGroup {
                         val d = ready.details
                         SettingsRow(ready.model.displayName, subtitle = d.description.ifBlank { null })
                         Divider()
-                        ValueRow("推理后端", d.backend)
+                        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_df1c1e), d.backend)
                         if (d.parameterCount > 0) {
                             Divider()
-                            ValueRow("参数量", Format.params(d.parameterCount))
+                            ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_832236), Format.params(d.parameterCount))
                         }
                         Divider()
-                        ValueRow("上下文长度", if (d.trainContextLength > 0) "${d.contextLength} / ${d.trainContextLength}" else "${d.contextLength}")
+                        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), if (d.trainContextLength > 0) "${d.contextLength} / ${d.trainContextLength}" else "${d.contextLength}")
                         Divider()
-                        ValueRow("聊天模板", if (d.hasChatTemplate) "模型内置" else "ChatML（兜底）")
+                        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d86ff2), if (d.hasChatTemplate) com.iris.localai.I18n.s(com.iris.localai.R.string.models_807c9f) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_ec88c5))
                         if (d.supportsThinking) {
                             Divider()
-                            ValueRow("深度思考", "支持")
+                            ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_1d878d), com.iris.localai.I18n.s(com.iris.localai.R.string.models_262b0b))
                         }
                         // 2.2.17 D: the GPU→CPU / mmproj note stays readable on the loaded model.
                         d.fallbackNote?.let { note ->
                             Divider()
-                            SettingsRow("加载提示", subtitle = note, icon = com.iris.localai.ui.icons.IrisIcons.Info)
+                            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_0021bd), subtitle = note, icon = com.iris.localai.ui.icons.IrisIcons.Info)
                         }
                         Divider()
-                        SettingsRow("卸载模型并释放内存", titleColor = c.danger, enabled = busy == null, onClick = { vm.unload() })
+                        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_a1c951), titleColor = c.danger, enabled = busy == null, onClick = { vm.unload() })
                     }
                 }
             }
@@ -523,17 +523,17 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                 val hints by com.iris.localai.util.HintLog.items.collectAsState()
                 var open by remember { mutableStateOf(false) }
                 SettingsGroup {
-                    SettingsRow("最近提示", subtitle = com.iris.localai.ui.hints.RecentHints.subtitle(hints), subtitleMaxLines = 1, icon = com.iris.localai.ui.icons.IrisIcons.Info, onClick = { open = true })
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.hints_f3439f), subtitle = com.iris.localai.ui.hints.RecentHints.subtitle(hints), subtitleMaxLines = 1, icon = com.iris.localai.ui.icons.IrisIcons.Info, onClick = { open = true })
                 }
                 if (open) com.iris.localai.ui.hints.RecentHintsSheet(onDismiss = { open = false })
             }
-            item(key = "local-title", contentType = "title") { SectionTitle("本机模型（${models.size}）") }
+            item(key = "local-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_c28cd6, models.size)) }
             if (models.isEmpty()) {
                 item(key = "empty", contentType = "empty") {
                     EmptyState(
-                        title = "还没有模型",
-                        message = if (vm.mnnSupported) "导入模型文件或文件夹，在线下载，或直接放到下方目录"
-                        else "导入模型文件，或用数据线 / adb 直接放到下方目录",
+                        title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d38003),
+                        message = if (vm.mnnSupported) com.iris.localai.I18n.s(com.iris.localai.R.string.models_22adbb)
+                        else com.iris.localai.I18n.s(com.iris.localai.R.string.models_adf29d),
                         icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                     )
                 }
@@ -611,14 +611,14 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "卸载 App 时这些模型会一起被删除", style = IrisType.secondary, color = c.textTertiary,
+                                com.iris.localai.I18n.s(com.iris.localai.R.string.models_5f4be2), style = IrisType.secondary, color = c.textTertiary,
                                 modifier = Modifier.weight(1f).padding(start = IrisDimens.space16),
                             )
-                            IrisButton("改存到下载目录", { openAllFilesAccess(context) }, style = IrisButtonStyle.Text, compact = true)
+                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_0b5542), { openAllFilesAccess(context) }, style = IrisButtonStyle.Text, compact = true)
                         }
                     }
                 }
-                GroupFootnote("可在「下载模型」里获取，或把模型文件拷进上面的文件夹。")
+                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.models_85c491))
             }
             // 2.2.16: the former 设置 › 模型与加载 (加载、下载源、默认后端、NPU、加载选项) on the same page
             if (settingsVm != null) item(key = "load-settings", contentType = "loadSettings") {
@@ -636,9 +636,9 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
 @Composable
 internal fun ModelDeleteDialog(m: LocalModel, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     ConfirmDialog(
-        title = "删除模型？",
-        message = "将从手机中删除 ${m.fileName}（${Format.bytes(m.sizeBytes)}）。",
-        confirmText = "删除",
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_ce618f),
+        message = com.iris.localai.I18n.s(com.iris.localai.R.string.models_704d32, m.fileName, Format.bytes(m.sizeBytes)),
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
     )
@@ -668,7 +668,7 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.material3.Icon(
-            Icons.Outlined.DragHandle, "拖动排序", tint = c.textTertiary,
+            Icons.Outlined.DragHandle, com.iris.localai.I18n.s(com.iris.localai.R.string.models_138a26), tint = c.textTertiary,
             modifier = dragHandle.size(40.dp).padding(IrisDimens.space8),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
@@ -677,13 +677,13 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         }
         Spacer(Modifier.width(IrisDimens.space8))
         when {
-            loaded -> Text("已加载", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8))
-            loading && (state as? EngineState.Loading)?.applyingTier == null -> IrisButton("取消加载", onCancelLoad, style = IrisButtonStyle.Outline, compact = true)
-            loading -> Text("加载中…", style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8).pulse())
-            else -> IrisButton("加载", onLoad, style = IrisButtonStyle.Outline, compact = true, enabled = !busy && state !is EngineState.Loading)
+            loaded -> Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_bec33d), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8))
+            loading && (state as? EngineState.Loading)?.applyingTier == null -> IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e60d2), onCancelLoad, style = IrisButtonStyle.Outline, compact = true)
+            loading -> Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_fb4ca1), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8).pulse())
+            else -> IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea), onLoad, style = IrisButtonStyle.Outline, compact = true, enabled = !busy && state !is EngineState.Loading)
         }
-        PressableIcon(Icons.Outlined.Tune, "后端与参数", iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings)
-        PressableIcon(Icons.Outlined.DeleteOutline, "删除", iconSize = IrisDimens.iconMedium, tint = c.textSecondary, enabled = !loading, onClick = onDelete)
+        PressableIcon(Icons.Outlined.Tune, com.iris.localai.I18n.s(com.iris.localai.R.string.models_fa1b10), iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings)
+        PressableIcon(Icons.Outlined.DeleteOutline, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), iconSize = IrisDimens.iconMedium, tint = c.textSecondary, enabled = !loading, onClick = onDelete)
     }
 }
 
@@ -715,13 +715,13 @@ fun ModelListItem(
         }
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
             when {
-                loaded -> Icon(Icons.Outlined.CheckCircle, "已加载", tint = c.accent, modifier = Modifier.size(IrisDimens.iconMedium))
+                loaded -> Icon(Icons.Outlined.CheckCircle, com.iris.localai.I18n.s(com.iris.localai.R.string.models_bec33d), tint = c.accent, modifier = Modifier.size(IrisDimens.iconMedium))
                 loading -> Box(Modifier.size(IrisDimens.space8).pulse(min = 0.3f).background(c.accent, androidx.compose.foundation.shape.CircleShape))
             }
         }
         if (onSettings != null) {
             com.iris.localai.ui.components.PressableIcon(
-                Icons.Outlined.Tune, "后端与参数", iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings,
+                Icons.Outlined.Tune, com.iris.localai.I18n.s(com.iris.localai.R.string.models_fa1b10), iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings,
             )
         }
     }
@@ -741,21 +741,21 @@ fun openAllFilesAccess(context: android.content.Context) {
 
 /** 2.2.16 下载源 texts (unit-tested). */
 object SourceText {
-    const val TITLE = "下载源"
-    const val RETRY_OTHER = "换源重试"
-    const val IMPORT = "从文件导入"
-    const val IMPORT_HINT = "已经有模型文件（网盘、电脑拷来的）？"
-    const val AUTO_SWITCH = "某个源失败或 20 秒没有速度时，会自动换下一个源并接着下载。"
-    const val FOOTNOTE = "自动：先测速，优先魔搭 ModelScope（有官方副本的模型），其次 hf-mirror.com，最后 HuggingFace 官方；失败会自动换源续传。国内网络建议选「自动」或「魔搭」。"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5)
+    val RETRY_OTHER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b7da7)
+    val IMPORT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d9a670)
+    val IMPORT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_aa27cc)
+    val AUTO_SWITCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_389994)
+    val FOOTNOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_c0f2d7)
     fun hint(s: com.iris.localai.data.DownloadSource): String = when (s) {
-        com.iris.localai.data.DownloadSource.AUTO -> "自动测速选最快的源，国内一般会用魔搭或 hf-mirror"
-        com.iris.localai.data.DownloadSource.MODELSCOPE -> "阿里魔搭，国内最快；没有副本的模型会改用 hf-mirror"
-        com.iris.localai.data.DownloadSource.HF_MIRROR -> "HuggingFace 的国内镜像"
-        com.iris.localai.data.DownloadSource.HUGGING_FACE -> "官方源，国内通常连不上"
+        com.iris.localai.data.DownloadSource.AUTO -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_6acd72)
+        com.iris.localai.data.DownloadSource.MODELSCOPE -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_35fcd5)
+        com.iris.localai.data.DownloadSource.HF_MIRROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_5775bd)
+        com.iris.localai.data.DownloadSource.HUGGING_FACE -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_4c60f8)
     }
 }
 
 /** 2.2.16 merged page texts (unit-tested). */
 object ModelsText {
-    const val TITLE = "模型与加载"
+    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516)
 }
