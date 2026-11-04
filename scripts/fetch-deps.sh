@@ -11,7 +11,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 LLAMA_REPO="https://github.com/ggml-org/llama.cpp"
-LLAMA_COMMIT="785322d17f2d51e5185cf996a1f4e46d87640841"  # master 2026-11-01 (K2 Horizon #29535, LFM3)
+LLAMA_COMMIT="bee23322f1baa3d2dd16b8339bed6aff4a8eb663"  # b12099, 2026-11-04 (Gemma 4 graph opt, OpenCL IQ4_XS/topk_mask, Hexagon TOP_K)
 
 SHERPA_VERSION="1.13.8"
 SHERPA_SHA256="b22c3fc1b6a45666d28892bb2f7694beeb77a8362d7ebd77c1a5431ec9435471"

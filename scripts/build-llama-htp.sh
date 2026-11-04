@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 # 2.2.15: Hexagon NPU variant of the GGUF engine -> prebuilt-assets/htp/ (full-flavour assets).
-#  - libiris_lhtp.so: our JNI + llama.cpp (third_party/llama.cpp, 785322d) built with the NDK, CPU only,
+#  - libiris_lhtp.so: our JNI + llama.cpp (third_party/llama.cpp, see fetch-deps.sh) built with the NDK, CPU only,
 #    ggml-base exported.
 #  - libiris-hexagon.so + libiris-htp-v73..v85.so: ggml-hexagon host + HTP skels from the official
-#    llama.cpp release b12032 (dde879b; only a requirements file differs from 785322d), built by
+#    llama.cpp release b12099 (bee2332, the same commit as fetch-deps.sh; 2.3.6), built by
 #    upstream CI with the Hexagon SDK. Renamed so they never collide with GenieX's older copies:
 #    host soname libggml-hexagon.so -> libiris-hexagon.so, NEEDED libggml-base.so -> libiris_lhtp.so,
 #    skel URI/soname libggml-htp-vNN.so -> libiris-htp-vNN.so (same length, in-place).
@@ -11,7 +11,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 NDK="${NDK:?set NDK=/path/to/android-ndk}"
-REL=b12032
+REL=b12099
 BIN="$(ls -d "$NDK"/toolchains/llvm/prebuilt/*/bin | head -1)"
 B=build-native-htp; rm -rf "$B"
 cmake -G Ninja -S app/src/main/cpp -B "$B" \

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(iris_llama LANGUAGES C CXX)
 
-# llama.cpp is vendored as a pinned git submodule (see scripts/fetch-llama.sh).
+# llama.cpp is fetched at a pinned commit into third_party/llama.cpp (see scripts/fetch-deps.sh).
 set(LLAMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/llama.cpp" CACHE PATH "llama.cpp source dir")
 if (NOT EXISTS "${LLAMA_DIR}/CMakeLists.txt")
-    message(FATAL_ERROR "llama.cpp not found at ${LLAMA_DIR}. Run: sh scripts/fetch-llama.sh")
+    message(FATAL_ERROR "llama.cpp not found at ${LLAMA_DIR}. Run: sh scripts/fetch-deps.sh")
 endif ()
 
 # ---- llama.cpp configuration: static, CPU only, tuned for Snapdragon 8 Elite (Oryon, ARMv8.7) ----
@@ -41,6 +41,16 @@ if (IRIS_OPENCL)
     set(GGML_OPENCL ON CACHE BOOL "" FORCE)
     set(GGML_OPENCL_USE_ADRENO_KERNELS ON CACHE BOOL "" FORCE)
     set(GGML_OPENCL_EMBED_KERNELS ON CACHE BOOL "" FORCE)
+endif ()
+
+# ---- 2.3.6: Mali / Immortalis / Xclipse GPU via ggml's Vulkan backend ----
+# Off by default (needs Khronos Vulkan-Headers with vulkan.hpp, SPIRV-Headers and a host glslc;
+# scripts/build-llama-native.sh and .github/workflows/native.yml pass them). libvulkan.so is part of
+# every Android 7+ system image. At run time iris_engine.cpp keeps Vulkan off on Qualcomm SoCs
+# (Adreno stays on OpenCL) and in crash-safe mode, via GGML_DISABLE_VULKAN, before the registry starts.
+option(IRIS_VULKAN "Build ggml's Vulkan backend (non-Adreno GPUs)" OFF)
+if (IRIS_VULKAN)
+    set(GGML_VULKAN ON CACHE BOOL "" FORCE)
 endif ()
 
 # ---- Whole-program optimisation ----
@@ -85,6 +95,9 @@ endif ()
 target_compile_features(iris_llama PRIVATE cxx_std_17)
 target_compile_options(iris_llama PRIVATE -Wall -Wextra -O3 -fvisibility=hidden)
 target_link_libraries(iris_llama PRIVATE llama ggml android log)
+if (IRIS_VULKAN)
+    target_compile_definitions(iris_llama PRIVATE IRIS_VULKAN=1)
+endif ()
 if (IRIS_OPENCL)
     target_link_libraries(iris_llama PRIVATE iris_cl_shim dl)
 endif ()

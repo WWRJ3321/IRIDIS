@@ -1,0 +1,50 @@
+# 2.3.6: rebuilds the native GGUF libraries with the NDK (the dev sandbox has no x86-64 NDK):
+#  - prebuilt-native/arm64-v8a/libiris_llama.so  (llama.cpp + JNI, OpenCL + Vulkan)
+#  - prebuilt-assets/htp/*                        (Hexagon variant, scripts/build-llama-htp.sh)
+# The results are force-committed to the branch ci/native-out (binaries only, never merged),
+# so they can be fetched with plain git and packaged by a local Gradle build (iris.prebuiltNative).
+name: native
+# Runs on a push to a native/** branch (workflow_dispatch only works once this file is on main).
+on:
+  push:
+    branches: ['native/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build glslc patchelf
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
+          echo "NDK=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Vulkan + SPIR-V headers
+        run: |
+          git clone -q --depth 1 https://github.com/KhronosGroup/Vulkan-Headers.git "$RUNNER_TEMP/vk"
+          git clone -q --depth 1 https://github.com/KhronosGroup/SPIRV-Headers.git "$RUNNER_TEMP/spirv-src"
+          cmake -S "$RUNNER_TEMP/spirv-src" -B "$RUNNER_TEMP/spirv-build" -G Ninja -DSPIRV_HEADERS_ENABLE_TESTS=OFF -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/spirv"
+          cmake --install "$RUNNER_TEMP/spirv-build"
+          echo "VK_HEADERS=$RUNNER_TEMP/vk" >> "$GITHUB_ENV"
+          echo "SPIRV_HEADERS=$RUNNER_TEMP/spirv" >> "$GITHUB_ENV"
+          echo "GLSLC=$(command -v glslc)" >> "$GITHUB_ENV"
+      - run: sh scripts/fetch-deps.sh
+      - name: libiris_llama.so (OpenCL + Vulkan)
+        run: sh scripts/build-llama-native.sh
+      - name: Hexagon variant
+        run: env -u VK_HEADERS sh scripts/build-llama-htp.sh
+      - name: Commit binaries
+        run: |
+          ls -la prebuilt-native/arm64-v8a prebuilt-assets/htp
+          git -C third_party/llama.cpp rev-parse HEAD > native-llama-commit.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan native-out
+          git rm -rq --cached .
+          git add -f prebuilt-native/arm64-v8a/libiris_llama.so prebuilt-assets/htp native-llama-commit.txt
+          git commit -qm "native libs for ${GITHUB_SHA::7} (llama.cpp $(cat native-llama-commit.txt | cut -c1-7))"
+          git push -f origin "HEAD:refs/heads/ci/native-out"

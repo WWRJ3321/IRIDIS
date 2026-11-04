@@ -13,6 +13,13 @@
 #include <dlfcn.h>
 #include <android/log.h>
 #endif
+#ifdef IRIS_VULKAN
+#include <cctype>
+#include <cstdlib>
+#include <string>
+#include <android/log.h>
+#include <sys/system_properties.h>
+#endif
 #include "llama.h"
 #ifdef IRIS_MTMD
 #include "mtmd.h"
@@ -45,6 +52,26 @@ int64_t us_since(Clock::time_point t0) {
 void backend_init_once() {
     static std::once_flag flag;
     std::call_once(flag, [] {
+#ifdef IRIS_VULKAN
+        // 2.3.6: Vulkan is for Mali / Immortalis / Xclipse. On Qualcomm the Adreno OpenCL backend is
+        // faster and some Adreno Vulkan drivers crash in pipeline creation, and crash-safe mode
+        // (IRIS_NO_OPENCL=1) keeps every GPU driver out. Must run before the backend registry starts.
+        // IRIS_FORCE_VULKAN=1 (debug) skips the SoC check.
+        {
+            const char *force = getenv("IRIS_FORCE_VULKAN");
+            const char *no_gpu = getenv("IRIS_NO_OPENCL");
+            char soc[PROP_VALUE_MAX] = {0};
+            __system_property_get("ro.soc.manufacturer", soc);
+            std::string m(soc);
+            std::transform(m.begin(), m.end(), m.begin(), [](unsigned char c) { return (char) std::tolower(c); });
+            const bool qualcomm = m.find("qualcomm") != std::string::npos || m == "qti";
+            if ((no_gpu && no_gpu[0] == '1') || (qualcomm && !(force && force[0] == '1'))) {
+                setenv("GGML_DISABLE_VULKAN", "1", 1);
+            }
+            __android_log_print(ANDROID_LOG_INFO, "IrisNative", "vulkan: soc=%s -> %s", soc,
+                                getenv("GGML_DISABLE_VULKAN") ? "off" : "on");
+        }
+#endif
         llama_backend_init();
 #ifdef IRIS_HTP
         // 2.2.15: ggml-hexagon (upstream llama.cpp release build, same commit) is a separate shared
@@ -102,7 +129,7 @@ void log_trampoline(enum ggml_log_level level, const char *text, void *) {
     if (text) {
         if ((int) level == GGML_LOG_LEVEL_CONT) {
             if (text[0] == '.') g_gpu_ticks.fetch_add(1, std::memory_order_relaxed);
-        } else if (std::strncmp(text, "ggml_opencl", 11) == 0) {
+        } else if (std::strncmp(text, "ggml_opencl", 11) == 0 || std::strncmp(text, "ggml_vulkan", 11) == 0) {
             std::lock_guard<std::mutex> lk(g_gpu_log_mu);
             g_gpu_last.assign(text, strnlen(text, 240));
             while (!g_gpu_last.empty() && (g_gpu_last.back() == '\n' || g_gpu_last.back() == '\r')) g_gpu_last.pop_back();
