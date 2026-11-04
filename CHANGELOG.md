@@ -13,6 +13,7 @@
 - 技能：在「技能」里选了技能或工具会立即开启智能体；关闭智能体会一并移除已选的技能/工具。
 - 修复：有历史对话时启动即闪退（聊天页初始化顺序导致的 NullPointerException）。
 - 修复：使用角色时闪退（角色宏正则在 Android 上语法错误）。
+- 本地 API 加固：未设 Key 时拒绝 `Origin: null` 和非回环 Host（防 DNS rebinding），无 Key 不发 CORS，防慢速连接占满并发，WakeLock 计数修复（#4，感谢 @Runa-Asahi）。
 
 ## 2.3.4（2026-11-04）
 
