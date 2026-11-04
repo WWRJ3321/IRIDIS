@@ -26,18 +26,18 @@ object CardPrompt {
      */
     fun macros(text: String, char: String, user: String, original: String = "", seed: Int = 0, rnd: java.util.Random = java.util.Random()): String {
         if (text.isEmpty()) return text
-        var s = text.replace(Regex("\\{\\{//[\\s\\S]*?}}"), "")
-        s = s.replace(Regex("\\{\\{(char|user|original|newline|trim)}}", RegexOption.IGNORE_CASE)) { m ->
+        var s = text.replace(Regex("\\{\\{//[\\s\\S]*?\\}\\}"), "")
+        s = s.replace(Regex("\\{\\{(char|user|original|newline|trim)\\}\\}", RegexOption.IGNORE_CASE)) { m ->
             when (m.groupValues[1].lowercase()) {
                 "char" -> char; "user" -> user; "original" -> original; "newline" -> "\n"; else -> "\u0000TRIM\u0000"
             }
         }
         s = s.replace("<USER>", user).replace("<BOT>", char)
-        s = s.replace(Regex("\\{\\{(random|pick)\\s*:\\s*([^}]*)}}", RegexOption.IGNORE_CASE)) { m ->
+        s = s.replace(Regex("\\{\\{(random|pick)\\s*:\\s*([^\\}]*)\\}\\}", RegexOption.IGNORE_CASE)) { m ->
             val opts = splitOptions(m.groupValues[2])
             if (opts.isEmpty()) "" else if (m.groupValues[1].equals("pick", true)) opts[Math.floorMod(seed * 31 + m.range.first, opts.size)] else opts[rnd.nextInt(opts.size)]
         }
-        s = s.replace(Regex("\\{\\{roll\\s*:\\s*d?(\\d{1,6})}}", RegexOption.IGNORE_CASE)) { m ->
+        s = s.replace(Regex("\\{\\{roll\\s*:\\s*d?(\\d{1,6})\\}\\}", RegexOption.IGNORE_CASE)) { m ->
             val n = m.groupValues[1].toIntOrNull()?.coerceAtLeast(1) ?: 1
             (rnd.nextInt(n) + 1).toString()
         }
