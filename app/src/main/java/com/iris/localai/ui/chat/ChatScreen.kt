@@ -629,7 +629,11 @@ fun ChatScreen(
                         draftOriginal = draftOriginal,
                     ),
                     refCatalog = vm::refCatalog,
-                    onAddRef = { r -> refs = com.iris.localai.data.TurnRefs.add(refs, r) },
+                    onAddRef = { r ->
+                        refs = com.iris.localai.data.TurnRefs.add(refs, r)
+                        // 2.3.5: a referenced skill / tool runs through tools → 智能体 on right away (not only at send).
+                        if (com.iris.localai.data.TurnRefs.needsAgent(refs, agentSettings.agentMode)) { vm.setAgentMode(true); vm.showNotice(ComposerText.AGENT_FOR_REF) }
+                    },
                     onRemoveRef = { r -> refs = refs - r },
                     onHoldToTalkCancel = { if (listening) { listening = false; vm.dictation.cancel() } },
                     onPickPhotos = { pickPhotos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
@@ -638,6 +642,8 @@ fun ChatScreen(
                     onMoveAttachment = { from, to -> pending = AttachmentOrder.move(pending, from, to) },
                     onToggleAgent = {
                         val on = !agentSettings.agentMode
+                        // 2.3.5: skills / tools need the agent — turning it off drops the references.
+                        if (!on) refs = emptyList()
                         vm.setAgentMode(on)
                         vm.showNotice(ComposerText.agentNotice(on))
                     },
