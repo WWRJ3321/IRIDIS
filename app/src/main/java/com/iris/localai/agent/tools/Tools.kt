@@ -397,9 +397,12 @@ object GenerateImageTool : SuspendTool {
         val models = env.imageGen?.runnableModels().orEmpty()
         if (models.isEmpty()) return ToolResult(false, "Error: $NO_MODEL", NO_MODEL.substringBefore('：'))
         // A reference image needs a model that takes one (not the fixed-size NPU context binary).
-        val model = if (init != null) models.firstOrNull { it.backend != com.iris.localai.imagegen.Backend.QNN }
+        // 2.4.0: sd.cpp models (FLUX.2 Klein / Z-Image) take no reference image, and inside an agent run the chat
+        // model stays loaded, so the lighter models go first; an sd.cpp model only when it is the one downloaded.
+        val sd = com.iris.localai.imagegen.Backend.SDCPP
+        val model = if (init != null) models.firstOrNull { it.backend != com.iris.localai.imagegen.Backend.QNN && it.backend != sd }
             ?: return ToolResult(false, "Error: the available image model cannot edit a picture; call without image", "该模型暂不支持参考图")
-        else models.first()
+        else models.firstOrNull { it.backend != sd } ?: models.first()
         val backend = env.imageGen!!
         val req = request(withStyle(p, imageStyle), model, init?.path)
         // 2.2.14: the model in use is always named.
