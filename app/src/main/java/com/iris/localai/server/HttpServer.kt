@@ -117,7 +117,7 @@ class HttpServer(
             s.soTimeout = READ_TIMEOUT_MS
             connections.withPermit {
                 val request = try {
-                    readBody(head, input, out)
+                    readBody(head.first, head.second, input, out)
                 } catch (e: HttpError) {
                     runCatching { responder.json(e.status, errorJson(e.message ?: "bad request", e.status)) }
                     return
@@ -151,7 +151,7 @@ class HttpServer(
     }
 
     /** Request line + headers, validated; the body is read later by [readBody]. */
-    private fun parseHead(input: InputStream, remote: InetAddress, deadlineNanos: Long): HttpRequest {
+    private fun parseHead(input: InputStream, remote: InetAddress, deadlineNanos: Long): Pair<HttpRequest, Int> {
         val head = readHead(input, deadlineNanos)
         val lines = head.split("\r\n")
         val parts = lines.first().split(' ')
@@ -172,12 +172,13 @@ class HttpServer(
         if (length > MAX_BODY) throw HttpError(413, "request body too large")
         val path = target.substringBefore('?')
         val query = parseQuery(target.substringAfter('?', ""))
-        return HttpRequest(method, path, query, headers, ByteArray(length.toInt()), remote)
+        return HttpRequest(method, path, query, headers, ByteArray(0), remote) to length.toInt()
     }
 
-    /** Fills [head]'s body (sized from Content-Length by [parseHead]). */
-    private fun readBody(head: HttpRequest, input: InputStream, out: OutputStream): HttpRequest {
-        val body = head.body
+    /** Reads the body of [length] bytes (from Content-Length, checked by [parseHead]). Allocated here,
+     *  inside the connection permit, so memory stays bounded by MAX_CONNECTIONS × MAX_BODY. */
+    private fun readBody(head: HttpRequest, length: Int, input: InputStream, out: OutputStream): HttpRequest {
+        val body = ByteArray(length)
         // 2.0.0: curl (bodies over 1 KiB / 1 MiB) and some HTTP stacks wait for this before sending the body.
         if (body.isNotEmpty() && head.headers["expect"]?.equals("100-continue", ignoreCase = true) == true) {
             out.write("HTTP/1.1 100 Continue\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
@@ -189,7 +190,7 @@ class HttpServer(
             if (n < 0) throw IOException("truncated body")
             read += n
         }
-        return head
+        return head.copy(body = body)
     }
 
     private fun readHead(input: InputStream, deadlineNanos: Long): String {
