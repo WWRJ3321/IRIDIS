@@ -4,7 +4,7 @@
 
 ## 2.3.6（2026-11-05）
 
-- 引擎：llama.cpp 升级到 b12099（bee2332）。Gemma 4 E2B/E4B 预填充大幅加快；Adreno OpenCL 新增 IQ4_XS 与 top-k；骁龙 NPU（Hexagon）采样 Top-K 更快，内置 Hexagon 运行库同步到 b12099。
+- 引擎：llama.cpp 升级到 b12099（bee2332），内置 Hexagon 运行库同步到 b12099。上游此区间含 Gemma 4 预填充、Adreno OpenCL IQ4_XS 与 Hexagon 采样等优化（上游说明，IRIDIS 尚未实测速度）。
 - GPU：非骁龙机型（天玑、Exynos、Tensor 等 Mali / Immortalis / Xclipse GPU）的 GGUF 可走 Vulkan；骁龙仍走 Adreno OpenCL。上次加载闪退进入安全模式时，Vulkan 也一并关闭。
 - 对话页：空白首页加「快捷工具」——写作、翻译、总结、润色、解释代码、防诈检测，点一下预填指令，补上内容再发送。
 
