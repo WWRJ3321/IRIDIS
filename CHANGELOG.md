@@ -2,6 +2,14 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.4.0（2026-11-05）
+
+- 生图：接入上游 stable-diffusion.cpp（MIT，固定在 3e92bf9），新原生库 libiris_sd.so（自带 ggml，仅导出 JNI 符号，不与对话引擎冲突）。
+- 新模型（均 Apache-2.0，可在 生图 页直接下载）：FLUX.2 Klein 4B（Q4_0，4 步，约 5.3 GB）与 Z-Image Turbo（Q3_K，8 步，中文提示词与文字更好，约 6 GB）。两者共用同一个 Qwen3-4B 文本编码器，第二个模型只多下约 3 GB；删除一个模型时共享文件保留，两个都删才清掉。
+- 运行：GPU 走 Vulkan，失败自动改用 CPU；若 GPU 驱动让应用闪退，下次自动只用 CPU。生图前会先卸下对话模型，权重常驻到空闲超时后释放。尺寸 512–1024 可选，大于 512² 时 VAE 分块解码以省内存。
+- 暂不支持：这两个模型的以图生图；骁龙 NPU（Hexagon）加速生图留待后续。
+- MOSS-Image：上游已支持，但 5B DiT + Qwen3.5-9B 编码器在手机上过重，且社区 Turbo 合并版许可未核实，本版不上架。
+
 ## 2.3.6（2026-11-05）
 
 - 引擎：llama.cpp 升级到 b12099（bee2332），内置 Hexagon 运行库同步到 b12099。上游此区间含 Gemma 4 预填充、Adreno OpenCL IQ4_XS 与 Hexagon 采样等优化（上游说明，IRIDIS 尚未实测速度）。
