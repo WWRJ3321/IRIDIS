@@ -910,7 +910,7 @@ private fun MorphPanel(
     header: @Composable RowScope.(p: Float, hPad: androidx.compose.ui.unit.Dp) -> Unit,
     // 2.3.5: one morph for both pills. hugWidthPx > 0 → width = content in [168, maxWidth]dp and the panel
     // keeps the pill's left edge (角色); otherwise fixed maxWidth, anchor-aware (模型).
-    maxWidth: androidx.compose.ui.unit.Dp = 240.dp,
+    maxWidth: androidx.compose.ui.unit.Dp = 280.dp,
     hugWidthPx: Int = 0,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
@@ -981,6 +981,7 @@ private fun MorphPanel(
                     Modifier
                         .wrapContentSize(Alignment.TopStart, unbounded = true)
                         .width(panelW.toDp())
+                        .heightIn(max = maxH.toDp())
                         .onSizeChanged { contentH = it.height + (52.dp.toPx() - headerH).toInt() },
                     horizontalAlignment = Alignment.Start,
                 ) {
@@ -998,6 +999,8 @@ private fun MorphPanel(
                             .fillMaxWidth()
                             .weight(1f, fill = false)
                             .graphicsLayer { alpha = ((progress() - 0.3f) / 0.7f).coerceIn(0f, 1f) }
+                            // only scrolls if the list is taller than the whole space below the pill
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
                             .padding(bottom = 4.dp),
                     ) {
                         content()
