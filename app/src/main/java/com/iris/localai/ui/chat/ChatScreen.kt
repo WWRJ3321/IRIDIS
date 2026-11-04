@@ -397,8 +397,9 @@ fun ChatScreen(
                 if (!solidBg) com.iris.localai.ui.theme.ChatBackdropImage(settings.backgroundImage, settings.backgroundBlur, settings.backgroundScrim)
                 // 2.2.10: 动态混色背景 (off = the 2.2.9 look exactly: static glow on the empty home only).
                 if (!solidBg && settings.dynamicBlend && settings.backgroundImage.isEmpty()) com.iris.localai.ui.components.HomeDynamicBlend()
+                // 2.3.5: the soft top glow stays once a conversation starts (it used to show on the empty home only).
+                if (!solidBg && settings.backgroundImage.isEmpty() && !settings.dynamicBlend) com.iris.localai.ui.components.HomeAmbientGlow()
                 if (messages.isEmpty()) {
-                    if (!solidBg && settings.backgroundImage.isEmpty() && !settings.dynamicBlend) com.iris.localai.ui.components.HomeAmbientGlow()
                     ChatEmptyState(
                         modelName = ui.readyModel?.displayName,
                         engine = ui.engine,
@@ -531,8 +532,9 @@ fun ChatScreen(
                                 character, compactChar,
                                 Modifier
                                     .then(if (compactChar) Modifier else Modifier.weight(1f, fill = false))
-                                    .onGloballyPositioned { charPillBounds = it.boundsInRoot() },
-                                // 2.3.5: pill stays visible; expanded = turned chevron + accent ring
+                                    .onGloballyPositioned { charPillBounds = it.boundsInRoot() }
+                                    // 2.3.5: hidden while its panel (which morphs from it) is showing — same as 模型
+                                    .graphicsLayer { alpha = if (charMenu || charMorph.value > 0f) 0f else 1f },
                                 expanded = { charMorph.value },
                             ) { hideKeyboard(); modelMenu = false; charMenu = !charMenu }
                         }
@@ -1031,10 +1033,12 @@ private fun ModelMorphPanel(
         header = { p, hPad -> ModelPillContent(engine, chevronTurn = p, hPad = hPad) },
     ) {
                         MorphHairline()
+                        // 2.3.5: restrained height — 40dp rows, at most 5 visible; more scroll inside this list only
+                        Column(Modifier.fillMaxWidth().heightIn(max = (40 * 5).dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                         models.forEach { m ->
                             val selected = m.path == currentPath
                             Row(
-                                Modifier.fillMaxWidth().height(44.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 16.dp),
+                                Modifier.fillMaxWidth().height(40.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
@@ -1049,6 +1053,7 @@ private fun ModelMorphPanel(
                                 if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
                             }
                         }
+                        }
                         if (models.isNotEmpty()) MorphHairline()
                         // 2.2.16: one entry for the merged 模型与加载 page (models + 档位 + load settings)
                         CompactMenuRow(ModelMenuText.MODELS_AND_LOADING, Icons.Outlined.Tune) { if (expanded) onManage() }
@@ -1062,10 +1067,10 @@ private fun ModelMorphPanel(
 @Composable
 private fun CharacterTitle(entry: com.iris.localai.character.CharacterStore.Entry?, compact: Boolean, modifier: Modifier = Modifier, expanded: () -> Float = { 0f }, onClick: () -> Unit) {
     val e = expanded()
+    // 2.3.5: no accent ring while open — the panel now morphs over the pill and the ring's round corner
+    // peeked out past the panel's 24dp corner.
     com.iris.localai.ui.components.IrisPill(
-        modifier.then(
-            if (e > 0f) Modifier.border(1.5.dp, Iris.colors.accent.copy(alpha = 0.55f * e), androidx.compose.foundation.shape.RoundedCornerShape(50)) else Modifier,
-        ),
+        modifier,
         height = IrisDimens.topBarControl,
         onClick = onClick, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_pick),
     ) { CharacterPillContent(entry, compact, chevronTurn = e, fillRow = false) }

@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">Memoria suficiente</string>
     <string name="imagegen_6b0e80">Biblioteca nativa de generación de imágenes NPU no cargada: %1$s</string>
     <string name="imagegen_a999cf">Error al inicializar el backend QNN: %1$s</string>
+    <string name="ch235_f_prompt">Prompt</string>
+    <string name="ch235_h_prompt">Escribe el prompt directamente: quién es, su carácter, cómo habla, su relación contigo…</string>
+    <string name="ch235_h_first">Opcional. La primera frase del personaje</string>
+    <string name="ch235_advanced_sub">Personalidad, escenario, saludos alternativos, etiquetas, ejemplos, prompt de sistema… (tarjetas Tavern)</string>
 </resources>

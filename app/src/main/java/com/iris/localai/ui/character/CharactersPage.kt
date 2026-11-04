@@ -292,7 +292,8 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
     var cloneVoice by remember { mutableStateOf(base.bindCloneVoice) }
     var imageStyle by remember { mutableStateOf(base.bindImageStyle) }
     var avatar by remember { mutableStateOf<ByteArray?>(null) }
-    var advanced by remember { mutableStateOf(false) }
+    // 2.3.5: imported cards that use the split fields open 高级 so nothing is hidden
+    var advanced by remember { mutableStateOf(base.personality.isNotBlank() || base.scenario.isNotBlank() || base.alternateGreetings.isNotEmpty()) }
     var modelMenu by remember { mutableStateOf(false) }
     val models by container.models.models.collectAsStateWithLifecycle()
     BackHandler(onBack = onClose)
@@ -343,20 +344,10 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
                 Text(I18n.s(R.string.ch232_avatar_hint), style = IrisType.secondary, color = c.textSecondary)
             }
             Field(I18n.s(R.string.ch232_f_name), name, { name = it }, single = true)
-            Field(I18n.s(R.string.ch232_f_desc), description, { description = it }, hint = I18n.s(R.string.ch232_h_desc))
-            Field(I18n.s(R.string.ch232_f_personality), personality, { personality = it })
-            Field(I18n.s(R.string.ch232_f_scenario), scenario, { scenario = it })
-            Field(I18n.s(R.string.ch232_f_first), firstMes, { firstMes = it }, hint = I18n.s(R.string.ch232_h_first))
-            alternates.forEachIndexed { i, g ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { Field(I18n.s(R.string.ch232_f_alt, i + 1), g, { alternates[i] = it }) }
-                    PressableIcon(IrisIcons.Close, I18n.s(R.string.chat_2f4aad), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { alternates.removeAt(i) }
-                }
-            }
-            IrisButton(I18n.s(R.string.ch232_add_alt), { alternates.add("") }, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add,
-                modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space4))
-            Field(I18n.s(R.string.ch232_f_tags), tags, { tags = it }, single = true, hint = I18n.s(R.string.ch232_h_tags))
-
+            // 2.3.5: one prompt box is enough — 设定 is written straight as a prompt (stored as the card's
+            // description). The tavern-card split fields (性格/场景/备选开场白/标签) live under 高级.
+            Field(I18n.s(R.string.ch235_f_prompt), description, { description = it }, hint = I18n.s(R.string.ch235_h_prompt), minLines = 6)
+            Field(I18n.s(R.string.ch232_f_first), firstMes, { firstMes = it }, hint = I18n.s(R.string.ch235_h_first))
             SectionTitle(I18n.s(R.string.ch232_bind_title))
             SettingsGroup {
                 Box {
@@ -385,10 +376,21 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
             GroupFootnote(I18n.s(R.string.ch232_bind_note))
 
             SettingsGroup {
-                SettingsRow(I18n.s(R.string.ch232_advanced), subtitle = I18n.s(R.string.ch232_advanced_sub), onClick = { advanced = !advanced },
+                SettingsRow(I18n.s(R.string.ch232_advanced), subtitle = I18n.s(R.string.ch235_advanced_sub), onClick = { advanced = !advanced },
                     trailing = { Text(if (advanced) "−" else "+", style = IrisType.body, color = c.textSecondary, modifier = Modifier.padding(end = IrisDimens.space8)) })
             }
             if (advanced) {
+                Field(I18n.s(R.string.ch232_f_personality), personality, { personality = it })
+                Field(I18n.s(R.string.ch232_f_scenario), scenario, { scenario = it })
+                alternates.forEachIndexed { i, g ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { Field(I18n.s(R.string.ch232_f_alt, i + 1), g, { alternates[i] = it }) }
+                        PressableIcon(IrisIcons.Close, I18n.s(R.string.chat_2f4aad), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { alternates.removeAt(i) }
+                    }
+                }
+                IrisButton(I18n.s(R.string.ch232_add_alt), { alternates.add("") }, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add,
+                    modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space4))
+                Field(I18n.s(R.string.ch232_f_tags), tags, { tags = it }, single = true, hint = I18n.s(R.string.ch232_h_tags))
                 Field(I18n.s(R.string.ch232_f_examples), examples, { examples = it }, hint = I18n.s(R.string.ch232_h_examples))
                 Field(I18n.s(R.string.ch232_f_system), system, { system = it }, hint = I18n.s(R.string.ch232_h_system))
                 Field(I18n.s(R.string.ch232_f_post), post, { post = it })
@@ -402,12 +404,12 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
 }
 
 @Composable
-private fun Field(label: String, value: String, onChange: (String) -> Unit, single: Boolean = false, hint: String? = null) {
+private fun Field(label: String, value: String, onChange: (String) -> Unit, single: Boolean = false, hint: String? = null, minLines: Int = 2) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space4)) {
         Text(label, style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(start = IrisDimens.space4, bottom = IrisDimens.space2))
         androidx.compose.material3.OutlinedTextField(
-            value, onChange, singleLine = single, minLines = if (single) 1 else 2, maxLines = if (single) 1 else 10,
+            value, onChange, singleLine = single, minLines = if (single) 1 else minLines, maxLines = if (single) 1 else maxOf(10, minLines),
             textStyle = IrisType.body.copy(color = c.text),
             placeholder = hint?.let { h -> { Text(h, style = IrisType.secondary, color = c.textTertiary) } },
             shape = IrisRadius.mediumShape,

@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">Genug Speicher</string>
     <string name="imagegen_6b0e80">Native NPU-Bildgenerierungsbibliothek nicht geladen: %1$s</string>
     <string name="imagegen_a999cf">Initialisierung des QNN-Backends fehlgeschlagen: %1$s</string>
+    <string name="ch235_f_prompt">Prompt</string>
+    <string name="ch235_h_prompt">Schreib einfach den Prompt: wer die Figur ist, Charakter, Sprechweise, Beziehung zu dir …</string>
+    <string name="ch235_h_first">Optional. Der erste Satz der Figur</string>
+    <string name="ch235_advanced_sub">Persönlichkeit, Szenario, alternative Begrüßungen, Tags, Beispiele, System-Prompt … (Tavern-Karten)</string>
 </resources>

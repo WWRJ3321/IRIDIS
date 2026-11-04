@@ -447,15 +447,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             contentPadding = PaddingValues(bottom = IrisDimens.space32 + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
         ) {
             item(key = "large-title", contentType = "largeTitle") { LargeTitle() }
-            // 2.2.16: 资源档位 lives on this page now (was the separate 档位与加载 sheet)
-            item(key = "tier", contentType = "tier") {
-                com.iris.localai.ui.components.SettingsGroup {
-                    com.iris.localai.ui.components.SegmentedRow(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.components_43448c), com.iris.localai.ui.chat.SpeedLevel.labels, appSettings.resourceTier, vm::setResourceTier,
-                        subtitle = com.iris.localai.engine.ResourceTier.of(appSettings.resourceTier).hint,
-                    )
-                }
-            }
+            // 2.3.5: 资源档位 removed from this page; the composer's speed chip sets the same value.
             item(key = "import", contentType = "import") {
                 Column(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)) {
                     IrisButton(
@@ -544,15 +536,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                 }
             }
 
-            item(key = "hints", contentType = "hints") {
-                // 2.2.17 D 「最近提示」: banners / toasts that already went away, readable again.
-                val hints by com.iris.localai.util.HintLog.items.collectAsState()
-                var open by remember { mutableStateOf(false) }
-                SettingsGroup {
-                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.hints_f3439f), subtitle = com.iris.localai.ui.hints.RecentHints.subtitle(hints), subtitleMaxLines = 1, icon = com.iris.localai.ui.icons.IrisIcons.Info, onClick = { open = true })
-                }
-                if (open) com.iris.localai.ui.hints.RecentHintsSheet(onDismiss = { open = false })
-            }
+            // 2.3.5: 「最近提示」 entry removed from this page (user request).
             item(key = "local-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_c28cd6, models.size)) }
             if (models.isEmpty()) {
                 item(key = "empty", contentType = "empty") {

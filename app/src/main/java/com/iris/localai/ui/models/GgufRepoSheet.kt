@@ -49,7 +49,7 @@ object SearchText {
     val VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_93f6a8)
 
     fun stats(h: GgufSearch.RepoHit): String = listOfNotNull(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.models_cbd50e, count(h.downloads)), if (h.likes > 0) "♥ ${count(h.likes)}" else null, h.updated.takeIf { it.isNotEmpty() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.models_56ffb4, it) },
+        com.iris.localai.I18n.s(com.iris.localai.R.string.models_cbd50e, count(h.downloads)), h.updated.takeIf { it.isNotEmpty() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.models_56ffb4, it) },
     ).joinToString(" · ")
 
     fun modeHint(m: GgufSearch.Browse, q: String): String = (if (q.isNotBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.models_45e86f, q) else "") + when (m) {
@@ -95,7 +95,7 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                 style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val files = st.files
-            files?.license?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_a68e4d, it), style = IrisType.caption, color = c.textSecondary) }
+            // 2.3.5: licence line dropped (noise); gated repos still say so below.
             if (st.filesLoading) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fc70c), style = IrisType.caption, color = c.textSecondary)
             st.filesError?.let { Text(it, style = IrisType.caption, color = c.danger) }
             if (files != null) {
@@ -108,15 +108,24 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                     val ram = remember { vm.availRam() }
                     Text(SearchText.MAIN, style = IrisType.caption, color = c.textSecondary)
                     if (hubActive) Text(DownloadText.ONE_AT_A_TIME, style = IrisType.caption, color = c.warning)
+                    // 2.3.5: rows are just quant + size + fit. The file name only shows when two files share a
+                    // quant, and then only the part that differs (common prefix / ".gguf" trimmed).
+                    val dupQuants = remember(files) { files.choices.groupingBy { it.quant }.eachCount().filter { it.key != null && it.value > 1 }.keys }
+                    val prefix = remember(files) {
+                        val names = files.choices.map { it.title }
+                        if (names.size < 2) "" else names.reduce { a, b -> a.commonPrefixWith(b) }
+                    }
                     Column(Modifier.heightIn(max = maxH).verticalScroll(rememberScrollState())) {
                         files.choices.forEach { ch ->
+                            val variant = if (ch.quant in dupQuants) ch.title.removePrefix(prefix).removeSuffix(".gguf").trim('-', '_', '.', ' ').takeIf { it.isNotEmpty() } else null
+                            val best = ch.quant.equals("Q4_K_M", ignoreCase = true)
                             Row(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = c.text)
+                                    Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = if (best) c.accent else c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text(
-                                        listOfNotNull(Format.bytes(ch.size), if (ram > 0) GgufSearch.fitHint(ch.size, ram) else null, ch.title.takeIf { ch.quant != null })
+                                        listOfNotNull(Format.bytes(ch.size), if (ram > 0) GgufSearch.fitHint(ch.size, ram) else null, variant)
                                             .joinToString(" · ") + if (!ch.complete) com.iris.localai.I18n.s(com.iris.localai.R.string.models_1366d0) else "",
-                                        style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                        style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                                 IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9), {
@@ -132,7 +141,7 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
         // full-width row (its own 16 dp padding)
         visionFile?.takeIf { st.files?.gated == false && st.files?.choices?.isNotEmpty() == true }?.let { projector ->
             com.iris.localai.ui.components.CheckRow(
-                SearchText.VISION, withVision, subtitle = "${projector.name} · ${Format.bytes(projector.size)}",
+                SearchText.VISION, withVision, subtitle = Format.bytes(projector.size),
             ) { withVision = !withVision }
         }
     }

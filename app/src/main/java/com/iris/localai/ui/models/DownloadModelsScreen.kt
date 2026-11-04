@@ -478,7 +478,6 @@ private fun OnlineCard(h: GgufSearch.RepoHit, ram: Long, onOpen: () -> Unit) {
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
-            Badge("GGUF")
             Badge(h.site.tag)
             h.sizeRange?.let { r -> Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(r.first) + com.iris.localai.I18n.s(com.iris.localai.R.string.models_d59693)) }
             if (ram > 0) h.sizeRange?.let { r -> GgufSearch.fitHint(r.first, ram).let { Badge(it, ramTone(it)) } }

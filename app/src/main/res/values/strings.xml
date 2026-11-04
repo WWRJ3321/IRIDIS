@@ -1924,4 +1924,8 @@
     <string name="models_60a35c">内存够用</string>
     <string name="imagegen_6b0e80">NPU 生图原生库未加载：%1$s</string>
     <string name="imagegen_a999cf">QNN 后端初始化失败：%1$s</string>
+    <string name="ch235_f_prompt">设定</string>
+    <string name="ch235_h_prompt">直接写提示词：TA 是谁、什么性格、怎么说话、和你是什么关系……</string>
+    <string name="ch235_h_first">可选。角色说的第一句话</string>
+    <string name="ch235_advanced_sub">性格、场景、备选开场白、标签、对话示例、系统提示词等（兼容酒馆角色卡）</string>
 </resources>

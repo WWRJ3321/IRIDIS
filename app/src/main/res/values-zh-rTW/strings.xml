@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">記憶體夠用</string>
     <string name="imagegen_6b0e80">NPU 生圖原生庫未載入：%1$s</string>
     <string name="imagegen_a999cf">QNN 後端初始化失敗：%1$s</string>
+    <string name="ch235_f_prompt">設定</string>
+    <string name="ch235_h_prompt">直接寫提示詞：TA 是誰、什麼性格、怎麼說話、和你是什麼關係……</string>
+    <string name="ch235_h_first">可選。角色說的第一句話</string>
+    <string name="ch235_advanced_sub">性格、場景、備選開場白、標籤、對話範例、系統提示詞等（相容酒館角色卡）</string>
 </resources>

@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">पर्याप्त मेमोरी</string>
     <string name="imagegen_6b0e80">NPU छवि निर्माण नेटिव लाइब्रेरी लोड नहीं हुई: %1$s</string>
     <string name="imagegen_a999cf">QNN बैकएंड आरंभ करना विफल: %1$s</string>
+    <string name="ch235_f_prompt">प्रॉम्प्ट</string>
+    <string name="ch235_h_prompt">सीधे प्रॉम्प्ट लिखें: वह कौन है, स्वभाव, बोलने का ढंग, आपसे रिश्ता…</string>
+    <string name="ch235_h_first">वैकल्पिक। किरदार की पहली पंक्ति</string>
+    <string name="ch235_advanced_sub">स्वभाव, परिदृश्य, वैकल्पिक अभिवादन, टैग, उदाहरण, सिस्टम प्रॉम्प्ट… (Tavern कार्ड)</string>
 </resources>

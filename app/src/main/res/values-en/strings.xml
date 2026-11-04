@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">Enough memory</string>
     <string name="imagegen_6b0e80">NPU image generation native library not loaded: %1$s</string>
     <string name="imagegen_a999cf">QNN backend initialization failed: %1$s</string>
+    <string name="ch235_f_prompt">Prompt</string>
+    <string name="ch235_h_prompt">Just write the prompt: who they are, personality, how they talk, how they relate to you…</string>
+    <string name="ch235_h_first">Optional. The character\'s first line</string>
+    <string name="ch235_advanced_sub">Personality, scenario, alternate greetings, tags, examples, system prompt… (Tavern card fields)</string>
 </resources>

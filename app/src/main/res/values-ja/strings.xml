@@ -1923,4 +1923,8 @@
     <string name="models_60a35c">メモリは十分です</string>
     <string name="imagegen_6b0e80">NPU 画像生成ネイティブライブラリが読み込まれていません：%1$s</string>
     <string name="imagegen_a999cf">QNN バックエンドの初期化に失敗しました：%1$s</string>
+    <string name="ch235_f_prompt">設定</string>
+    <string name="ch235_h_prompt">プロンプトをそのまま書く：誰なのか、性格、話し方、あなたとの関係……</string>
+    <string name="ch235_h_first">任意。キャラクターの最初のひとこと</string>
+    <string name="ch235_advanced_sub">性格、シナリオ、別の挨拶、タグ、会話例、システムプロンプトなど（Tavern カード互換）</string>
 </resources>
