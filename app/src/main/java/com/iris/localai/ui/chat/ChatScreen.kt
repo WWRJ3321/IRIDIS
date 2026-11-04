@@ -1137,24 +1137,32 @@ private fun CharacterMorphPanel(
             val panelW = com.iris.localai.ui.components.MorphGeometry.dropWidth(
                 if (contentW > 0) contentW.toFloat() else 168.dp.toPx(), screenW, m, 168.dp.toPx(), 220.dp.toPx(),
             )
-            val left = com.iris.localai.ui.components.MorphGeometry.dropLeft(pillInRoot.left, panelW, screenW, m) - origin.x
-            val top = pillInRoot.bottom + 6.dp.toPx() - origin.y
-            val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
+            val endLeft = com.iris.localai.ui.components.MorphGeometry.dropLeft(pillInRoot.left, panelW, screenW, m) - origin.x
+            val endTop = pillInRoot.bottom + 6.dp.toPx() - origin.y
+            val avail = if (areaH > 0) areaH - endTop - 16.dp.toPx() else Float.MAX_VALUE
             val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(88.dp.toPx())
-            val shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+            // 2.3.5: grows out of the 角色 pill like the 模型 panel — bounds and corner morph from the pill's
+            // rect to the thin dropdown below it (pill stays visible once open); rows fade in late.
+            val rowsH = ((cards.size + 2) * 44 + 9).dp.toPx()
+            val endH = rowsH.coerceAtMost(maxH)
+            val pillLeft = pillInRoot.left - origin.x
+            val pillTop = pillInRoot.top - origin.y
+            val pillW = pillInRoot.width
+            val pillH = pillInRoot.height.coerceAtLeast(1f)
+            val p = progress()
+            val left = pillLeft + (endLeft - pillLeft) * p
+            val top = pillTop + (endTop - pillTop) * p
+            val w = pillW + (panelW - pillW) * p
+            val h = pillH + (endH - pillH) * p
+            val corner = pillH / 2f + (24.dp.toPx() - pillH / 2f) * p
+            val shape = androidx.compose.foundation.shape.RoundedCornerShape(corner.toDp())
             Box(
                 Modifier
                     .offset { androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()) }
-                    .graphicsLayer {
-                        val p = progress()
-                        alpha = p
-                        val sc = 0.92f + 0.08f * p
-                        scaleX = sc; scaleY = sc
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-                    }
-                    .width(panelW.toDp())
-                    .heightIn(max = maxH.toDp())
+                    .size(w.toDp(), h.toDp())
                     .glassSurface(shape, com.iris.localai.ui.theme.IrisElevation.menu, strong = true)
+                    .clip(shape)
+                    .graphicsLayer { alpha = ((progress() - 0.35f) / 0.65f).coerceIn(0f, 1f) }
                     .pointerInput(Unit) { detectTapGestures { } },
             ) {
                 // measure natural content width (unconstrained) to size the panel
