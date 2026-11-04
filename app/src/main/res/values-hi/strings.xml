@@ -114,6 +114,12 @@
     <string name="mr234_hint">सामान्य चैट पर लौट आए। क्या %1$s पर वापस जाएँ?</string>
     <string name="mr234_back">वापस जाएँ</string>
     <string name="set234_lang">भाषा</string>
+    <string name="mm235_attach">विज़न प्रोजेक्टर (mmproj) जोड़ें</string>
+    <string name="mm235_pick">फ़ाइल चुनें…</string>
+    <string name="mm235_remove">प्रोजेक्टर हटाएँ</string>
+    <string name="mm235_badge">विज़न</string>
+    <string name="mm235_later">बाद में</string>
+    <string name="mm235_offer">%1$s आयात हुआ। यदि यह विज़न मॉडल है, तो इसकी mmproj फ़ाइल जोड़ें।</string>
     <string name="ui_271348">पिछली बार IRIDIS अचानक बंद हो गया था</string>
     <string name="ui_79d3ab">कॉपी करें</string>
     <string name="ui_b15d91">बंद करें</string>

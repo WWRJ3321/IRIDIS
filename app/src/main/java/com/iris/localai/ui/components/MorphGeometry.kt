@@ -16,4 +16,14 @@ object MorphGeometry {
         val left = want.coerceIn(margin, (screenW - margin - w).coerceAtLeast(margin))
         return w to left
     }
+
+    /** 2.3.5: thin dropdown width = content clamped to [minW, maxW] and to screen − 2·margin. */
+    fun dropWidth(contentW: Float, screenW: Float, margin: Float, minW: Float, maxW: Float): Float {
+        val room = (screenW - 2 * margin).coerceAtLeast(0f)
+        return contentW.coerceIn(minW, maxW).coerceAtMost(room)
+    }
+
+    /** 2.3.5: dropdown left = pill's left edge, shifted left only to keep [margin] from the right edge. */
+    fun dropLeft(pillLeft: Float, panelW: Float, screenW: Float, margin: Float): Float =
+        pillLeft.coerceAtMost(screenW - margin - panelW).coerceAtLeast(margin.coerceAtMost(pillLeft))
 }

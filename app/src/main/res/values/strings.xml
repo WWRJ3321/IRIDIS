@@ -115,6 +115,12 @@
     <string name="mr234_hint">已切回普通对话，是否换回原模型 %1$s？</string>
     <string name="mr234_back">换回</string>
     <string name="set234_lang">语言</string>
+    <string name="mm235_attach">挂载视觉投影 (mmproj)</string>
+    <string name="mm235_pick">从文件挂载…</string>
+    <string name="mm235_remove">移除视觉投影</string>
+    <string name="mm235_badge">视觉</string>
+    <string name="mm235_later">以后</string>
+    <string name="mm235_offer">已导入 %1$s。如果是视觉模型，可挂载配套的 mmproj 文件。</string>
     <string name="ui_271348">上次 IRIDIS 意外退出了</string>
     <string name="ui_79d3ab">复制</string>
     <string name="ui_b15d91">关闭</string>

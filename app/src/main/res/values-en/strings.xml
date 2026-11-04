@@ -114,6 +114,12 @@
     <string name="mr234_hint">Back to a normal chat. Switch back to %1$s?</string>
     <string name="mr234_back">Switch back</string>
     <string name="set234_lang">Language</string>
+    <string name="mm235_attach">Attach vision projector (mmproj)</string>
+    <string name="mm235_pick">Choose file…</string>
+    <string name="mm235_remove">Remove projector</string>
+    <string name="mm235_badge">Vision</string>
+    <string name="mm235_later">Later</string>
+    <string name="mm235_offer">Imported %1$s. If it is a vision model, attach its mmproj file.</string>
     <string name="ui_271348">IRIDIS closed unexpectedly last time</string>
     <string name="ui_79d3ab">Copy</string>
     <string name="ui_b15d91">Close</string>

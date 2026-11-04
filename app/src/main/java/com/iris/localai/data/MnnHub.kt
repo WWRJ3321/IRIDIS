@@ -250,8 +250,9 @@ class MnnHub(private val repo: ModelRepository) {
 
     private suspend fun downloadGguf(hit: GgufSearch.RepoHit, files: List<Triple<String, Long, String>>, source: DownloadSource, demote: DownloadSource?): LocalModel = withContext(Dispatchers.IO) {
         if (hit.gated) throw IOException(GATED)
-        val modelsDir = repo.modelsDir
         val mainName = files.first().third
+        // 2.3.5: every GGUF download (main + shards + mmproj) goes into models/<name>/
+        val modelsDir = File(repo.modelsDir, GgufFolder.folderFor(mainName)).apply { mkdirs() }
         if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, mainName))
         val claimed = files.map { it.third + ModelRepository.PART_SUFFIX }
         if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, hit.id)) }

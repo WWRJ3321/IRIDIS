@@ -99,6 +99,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.border
 
 data class ImportState(val fileName: String = "", val progress: Float = 0f, val error: String? = null, val active: Boolean = false)
 
@@ -164,6 +165,8 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val m = c.models.import(uri) { p -> _import.value = _import.value.copy(progress = p) }
                 _import.value = ImportState()
+                // 2.3.5 (#8): a single GGUF without a paired projector → offer 「挂载视觉投影」.
+                if (m.format == com.iris.localai.data.ModelFormat.GGUF && c.engine.mmprojFor(m, c.modelConfigs.get(m.id).mmproj) == null) _mmprojOffer.value = m
                 if (engine.value !is EngineState.Ready) c.engine.load(m)
             } catch (t: Throwable) {
                 _import.value = ImportState(error = if (t is kotlinx.coroutines.CancellationException) null else t.message)
@@ -172,6 +175,20 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelImport() { importJob?.cancel() }
+
+    // 2.3.5 (#8): 挂载视觉投影 (mmproj) after a single-GGUF import.
+    private val _mmprojOffer = MutableStateFlow<LocalModel?>(null)
+    val mmprojOffer = _mmprojOffer.asStateFlow()
+    fun dismissMmprojOffer() { _mmprojOffer.value = null }
+    fun attachMmproj(m: LocalModel, uri: Uri) = viewModelScope.launch {
+        _mmprojOffer.value = null
+        try {
+            val name = c.models.importMmproj(m, uri)
+            c.modelConfigs.update(m.id) { it.copy(mmproj = name) }
+        } catch (t: Throwable) {
+            _import.value = ImportState(error = t.message)
+        }
+    }
 
     // ---- MNN folders ----
     val mnnSupported: Boolean = com.iris.localai.data.ModelFormat.MNN in com.iris.localai.engine.EngineFactory.supportedFormats
@@ -182,7 +199,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         importJob = viewModelScope.launch {
             _import.value = ImportState(fileName = uri.lastPathSegment?.substringAfterLast(':').orEmpty(), active = true)
             try {
-                val m = c.models.importFolder(uri) { p -> _import.value = _import.value.copy(progress = p) }
+                val m = c.models.importFolder(uri, onPair = { id, proj -> c.modelConfigs.update(id) { it.copy(mmproj = proj) } }) { p -> _import.value = _import.value.copy(progress = p) }
                 _import.value = ImportState()
                 if (engine.value !is EngineState.Ready) c.engine.load(m)
             } catch (t: Throwable) {
@@ -393,6 +410,15 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::import) }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::importFolder) }
+    val mmprojOffer by vm.mmprojOffer.collectAsStateWithLifecycle()
+    val mmprojPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> val m = mmprojOffer; if (uri != null && m != null) vm.attachMmproj(m, uri) else vm.dismissMmprojOffer() }
+    mmprojOffer?.let { m ->
+        com.iris.localai.ui.components.IrisDialog(
+            onDismiss = { vm.dismissMmprojOffer() }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_attach),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_pick), onConfirm = { mmprojPicker.launch(arrayOf("*/*")) },
+            dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_later), onDismissClick = { vm.dismissMmprojOffer() },
+        ) { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_offer, m.displayName), style = IrisType.body, color = Iris.colors.textSecondary) }
+    }
     val hub by vm.hub.collectAsStateWithLifecycle()
     val folder by vm.folder.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -673,7 +699,20 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
             Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (m.format == com.iris.localai.data.ModelFormat.GGUF) {
+                    // 2.3.5 (#8): small 视觉 badge when a projector is linked
+                    val ctr = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.iris.localai.IrisApp).container
+                    val cfgs by ctr.modelConfigs.configs.collectAsStateWithLifecycle()
+                    val pick = cfgs[m.id]?.mmproj
+                    val vision = remember(m.path, pick) { ctr.engine.mmprojFor(m, pick) != null }
+                    if (vision) Text(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_badge), style = IrisType.caption, color = c.accent, maxLines = 1,
+                        modifier = Modifier.padding(end = IrisDimens.space4).border(IrisDimens.hairline, c.accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 6.dp),
+                    )
+                }
+                Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
         Spacer(Modifier.width(IrisDimens.space8))
         when {

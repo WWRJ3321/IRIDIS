@@ -87,8 +87,14 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     var editPrompt by remember { mutableStateOf(false) }
     var editSeed by remember { mutableStateOf(false) }
     var pickMmproj by remember { mutableStateOf(false) }
+    var mmprojTick by remember { mutableIntStateOf(0) }
+    val mmprojFilePicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            runCatching { container.models.importMmproj(model, uri) }.onSuccess { n -> set { it.copy(mmproj = n) }; mmprojTick++ }
+        }
+    }
     // 2.2.17: projectors in the model's folder (GGUF vision through llama.cpp mtmd).
-    val mmprojSiblings = remember(model.path, pickMmproj) {
+    val mmprojSiblings = remember(model.path, pickMmproj, mmprojTick) {
         if (model.format != com.iris.localai.data.ModelFormat.GGUF) emptyList()
         else java.io.File(model.path).parentFile?.list()?.toList().orEmpty()
     }
@@ -285,10 +291,11 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                         OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_475473), eff.useMmap, o.useMmap == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_f1f0d5),
                             onChange = { on -> set { it.copy(useMmap = on) } }, onReset = { set { it.copy(useMmap = null) } })
                     }
-                    if (model.format == com.iris.localai.data.ModelFormat.GGUF && mmprojChoices.isNotEmpty()) {
+                    if (model.format == com.iris.localai.data.ModelFormat.GGUF) {
                         Divider()
                         SettingsRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.models_f08420),
+                            // 2.3.5 (#8): always offered for GGUF — 挂载视觉投影 (mmproj)
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_attach),
                             subtitle = when (o.mmproj) {
                                 null -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_a73152) + (mmprojAuto ?: com.iris.localai.I18n.s(com.iris.localai.R.string.models_a21729))
                                 com.iris.localai.engine.llama.MmprojPairing.OFF -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_8bfbde)
@@ -366,6 +373,10 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_fd346f), o.mmproj == null, subtitle = mmprojAuto ?: com.iris.localai.I18n.s(com.iris.localai.R.string.models_d0a02b)) { set { it.copy(mmproj = null) } }
                 CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_57ed11), o.mmproj == com.iris.localai.engine.llama.MmprojPairing.OFF) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
                 mmprojChoices.forEach { f -> CheckRow(f, o.mmproj == f) { set { it.copy(mmproj = f) } } }
+                // 2.3.5 (#8): pick / replace from a file; 移除 = never load one
+                CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
+                if (o.mmproj != com.iris.localai.engine.llama.MmprojPairing.OFF && (o.mmproj != null || mmprojAuto != null))
+                    CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_remove), false) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
             }
         }
     }
