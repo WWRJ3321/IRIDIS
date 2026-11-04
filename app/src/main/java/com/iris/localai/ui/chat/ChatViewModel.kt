@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -93,6 +94,11 @@ data class StreamingText(val id: String, val text: String)
 class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     private val c = (app as IrisApp).container
+    // 2.3.5 fix: declared first — [state] starts Eagerly in the constructor and reads these through
+    // usageFor → keptKb / turnBlocks; declared further down they were still null there and a restored
+    // conversation with messages (对话 mode, 知识库 in chat) crashed at launch (synchronized on null).
+    private val kbBlocks = LinkedHashMap<String, com.iris.localai.knowledge.KbBlock>()
+    private val memBlocks = LinkedHashMap<String, String>()
     /**
      * 1.14.3: owner of every generation this screen starts (replies, voice, agent turns, summaries,
      * process_file parts, warm-up). 停止 and the stop filters cancel only these, never an API
@@ -148,7 +154,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val s = c.settings.current
         val eff = com.iris.localai.data.EffectiveModelConfig.resolve(s, ready?.model?.format, ready?.model?.id?.let { cfgs[it] })
         st.copy(deepThinking = eff.thinking, context = usageFor(st.conversation, ready, meas[st.conversation.id], summ))
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatUiState())
+    }
+        // 2.3.5 fix: first value after the constructor has finished (Eagerly + Main.immediate ran
+        // usageFor inside <init>, before later fields were initialised).
+        .onStart { kotlinx.coroutines.yield() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ChatUiState())
 
     /** 1.13.1: the running reply's timer — the speed overlay reads its visible-character count. */
     @Volatile var liveTimer: com.iris.localai.util.ReplyTimer? = null
@@ -526,7 +536,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      * sends the history the engine already holds and its KV cache is reused instead of the whole
      * conversation being prefilled again. Bounded ([KbChat.MAX_KEPT]); not persisted.
      */
-    private val kbBlocks = LinkedHashMap<String, com.iris.localai.knowledge.KbBlock>()
+    // (kbBlocks: declared at the top of the class — see 2.3.5 fix)
 
     /** 2.3.2: knowledge blocks that go into the prompt (newest 2 user turns, ≤ 15% of the window). */
     private fun keptKb(conv: Conversation, nCtx: Int): Map<String, com.iris.localai.knowledge.KbBlock> {
@@ -539,7 +549,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      * 2.2.9 C: user message id → its 【相关记忆】 block (FACT items relevant to it), put in front of
      * that message like the knowledge block; kept per message so the history stays byte-stable.
      */
-    private val memBlocks = LinkedHashMap<String, String>()
+    // (memBlocks: declared at the top of the class — see 2.3.5 fix)
 
     /** kbBlocks + memBlocks, memory first, for [KbChat.attachAll]. */
     private fun turnBlocks(conv: Conversation, nCtx: Int): Map<String, String> {
