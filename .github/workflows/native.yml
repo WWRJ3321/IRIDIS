@@ -32,7 +32,8 @@ jobs:
           echo "VK_HEADERS=$RUNNER_TEMP/vk" >> "$GITHUB_ENV"
           echo "SPIRV_HEADERS=$RUNNER_TEMP/spirv" >> "$GITHUB_ENV"
           echo "GLSLC=$(command -v glslc)" >> "$GITHUB_ENV"
-      - run: sh scripts/fetch-deps.sh
+      - name: llama.cpp (MNN / sherpa are not needed here)
+        run: sh scripts/fetch-deps.sh || test -f third_party/llama.cpp/CMakeLists.txt
       - name: libiris_llama.so (OpenCL + Vulkan)
         run: sh scripts/build-llama-native.sh
       - name: Hexagon variant
