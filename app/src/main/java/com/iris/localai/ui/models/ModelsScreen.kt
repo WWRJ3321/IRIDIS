@@ -684,12 +684,23 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
             Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (m.format == com.iris.localai.data.ModelFormat.GGUF) {
-                    // 2.3.5 (#8): small 视觉 badge when a projector is linked
+                run {
+                    // 2.3.5: 视觉 badge for every format, using the same test its engine uses when loading:
+                    // GGUF = a linked/sibling mmproj; LiteRT-LM = multimodal file (Gemma 3n/4, VL…);
+                    // MNN = visual.mnn in the folder; QAIRT = vision_encoder.bin in the bundle.
                     val ctr = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.iris.localai.IrisApp).container
                     val cfgs by ctr.modelConfigs.configs.collectAsStateWithLifecycle()
                     val pick = cfgs[m.id]?.mmproj
-                    val vision = remember(m.path, pick) { ctr.engine.mmprojFor(m, pick) != null }
+                    val vision = remember(m.path, m.format, pick) {
+                        runCatching {
+                            when (m.format) {
+                                com.iris.localai.data.ModelFormat.GGUF -> ctr.engine.mmprojFor(m, pick) != null
+                                com.iris.localai.data.ModelFormat.LITERT -> com.iris.localai.util.VisionModels.litertMayHaveVision(m.fileName)
+                                com.iris.localai.data.ModelFormat.MNN -> java.io.File(m.path, "visual.mnn").isFile
+                                com.iris.localai.data.ModelFormat.QAIRT -> com.iris.localai.engine.geniex.QairtBundle.isVision(java.io.File(m.path).list().orEmpty().toSet())
+                            }
+                        }.getOrDefault(false)
+                    }
                     if (vision) Text(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_badge), style = IrisType.caption, color = c.accent, maxLines = 1,
                         modifier = Modifier.padding(end = IrisDimens.space4).border(IrisDimens.hairline, c.accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 6.dp),

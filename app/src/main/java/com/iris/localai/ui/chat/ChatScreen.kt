@@ -1031,6 +1031,7 @@ private fun ModelMorphPanel(
     val c = Iris.colors
     MorphPanel(progress, expanded, pillInRoot, onDismiss, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9),
         header = { p, hPad -> ModelPillContent(engine, chevronTurn = p, hPad = hPad) },
+        maxWidth = 236.dp, // 2.3.5: 280 → 236dp (user: too wide); structure untouched
     ) {
                         MorphHairline()
                         // 2.3.5: restrained height — 40dp rows, at most 5 visible; more scroll inside this list only
