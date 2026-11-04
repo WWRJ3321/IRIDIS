@@ -29,6 +29,8 @@ jobs:
           git clone -q --depth 1 https://github.com/KhronosGroup/SPIRV-Headers.git "$RUNNER_TEMP/spirv-src"
           cmake -S "$RUNNER_TEMP/spirv-src" -B "$RUNNER_TEMP/spirv-build" -G Ninja -DSPIRV_HEADERS_ENABLE_TESTS=OFF -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/spirv"
           cmake --install "$RUNNER_TEMP/spirv-build"
+          # ggml-vulkan includes <spirv/unified1/spirv.hpp>; the cross build only sees the Vulkan include dir.
+          cp -r "$RUNNER_TEMP/spirv/include/spirv" "$RUNNER_TEMP/vk/include/"
           echo "VK_HEADERS=$RUNNER_TEMP/vk" >> "$GITHUB_ENV"
           echo "SPIRV_HEADERS=$RUNNER_TEMP/spirv" >> "$GITHUB_ENV"
           echo "GLSLC=$(command -v glslc)" >> "$GITHUB_ENV"
