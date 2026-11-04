@@ -1927,4 +1927,5 @@
     <string name="ch235_h_prompt">Schreib einfach den Prompt: wer die Figur ist, Charakter, Sprechweise, Beziehung zu dir …</string>
     <string name="ch235_h_first">Optional. Der erste Satz der Figur</string>
     <string name="ch235_advanced_sub">Persönlichkeit, Szenario, alternative Begrüßungen, Tags, Beispiele, System-Prompt … (Tavern-Karten)</string>
+    <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
 </resources>

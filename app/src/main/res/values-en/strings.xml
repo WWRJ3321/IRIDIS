@@ -1855,7 +1855,7 @@
     <string name="agent_d88230">MCP “%1$s” %2$s returned an error: %3$s</string>
     <string name="engine_fabc89">This build doesn\'t include the built-in NPU runtime</string>
     <string name="engine_1ac99d">No usable Hexagon NPU device found</string>
-    <string name="engine_4b134d">No usable OpenCL GPU device found</string>
+    <string name="engine_4b134d">No usable GPU device found</string>
     <string name="engine_f7cffe">mmproj load error: %1$s</string>
     <string name="engine_17c8ba">Vision projector not loaded: %1$s</string>
     <string name="engine_fba350">\u0020· Vision\u0020</string>
@@ -1927,4 +1927,5 @@
     <string name="ch235_h_prompt">Just write the prompt: who they are, personality, how they talk, how they relate to you…</string>
     <string name="ch235_h_first">Optional. The character\'s first line</string>
     <string name="ch235_advanced_sub">Personality, scenario, alternate greetings, tags, examples, system prompt… (Tavern card fields)</string>
+    <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
 </resources>

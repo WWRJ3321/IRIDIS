@@ -1927,4 +1927,5 @@
     <string name="ch235_h_prompt">सीधे प्रॉम्प्ट लिखें: वह कौन है, स्वभाव, बोलने का ढंग, आपसे रिश्ता…</string>
     <string name="ch235_h_first">वैकल्पिक। किरदार की पहली पंक्ति</string>
     <string name="ch235_advanced_sub">स्वभाव, परिदृश्य, वैकल्पिक अभिवादन, टैग, उदाहरण, सिस्टम प्रॉम्प्ट… (Tavern कार्ड)</string>
+    <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
 </resources>

@@ -1927,4 +1927,5 @@
     <string name="ch235_h_prompt">Escribe el prompt directamente: quién es, su carácter, cómo habla, su relación contigo…</string>
     <string name="ch235_h_first">Opcional. La primera frase del personaje</string>
     <string name="ch235_advanced_sub">Personalidad, escenario, saludos alternativos, etiquetas, ejemplos, prompt de sistema… (tarjetas Tavern)</string>
+    <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
 </resources>

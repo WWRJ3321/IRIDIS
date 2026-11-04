@@ -41,7 +41,12 @@ data class BackendEnvironment(
     val geniexQairt: Boolean = false,
     /** 2.2.15: the built-in llama.cpp Hexagon runtime (libiris_lhtp + upstream ggml-hexagon) can run GGUF on this chip's NPU. */
     val htpReady: Boolean = false,
+    /** 2.3.6: llama.cpp's Vulkan backend is used for GGUF on the GPU (non-Qualcomm SoC: Mali / Immortalis / Xclipse). */
+    val hasVulkan: Boolean = false,
 ) {
+    /** 2.3.6: the GGUF (llama.cpp) GPU path on this device: Adreno → OpenCL, anything else → Vulkan. */
+    val ggufGpu: Boolean get() = if (hasVulkan) true else hasOpenCl
+
     companion object {
         private val OPENCL_PATHS = listOf(
             "/vendor/lib64/libOpenCL.so", "/system/vendor/lib64/libOpenCL.so", "/system/lib64/libOpenCL.so",
@@ -63,6 +68,7 @@ data class BackendEnvironment(
                 geniexBlock = com.iris.localai.engine.geniex.GenieXRules.block(gx?.state?.value),
                 geniexQairt = gx?.qairtSupported == true,
                 htpReady = runCatching { com.iris.localai.engine.llama.LlamaHtpRuntime.available(context) }.getOrDefault(false),
+                hasVulkan = GpuPolicy.vulkanGguf(),
             )
         }
     }
@@ -100,7 +106,7 @@ object BackendCapabilities {
                 com.iris.localai.engine.geniex.GenieXRules.ggufOptions(env)
             } else listOf(
                 BackendOption(Backend.CPU, true, detail = "llama.cpp · ARM KleidiAI"),
-                BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4abf01)),
+                BackendOption(Backend.GPU, env.ggufGpu, if (env.ggufGpu) null else noCl, GpuPolicy.ggufGpuDetail(env)),
                 BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5d3c02)),
             )
             ModelFormat.LITERT -> {
@@ -326,3 +332,23 @@ class BackendCrashMemory(context: Context) {
 /** Helper for the UI: the options of a model, plus whether a backend crashed before. */
 fun LocalModel.backendOptions(env: BackendEnvironment, engine: String? = null): List<BackendOption> =
     BackendCapabilities.options(format, fileName, env, engine)
+
+/**
+ * 2.3.6: which GPU API llama.cpp uses. Qualcomm (Adreno) stays on OpenCL, where llama.cpp has hand-tuned
+ * kernels; other SoCs (MediaTek / Exynos / Tensor: Mali, Immortalis, Xclipse) use Vulkan. The native
+ * side applies the same rule (GGML_DISABLE_VULKAN before the backend registry starts, iris_engine.cpp).
+ */
+object GpuPolicy {
+    val qualcomm: Boolean by lazy {
+        if (android.os.Build.VERSION.SDK_INT < 31) return@lazy android.os.Build.HARDWARE.lowercase().startsWith("qcom")
+        val m = android.os.Build.SOC_MANUFACTURER.lowercase()
+        m.contains("qualcomm") || m == "qti"
+    }
+
+    fun vulkanGguf(): Boolean = !BackendCrashMemory.openClDisabled && !qualcomm &&
+        listOf("/system/lib64/libvulkan.so", "/vendor/lib64/libvulkan.so").any { java.io.File(it).exists() }
+
+    fun ggufGpuDetail(env: BackendEnvironment): String =
+        if (env.hasVulkan) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_vk236)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4abf01)
+}

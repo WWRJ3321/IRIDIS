@@ -1856,7 +1856,7 @@
     <string name="agent_d88230">MCP「%1$s」%2$s 返回错误：%3$s</string>
     <string name="engine_fabc89">此版本不含内置 NPU 运行库</string>
     <string name="engine_1ac99d">没有找到可用的 Hexagon NPU 设备</string>
-    <string name="engine_4b134d">没有找到可用的 OpenCL GPU 设备</string>
+    <string name="engine_4b134d">没有找到可用的 GPU 设备</string>
     <string name="engine_f7cffe">mmproj 加载异常：%1$s</string>
     <string name="engine_17c8ba">视觉投影未加载：%1$s</string>
     <string name="engine_fba350">\u0020· 识图\u0020</string>
@@ -1928,4 +1928,5 @@
     <string name="ch235_h_prompt">直接写提示词：TA 是谁、什么性格、怎么说话、和你是什么关系……</string>
     <string name="ch235_h_first">可选。角色说的第一句话</string>
     <string name="ch235_advanced_sub">性格、场景、备选开场白、标签、对话示例、系统提示词等（兼容酒馆角色卡）</string>
+    <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
 </resources>

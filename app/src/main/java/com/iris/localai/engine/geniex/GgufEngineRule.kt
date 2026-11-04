@@ -42,7 +42,8 @@ object GgufEngineRule {
         val npu = npuReason(env)
         return listOf(
             BackendOption(Backend.CPU, true, detail = "内置 llama.cpp · 最稳"),
-            BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "Adreno · OpenCL（Q4_0 / Q8_0 最快）"),
+            BackendOption(Backend.GPU, env.ggufGpu, if (env.ggufGpu) null else noCl,
+                if (env.hasVulkan) "Vulkan（Mali / Immortalis）" else "Adreno · OpenCL（Q4_0 / Q8_0 最快）"),
             BackendOption(Backend.NPU, npu == null, npu,
                 if (env.geniexBlock == null) "GenieX（不支持的模型改用内置 llama.cpp Hexagon）· Q4_0 最快" else "内置 llama.cpp · Hexagon · Q4_0 / Q8_0 最快"),
         )

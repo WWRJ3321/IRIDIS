@@ -1927,4 +1927,5 @@
     <string name="ch235_h_prompt">プロンプトをそのまま書く：誰なのか、性格、話し方、あなたとの関係……</string>
     <string name="ch235_h_first">任意。キャラクターの最初のひとこと</string>
     <string name="ch235_advanced_sub">性格、シナリオ、別の挨拶、タグ、会話例、システムプロンプトなど（Tavern カード互換）</string>
+    <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
 </resources>
