@@ -25,13 +25,15 @@
   <a href="docs/BUILD.md">构建</a> ·
   <a href="docs/API.md">API</a> ·
   <a href="docs/ARCHITECTURE.md">架构</a> ·
-  <a href="CHANGELOG.md">更新日志</a>
+  <a href="CHANGELOG.md">更新日志</a> ·
+  <a href="#交流">QQ 群</a>
 </p>
 
 <p align="center">
   <img alt="Android 12+" src="https://img.shields.io/badge/Android-12%2B%20arm64-3DDC84?logo=android&logoColor=white"/>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"/></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.3.2-5660F0"/></a>
+  <a href="https://github.com/WWRJ3321/IRIDIS/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/WWRJ3321/IRIDIS?label=version&color=5660F0"/></a>
+  <a href="#交流"><img alt="QQ 群" src="https://img.shields.io/badge/QQ%E7%BE%A4-1106294553-12B7F5?logo=tencentqq&logoColor=white"/></a>
 </p>
 
 <p align="center"><img src="docs/assets/cover.webp" alt="IRIDIS 一站式安卓本地 AI 平台" width="720"></p>
@@ -40,8 +42,8 @@
 
 ## 亮点
 
-| | |
-|---|---|
+| 能力 | 说明 |
+|:--|:--|
 | **四种推理引擎** | llama.cpp · MNN · LiteRT-LM · GenieX（高通 NPU 跑 GGUF），另有内置 Hexagon 运行库；CPU / GPU / NPU 按机型选最快 |
 | **完全离线** | 推理、语音、记录都在本机，飞行模式照常可用 |
 | **角色卡** | 导入 / 导出 SillyTavern V2/V3 角色卡（PNG / JSON / CHARX），开场白可切换，内置世界书按关键词触发，可绑定模型和音色 |
@@ -101,6 +103,10 @@ cp local.properties.example local.properties   # 填 sdk.dir / ndk.path
 ```
 
 JDK 17 · Android SDK 35 · NDK r27c+ · CMake。详见 [docs/BUILD.md](docs/BUILD.md)。
+
+## 交流
+
+QQ 群「WWRJ的小窝」：**1106294553**，反馈 bug、提建议、闲聊都欢迎，群里 @Q群管家 可查常见问题。也可以提 [GitHub Issue](https://github.com/WWRJ3321/IRIDIS/issues)。
 
 ## 许可证
 
