@@ -908,6 +908,10 @@ private fun MorphPanel(
     onDismiss: () -> Unit,
     closeLabel: String,
     header: @Composable RowScope.(p: Float, hPad: androidx.compose.ui.unit.Dp) -> Unit,
+    // 2.3.5: one morph for both pills. hugWidthPx > 0 → width = content in [168, maxWidth]dp and the panel
+    // keeps the pill's left edge (角色); otherwise fixed maxWidth, anchor-aware (模型).
+    maxWidth: androidx.compose.ui.unit.Dp = 240.dp,
+    hugWidthPx: Int = 0,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val c = Iris.colors
@@ -944,11 +948,16 @@ private fun MorphPanel(
             // 2.3.4: clamped to the SCREEN (not the parent area) with 16dp side margins, anchor-aware: a pill
             // right of centre (角色) expands leftward from its right edge; width min(screen − 32dp, 280dp).
             val screenW = conf.screenWidthDp.dp.toPx()
-            val g = com.iris.localai.ui.components.MorphGeometry.place(pillInRoot.left, pillW, screenW, 16.dp.toPx(), 280.dp.toPx())
+            val mg = 16.dp.toPx()
+            val g = if (hugWidthPx > 0) {
+                val dw = com.iris.localai.ui.components.MorphGeometry.dropWidth(hugWidthPx.toFloat(), screenW, mg, 168.dp.toPx(), maxWidth.toPx())
+                dw to com.iris.localai.ui.components.MorphGeometry.dropLeft(pillInRoot.left, dw, screenW, mg)
+            } else com.iris.localai.ui.components.MorphGeometry.place(pillInRoot.left, pillW, screenW, mg, maxWidth.toPx())
             val panelW = g.first
             val panelLeft = g.second - origin.x
+            // 2.3.5: fixed height = the whole content (no scrolling); only the space left on screen caps it.
             val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
-            val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(pillH)
+            val maxH = avail.coerceAtLeast(pillH)
             val headerH = pillH + (52.dp.toPx() - pillH) * p
             val targetH = if (contentH > 0) contentH.toFloat().coerceAtMost(maxH) else pillH
             val w = pillW + (panelW - pillW) * p
@@ -972,7 +981,6 @@ private fun MorphPanel(
                     Modifier
                         .wrapContentSize(Alignment.TopStart, unbounded = true)
                         .width(panelW.toDp())
-                        .heightIn(max = maxH.toDp())
                         .onSizeChanged { contentH = it.height + (52.dp.toPx() - headerH).toInt() },
                     horizontalAlignment = Alignment.Start,
                 ) {
@@ -990,7 +998,6 @@ private fun MorphPanel(
                             .fillMaxWidth()
                             .weight(1f, fill = false)
                             .graphicsLayer { alpha = ((progress() - 0.3f) / 0.7f).coerceIn(0f, 1f) }
-                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
                             .padding(bottom = 4.dp),
                     ) {
                         content()
@@ -1117,76 +1124,36 @@ private fun CharacterMorphPanel(
     onPick: (String?) -> Unit,
     onManage: () -> Unit,
 ) {
+    // 2.3.5: same pill → panel morph as 模型 (header = the pill itself), but slim: width hugs the rows in
+    // [168, 220]dp from the pill's left edge, full height, no scrolling.
     val c = Iris.colors
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val conf = androidx.compose.ui.platform.LocalConfiguration.current
-    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    var areaH by remember { mutableStateOf(0) }
     var contentW by remember { mutableStateOf(0) }
-    Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot(); areaH = it.size.height }) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = progress() }
-                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = if (c.isDark) 0.24f else 0.12f))
-                .then(if (expanded) Modifier.pointerInput(Unit) { detectTapGestures { onDismiss() } } else Modifier),
-        )
-        with(density) {
-            val screenW = conf.screenWidthDp.dp.toPx()
-            val m = 16.dp.toPx()
-            val panelW = com.iris.localai.ui.components.MorphGeometry.dropWidth(
-                if (contentW > 0) contentW.toFloat() else 168.dp.toPx(), screenW, m, 168.dp.toPx(), 220.dp.toPx(),
-            )
-            val endLeft = com.iris.localai.ui.components.MorphGeometry.dropLeft(pillInRoot.left, panelW, screenW, m) - origin.x
-            val endTop = pillInRoot.bottom + 6.dp.toPx() - origin.y
-            val avail = if (areaH > 0) areaH - endTop - 16.dp.toPx() else Float.MAX_VALUE
-            val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(88.dp.toPx())
-            // 2.3.5: grows out of the 角色 pill like the 模型 panel — bounds and corner morph from the pill's
-            // rect to the thin dropdown below it (pill stays visible once open); rows fade in late.
-            val rowsH = ((cards.size + 2) * 44 + 9).dp.toPx()
-            val endH = rowsH.coerceAtMost(maxH)
-            val pillLeft = pillInRoot.left - origin.x
-            val pillTop = pillInRoot.top - origin.y
-            val pillW = pillInRoot.width
-            val pillH = pillInRoot.height.coerceAtLeast(1f)
-            val p = progress()
-            val left = pillLeft + (endLeft - pillLeft) * p
-            val top = pillTop + (endTop - pillTop) * p
-            val w = pillW + (panelW - pillW) * p
-            val h = pillH + (endH - pillH) * p
-            val corner = pillH / 2f + (24.dp.toPx() - pillH / 2f) * p
-            val shape = androidx.compose.foundation.shape.RoundedCornerShape(corner.toDp())
-            Box(
-                Modifier
-                    .offset { androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()) }
-                    .size(w.toDp(), h.toDp())
-                    .glassSurface(shape, com.iris.localai.ui.theme.IrisElevation.menu, strong = true)
-                    .clip(shape)
-                    .graphicsLayer { alpha = ((progress() - 0.35f) / 0.65f).coerceIn(0f, 1f) }
-                    .pointerInput(Unit) { detectTapGestures { } },
-            ) {
-                // measure natural content width (unconstrained) to size the panel
-                Column(
-                    Modifier.wrapContentWidth(Alignment.Start, unbounded = true).height(0.dp).graphicsLayer { alpha = 0f }
-                        .onSizeChanged { contentW = it.width },
-                ) {
-                    CharRow(false, false, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_none), {}, fill = false) { Box(Modifier.size(28.dp)) }
-                    cards.forEach { e -> CharRow(true, false, e.card.name.ifBlank { e.id }, {}, fill = false) { Box(Modifier.size(28.dp)) } }
-                    CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_manage), Icons.Outlined.ManageAccounts, fill = false) {}
-                }
-                Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 4.dp)) {
-                    CharRow(null == current?.id, expanded, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_none), { onPick(null) }) {
-                        Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.PersonOff, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                    cards.forEach { e ->
-                        CharRow(e.id == current?.id, expanded, e.card.name.ifBlank { e.id }, { onPick(e.id) }) { com.iris.localai.ui.character.CharacterAvatar(e.avatar, e.card.name, 28.dp) }
-                    }
-                    MorphHairline()
-                    CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_manage), Icons.Outlined.ManageAccounts) { if (expanded) onManage() }
+    Box(Modifier.fillMaxSize()) {
+        // measure the rows' natural width (invisible, takes no space)
+        Column(
+            Modifier.wrapContentWidth(Alignment.Start, unbounded = true).height(0.dp).graphicsLayer { alpha = 0f }
+                .onSizeChanged { contentW = it.width },
+        ) {
+            CharRow(false, false, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_none), {}, fill = false) { Box(Modifier.size(28.dp)) }
+            cards.forEach { e -> CharRow(true, false, e.card.name.ifBlank { e.id }, {}, fill = false) { Box(Modifier.size(28.dp)) } }
+            CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_manage), Icons.Outlined.ManageAccounts, fill = false) {}
+        }
+        MorphPanel(progress, expanded, pillInRoot, onDismiss, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9),
+            header = { p, hPad -> CharacterPillContent(current, compact = false, chevronTurn = p, hPad = hPad) },
+            maxWidth = 220.dp,
+            hugWidthPx = contentW.coerceAtLeast(1),
+        ) {
+            MorphHairline()
+            CharRow(null == current?.id, expanded, com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_none), { onPick(null) }) {
+                Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.PersonOff, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
                 }
             }
+            cards.forEach { e ->
+                CharRow(e.id == current?.id, expanded, e.card.name.ifBlank { e.id }, { onPick(e.id) }) { com.iris.localai.ui.character.CharacterAvatar(e.avatar, e.card.name, 28.dp) }
+            }
+            MorphHairline()
+            CompactMenuRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ch233_manage), Icons.Outlined.ManageAccounts) { if (expanded) onManage() }
         }
     }
 }
