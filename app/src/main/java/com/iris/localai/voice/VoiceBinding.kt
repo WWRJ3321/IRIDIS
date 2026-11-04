@@ -18,4 +18,7 @@ object VoiceBinding {
     /** The global choice, with [override] (card chat on screen) on top. Leaving the card chat = null = global. */
     fun effective(global: VoiceSel, override: VoiceOverride?): VoiceSel =
         if (override == null) global else VoiceSel(override.pack, override.speaker ?: global.speaker, override.clone)
+
+    /** 2.3.4: the override in force; the settings voice preview ([globalOnly]) ignores any card chat override. */
+    fun applicable(override: VoiceOverride?, globalOnly: Boolean): VoiceOverride? = if (globalOnly) null else override
 }

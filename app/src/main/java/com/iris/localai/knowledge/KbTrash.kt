@@ -79,3 +79,64 @@ class KbTrash(private val kbDir: () -> File) {
         const val KEEP_MS = 30L * 24 * 3600 * 1000
     }
 }
+
+/**
+ * 2.3.4: reference-only removal. A knowledge file IRIDIS cannot move into `.trash` (seen only through the
+ * SAF grant / content:// — possibly the user's own file) is never deleted: its path is hidden from the
+ * index instead, and restore simply un-hides it. Stored in app storage ([file]), one `state\tdeletedAt\tpath`
+ * line each (state `t` = in the 回收站, `p` = removed for good, still hidden, file untouched). Pure JVM.
+ */
+class KbRefs(private val file: File) {
+    private data class Row(val state: Char, val at: Long, val path: String)
+
+    private fun rows(): List<Row> = runCatching {
+        file.readLines().mapNotNull { l ->
+            val p = l.split('\t', limit = 3)
+            if (p.size == 3 && p[0].length == 1 && p[2].isNotBlank()) Row(p[0][0], p[1].toLongOrNull() ?: 0L, p[2]) else null
+        }
+    }.getOrDefault(emptyList())
+
+    private fun save(r: List<Row>) = runCatching {
+        file.parentFile?.mkdirs()
+        val tmp = File(file.path + ".tmp")
+        tmp.writeText(r.joinToString("") { "${it.state}\t${it.at}\t${it.path}\n" })
+        if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+    }.isSuccess
+
+    /** Paths hidden from the knowledge base (in trash or removed for good). */
+    fun hidden(): Set<String> = rows().map { it.path }.toSet()
+
+    fun hide(path: String, now: Long = System.currentTimeMillis()): Boolean =
+        save(rows().filterNot { it.path == path } + Row('t', now, path))
+
+    /** Trash entries; ids are `ref-<index>` so they never clash with [KbTrash] ids. */
+    fun items(): List<KbTrash.Item> = rows().withIndex().filter { it.value.state == 't' }
+        .map { KbTrash.Item("$PREFIX${it.index}", it.value.path, false, it.value.at, 0L) }
+
+    /** Un-hides [id]; returns the path (the reference is back, the file was never touched). */
+    fun restore(id: String): String? {
+        val i = id.removePrefix(PREFIX).toIntOrNull() ?: return null
+        val r = rows(); val row = r.getOrNull(i)?.takeIf { it.state == 't' } ?: return null
+        return if (save(r.filterIndexed { j, _ -> j != i })) row.path else null
+    }
+
+    /** Leaves the trash for good: stays hidden, the file is still not deleted. */
+    fun remove(id: String): Boolean {
+        val i = id.removePrefix(PREFIX).toIntOrNull() ?: return false
+        val r = rows(); if (r.getOrNull(i)?.state != 't') return false
+        return save(r.mapIndexed { j, x -> if (j == i) x.copy(state = 'p') else x })
+    }
+
+    fun empty(): Int { val r = rows(); val n = r.count { it.state == 't' }; save(r.map { it.copy(state = 'p') }); return n }
+
+    fun purge(now: Long = System.currentTimeMillis(), keepMs: Long = KbTrash.KEEP_MS): Int {
+        val r = rows(); val n = r.count { it.state == 't' && now - it.at > keepMs }
+        if (n > 0) save(r.map { if (it.state == 't' && now - it.at > keepMs) it.copy(state = 'p') else it })
+        return n
+    }
+
+    /** A file was added again at [path] (re-import): show it. */
+    fun unhide(path: String) { val r = rows(); if (r.any { it.path == path }) save(r.filterNot { it.path == path }) }
+
+    companion object { const val PREFIX = "ref-" }
+}

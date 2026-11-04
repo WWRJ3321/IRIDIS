@@ -111,6 +111,9 @@
     <string name="ws233_pick_this">Usar esta carpeta</string>
     <string name="ws233_internal">Almacenamiento</string>
     <string name="ws233_up">Subir un nivel</string>
+    <string name="mr234_hint">De vuelta a un chat normal. ¿Volver a %1$s?</string>
+    <string name="mr234_back">Volver</string>
+    <string name="set234_lang">Idioma</string>
     <string name="ui_271348">IRIDIS se cerró inesperadamente la última vez</string>
     <string name="ui_79d3ab">Copiar</string>
     <string name="ui_b15d91">Cerrar</string>

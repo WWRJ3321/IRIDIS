@@ -122,6 +122,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         return true
     }
     private val streamingId = MutableStateFlow<String?>(null)
+    /** 2.3.4: model loaded before a card chat swapped in its bound model (path); offered back once on leaving. */
+    private var preCardModelPath: String? = null
+    private val _modelRestore = MutableStateFlow<LocalModel?>(null)
+    /** One-time 「已切回普通对话，是否换回原模型 X？」 hint; null = none. */
+    val modelRestore: StateFlow<LocalModel?> = _modelRestore
     private val notice = MutableStateFlow<String?>(null)
     fun showNotice(text: String) { notice.value = text }
 
@@ -280,6 +285,20 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     init {
         // 1.7.7: reload failures / GPU→CPU fallbacks from the engine are shown, never swallowed.
         viewModelScope.launch { c.engine.notices.collect { notice.value = it } }
+        // 2.3.4: leaving a card chat → one-time hint to switch back to the pre-card model (never automatic).
+        viewModelScope.launch {
+            var lastCard: String? = null
+            shown.map { it.characterId }.distinctUntilChanged().collect { card ->
+                val prev = preCardModelPath
+                val path = com.iris.localai.character.ModelRestore.offer(lastCard, card, prev, c.engine.readyModel?.path)
+                if (lastCard != null && card == null) {
+                    preCardModelPath = null
+                    path?.let { p -> c.models.models.value.firstOrNull { it.path == p }?.let { _modelRestore.value = it } }
+                }
+                if (card != null) _modelRestore.value = null
+                lastCard = card
+            }
+        }
         // 2.2.17 D 「最近提示」: every banner, plus load failures / fallback notes, can be read again later.
         viewModelScope.launch { notice.collect { n -> com.iris.localai.util.HintLog.add(n, com.iris.localai.util.HintLog.Source.CHAT) } }
         viewModelScope.launch {
@@ -409,6 +428,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     fun dismissNotice() { notice.value = null }
+
+    fun dismissModelRestore() { _modelRestore.value = null }
+    fun acceptModelRestore() { _modelRestore.value?.let { loadModel(it) }; _modelRestore.value = null }
 
     // ------------------------------------------------------------------ models
 
@@ -1662,7 +1684,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         // Bindings (only to what exists; missing → keep the current setting).
         card.bindModel.takeIf { it.isNotBlank() }?.let { file ->
             val m = c.models.models.value.firstOrNull { it.fileName == file }
-            if (m != null && c.engine.readyModel?.path != m.path && genJob?.isActive != true) loadModel(m)
+            if (m != null && c.engine.readyModel?.path != m.path && genJob?.isActive != true) {
+                // 2.3.4: remember what was loaded before the first card swap (kept across card → card).
+                if (preCardModelPath == null) preCardModelPath = c.engine.readyModel?.path
+                loadModel(m)
+            }
         }
         // 2.3.3: the bound voice is applied per chat by [character] (VoiceBinding), never saved to settings.
     }
@@ -1930,7 +1956,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (folded > 0) notice.value = ContextText.compactNotice(folded)
             val p = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew) }
             plan = p
-            val history = p.messages.filter { it.role != PromptMessage.SYSTEM }
+            // 2.3.4: card chat in 智能体 mode also gets the world book + post-history instructions on the newest
+            // user turn (not saved to history; same lore budget as normal chat).
+            val history = cardTurn(conversation.value, p.messages).filter { it.role != PromptMessage.SYSTEM }
             // 2.3: stable system prompt (persona + tools + instructions + frozen memory); the plan goes on the new user turn.
             val base = listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +
                 com.iris.localai.agent.GuiIntent.withHint(com.iris.localai.agent.AgentPrompt.withPlanNote(history, c.agent.plans.get(convId)), tools.any { it.name == "screen" })
@@ -2066,7 +2094,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         freezeMemory(agentMode = true, ready = ready)
         val p = planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew)
         return listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +
-            p.messages.filter { it.role != PromptMessage.SYSTEM }
+            cardTurn(conversation.value, p.messages).filter { it.role != PromptMessage.SYSTEM }
     }
 
     /** 1.10.6: every prompt sent for a reply, for 「查看提示内容」. */

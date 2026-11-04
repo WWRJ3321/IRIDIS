@@ -93,7 +93,7 @@ object CardPrompt {
      */
     fun turnSuffix(card: CharacterCard, user: String, recent: List<String>, loreBudget: Int, seed: Int = 0): String {
         val char = card.charName.ifBlank { "Character" }
-        val lore = Lorebook.of(card)?.let { b -> b.select(recent, loreBudget).map { macros(it.content, char, user, "", seed).trim() }.filter { it.isNotEmpty() } }.orEmpty()
+        val lore = Lorebook.of(card)?.let { book -> book.select(recent, loreBudget).map { macros(it.content, char, user, "", seed).trim() }.filter { it.isNotEmpty() } }.orEmpty()
         val post = postHistory(card, user, seed)
         val out = StringBuilder()
         if (lore.isNotEmpty()) out.append("[World info]\n").append(lore.joinToString("\n"))

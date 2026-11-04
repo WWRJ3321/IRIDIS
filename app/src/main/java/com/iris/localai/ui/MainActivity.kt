@@ -68,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS }
+private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS }
 
 class MainActivity : ComponentActivity() {
 
@@ -263,6 +263,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         // 2.2.17 C: full 下载模型 page; 「试一试」 puts the demo prompt into the chat input
         Route.DOWNLOAD_MODELS -> com.iris.localai.ui.models.DownloadModelsScreen(onBack = pop, onTryPrompt = { p -> chat.setDraft(p); home() })
         Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)
+        Route.LANGUAGE -> com.iris.localai.ui.settings.LanguagePage(onBack = pop)
         Route.SETTINGS -> SettingsHome(
             settingsVm, onBack = pop,
             onOpen = { p -> push(routeOf(p)) },
@@ -296,6 +297,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
 
 private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.APPEARANCE -> Route.APPEARANCE
+    SettingsPage.LANGUAGE -> Route.LANGUAGE
     SettingsPage.HOME -> Route.SETTINGS
     SettingsPage.MODEL_BACKEND -> Route.MODELS
     SettingsPage.GENERATION -> Route.GENERATION

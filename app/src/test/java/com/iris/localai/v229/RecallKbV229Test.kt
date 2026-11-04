@@ -153,9 +153,11 @@ class RecallKbV229Test {
         assertEquals("出处：租房合同.md · 第 3 段", KbSource.chip(l))
         assertEquals(contract to 2, KbSource.parse(l))
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
-        val old = json.decodeFromString(ChatMessage.serializer(), """{"id":"1","role":"ASSISTANT","content":"hi","kbRefs":2}""")
+        val old = json.decodeFromString(ChatMessage.serializer(), """{"id":"1","role":"ASSISTANT","content":"hi","kbRefs":2,"createdAt":1700000000000}""")
         assertEquals(emptyList<String>(), old.kbSources)
-        val m = old.copy(kbSources = listOf(l))
+        // 2.3.4: fixed createdAt (the default is "now", which made the round trip flaky across a millisecond).
+        assertEquals(1_700_000_000_000L, old.createdAt)
+        val m = old.copy(kbSources = listOf(l), createdAt = 1_700_000_000_000L)
         assertEquals(m, json.decodeFromString(ChatMessage.serializer(), json.encodeToString(ChatMessage.serializer(), m)))
         // Voice: half the characters.
         val hits = listOf(KbHit(contract, "很长".repeat(500), 2.0, 0))

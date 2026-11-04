@@ -111,6 +111,9 @@
     <string name="ws233_pick_this">Diesen Ordner nutzen</string>
     <string name="ws233_internal">Gerätespeicher</string>
     <string name="ws233_up">Eine Ebene höher</string>
+    <string name="mr234_hint">Zurück im normalen Chat. Wieder zu %1$s wechseln?</string>
+    <string name="mr234_back">Zurück</string>
+    <string name="set234_lang">Sprache</string>
     <string name="ui_271348">IRIDIS wurde beim letzten Mal unerwartet beendet</string>
     <string name="ui_79d3ab">Kopieren</string>
     <string name="ui_b15d91">Schließen</string>

@@ -71,15 +71,21 @@ class KnowledgeBase(
     val trash = KbTrash { dir() }
     private var lastPurge = 0L
 
-    fun trashItems(): List<KbTrash.Item> = synchronized(lock) { purgeTrash(); trash.list() }
-    fun restore(id: String): String? = synchronized(lock) { trash.restore(id).also { lastScan = 0 } }?.also { refresh() }
-    fun removeFromTrash(id: String): Boolean = synchronized(lock) { trash.remove(id) }
-    fun emptyTrash(): Int = synchronized(lock) { trash.empty() }
+    /** 2.3.4: reference-only removals (SAF / content:// files are never deleted, only hidden). */
+    val refs = KbRefs(File(indexFile.parentFile ?: File("."), "kb-hidden-refs.txt"))
+
+    fun trashItems(): List<KbTrash.Item> = synchronized(lock) { purgeTrash(); (trash.list() + refs.items()).sortedByDescending { it.deletedAt } }
+    fun restore(id: String): String? = synchronized(lock) {
+        (if (id.startsWith(KbRefs.PREFIX)) refs.restore(id) else trash.restore(id)).also { lastScan = 0 }
+    }?.also { refresh() }
+    fun removeFromTrash(id: String): Boolean = synchronized(lock) { if (id.startsWith(KbRefs.PREFIX)) refs.remove(id) else trash.remove(id) }
+    fun emptyTrash(): Int = synchronized(lock) { trash.empty() + refs.empty() }
 
     private fun purgeTrash(now: Long = System.currentTimeMillis()) {
         if (now - lastPurge < 3_600_000L) return
         lastPurge = now
         runCatching { trash.purge(now) }
+        runCatching { refs.purge(now) }
     }
 
     private fun load(): KbIndexData = data ?: runCatching {
@@ -111,7 +117,9 @@ class KnowledgeBase(
             }
             walk("", 0)
         }
-        return out.values.sortedBy { it.path.lowercase() } to unsupported
+        // 2.3.4: references the user removed (file left untouched) stay out of the index.
+        val hidden = refs.hidden()
+        return out.values.filter { it.path !in hidden }.sortedBy { it.path.lowercase() } to unsupported
     }
 
     private fun read(rel: String): ByteArray? {
@@ -226,8 +234,9 @@ class KnowledgeBase(
     fun delete(path: String): Boolean = synchronized(lock) {
         if (KbPaths.file(path) == null) return@synchronized false
         val f = File(dir(), path)
-        // 2.3.3: into the 回收站 when File access can move it; SAF-only files are deleted as before.
-        val gone = (f.isFile && trash.put(path)) || (f.isFile && f.delete()) || external()?.delete("$FOLDER/$path") == true || !f.exists()
+        // 2.3.3: into the 回收站 when File access can move IRIDIS's copy. 2.3.4: anything else (SAF / content://,
+        // possibly the user's own file) is never deleted — only its reference/index entry goes (restorable).
+        val gone = (f.isFile && trash.put(path)) || refs.hide(path)
         if (!gone) return@synchronized false
         val d = load()
         if (d.files.any { it.path == path }) {
@@ -259,6 +268,7 @@ class KnowledgeBase(
         val ok = runCatching { target.writeBytes(bytes); true }.getOrDefault(false)
         val relName = KbPaths.join(sub, target.name)
         val rel = if (ok) relName else if (external()?.write("$FOLDER/$relName", bytes) == true) relName else null
+        rel?.let { refs.unhide(it) }
         lastScan = 0
         rel
     }
@@ -325,7 +335,11 @@ class KnowledgeBase(
         val p = KbPaths.folder(path)?.takeIf { it.isNotEmpty() } ?: return@synchronized false
         val f = File(dir(), p)
         if (!f.isDirectory) return@synchronized false
-        if (!trash.put(p) && !f.deleteRecursively()) return@synchronized false
+        // 2.3.4: never delete when the folder cannot go to the 回收站: hide its files' references instead.
+        if (!trash.put(p)) {
+            val under = scan().first.map { it.path }.filter { KbPaths.under(it, p) }
+            if (under.isEmpty() || !under.all { refs.hide(it) }) return@synchronized false
+        }
         dropIndex { KbPaths.under(it, p) }
         loadStats().let { m -> if (m.keys.removeAll { KbPaths.under(it, p) }) saveStats(m) }
         lastScan = 0

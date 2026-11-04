@@ -588,6 +588,7 @@ fun ChatScreen(
             ) {
                 SlowLoadBanner(ui.engine, backdrop = backdrop, onUseCpu = vm::switchLoadingModelToCpu)
                 NoticeBanner(ui.notice, backdrop = backdrop, onDismiss = vm::dismissNotice)
+                ModelRestoreBanner(vm.modelRestore.collectAsState().value, backdrop, onBack = vm::acceptModelRestore, onDismiss = vm::dismissModelRestore)
                 // 1.14.0 计划卡片 (kept until the plan is done or cleared).
                 com.iris.localai.ui.agent.PlanCard(currentPlan, backdrop, onClear = vm::clearPlan)
                 // 1.10.10: the activity indicator shares the context meter's row right above the
@@ -932,9 +933,12 @@ private fun MorphPanel(
             val top = pillInRoot.top - origin.y
             val pillW = pillInRoot.width
             val pillH = pillInRoot.height
-            val areaWidth = if (areaW > 0) areaW.toFloat() else conf.screenWidthDp.dp.toPx()
-            val panelW = minOf(maxOf(pillW, 248.dp.toPx()), 280.dp.toPx(), areaWidth - 32.dp.toPx()).coerceAtLeast(pillW)
-            val panelLeft = minOf(pillLeft, areaWidth - panelW - 16.dp.toPx()).coerceAtLeast(16.dp.toPx())
+            // 2.3.4: clamped to the SCREEN (not the parent area) with 16dp side margins, anchor-aware: a pill
+            // right of centre (角色) expands leftward from its right edge; width min(screen − 32dp, 280dp).
+            val screenW = conf.screenWidthDp.dp.toPx()
+            val g = com.iris.localai.ui.components.MorphGeometry.place(pillInRoot.left, pillW, screenW, 16.dp.toPx(), 280.dp.toPx())
+            val panelW = g.first
+            val panelLeft = g.second - origin.x
             val avail = if (areaH > 0) areaH - top - 16.dp.toPx() else Float.MAX_VALUE
             val maxH = minOf(conf.screenHeightDp.dp.toPx() * 0.5f, avail).coerceAtLeast(pillH)
             val headerH = pillH + (52.dp.toPx() - pillH) * p
@@ -1263,6 +1267,22 @@ private fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.ut
 }
 
 /** Dismissible notice above the composer; keeps showing the last text while it animates out. */
+/** 2.3.4: one-time 「已切回普通对话，是否换回原模型 X？」 with a 换回 action; leaves by itself after a few seconds. */
+@Composable
+private fun ModelRestoreBanner(model: com.iris.localai.data.LocalModel?, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onBack: () -> Unit, onDismiss: () -> Unit) {
+    val c = Iris.colors
+    LaunchedEffect(model) { if (model != null) { kotlinx.coroutines.delay(8_000L); onDismiss() } }
+    AnimatedVisibility(visible = model != null, enter = fadeIn(), exit = fadeOut()) {
+        Box(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space8), contentAlignment = Alignment.Center) {
+            BannerCard(backdrop, Modifier.widthIn(max = 520.dp), onClick = onDismiss) {
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.mr234_hint, model?.displayName.orEmpty()), style = IrisType.secondary, color = c.text,
+                    maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                androidx.compose.material3.TextButton(onClick = onBack) { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.mr234_back), color = c.accent) }
+            }
+        }
+    }
+}
+
 @Composable
 private fun NoticeBanner(notice: String?, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onDismiss: () -> Unit) {
     val c = Iris.colors

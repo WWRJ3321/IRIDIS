@@ -195,10 +195,13 @@ class SpeechSynthesizer(
         private set
     /** 2.3.3: the card chat on screen speaks with its bound voice; null = the global setting. */
     @Volatile var override: VoiceOverride? = null
-    private fun sel(): VoiceSel = settings.current.let { s -> VoiceBinding.effective(VoiceSel(s.ttsPack, s.ttsSpeakerId, s.cloneVoiceId), override) }
+    /** 2.3.4: true while the settings 试听 plays — it always uses the global voice, never a card chat's override. */
+    @Volatile var globalOnly: Boolean = false
+    private val activeOverride: VoiceOverride? get() = VoiceBinding.applicable(override, globalOnly)
+    private fun sel(): VoiceSel = settings.current.let { s -> VoiceBinding.effective(VoiceSel(s.ttsPack, s.ttsSpeakerId, s.cloneVoiceId), activeOverride) }
     /** Speaker to use: the card's when it binds one, else [global]. */
-    fun speaker(global: Int): Int = override?.speaker ?: global
-    fun systemSelected(): Boolean = override == null && settings.current.ttsEngine == TTS_ENGINE_SYSTEM && system != null
+    fun speaker(global: Int): Int = activeOverride?.speaker ?: global
+    fun systemSelected(): Boolean = activeOverride == null && settings.current.ttsEngine == TTS_ENGINE_SYSTEM && system != null
 
     // Synthesis competes with the LLM for CPU while the reply is still being written; run it
     // (and the ONNX threads it spawns, which inherit this) at audio priority so speech keeps up.

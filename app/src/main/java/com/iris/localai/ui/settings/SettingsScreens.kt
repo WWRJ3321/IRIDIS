@@ -95,7 +95,7 @@ import kotlin.math.roundToInt
  * with rarely used items folded under 「高级」. No storage key or default value changed.
  */
 /** 2.1.3: DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
-enum class SettingsPage { APPEARANCE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT }
+enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT }
 
 private val THEME_OPTIONS get() = listOf(ThemeMode.SYSTEM to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71bbc7), ThemeMode.LIGHT to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48d0a0), ThemeMode.DARK to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41e8e8))
 
@@ -207,6 +207,13 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_379b88))
             SettingsGroup {
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), SettingsText.APPEARANCE, com.iris.localai.ui.icons.IrisIcons.Contrast) { onOpen(SettingsPage.APPEARANCE) }
+                Divider()
+                // 2.3.4: 语言 is its own entry (moved out of 外观).
+                val ctx = LocalContext.current
+                val tag = remember { com.iris.localai.I18n.current(ctx) }
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang),
+                    com.iris.localai.I18n.LANGS.firstOrNull { it.first == tag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system),
+                    com.iris.localai.ui.icons.IrisIcons.Globe) { onOpen(SettingsPage.LANGUAGE) }
             }
 
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0d8307))
@@ -874,6 +881,26 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
 
 
 /** 1.14.1 外观: theme, visual effects, feedback. */
+/** 2.3.4: 设置 › 语言 — the 2.3.1 picker on its own page (follow system + the 7 UI languages). */
+@Composable
+fun LanguagePage(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val langTag = remember { com.iris.localai.I18n.current(context) }
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang), onBack) {
+        ScrollBody {
+            SettingsGroup {
+                (listOf("" to com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system)) + com.iris.localai.I18n.LANGS).forEachIndexed { i, (tag, name) ->
+                    if (i > 0) Divider()
+                    CheckRow(name, selected = tag == langTag) {
+                        if (tag != langTag && activity != null) com.iris.localai.I18n.set(activity, tag)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
@@ -890,31 +917,8 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
             if (name != null) vm.update { it.copy(backgroundImage = name) }
         }
     }
-    var langSheet by remember { mutableStateOf(false) }
-    val activity = context as? android.app.Activity
-    val langTag = remember { com.iris.localai.I18n.current(context) }
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), onBack) {
         ScrollBody {
-            // 2.3.1 多语言界面
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title))
-            SettingsGroup {
-                SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title), icon = com.iris.localai.ui.icons.IrisIcons.Globe,
-                    subtitle = com.iris.localai.I18n.LANGS.firstOrNull { it.first == langTag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system),
-                    onClick = { langSheet = true }, trailing = { Chevron() },
-                )
-            }
-            if (langSheet) com.iris.localai.ui.components.IrisSheet(onDismiss = { langSheet = false }) {
-                com.iris.localai.ui.components.SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.lang_title))
-                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                    (listOf("" to com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system)) + com.iris.localai.I18n.LANGS).forEach { (tag, name) ->
-                        CheckRow(name, selected = tag == langTag) {
-                            langSheet = false
-                            if (tag != langTag && activity != null) com.iris.localai.I18n.set(activity, tag)
-                        }
-                    }
-                }
-            }
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9970ad))
             SettingsGroup {
                 SegmentedRow(

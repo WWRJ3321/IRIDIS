@@ -166,14 +166,33 @@ object KbQuery {
     val STOP = setOf("什么", "怎么", "么时", "时候", "一下", "是不", "不是", "可以", "这个", "那个", "我们", "你们", "一个", "有没", "没有",
         "我的", "你的", "的是", "是什", "怎样", "如何", "多少", "哪里", "请问", "还有", "上面", "刚才", "the", "a", "is", "of", "to", "and", "what")
     const val TOP_K = 4
-    /** 2.3.2: acknowledgements / continuations that say nothing about the subject. */
-    val ACK = setOf("好的", "好", "嗯", "嗯嗯", "继续", "谢谢", "多谢", "感谢", "收到", "明白", "了解", "知道", "道了", "行", "对", "是的",
-        "没问", "问题", "可以", "ok", "okay", "thanks", "thank", "you", "yes", "go", "on", "continue", "next", "sure", "got", "it", "好吧", "然后", "接着", "再来")
+    /**
+     * 2.3.4: whole-message acknowledgements. Retrieval is skipped only when the ENTIRE trimmed message
+     * (punctuation / emoji / whitespace removed, case-folded) is one of these or a combination of them
+     * (好的，继续). No substring / token matching: anything with a question or extra content retrieves.
+     */
+    val ACK = setOf("好的", "好", "好吧", "好嘞", "嗯", "嗯嗯", "嗯呢", "哦", "噢", "继续", "接着", "然后", "再来", "谢谢", "多谢", "感谢",
+        "谢啦", "收到", "明白", "明白了", "了解", "知道了", "是的", "没问题", "ok", "okay", "k", "thanks", "thankyou", "thx", "ty",
+        "yes", "yep", "goon", "continue", "next", "sure", "gotit", "cool", "nice")
+    private val ACK_SPLIT = Regex("[\\s\\p{P}\\p{S}~～]+")
+
+    /** True only when the whole [text] is acknowledgement words (each piece between punctuation is in [ACK]). */
+    fun isPureAck(text: String): Boolean {
+        val t = text.trim().lowercase()
+        if (t.isEmpty()) return true
+        val parts = t.split(ACK_SPLIT).filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return true
+        return parts.all { it in ACK } || parts.joinToString("") in ACK
+    }
 
     fun meaningful(text: String): List<String> = KbTokenizer.tokens(text).filter { it !in STOP }
 
-    /** 2.3.2: terms that say what [current] is about; empty (好的 / 继续 / 谢谢) → no search at all. */
-    fun effective(current: String): List<String> = meaningful(current).filter { it !in ACK }.distinct()
+    /** Terms that say what [current] is about; empty only for a pure acknowledgement ([isPureAck]). */
+    fun effective(current: String): List<String> {
+        if (isPureAck(current)) return emptyList()
+        val m = meaningful(current).distinct()
+        return m.ifEmpty { KbTokenizer.tokens(current).distinct().ifEmpty { listOf(current.trim()) } }
+    }
 
     fun isFollowUp(current: String): Boolean {
         val t = current.trim()

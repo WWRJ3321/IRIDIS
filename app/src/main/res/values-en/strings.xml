@@ -111,6 +111,9 @@
     <string name="ws233_pick_this">Use this folder</string>
     <string name="ws233_internal">Phone storage</string>
     <string name="ws233_up">Up one level</string>
+    <string name="mr234_hint">Back to a normal chat. Switch back to %1$s?</string>
+    <string name="mr234_back">Switch back</string>
+    <string name="set234_lang">Language</string>
     <string name="ui_271348">IRIDIS closed unexpectedly last time</string>
     <string name="ui_79d3ab">Copy</string>
     <string name="ui_b15d91">Close</string>

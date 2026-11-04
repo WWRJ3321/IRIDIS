@@ -191,6 +191,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7a658c) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_87feec)); return }
         // Stops a running voice conversation or read-aloud instead of talking over it.
         c.synthesizer.claim(this) { stopPreview() }
+        c.synthesizer.globalOnly = true
         previewJob = viewModelScope.launch {
             var player: PcmPlayer? = null
             try {
@@ -216,6 +217,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 player?.release()
                 if (previewPlayer === player) previewPlayer = null
+                c.synthesizer.globalOnly = false
                 c.synthesizer.unclaim(this@SettingsViewModel)
             }
         }
