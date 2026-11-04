@@ -1,5 +1,6 @@
 # 2.3.6: rebuilds the native GGUF libraries with the NDK (the dev sandbox has no x86-64 NDK):
 #  - prebuilt-native/arm64-v8a/libiris_llama.so  (llama.cpp + JNI, OpenCL + Vulkan)
+#  - prebuilt-native/arm64-v8a/libiris_sd.so     (2.4.0: stable-diffusion.cpp + JNI, CPU + Vulkan)
 #  - prebuilt-assets/htp/*                        (Hexagon variant, scripts/build-llama-htp.sh)
 # The results are force-committed to the branch ci/native-out (binaries only, never merged),
 # so they can be fetched with plain git and packaged by a local Gradle build (iris.prebuiltNative).
@@ -38,6 +39,8 @@ jobs:
         run: sh scripts/fetch-deps.sh || test -f third_party/llama.cpp/CMakeLists.txt
       - name: libiris_llama.so (OpenCL + Vulkan)
         run: sh scripts/build-llama-native.sh
+      - name: libiris_sd.so (stable-diffusion.cpp, CPU + Vulkan)
+        run: sh scripts/build-sd-native.sh
       - name: Hexagon variant
         run: env -u VK_HEADERS sh scripts/build-llama-htp.sh
       - name: Commit binaries
@@ -48,6 +51,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan native-out
           git rm -rq --cached .
-          git add -f prebuilt-native/arm64-v8a/libiris_llama.so prebuilt-assets/htp native-llama-commit.txt
+          git add -f prebuilt-native/arm64-v8a/libiris_llama.so prebuilt-native/arm64-v8a/libiris_sd.so prebuilt-assets/htp native-llama-commit.txt
           git commit -qm "native libs for ${GITHUB_SHA::7} (llama.cpp $(cat native-llama-commit.txt | cut -c1-7))"
           git push -f origin "HEAD:refs/heads/ci/native-out"
