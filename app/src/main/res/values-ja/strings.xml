@@ -1928,4 +1928,16 @@
     <string name="ch235_h_first">任意。キャラクターの最初のひとこと</string>
     <string name="ch235_advanced_sub">性格、シナリオ、別の挨拶、タグ、会話例、システムプロンプトなど（Tavern カード互換）</string>
     <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
+    <string name="qt236_write">Write</string>
+    <string name="qt236_write_p">Write a piece of text for me. Requirements:</string>
+    <string name="qt236_translate">Translate</string>
+    <string name="qt236_translate_p">Translate the text below into English (if it is already English, into Chinese). Reply with the translation only:</string>
+    <string name="qt236_summary">Summarize</string>
+    <string name="qt236_summary_p">Summarize the text below in a few sentences and list the key points:</string>
+    <string name="qt236_polish">Polish</string>
+    <string name="qt236_polish_p">Polish the text below. Keep the meaning, make it read more naturally:</string>
+    <string name="qt236_code">Explain code</string>
+    <string name="qt236_code_p">Explain what the code below does and point out any problems:</string>
+    <string name="qt236_scam">Scam check</string>
+    <string name="qt236_scam_p">Is the message below a scam? Explain why and what I should do:</string>
 </resources>

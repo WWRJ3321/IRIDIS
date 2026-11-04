@@ -1928,4 +1928,16 @@
     <string name="ch235_h_first">可選。角色說的第一句話</string>
     <string name="ch235_advanced_sub">性格、場景、備選開場白、標籤、對話範例、系統提示詞等（相容酒館角色卡）</string>
     <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
+    <string name="qt236_write">寫作</string>
+    <string name="qt236_write_p">幫我寫一段文字，要求：</string>
+    <string name="qt236_translate">翻譯</string>
+    <string name="qt236_translate_p">把下面的內容翻譯成中文（原文是中文就譯成英文），只給譯文：</string>
+    <string name="qt236_summary">總結</string>
+    <string name="qt236_summary_p">用幾句話總結下面的內容，列出要點：</string>
+    <string name="qt236_polish">潤色</string>
+    <string name="qt236_polish_p">潤色下面這段文字，保持原意，讓它更通順自然：</string>
+    <string name="qt236_code">解釋程式碼</string>
+    <string name="qt236_code_p">解釋下面這段程式碼做了什麼，有問題請指出：</string>
+    <string name="qt236_scam">防詐檢測</string>
+    <string name="qt236_scam_p">幫我判斷下面這條訊息是不是詐騙，說明理由和該怎麼做：</string>
 </resources>

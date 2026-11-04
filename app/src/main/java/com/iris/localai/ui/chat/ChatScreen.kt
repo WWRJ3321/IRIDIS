@@ -1402,6 +1402,25 @@ private fun ChatEmptyState(
         )
         Spacer(Modifier.height(IrisDimens.space20))
         Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_61295b), style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
+        // 2.3.6: 快捷工具 — each pill pre-fills the composer with an instruction (nothing is sent).
+        Spacer(Modifier.height(IrisDimens.space24))
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(
+            Modifier.widthIn(max = 420.dp),
+            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+        ) {
+            com.iris.localai.chat.QuickTools.all.forEach { t ->
+                val label = com.iris.localai.I18n.s(t.label)
+                com.iris.localai.ui.components.IrisPill(
+                    height = 36.dp,
+                    onClick = { onPrompt(com.iris.localai.chat.QuickTools.draft(com.iris.localai.I18n.s(t.prompt))) },
+                    onClickLabel = label,
+                ) {
+                    Text(label, style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.space16))
+                }
+            }
+        }
     }
 }
 
