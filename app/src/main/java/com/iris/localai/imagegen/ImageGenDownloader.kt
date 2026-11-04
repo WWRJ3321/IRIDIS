@@ -218,8 +218,15 @@ object ImageDownloads {
 
 
     /** Removes the model folder from every root. */
-    fun delete(roots: List<File>, model: ImageModel): Boolean =
-        roots.map { ImageGenFiles.modelDir(it, model) }.filter { it.exists() }.all { it.deleteRecursively() }
+    fun delete(roots: List<File>, model: ImageModel, others: List<ImageModel> = ImageCatalog.all): Boolean {
+        val ok = roots.map { ImageGenFiles.modelDir(it, model) }.filter { it.exists() }.all { it.deleteRecursively() }
+        // 2.4.0: a shared file (the Qwen3-4B text encoder) goes only when no other downloaded model uses it.
+        for (root in roots) for (path in model.sharedPaths) {
+            val usedElsewhere = others.any { o -> o.id != model.id && path in o.sharedPaths && ImageGenFiles.modelDir(root, o).exists() }
+            if (!usedElsewhere) File(root, path).delete()
+        }
+        return ok
+    }
 }
 
 /**

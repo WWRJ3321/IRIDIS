@@ -1940,4 +1940,6 @@
     <string name="qt236_code_p">解釋下面這段程式碼做了什麼，有問題請指出：</string>
     <string name="qt236_scam">防詐檢測</string>
     <string name="qt236_scam_p">幫我判斷下面這條訊息是不是詐騙，說明理由和該怎麼做：</string>
+    <string name="imagegen_sd240_cancelled">已停止生成</string>
+    <string name="imagegen_sd240_noimg2img">這個模型暫不支援以圖生圖</string>
 </resources>

@@ -17,6 +17,8 @@ object SelfCheck {
     const val QNN_MIN_HTP = 73
     const val QNN_MIN_RAM_MB = 2500L
     const val MNN_MIN_RAM_MB = 3000L
+    /** 2.4.0: weights are mmapped, so this is the working set (~4B DiT Q4 + encoder pass + VAE), not the download size. */
+    const val SDCPP_MIN_RAM_MB = 4500L
     val HEXAGON_PENDING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1b8a07)
 
     fun verdicts(facts: ProbeFacts, models: List<ImageModel> = ImageCatalog.all): List<TierVerdict> =
@@ -37,6 +39,9 @@ object SelfCheck {
                 if (f.freeRamMb < MNN_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, MNN_MIN_RAM_MB, f.freeRamMb))
             }
             Backend.HEXAGON -> problems.add(HEXAGON_PENDING)
+            Backend.SDCPP -> {
+                if (f.freeRamMb < SDCPP_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, SDCPP_MIN_RAM_MB, f.freeRamMb))
+            }
         }
         val ok = problems.isEmpty()
         val parts = ArrayList<String>()

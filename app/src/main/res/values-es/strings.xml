@@ -1940,4 +1940,6 @@
     <string name="qt236_code_p">Explain what the code below does and point out any problems:</string>
     <string name="qt236_scam">Scam check</string>
     <string name="qt236_scam_p">Is the message below a scam? Explain why and what I should do:</string>
+    <string name="imagegen_sd240_cancelled">Generation stopped</string>
+    <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
 </resources>

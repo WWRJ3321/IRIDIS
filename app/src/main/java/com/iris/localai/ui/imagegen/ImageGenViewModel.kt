@@ -188,7 +188,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, seed = req.seed.toString()) }
         job = viewModelScope.launch {
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
-            if (model.backend == com.iris.localai.imagegen.Backend.QNN) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
+            if (model.backend == com.iris.localai.imagegen.Backend.QNN || model.backend == com.iris.localai.imagegen.Backend.SDCPP) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
             val r = withContext(Dispatchers.Default) {
                 engine.generate(req, model) { step, total -> _ui.update { it.copy(step = step, total = total) } }
             }

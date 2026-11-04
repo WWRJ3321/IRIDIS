@@ -1,7 +1,8 @@
 package com.iris.localai.imagegen
 
 enum class Tier { LOW, MID, HIGH }
-enum class Backend { QNN, MNN_CPU, HEXAGON }
+/** 2.4.0: SDCPP = upstream stable-diffusion.cpp on the GPU (ggml Vulkan) with CPU fallback. */
+enum class Backend { QNN, MNN_CPU, HEXAGON, SDCPP }
 
 /** A file inside a downloaded archive, after flattening its top-level folder; [path] is relative to the model folder. */
 data class UnpackedFile(val path: String, val size: Long)
@@ -55,7 +56,12 @@ data class ImageModel(
     val minHtpArch: Int = 73,
     /** One line under the name on the 生图 page (empty = none). */
     val note: String = "",
-)
+    /** 2.4.0: [Backend.SDCPP] models — which downloaded file is the diffusion model, text encoder and VAE. */
+    val sdFiles: SdFiles? = null,
+) {
+    /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
+    val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }
+}
 
 object ImageCatalog {
     /** taobao-mnn/stable-diffusion-v1-5-mnn-general, pinned to the revision checked 2026-10-22. */
@@ -151,15 +157,50 @@ object ImageCatalog {
     /** For this phone's chip (unknown chip → the 8 Elite text encoder). */
     val ANYTHING_V5: ImageModel by lazy { anythingV5(runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()) }
 
-    // TODO: files once the Hexagon runtime ships.
-    val FLUX2_KLEIN = ImageModel(
-        id = "flux2-klein-4b", tier = Tier.MID, name = "FLUX.2 Klein 4B", backend = Backend.HEXAGON,
-        files = emptyList(), fixedSize = null, defaultSteps = 4, defaultCfg = 1f, needsHexagonRuntime = true,
+    /** 2.4.0: files more than one model uses (the Qwen3-4B text encoder), relative to the imagegen root. */
+    const val SHARED_DIR = "_shared"
+
+    private fun hf(repo: String, rev: String, file: String) = "https://huggingface.co/$repo/resolve/$rev/$file"
+
+    /**
+     * Qwen3-4B Q4_K_M (unsloth/Qwen3-4B-GGUF, Apache-2.0): the text encoder of both FLUX.2 Klein 4B and
+     * Z-Image Turbo (Comfy-Org ships the same qwen_3_4b.safetensors, LFS oid 6c671498…, for both). Listing read 2026-11-05.
+     */
+    private val QWEN3_4B = RemoteFile(
+        hf("unsloth/Qwen3-4B-GGUF", "22c9fc8a8c7700b76a1789366280a6a5a1ad1120", "Qwen3-4B-Q4_K_M.gguf"),
+        2_497_281_312L, "$SHARED_DIR/Qwen3-4B-Q4_K_M.gguf",
     )
 
+    /** FLUX.2 Klein 4B (Apache-2.0): leejet GGUF Q4_0 + FLUX.2 VAE (Comfy-Org/Flux-2-Klein-4B). 4 steps, CFG 1. */
+    val FLUX2_KLEIN = ImageModel(
+        id = "flux2-klein-4b", tier = Tier.MID, name = "FLUX.2 Klein 4B", backend = Backend.SDCPP,
+        files = listOf(
+            RemoteFile(hf("leejet/FLUX.2-klein-4B-GGUF", "3b1f5a9dc3abb32238b053aeb3d823c30afdacbd", "flux-2-klein-4b-Q4_0.gguf"),
+                2_460_378_560L, "flux2-klein-4b/flux-2-klein-4b-Q4_0.gguf"),
+            QWEN3_4B,
+            RemoteFile(hf("Comfy-Org/Flux-2-Klein-4B", "5b3abca5c0dc1ecd4eaf3340868d09063fc1c965", "split_files/vae/flux2-vae.safetensors"),
+                336_211_292L, "flux2-klein-4b/flux2-vae.safetensors"),
+        ),
+        fixedSize = null, defaultSteps = 4, defaultCfg = 1f,
+        hfRepo = "leejet/FLUX.2-klein-4B-GGUF",
+        note = "通用写实 · 4 步 · GPU（Vulkan），约 5.3 GB",
+        sdFiles = SdFiles("flux2-klein-4b/flux-2-klein-4b-Q4_0.gguf", QWEN3_4B.path, "flux2-klein-4b/flux2-vae.safetensors"),
+    )
+
+    /** Z-Image Turbo (Apache-2.0): leejet GGUF Q3_K + FLUX.1 VAE (Comfy-Org/Z-Image-Turbo). 8 steps, CFG 1; good with Chinese prompts and text. */
     val Z_IMAGE_TURBO = ImageModel(
-        id = "z-image-turbo", tier = Tier.HIGH, name = "Z-Image Turbo", backend = Backend.HEXAGON,
-        files = emptyList(), fixedSize = null, defaultSteps = 8, defaultCfg = 1f, needsHexagonRuntime = true,
+        id = "z-image-turbo", tier = Tier.HIGH, name = "Z-Image Turbo", backend = Backend.SDCPP,
+        files = listOf(
+            RemoteFile(hf("leejet/Z-Image-Turbo-GGUF", "c61c0e422dc8b541b7548cf33a4ef8302b0f8085", "z_image_turbo-Q3_K.gguf"),
+                3_143_559_104L, "z-image-turbo/z_image_turbo-Q3_K.gguf"),
+            QWEN3_4B,
+            RemoteFile(hf("Comfy-Org/Z-Image-Turbo", "6fc90a3b1b653e935a0d175e260736de25b84df5", "split_files/vae/ae.safetensors"),
+                335_304_388L, "z-image-turbo/ae.safetensors"),
+        ),
+        fixedSize = null, defaultSteps = 8, defaultCfg = 1f,
+        hfRepo = "leejet/Z-Image-Turbo-GGUF",
+        note = "中文提示词与文字更好 · 8 步 · GPU（Vulkan），约 6 GB",
+        sdFiles = SdFiles("z-image-turbo/z_image_turbo-Q3_K.gguf", QWEN3_4B.path, "z-image-turbo/ae.safetensors"),
     )
 
     val all: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO)

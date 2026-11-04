@@ -172,7 +172,18 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     @Volatile private var qnn: QnnSdEngine? = null
     @Volatile private var active: ImageGenEngine? = null
 
+    @Volatile private var sd: SdCppEngine? = null
+
+    /** 2.4.0: the stable-diffusion.cpp engine (FLUX.2 Klein / Z-Image), created on first use. */
+    fun sdEngine(): SdCppEngine = sd ?: synchronized(this) {
+        sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir).also { sd = it }
+    }
+
     fun engineFor(model: ImageModel): ImageGenEngine {
+        if (model.backend == Backend.SDCPP) {
+            SdNative.unavailableReason?.let { return UnavailableEngine(it) }
+            return sdEngine()
+        }
         if (model.backend != Backend.QNN) return stub
         qnn?.let { return it }
         val probe = DeviceProbe.nativeProbe(context)
@@ -203,7 +214,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     val busy: Boolean get() = active != null
 
     /** Frees the NPU graphs (≈1.1 GB) now, until the next generation. */
-    fun release() { qnn?.release() }
+    fun release() { qnn?.release(); sd?.release() }
 
     /** Leaving the 生图 page: free the NPU graphs now, or as soon as a running generation ends. */
     fun releaseWhenIdle() = idle.releaseWhenIdle()

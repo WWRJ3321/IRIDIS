@@ -180,6 +180,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         (if (s.running) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b8656e) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_62227c)) + s.model.name + " · " + when (s.model.backend) {
                             com.iris.localai.imagegen.Backend.QNN, com.iris.localai.imagegen.Backend.HEXAGON -> "NPU"
                             com.iris.localai.imagegen.Backend.MNN_CPU -> "CPU"
+                            com.iris.localai.imagegen.Backend.SDCPP -> "GPU"
                         } +
                             (if (s.modelId in s.downloaded) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)),
                         style = IrisType.caption, color = Iris.colors.accent,
