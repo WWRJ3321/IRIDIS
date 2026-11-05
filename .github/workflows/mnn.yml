@@ -1,0 +1,36 @@
+# 2.4.0: rebuilds the MNN prebuilt (third_party/mnn) that scripts/fetch-deps.sh downloads, because the old
+# release asset (v2.0.0-beta) is gone. Runs on a push to a mnn/** branch; the tar is force-committed to
+# ci/mnn-out (binary only, never merged) and then pinned by a tag + SHA-256 in fetch-deps.sh.
+name: mnn
+on:
+  push:
+    branches: ['mnn/**']
+permissions:
+  contents: write
+jobs:
+  mnn:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools (NDK r30)
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          NDKV=$("$SDKM" --list 2>/dev/null | grep -o 'ndk;30\.[0-9.]*' | sort -V | tail -1)
+          echo "using $NDKV"; test -n "$NDKV"
+          yes | "$SDKM" "$NDKV" > /dev/null
+          echo "NDK=$ANDROID_HOME/ndk/${NDKV#ndk;}" >> "$GITHUB_ENV"
+      - name: Build MNN
+        run: sh scripts/build-mnn-android.sh
+      - name: Commit tar
+        run: |
+          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-01-01' -C third_party -cf - mnn | gzip -n -9 > mnn-prebuilt-arm64.tar.gz
+          sha256sum mnn-prebuilt-arm64.tar.gz | tee mnn-prebuilt-arm64.tar.gz.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan mnn-out
+          git rm -rq --cached .
+          git add -f mnn-prebuilt-arm64.tar.gz mnn-prebuilt-arm64.tar.gz.sha256
+          git commit -qm "MNN prebuilt for ${GITHUB_SHA::7} ($(cat third_party/mnn/VERSION | cut -c1-60))"
+          git push -f origin "HEAD:refs/heads/ci/mnn-out"
