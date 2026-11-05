@@ -60,7 +60,7 @@ class SdCppEngine(
     fun clearGpuCrash() { marker.delete() }
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> {
-        SdNative.unavailableReason?.let { return Result.failure(IllegalStateException(it)) }
+        if (!SdNative.loaded) return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)))
         if (req.initImagePath != null) return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_noimg2img)))
         val files = model.sdFiles ?: return Result.failure(IllegalStateException("no sd.cpp files for ${model.id}"))
         val root = rootOf(model) ?: return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)))

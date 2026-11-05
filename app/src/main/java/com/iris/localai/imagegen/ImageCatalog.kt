@@ -163,6 +163,16 @@ object ImageCatalog {
     private fun hf(repo: String, rev: String, file: String) = "https://huggingface.co/$repo/resolve/$rev/$file"
 
     /**
+     * 2.4.0: libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI, CI build of native.yml) is not in the APK; it is
+     * downloaded with the first sd.cpp model and only loaded after its SHA-256 matches [SD_LIB_SHA256] (SdNative).
+     */
+    const val SD_LIB_SHA256 = "1e5b7a0afc68a8c230ff883a78a43223955ab31166526e8a4429256fef221297"
+    val SD_LIB = RemoteFile(
+        "https://github.com/WWRJ3321/IRIDIS/releases/download/sdcpp-3e92bf9/libiris_sd-3e92bf9.so",
+        63_630_040L, "$SHARED_DIR/libiris_sd-3e92bf9.so",
+    )
+
+    /**
      * Qwen3-4B Q4_K_M (unsloth/Qwen3-4B-GGUF, Apache-2.0): the text encoder of both FLUX.2 Klein 4B and
      * Z-Image Turbo (Comfy-Org ships the same qwen_3_4b.safetensors, LFS oid 6c671498…, for both). Listing read 2026-11-05.
      */
@@ -178,6 +188,7 @@ object ImageCatalog {
             RemoteFile(hf("leejet/FLUX.2-klein-4B-GGUF", "3b1f5a9dc3abb32238b053aeb3d823c30afdacbd", "flux-2-klein-4b-Q4_0.gguf"),
                 2_460_378_560L, "flux2-klein-4b/flux-2-klein-4b-Q4_0.gguf"),
             QWEN3_4B,
+            SD_LIB,
             RemoteFile(hf("Comfy-Org/Flux-2-Klein-4B", "5b3abca5c0dc1ecd4eaf3340868d09063fc1c965", "split_files/vae/flux2-vae.safetensors"),
                 336_211_292L, "flux2-klein-4b/flux2-vae.safetensors"),
         ),
@@ -194,12 +205,13 @@ object ImageCatalog {
             RemoteFile(hf("leejet/Z-Image-Turbo-GGUF", "c61c0e422dc8b541b7548cf33a4ef8302b0f8085", "z_image_turbo-Q3_K.gguf"),
                 3_143_559_104L, "z-image-turbo/z_image_turbo-Q3_K.gguf"),
             QWEN3_4B,
+            SD_LIB,
             RemoteFile(hf("Comfy-Org/Z-Image-Turbo", "6fc90a3b1b653e935a0d175e260736de25b84df5", "split_files/vae/ae.safetensors"),
                 335_304_388L, "z-image-turbo/ae.safetensors"),
         ),
         fixedSize = null, defaultSteps = 8, defaultCfg = 1f,
         hfRepo = "leejet/Z-Image-Turbo-GGUF",
-        note = "中文提示词与文字更好 · 8 步 · GPU（Vulkan），约 6 GB",
+        note = "擅长中英文字 · 8 步 · GPU（Vulkan），约 6 GB",
         sdFiles = SdFiles("z-image-turbo/z_image_turbo-Q3_K.gguf", QWEN3_4B.path, "z-image-turbo/ae.safetensors"),
     )
 

@@ -131,6 +131,8 @@ android {
                 "**/libnpu_jni.so", "**/libgeniex*.so", "**/libllama.so", "**/libllama-common.so", "**/libmtmd.so",
                 "**/libggml*.so", "**/libomp.so", "**/libQnn*.so", "**/libhta_hexagon_runtime_*.so",
                 "**/libPlatformValidatorShared.so", "**/libcalculator.so", "**/libCalculator_skel.so",
+                // 2.4.0: stable-diffusion.cpp (≈64 MB) is downloaded with the FLUX.2 / Z-Image models (ImageCatalog.SD_LIB).
+                "**/libiris_sd.so",
             )
         }
         resources {

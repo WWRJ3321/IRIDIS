@@ -1942,4 +1942,5 @@
     <string name="qt236_scam_p">Is the message below a scam? Explain why and what I should do:</string>
     <string name="imagegen_sd240_cancelled">Generation stopped</string>
     <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
+    <string name="imagegen_sd240_nolib">Image engine not ready: download this model again on the image page (adds the ~64 MB engine)</string>
 </resources>

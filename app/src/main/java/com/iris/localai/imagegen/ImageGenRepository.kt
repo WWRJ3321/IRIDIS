@@ -181,7 +181,8 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     fun engineFor(model: ImageModel): ImageGenEngine {
         if (model.backend == Backend.SDCPP) {
-            SdNative.unavailableReason?.let { return UnavailableEngine(it) }
+            val root = repo.downloadedDir(model)?.parentFile
+            SdNative.ensureLoaded(context, root?.let { File(it, ImageCatalog.SD_LIB.path) })?.let { return UnavailableEngine(it) }
             return sdEngine()
         }
         if (model.backend != Backend.QNN) return stub

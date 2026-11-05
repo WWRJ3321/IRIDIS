@@ -1943,4 +1943,5 @@
     <string name="qt236_scam_p">帮我判断下面这条消息是不是诈骗，说明理由和该怎么做：</string>
     <string name="imagegen_sd240_cancelled">已停止生成</string>
     <string name="imagegen_sd240_noimg2img">这个模型暂不支持以图生图</string>
+    <string name="imagegen_sd240_nolib">生图组件未就绪：请在生图页重新下载该模型（会补下约 64 MB 的引擎）</string>
 </resources>

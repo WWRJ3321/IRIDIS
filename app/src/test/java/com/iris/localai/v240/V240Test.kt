@@ -23,8 +23,8 @@ class V240Test {
             val sd = assertNotNull(m.sdFiles).let { m.sdFiles!! }
             val paths = m.files.map { it.path }.toSet()
             assertTrue(sd.diffusion in paths && sd.llm in paths && sd.vae in paths)
-            assertEquals(listOf("${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf"), m.sharedPaths)
-            assertTrue(m.files.all { it.url.startsWith("https://huggingface.co/") && "/resolve/" in it.url && it.size > 0 })
+            assertEquals(listOf("${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", ImageCatalog.SD_LIB.path), m.sharedPaths)
+            assertTrue(m.files.filter { it !== ImageCatalog.SD_LIB }.all { it.url.startsWith("https://huggingface.co/") && "/resolve/" in it.url && it.size > 0 })
         }
     }
 
@@ -38,6 +38,15 @@ class V240Test {
         assertTrue("z still uses it", shared.exists())
         assertTrue(ImageDownloads.delete(listOf(root), z))
         assertFalse(shared.exists())
+    }
+
+    @Test fun engineLibIsDownloadedAndPinned() {
+        val lib = ImageCatalog.SD_LIB
+        assertTrue(lib.url.startsWith("https://github.com/WWRJ3321/IRIDIS/releases/download/"))
+        assertTrue(lib.path.endsWith(".so") && lib.size > 10_000_000L)
+        assertTrue(Regex("[0-9a-f]{64}").matches(ImageCatalog.SD_LIB_SHA256))
+        val f = File(tmp(), "x").apply { writeText("abc") }
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", com.iris.localai.imagegen.SdLibRules.sha256(f))
     }
 
     @Test fun gpuThenCpuUnlessCrashed() {
