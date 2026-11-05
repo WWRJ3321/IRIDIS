@@ -47,7 +47,6 @@ object IrisDimens {
     val topBarHeight = 56.dp
     /** 2.2.4: floating circular top-bar buttons and the chat model pill. */
     val floatingButton = 44.dp
-    val floatingButtonSmall = 40.dp
     /** 2.2.5: home top bar — round buttons and the model pill share one 48 dp height. */
     val topBarControl = 42.dp // 2.2.7: slimmer pill + side buttons
     /** Height reserved for the large page title under the top bar (HyperOS / iOS large title). */
@@ -149,7 +148,6 @@ object IrisType {
     val micro = TextStyle(fontSize = 11.sp, lineHeight = 14.sp)
     /** 2.2.4: chat model pill — bold model name and the small engine/status line under it. */
     val pillTitle = TextStyle(fontSize = 15.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold)
-    val pillCaption = TextStyle(fontSize = 11.sp, lineHeight = 12.sp)
     /** 2.2.4: compact menu rows (model menu). */
     val menuItem = TextStyle(fontSize = 14.sp, lineHeight = 19.sp)
     val menuItemSelected = TextStyle(fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
@@ -160,7 +158,6 @@ object IrisType {
     val mdH1 = TextStyle(fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp)
     val mdH2 = TextStyle(fontSize = 19.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.1).sp)
     val mdH3 = TextStyle(fontSize = 17.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold)
-    val mdTable = TextStyle(fontSize = 14.sp, lineHeight = 20.sp)
     val mono = TextStyle(fontSize = 13.sp, lineHeight = 20.sp, fontFamily = FontFamily.Monospace)
     val monoSmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp, fontFamily = FontFamily.Monospace)
 }

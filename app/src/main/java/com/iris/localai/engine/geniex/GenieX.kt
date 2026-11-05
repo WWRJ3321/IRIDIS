@@ -5,7 +5,7 @@ import com.iris.localai.engine.NpuState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * 2.2.0: Qualcomm GenieX (com.qualcomm.qti:geniex-android 0.8.0) as the fourth engine, full flavour only.
+ * 2.2.0: Qualcomm GenieX (com.qualcomm.qti:geniex-android; 0.10.0 = QAIRT 2.50 since 2.4.1) as the fourth engine, full flavour only.
  * Two runtimes inside one SDK:
  *  - `llama_cpp`: GGUF files on the Hexagon NPU / Adreno GPU / CPU (Q4_0 is best on Hexagon);
  *  - `qairt`: Qualcomm AI Hub pre-compiled bundles (a folder: genie_config.json + *.bin + tokenizer.json), NPU only.
@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
  * (设置 › 模型与加载), like the LiteRT NPU runtime. Everything in this file is pure and unit-tested.
  */
 object GenieX {
-    const val VERSION = "0.8.0"
+    const val VERSION = "0.10.0"
+    /** 2.4.1: QAIRT (QNN) version of the runtime GenieX [VERSION] ships (libQnnHtp.so v2.50.40). */
+    const val QAIRT_VERSION = "2.50"
     const val LABEL = "GenieX"
 
     /** Engine ids for GGUF files ([com.iris.localai.data.AppSettings.ggufEngine] / per-model override). */
@@ -65,8 +67,11 @@ object GenieX {
      * A hint for the SDK's error texts (the JNI throws "Llm create failed: <geniex_get_error_message>",
      * e.g. "File not found or inaccessible", "Parameter not supported by this plugin").
      */
-    fun codeHint(message: String?): String? {
+    fun codeHint(message: String?, qairt: Boolean = false): String? {
         val m = message.orEmpty().lowercase()
+        // 2.4.1: an AI Hub bundle that fails here is almost always built for another QAIRT version or chip.
+        if (qairt && ("model loading failed" in m || "invalid model" in m || "context" in m && "binary" in m))
+            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_loadfail, QAIRT_VERSION)
         return when {
             "parameter not supported" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_77a0f4)
             "file not found" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8931e5)
@@ -80,8 +85,8 @@ object GenieX {
 }
 
 /**
- * Hexagon generation of a Snapdragon SoC and the GenieX libraries it needs. The 0.8.0 AAR ships
- * 51 libraries (≈ 82 MB); a phone needs at most 20 of them: the HTP skel/stub of its own Hexagon
+ * Hexagon generation of a Snapdragon SoC and the GenieX libraries it needs. The 0.10.0 AAR ships
+ * 52 libraries (≈ 89 MB); a phone needs at most 20 of them: the HTP skel/stub of its own Hexagon
  * generation only, no HTA / SNPE / LPAI, no profiling readers / Optrace, no PlatformValidator /
  * calculator samples, no NetRun tools, no libQnnHtpPrepare (online graph compiler — GGUF does not use
  * QNN at all and QAIRT bundles are pre-compiled context binaries), no libomp (nothing links it).
@@ -93,8 +98,8 @@ object GenieXLibs {
     data class Lib(val entry: String, val path: String, val pin: Pin)
 
     const val AAR_NAME = "geniex-android-${GenieX.VERSION}.aar"
-    const val AAR_BYTES = 82_167_359L
-    const val AAR_SHA256 = "330d4d20ca27b449ba3e1b588fa2e964124e1682c01502952b483875d902dcc9"
+    const val AAR_BYTES = 89_045_966L
+    const val AAR_SHA256 = "3a40def4890fe4991d3547acf8bcfa9f1be491ad7790a1cb5d26bbecb2dde69b"
     val AAR_URLS = listOf(
         "https://repo1.maven.org/maven2/com/qualcomm/qti/geniex-android/${GenieX.VERSION}/$AAR_NAME",
         "https://maven.aliyun.com/repository/central/com/qualcomm/qti/geniex-android/${GenieX.VERSION}/$AAR_NAME",
@@ -103,38 +108,38 @@ object GenieXLibs {
     /** GenieX's registry scans `<GENIEX_PLUGIN_PATH>/<id>/libgeniex_plugin.so` at init. */
     const val PLUGIN_FILE = "libgeniex_plugin.so"
 
-    /** Size + SHA-256 of every library we may install, taken from the Maven Central 0.8.0 AAR. */
+    /** Size + SHA-256 of every library we may install, taken from the Maven Central 0.10.0 AAR. */
     val PINS: Map<String, Pin> = mapOf(
-        "libnpu_jni.so" to Pin(465896L, "ee2af03f6ab75e0805aa288864075ff1844b5c2e1121ce3704269749fbe3d3da"),
-        "libgeniex.so" to Pin(5265880L, "47ba9feb717ded2dd74d566b1808e3f3515e2824f46d6c42f0e20f47ab63f02b"),
-        "libggml-base.so" to Pin(996280L, "448799f31f969b7fef5bb2715a77a1f8850d684c3af6b299da6936c4ce24387e"),
-        "libggml-cpu.so" to Pin(867280L, "c43dbd66a1e8c366930c2b02a098956b8e7cd9dce21654ae7501f516e96c1ae7"),
-        "libggml-opencl.so" to Pin(3496576L, "d7690ef7de6f69713c76cfdee3de66527473b5be83e5b91a1f96f54332857f46"),
-        "libggml-hexagon.so" to Pin(860944L, "d20212fd44f66759a02f31f65286f30d9d51b1161fb3b9b04f26ff2ea81def7a"),
-        "libggml.so" to Pin(31336L, "d88d0d5bcb3f75a3d47d0357fd966e301a13f4ef2a5c293b61a619e80b8ffe14"),
-        "libllama.so" to Pin(3390392L, "cca26539c63842d9910085a030ab141adfe2218fb22b52d9853d3dbb94ac8c21"),
-        "libllama-common.so" to Pin(3738880L, "33f4a8fae630738746b0b5efbd10c3d74186dd9abb86848b5c1d5d9466fb4930"),
-        "libmtmd.so" to Pin(1239336L, "6de28b5e23b8307929ba83f54e31ee3f263426644c600ac3cfa55048e5d97980"),
-        "libgeniex_plugin_llama_cpp.so" to Pin(228560L, "c4e5f93dd883e3cb4c1bd53b864b2c08146b09f2524a15bd0344f556cd76b78c"),
-        "libgeniex-proc.so" to Pin(7092056L, "ab64baa0af53f74c1599902b94f1aefaab8b42f424cd747e070fb8a44c68e40e"),
-        "libgeniex-proc-vision.so" to Pin(374032L, "996da37ad72bd345f14cea82ffcb01781eabcfd579509caf0351f0b4355a8b78"),
-        "libgeniex_core.so" to Pin(1141400L, "d39778e9ef992c913f2bae3ea243b4c0eb49c6ce0d8533c62b837d28fca372a9"),
-        "libgeniex_vlm.so" to Pin(356832L, "38344ab1713c0739514ec55726f73e6573ad46d656aa43476824dfcc78062fff"),
-        "libgeniex_plugin_qairt.so" to Pin(277600L, "cbbff6b297d53bc3a86b621edbb03e7d60b08eeab1f3111c7432b8d5538304eb"),
-        "libQnnSystem.so" to Pin(3635400L, "f08e9ddc18a40719839cce8bbfb3afd3aef06f5ad486b21934a1c4568c9a6a48"),
-        "libQnnHtp.so" to Pin(2952008L, "b5b36b2d5e0cc352b5e5f468f6f668b1585d515854fc1c5890b1365047a36be1"),
-        "libQnnHtpNetRunExtensions.so" to Pin(957864L, "0d29d3dac7d82d8eb5bdc47a0649a7d6a5f5b4a2fbc52b2f975b6ae2c16b6213"),
-        "libggml-htp-v73.so" to Pin(791136L, "003ec7c9dc4b451773fda44e97816a33dff7ba3b64f2b9db40335986f52e9bc2"),
-        "libggml-htp-v75.so" to Pin(741984L, "4fea34565752790266ab653d331640f52be8c446f1d9d15dfb308e4c9671662f"),
-        "libggml-htp-v79.so" to Pin(758436L, "4185640aaacd627728e324fa191f5bc071e4ca80f82f81712e362c1e55d68b23"),
-        "libggml-htp-v81.so" to Pin(783020L, "4aefc5f6372f966e029c393773efd689f0a3a59cdedaae17514a673c1cedad30"),
-        "libQnnHtpV79Stub.so" to Pin(726960L, "16ed6f58965bcabc5cbe4e6c322a4953aefe2c74d6d1c662e70e6234eae0c662"),
-        "libQnnHtpV79Skel.so" to Pin(10936696L, "82275aaae3f022387e2c86d5b45eecb390b1b873e6a223a31036bdf5c985ceb1"),
-        "libQnnHtpV81Stub.so" to Pin(803416L, "e97898d6772288e202e9cf988b80b39b8336f3dca8b99ee3075d234093582e3c"),
-        "libQnnHtpV81Skel.so" to Pin(11788496L, "4b19d3c6ec8b3017f80710ffa1726c3a6578047933aee4cf451b9eb526403ff9"),
+        "libnpu_jni.so" to Pin(479248L, "13dc28ea6e2254444904346d20c767edf5330c94fdd8370d8d2cbd50ac76bc36"),
+        "libgeniex.so" to Pin(5245112L, "deca3df413ac5c4c1f1db8e9e4beaa9060af8fb48448d3649096f7158bd3c569"),
+        "libggml-base.so" to Pin(1002072L, "60745471b0af9dc254c56144a1d4a6258f4533c4eed2fb16c57121b4a40d6fe3"),
+        "libggml-cpu.so" to Pin(858552L, "a2e15c579e45c2a26b3aec683aea86f94064163a313835f12e44e033ba7d6e0e"),
+        "libggml-opencl.so" to Pin(3815776L, "a7c2809b3bee77b0d2b923a079220db2cee505a180b255b042938fa79d51fcf9"),
+        "libggml-hexagon.so" to Pin(936160L, "bbbbc30f44312f7784ecdb7a1af1ce36b4cbc3e5b79bb7cb7b805707cff47a01"),
+        "libggml.so" to Pin(30432L, "a877f80455f936be2a64d595adf8e0a602ac11c1740315941634a951a49205c4"),
+        "libllama.so" to Pin(4037800L, "adda8c9e4f5acb29a6dd32274732543bc5ad524c69fa291ccb23b29341b58bfe"),
+        "libllama-common.so" to Pin(3991144L, "8d311ce6fdc6b8b64bbe9f80a20c0ad3ad0b802cc8a7cfc230e3aff36d8d42c2"),
+        "libmtmd.so" to Pin(1380056L, "5853aff1bca65a92c19f521ee33a573b55910dd45021dfee4e8e9f71e4a89f62"),
+        "libgeniex_plugin_llama_cpp.so" to Pin(289616L, "c116a78f993be75a97415f4d73395cb5b7297f121cf588998a98ba15a7040bb6"),
+        "libgeniex-proc.so" to Pin(7174112L, "5fe2bcc8aeefa6c0e0250a77987f4b945b7101c5a382aa4d6d4b739e9c9f5430"),
+        "libgeniex-proc-vision.so" to Pin(523480L, "aa70853282e983cd25b1ce2753724ebcb9353c0d89ec3b7dda506b38d089f664"),
+        "libgeniex_core.so" to Pin(1189392L, "c576ffdf6264a06e5da4bd74664e8ff14b26a485621716daf946a06f5bea0038"),
+        "libgeniex_vlm.so" to Pin(361824L, "6c5f03d54b7ce80232e21c5add830ace241c9932637e0ce59847f2c19e994980"),
+        "libgeniex_plugin_qairt.so" to Pin(324040L, "ea24e62179661f9609fbd6eba945493c05234586d8c765f49363098e1c079848"),
+        "libQnnSystem.so" to Pin(4068024L, "b30bd9880dc48f6c5349185a7d45b326f8a064b10072e60094354fa23d9a2027"),
+        "libQnnHtp.so" to Pin(3979248L, "d299323d79868adbb18997c8e99ae18f961005589ab137f56a51d27e67d6bf0f"),
+        "libQnnHtpNetRunExtensions.so" to Pin(1105096L, "2923a52c9c3d4039ee181fc3978aff7546aa34ea970de939b0793954ae9c2345"),
+        "libggml-htp-v73.so" to Pin(811536L, "d3effaa2a735edfccd20d594db9fd97a49aa93f2aaf852fc624429e664eb18c3"),
+        "libggml-htp-v75.so" to Pin(807440L, "1275155161f45b97c7333d1beb0ab14d77b3b77beb8ba17c49e0d6306f5e4462"),
+        "libggml-htp-v79.so" to Pin(827980L, "5c50629ddf2708c7368ef8806e0493fde05cf7de5a6d41adbdaccea6c4989a09"),
+        "libggml-htp-v81.so" to Pin(840276L, "bb0139d68e1331d9e7131f4416c81d721ab95af60d0b6ce35d3b8f01896fbfa2"),
+        "libQnnHtpV79Stub.so" to Pin(791424L, "166a3bb724c448e9425aa8f98f16b25aa1465eae6334553e408da7256d76fc99"),
+        "libQnnHtpV79Skel.so" to Pin(12563756L, "408c1f6a3c6b853bbe34a9862a4054c171e76808a3b3004eac1d3c0fb309fd29"),
+        "libQnnHtpV81Stub.so" to Pin(816184L, "8cfb232be5f3f09d732805a8cfe222515460625a00267ed6648667e140be8a31"),
+        "libQnnHtpV81Skel.so" to Pin(13542412L, "35a3d4392c8dc15ebe724b57353975614e6eeba59cde2cc3af71b3f4b5d5db0f"),
     )
 
-    /** Hexagon generations GenieX 0.8.0 ships a ggml-htp kernel for. */
+    /** Hexagon generations GenieX ships a ggml-htp kernel for (0.10.0 adds v85, no phone SoC maps to it yet). */
     val LLAMA_ARCHS = setOf(73, 75, 79, 81)
     /** …and a QNN HTP stub/skel for (8 Elite, 8 Elite Gen 5). */
     val QAIRT_ARCHS = setOf(79, 81)
@@ -195,6 +200,18 @@ object GenieXLibs {
     }
 
     fun installedBytes(arch: Int): Long = forArch(arch).sumOf { it.pin.size }
+
+    /**
+     * 2.4.1: version of an older runtime still on disk (sibling folders `rt-<version>-v<arch>`), or null.
+     * GenieX 0.8.0 (QAIRT 2.45) cannot run bundles built with QAIRT 2.50, so it is offered as 「重新下载」.
+     */
+    fun oldRuntime(siblings: Collection<String>, current: String): String? =
+        siblings.asSequence().filter { it != current }
+            .mapNotNull { Regex("^rt-([0-9][0-9A-Za-z.]*)-v\\d+$").find(it)?.groupValues?.get(1) }
+            .firstOrNull { it != GenieX.VERSION }
+
+    fun oldRuntimeReason(old: String): String =
+        com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_oldrt, old, GenieX.VERSION, GenieX.QAIRT_VERSION)
 
     // ---------------------------------------------------------------- install marker
 
@@ -259,6 +276,67 @@ object QairtBundle {
     /** Context size compiled into the bundle (`"context": {"size": N}` in genie_config.json), or null. */
     fun contextSize(genieConfig: String): Int? =
         Regex("\"context\"\\s*:\\s*\\{[^{}]*?\"size\"\\s*:\\s*(\\d+)").find(genieConfig)?.groupValues?.get(1)?.toIntOrNull()
+}
+
+/**
+ * 2.4.1: what an AI Hub bundle was compiled for, checked before the load so a mismatch gets a clear
+ * Chinese reason instead of GenieX's "Model loading failed". `htp_backend_ext_config.json` names the
+ * Hexagon generation (`"dsp_arch": "v79"`); `metadata.json` / `genie_config.json` may carry the QAIRT
+ * (QNN SDK) version the context binaries were built with. Missing fields = no verdict (load as before).
+ */
+object QairtCompat {
+    const val HTP_EXT_CONFIG = "htp_backend_ext_config.json"
+
+    data class Info(val dspArch: Int?, val qairt: String?)
+
+    private val DSP_ARCH = Regex("\"dsp_arch\"\\s*:\\s*\"?[vV]?(\\d{2,3})\"?")
+    private val QAIRT_VER = Regex("\"(?:qairt|qnn|qnn_sdk|qairt_sdk)(?:_version)?\"\\s*:\\s*\"v?(\\d+)\\.(\\d+)")
+
+    fun dspArch(json: String?): Int? = json?.let { DSP_ARCH.find(it)?.groupValues?.get(1)?.toIntOrNull() }
+
+    /** "2.37" from `"qairt": "2.37.1.250807…"` / `"qnn_sdk_version": "v2.45.0…"`, or null. */
+    fun qairtVersion(json: String?): String? = json?.let { QAIRT_VER.find(it)?.let { m -> m.groupValues[1] + "." + m.groupValues[2] } }
+
+    /** [files]: file name → text for the bundle's htp_backend_ext_config.json, metadata.json, genie_config.json (those present). */
+    fun info(files: Map<String, String>): Info {
+        val order = listOf(HTP_EXT_CONFIG, QairtBundle.GENIE_CONFIG, QairtBundle.METADATA)
+        return Info(
+            dspArch = order.firstNotNullOfOrNull { dspArch(files[it]) },
+            qairt = listOf(QairtBundle.METADATA, QairtBundle.GENIE_CONFIG, HTP_EXT_CONFIG).firstNotNullOfOrNull { qairtVersion(files[it]) },
+        )
+    }
+
+    /** -1 / 0 / 1 comparing "major.minor" versions. */
+    fun compare(a: String, b: String): Int {
+        val x = a.split('.').map { it.toIntOrNull() ?: 0 }
+        val y = b.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(x.size, y.size)) {
+            val c = (x.getOrElse(i) { 0 }).compareTo(y.getOrElse(i) { 0 })
+            if (c != 0) return c
+        }
+        return 0
+    }
+
+    fun chipName(arch: Int): String = when (arch) {
+        73 -> "骁龙 8 Gen 2"
+        75 -> "骁龙 8 Gen 3"
+        79 -> "骁龙 8 Elite"
+        81 -> "骁龙 8 Elite Gen 5"
+        else -> "Hexagon V$arch"
+    }
+
+    /** Why this bundle cannot load on this phone ([deviceArch] null = unknown → no arch verdict), or null. */
+    fun problem(info: Info, deviceArch: Int?, runtimeQairt: String = GenieX.QAIRT_VERSION): String? {
+        val b = info.dspArch
+        if (b != null && deviceArch != null && b != deviceArch) {
+            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_arch, chipName(b), b, chipName(deviceArch), deviceArch)
+        }
+        val q = info.qairt
+        if (q != null && compare(q, runtimeQairt) > 0) {
+            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_qairt, q, runtimeQairt)
+        }
+        return null
+    }
 }
 
 /** Vision projector (mmproj) next to a GGUF file, for GenieX's VLM path. */

@@ -223,8 +223,6 @@ class SpeechSynthesizer(
     /** The selected cloned voice, if it and the ZipVoice model are both present. */
     fun activeClone(): ClonedVoice? = sel().clone.takeIf { it.isNotEmpty() }
         ?.let { clones.get(it) }?.takeIf { store.states.value[VoicePack.CLONE_ZIPVOICE] == PackState.Installed }
-    /** Kokoro has 103 selectable voices; the other packs and cloned voices have one. */
-    val hasSpeakers: Boolean get() = activeClone() == null && activePack()?.singleSpeaker == false
     val sampleRate: Int get() = tts?.sampleRate() ?: 24_000
     /** What is loaded right now: a cloned voice or a fixed-voice pack. */
     val speakingWithClone: Boolean get() = loadedPack == VoicePack.CLONE_ZIPVOICE

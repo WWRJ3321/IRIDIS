@@ -242,7 +242,6 @@ fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
 object MenuGeometry {
     val MARGIN = IrisDimens.space20
     val GAP = IrisDimens.space6
-    val ELEVATION = 14.dp
     val MIN_WIDTH = 168.dp
 
     data class Placement(val x: Int, val y: Int, val originX: Float, val originY: Float, val below: Boolean)

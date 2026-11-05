@@ -136,9 +136,6 @@ object ComposerText {
     // mic again (right of the pills) and 语音对话 is the round button when the input is empty.
     val THINK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_21d68b)
     val THINK_UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e3d835)
-    val VOICE_INPUT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_688ad1)
-    val VOICE_MODE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_51e79d)
-    val HOLD_TO_TALK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b5a354)
     val LISTENING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8bcad)
     val RELEASE_TO_CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1f31c5)
     val TRANSCRIBING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_0e89f9)

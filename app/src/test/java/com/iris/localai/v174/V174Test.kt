@@ -212,6 +212,5 @@ class V174Test {
         val gen = LiveResourcePolicy.note(LiveApply.RELOAD, generating = true)
         assertTrue(idle.contains("空闲时自动重新加载模型生效（约几秒）"))
         assertTrue(gen.contains("本条结束后重新加载生效"))
-        for (n in listOf(idle, gen, LiveResourcePolicy.RELOADING_NOTE)) assertFalse(n.contains("立即生效"))
     }
 }

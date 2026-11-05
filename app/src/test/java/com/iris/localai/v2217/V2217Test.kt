@@ -79,7 +79,7 @@ class V2217Test {
 
     @Test fun bundledAssetFilesExist() {
         val root = listOf(File("app/src/main/assets"), File("src/main/assets")).first { it.isDirectory }
-        ThreeAssets.BUNDLED.forEach { assertTrue(it, File(root, "three/$it").length() > 1000) }
+        (ThreeAssets.BUNDLED - ThreeAssets.GENERATED).forEach { assertTrue(it, File(root, "three/$it").length() > 1000) }
         assertTrue(File(root, "three/build/three.module.js").readText().contains("REVISION=\"170\"") ||
             File(root, "three/build/three.module.js").readText().contains("\"170\""))
         assertTrue(File(root, "licenses/mit-three.js.txt").readText().contains("MIT License"))

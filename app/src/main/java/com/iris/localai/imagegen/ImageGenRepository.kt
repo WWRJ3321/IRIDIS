@@ -29,8 +29,6 @@ object ImageGenFiles {
         return f
     }
 
-    /** Markdown reference to [file] relative to the workspace (`images/IMG_….png`). */
-    fun markdownRef(file: File): String = "![](${IMAGES_SUB}/${file.name})"
 
     fun modelDir(imagegenRoot: File, model: ImageModel): File = File(imagegenRoot, model.id)
 
@@ -143,7 +141,7 @@ class RepositoryImageGenBackend(
 ) : com.iris.localai.agent.ImageGenBackend {
     override fun runnableModels(): List<ImageModel> {
         val dl = runCatching { repo.downloaded() }.getOrDefault(emptySet())
-        return repo.catalog.filter { it.id in dl && !it.needsHexagonRuntime }
+        return repo.catalog.filter { it.id in dl }
     }
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
@@ -176,8 +174,14 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     /** 2.4.0: the stable-diffusion.cpp engine (FLUX.2 Klein / Z-Image), created on first use. */
     fun sdEngine(): SdCppEngine = sd ?: synchronized(this) {
-        sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir).also { sd = it }
+        sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir, availMb = ::availMb).also { sd = it }
     }
+
+    /** 2.4.1: ActivityManager.MemoryInfo.availMem in MB (MAX when unknown). */
+    private fun availMb(): Long = runCatching {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem / (1024L * 1024L)
+    }.getOrDefault(Long.MAX_VALUE)
 
     fun engineFor(model: ImageModel): ImageGenEngine {
         if (model.backend == Backend.SDCPP) {

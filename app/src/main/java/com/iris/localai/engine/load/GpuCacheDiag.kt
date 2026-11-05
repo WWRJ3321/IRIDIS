@@ -24,7 +24,6 @@ object GpuCacheDiag {
     const val CACHE_DIR = "litert-cache"
     const val PROGRAM_SUFFIX = "_mldrift_program_cache.bin"
     const val WEIGHT_SUFFIX = "_mldrift_weight_cache.bin"
-    const val XNNPACK_SUFFIX = ".xnnpack_cache"
 
     /** Leave this much room on top of the model size for the GPU weight cache (≈ model size) + slack. */
     const val SPACE_SLACK_BYTES = 512L * 1024 * 1024

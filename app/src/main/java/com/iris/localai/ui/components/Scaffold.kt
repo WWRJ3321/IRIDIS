@@ -75,8 +75,6 @@ object LargeTitleMath {
     /** Alpha of the small centred bar title: appears only in the last 40 % of the collapse. */
     fun barTitleAlpha(collapse: Float): Float = if (collapse >= 1f) 1f else ((collapse - 0.6f) * 2.5f).coerceIn(0f, 1f)
 
-    /** Alpha of the hairline under the bar once content runs beneath it. */
-    fun hairlineAlpha(collapse: Float): Float = if (collapse >= 1f) 1f else 0f
 }
 
 /** 2.2.4: height of the floating top bar a body scrolls under (status bar included); 0 = padded. */

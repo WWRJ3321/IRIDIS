@@ -21,7 +21,6 @@ enum class IrisPalette(val id: String, val label: String, val light: IrisColors,
     val swatch: Color get() = light.accent
 
     companion object {
-        const val DEFAULT_ID = "default"
         fun of(id: String?): IrisPalette = entries.firstOrNull { it.id == id } ?: DEFAULT
         fun isValid(id: String?): Boolean = entries.any { it.id == id }
     }

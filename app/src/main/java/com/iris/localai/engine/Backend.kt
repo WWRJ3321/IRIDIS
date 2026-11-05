@@ -216,8 +216,6 @@ object BackendCapabilities {
     /** Lower-case file-name fragments of [prefersCpu]. */
     val CPU_FIRST = listOf("qwen3.5", "qwen3_5", "qwen35", "agents-a1", "agents_a1")
 
-    /** History budget of an NPU file of an unknown family without `_ekvNNNN` (Gemma 4: [NpuIds.GEMMA4_NPU_KV]). */
-    const val NPU_DEFAULT_CONTEXT = NpuIds.UNKNOWN_NPU_KV
 }
 
 object BackendPlanner {
@@ -292,7 +290,6 @@ class BackendCrashMemory(context: Context) {
 
     /** 2.2.14: an OpenCL (llama.cpp GPU) load hung on this device; GGUF defaults to CPU until retried. */
     val openClHung: Boolean get() = prefs.getBoolean(KEY_CL_HUNG, false)
-    val openClHangDetail: String? get() = prefs.getString(KEY_CL_HANG_DETAIL, null)
 
     /** Written before the process restarts: remember the hang and which model to reload on CPU. */
     fun markOpenClHung(detail: String, reloadFile: String) {

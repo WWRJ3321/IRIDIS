@@ -138,7 +138,7 @@ class V220GenieXTest {
         assertTrue(libs.any { it.path == "qairt/libgeniex_plugin.so" && it.entry.endsWith("libgeniex_plugin_qairt.so") })
         assertTrue(libs.all { it.entry.startsWith("jni/arm64-v8a/") && it.pin.sha256.length == 64 && it.pin.size > 0 })
         val mb = GenieXLibs.installedBytes(79) / (1 shl 20)
-        assertTrue("installed ${mb} MB", mb in 40..55)
+        assertTrue("installed ${mb} MB", mb in 40..60)
     }
 
     @Test fun olderSnapdragonsGetGgufOnly() {
@@ -150,7 +150,7 @@ class V220GenieXTest {
     }
 
     @Test fun loadOrderPutsEveryDependencyFirst() {
-        // NEEDED entries (llvm-readelf -d on the 0.8.0 AAR), restricted to GenieX's own libraries.
+        // NEEDED entries (llvm-readelf -d on the 0.8.0 AAR; unchanged in 0.10.0), restricted to GenieX's own libraries.
         val needed = mapOf(
             "libggml-cpu.so" to listOf("libggml-base.so"),
             "libggml-opencl.so" to listOf("libggml-base.so"),
@@ -193,10 +193,10 @@ class V220GenieXTest {
 
     @Test fun downloadSourcesArePinned() {
         assertEquals(2, GenieXLibs.AAR_URLS.size)
-        assertTrue(GenieXLibs.AAR_URLS[0].startsWith("https://repo1.maven.org/maven2/com/qualcomm/qti/geniex-android/0.8.0/"))
+        assertTrue(GenieXLibs.AAR_URLS[0].startsWith("https://repo1.maven.org/maven2/com/qualcomm/qti/geniex-android/0.10.0/"))
         assertTrue(GenieXLibs.AAR_URLS[1].startsWith("https://maven.aliyun.com/"))
         assertEquals(64, GenieXLibs.AAR_SHA256.length)
-        assertEquals(82_167_359L, GenieXLibs.AAR_BYTES)
+        assertEquals(89_045_966L, GenieXLibs.AAR_BYTES)
     }
 
     @Test fun adspPathPutsOursFirstWithSemicolons() {
@@ -219,7 +219,7 @@ class V220GenieXTest {
         val rules = file("proguard-rules.pro").readText()
         assertTrue(rules.contains("-keep class com.geniex.sdk.** { *; }"))
         val toml = file("../gradle/libs.versions.toml").readText()
-        assertTrue(toml.contains("geniex = \"0.8.0\""))
+        assertTrue(toml.contains("geniex = \"0.10.0\""))
     }
 
     // ---------------------------------------------------------------- QAIRT bundles

@@ -100,7 +100,6 @@ class V1102Test {
         assertTrue(hold.contains("awaitEachGesture"))
         val start = hold.indexOf("start()"); val wait = hold.indexOf("awaitPointerEvent()"); val end = hold.indexOf("end()", wait)
         assertTrue(start in 1 until wait && wait < end)
-        assertEquals("按住说话", ComposerText.HOLD_TO_TALK)
         assertTrue(ComposerText.LISTENING.contains("松开结束"))
         assertTrue(composerBody.contains("onHoldStart = onHoldToTalkStart"))
         assertTrue(composerBody.contains("onHoldEnd = onHoldToTalkEnd"))

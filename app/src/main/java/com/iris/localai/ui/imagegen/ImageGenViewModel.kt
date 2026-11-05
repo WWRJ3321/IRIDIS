@@ -52,6 +52,12 @@ object ImageGenText {
     val RUN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_4c763b)
     val COPY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab)
     val FIXED_SIZE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_e23c9e)
+    /** 2.4.1: sd.cpp models — which processor the next image uses, and the switches. */
+    val SD_ON_GPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_on_gpu)
+    val SD_ON_CPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_on_cpu)
+    val SD_GPU_CRASHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_gpu_crashed)
+    val RETRY_GPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_retry_gpu)
+    val USE_CPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_use_cpu)
 }
 
 data class ImageGenUi(
@@ -73,13 +79,17 @@ data class ImageGenUi(
     val result: String? = null,
     val history: List<String> = emptyList(),
     val report: String? = null,
+    /** 2.4.1: sd.cpp — the GPU crashed last time (runs on the CPU until 「重试 GPU」). */
+    val sdGpuCrashed: Boolean = false,
+    /** 2.4.1: sd.cpp — the next image runs on the CPU (crash or 「改用 CPU」). */
+    val sdOnCpu: Boolean = false,
     /** Model id -> running / failed download (from [ImageGenDownloader.states]). */
     val downloads: Map<String, ImageDl> = emptyMap(),
 ) {
     val model: ImageModel get() = ImageCatalog.byId(modelId) ?: ImageCatalog.SD15_QNN
     /** Reference image + 重绘强度 work everywhere except the fixed-size QNN context binary (txt2img only). */
     val img2imgSupported: Boolean get() = model.backend != Backend.QNN
-    val canGenerate: Boolean get() = !running && prompt.isNotBlank() && !model.needsHexagonRuntime
+    val canGenerate: Boolean get() = !running && prompt.isNotBlank()
 
     fun request(): ImageRequest = ImageRequest(
         prompt = prompt, negative = negative, width = width, height = height, steps = steps, cfg = cfg,
@@ -116,7 +126,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Starts (or resumes) [m]'s download in the app scope with the 下载源 from 设置. */
     fun download(m: ImageModel) {
-        if (m.needsHexagonRuntime || m.files.isEmpty()) return
+        if (m.files.isEmpty()) return
         // 2.2.16: after a failure the button is 「换源重试」 (the source that failed goes last; .part files resume)
         val failed = downloader.states.value[m.id] is com.iris.localai.imagegen.ImageDl.Failed
         downloader.clearError(m.id)
@@ -144,14 +154,28 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             val (dl, hist) = withContext(Dispatchers.IO) {
                 runCatching { repo.downloaded() }.getOrDefault(emptySet()) to runCatching { repo.history().map { it.path } }.getOrDefault(emptyList())
             }
-            _ui.update { it.copy(downloaded = dl, history = hist) }
+            val sd = engines.sdEngine()
+            _ui.update { it.copy(downloaded = dl, history = hist, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu) }
         }
+    }
+
+    /** 2.4.1 「重试 GPU」: forget the last GPU crash (and a 「改用 CPU」 choice). */
+    fun retryGpu() {
+        engines.sdEngine().clearGpuCrash()
+        _ui.update { it.copy(error = null) }
+        refresh()
+    }
+
+    /** 2.4.1 「改用 CPU」: slower, but needs only the compute buffers (weights stay mmapped). */
+    fun useCpu() {
+        engines.sdEngine().setPreferCpu(true)
+        _ui.update { it.copy(error = null) }
+        refresh()
     }
 
     fun edit(f: (ImageGenUi) -> ImageGenUi) = _ui.update(f)
 
     fun selectModel(m: ImageModel) {
-        if (m.needsHexagonRuntime) return
         _ui.update {
             val old = it.model
             // 2.2.12: a model's suggested prompt / negative fill fields that are empty or still the previous model's default
@@ -195,6 +219,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
             saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }) } }
                 .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName) } }
+            if (model.backend == com.iris.localai.imagegen.Backend.SDCPP) refresh()
         }
     }
 

@@ -178,14 +178,25 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     // 2.2.14: which model this generates with (and on what), always visible.
                     Text(
                         (if (s.running) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b8656e) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_62227c)) + s.model.name + " · " + when (s.model.backend) {
-                            com.iris.localai.imagegen.Backend.QNN, com.iris.localai.imagegen.Backend.HEXAGON -> "NPU"
+                            com.iris.localai.imagegen.Backend.QNN -> "NPU"
                             com.iris.localai.imagegen.Backend.MNN_CPU -> "CPU"
-                            com.iris.localai.imagegen.Backend.SDCPP -> "GPU"
+                            com.iris.localai.imagegen.Backend.SDCPP -> if (s.sdOnCpu) "CPU" else "GPU"
                         } +
                             (if (s.modelId in s.downloaded) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)),
                         style = IrisType.caption, color = Iris.colors.accent,
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
+                    // 2.4.1: sd.cpp models — GPU or CPU for the next image, 「重试 GPU」 after a crash, 「改用 CPU」.
+                    if (s.model.backend == com.iris.localai.imagegen.Backend.SDCPP && !s.running) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = IrisDimens.space6)) {
+                            Text(
+                                if (s.sdGpuCrashed) ImageGenText.SD_GPU_CRASHED else if (s.sdOnCpu) ImageGenText.SD_ON_CPU else ImageGenText.SD_ON_GPU,
+                                style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.weight(1f),
+                            )
+                            if (s.sdOnCpu) IrisButton(ImageGenText.RETRY_GPU, onClick = vm::retryGpu, style = IrisButtonStyle.Text, compact = true)
+                            else IrisButton(ImageGenText.USE_CPU, onClick = vm::useCpu, style = IrisButtonStyle.Text, compact = true)
+                        }
+                    }
                     if (s.running) {
                         IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
                         Spacer(Modifier.height(IrisDimens.space6))
@@ -259,33 +270,29 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
     ) { Text(text, style = IrisType.labelSmall, color = if (selected) c.onAccentContainer else c.textSecondary) }
 }
 
-/** Tier/model chip: name, size, 已下载/未下载 + 下载; Hexagon models disabled with [SelfCheck.HEXAGON_PENDING]. */
+/** Tier/model chip: name, size, 已下载/未下载 + 下载. */
 @Composable
 private fun ModelChip(
     m: ImageModel, selected: Boolean, downloaded: Boolean, dl: ImageDl?,
     onClick: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
 ) {
     val c = Iris.colors
-    val enabled = !m.needsHexagonRuntime
-    val alpha = if (enabled) 1f else 0.45f
     Column(
         Modifier.widthIn(min = 150.dp, max = 190.dp)
             .clip(IrisRadius.largeShape)
             .background(if (selected) c.accentContainer else c.surfaceElevated)
             .border(1.dp, if (selected) c.onAccentContainer.copy(alpha = 0.25f) else c.outline, IrisRadius.largeShape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(IrisDimens.space12),
     ) {
         val fg = if (selected) c.onAccentContainer else c.text
-        Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha))
-        Text(m.name, style = IrisType.labelSmall, color = fg.copy(alpha = alpha), maxLines = 2)
-        if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary.copy(alpha = alpha), maxLines = 2)
+        Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary)
+        Text(m.name, style = IrisType.labelSmall, color = fg, maxLines = 2)
+        if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary, maxLines = 2)
         Spacer(Modifier.height(IrisDimens.space4))
-        Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary.copy(alpha = alpha))
+        Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
         Spacer(Modifier.height(IrisDimens.space4))
-        if (!enabled) {
-            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c6c01f, SelfCheck.HEXAGON_PENDING), style = IrisType.caption, color = c.textTertiary)
-        } else when (dl) {
+        when (dl) {
             is ImageDl.Downloading, is ImageDl.Extracting -> {
                 val frac = if (dl is ImageDl.Downloading) dl.fraction else (dl as ImageDl.Extracting).fraction
                 val label = if (dl is ImageDl.Downloading) "${Format.bytes(dl.done)} / ${Format.bytes(dl.total)}" + (if (dl.source.isNotEmpty()) " · ${dl.source}" else "")

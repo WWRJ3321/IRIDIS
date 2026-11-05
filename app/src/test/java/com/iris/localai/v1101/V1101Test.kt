@@ -125,8 +125,6 @@ class V1101Test {
         assertEquals("思考", ComposerText.THINK)
         assertEquals("对话", ComposerText.CHAT)
         assertTrue(ComposerText.THINK_UNSUPPORTED.contains("不支持思考"))
-        assertEquals("语音输入", ComposerText.VOICE_INPUT)
-        assertEquals("语音对话", ComposerText.VOICE_MODE)
         assertTrue(ComposerText.agentNotice(true).startsWith("已切换到智能体模式"))
         assertTrue(ComposerText.agentNotice(false).startsWith("已切换到对话模式"))
     }

@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 229
-        versionName = "2.4.0"
+        versionCode = 230
+        versionName = "2.4.1"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -123,7 +123,7 @@ android {
         jniLibs {
             // Compressed in the APK (≈55% smaller download); extracted once at install time.
             useLegacyPackaging = true
-            // 2.2.0: GenieX (geniex-android 0.8.0, full flavour) ships 51 native libraries (≈ 82 MB AAR).
+            // 2.2.0: GenieX (geniex-android 0.10.0 since 2.4.1, full flavour) ships 52 native libraries (≈ 89 MB AAR).
             // None go into the APK: the ones this phone needs are downloaded on demand from Maven
             // Central into app storage (GenieXRuntime, 设置 › 模型与后端), like the LiteRT NPU runtime.
             // No name overlaps ours (libiris_llama / libiris_mnn / liblitertlm_jni / sherpa).

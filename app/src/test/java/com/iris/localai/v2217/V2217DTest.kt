@@ -102,11 +102,6 @@ class V2217DTest {
         assertEquals("n49", l[0].text)
     }
 
-    @Test fun recentHintsMeta() {
-        val h = HintLog.Hint("x", HintLog.Source.MODEL, 0, 2)
-        assertEquals("模型加载 · 3 分钟前 · ×2", com.iris.localai.ui.hints.RecentHints.meta(h, 180_000))
-    }
-
     // ---------------------------------------------------------------- 4 引用链接
     private val hits = listOf(
         SearchHit("苹果发布会", "https://www.example.com/a?x=1", "摘要一", source = "Example", date = "2026-11-01"),

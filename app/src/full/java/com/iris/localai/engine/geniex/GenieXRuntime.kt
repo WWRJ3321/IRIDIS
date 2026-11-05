@@ -17,11 +17,11 @@ import java.security.MessageDigest
 import java.util.zip.ZipFile
 
 /**
- * 2.2.0: the GenieX 0.8.0 native runtime, installed on demand (the APK carries only the SDK's
+ * 2.2.0: the GenieX native runtime ([GenieX.VERSION]; 0.10.0 = QAIRT 2.50 since 2.4.1), installed on demand (the APK carries only the SDK's
  * Kotlin classes; every GenieX .so is excluded from packaging in app/build.gradle.kts).
  *
- * Install: Maven Central (aliyun mirror as fallback) `geniex-android-0.8.0.aar` → size + SHA-256 of
- * the archive → only this chip's libraries ([GenieXLibs.forArch], ≈ 50 MB of the 82 MB) → size +
+ * Install: Maven Central (aliyun mirror as fallback) `geniex-android-<VERSION>.aar` → size + SHA-256 of
+ * the archive → only this chip's libraries ([GenieXLibs.forArch], ≈ 55 MB of the 89 MB) → size +
  * SHA-256 of each → marker → the archive is deleted. The plugin libraries go to
  * `<dir>/llama_cpp/libgeniex_plugin.so` and `<dir>/qairt/libgeniex_plugin.so`, the layout GenieX's
  * registry scans at init.
@@ -70,7 +70,9 @@ class GenieXRuntime private constructor(context: Context) : GenieXSupport {
         GenieXLibs.unsupportedReason(manufacturer, soc)?.let { return NpuState.Unsupported(it) }
         return when (val c = check()) {
             GenieXLibs.Check.Ok -> NpuState.Installed
-            GenieXLibs.Check.NotInstalled -> NpuState.NotInstalled
+            // 2.4.1: an older runtime (0.8.0 = QAIRT 2.45) on disk → 「重新下载」 instead of a plain first install.
+            GenieXLibs.Check.NotInstalled -> GenieXLibs.oldRuntime(dir.parentFile?.list().orEmpty().toList(), dir.name)
+                ?.let { NpuState.NeedsRepair(GenieXLibs.oldRuntimeReason(it)) } ?: NpuState.NotInstalled
             is GenieXLibs.Check.Broken -> NpuState.NeedsRepair(c.reason)
         }
     }
@@ -125,6 +127,7 @@ class GenieXRuntime private constructor(context: Context) : GenieXSupport {
     /** Libraries already mapped into this process keep working until it exits (unlinking a mapped file is safe). */
     override fun delete() {
         dir.deleteRecursively()
+        dir.parentFile?.listFiles()?.forEach { if (it.name.startsWith("rt-")) it.deleteRecursively() }
         cache.deleteRecursively()
         _state.value = diskState()
     }

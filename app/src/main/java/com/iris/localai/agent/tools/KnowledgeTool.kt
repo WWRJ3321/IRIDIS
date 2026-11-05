@@ -22,7 +22,8 @@ object KbSearchTool : AgentTool {
         val q = Args.str(args, "query", "q", "text", "keywords")?.trim() ?: throw IllegalArgumentException("缺少参数 query")
         if (q.isEmpty()) throw IllegalArgumentException("query 不能为空")
         val kb = env.knowledge ?: return ToolResult(false, "Error: the knowledge base is empty", "知识库为空")
-        val hits = kb.search(q, KbPrompt.TOOL_SNIPPETS)
+        // 2.4.1: the same coverage gate as 引用知识库 (a query sharing one common word is "no match").
+        val hits = com.iris.localai.knowledge.KbChat.let { g -> g.reach(kb.search(q, KbPrompt.TOOL_SNIPPETS * 2).filter(g::relevant)) }.take(KbPrompt.TOOL_SNIPPETS)
         if (hits.isEmpty()) return ToolResult(true, KbPrompt.toolOutput(q, hits), "无结果")
         return ToolResult(true, capTokens(KbPrompt.toolOutput(q, hits), env.outputTokens), "${hits.size} 段 · " + hits.map { it.file }.distinct().joinToString("、").take(40))
     }

@@ -67,8 +67,6 @@ object IrisMotion {
     val Press = SpringToken(response = 0.18f, damping = 0.75f)
     /** Finger up: the elastic rebound. */
     val Rebound = SpringToken(response = 0.36f, damping = 0.55f)
-    /** Values that follow a finger (slider knobs, drag handles): a touch of lag, no wobble. */
-    val Interactive = SpringToken(response = 0.24f, damping = 0.90f)
     /** Opacity in. Critically damped so alpha never overshoots. */
     val FadeIn = SpringToken(response = 0.30f, damping = 1.0f)
     /** Opacity out / leaving: a little quicker than coming in. */
@@ -86,7 +84,6 @@ object IrisMotion {
     /** Press scale for icon buttons, for wide buttons / chips, for list rows. */
     const val PRESS_SCALE_ICON = 0.86f
     const val PRESS_SCALE_BUTTON = 0.96f
-    const val PRESS_SCALE_ROW = 0.985f
 
     // ---- Repeating indicators (only while something is in progress; see LocalDecorativeMotion) ----
     const val PULSE_PERIOD_MS = 900
@@ -97,8 +94,6 @@ object IrisMotion {
     const val ORB_BREATH_BUSY_MS = 900
     /** 1.14.7: delay between consecutive items of a staggered entrance (welcome screen). */
     const val ENTRANCE_STAGGER_MS = 70L
-    /** Pause of the "copied" check before it turns back into the copy icon. */
-    const val CONFIRM_HOLD_MS = 1500L
     /** Smooth ease for looping indicators (a loop has no "current value" to retarget, so no spring). */
     val LoopEasing: Easing = CubicBezierEasing(0.37f, 0f, 0.63f, 1f)
 
@@ -119,19 +114,6 @@ object IrisMotion {
     const val ARCHIVE_RISE_MS = 480
     /** Diagonal "decrypt" sweep of the file sheet, frosted → clear. */
     const val ARCHIVE_DECRYPT_MS = 640
-    /** 2.1.9 档案: the white intro (title only) before the slab field fades in, first open per session. */
-    const val ARCHIVE_INTRO_MS = 700
-    /** 2.1.9 档案: the slab field fading in / settling after the intro. */
-    const val ARCHIVE_SETTLE_MS = 620
-    /** 2.1.9 档案: the file detail — decrypt line, frosted → clear glass, redaction bars retracting. */
-    const val ARCHIVE_REVEAL_MS = 1150
-    /**
-     * 2.1.9 档案 打开转场: one linear 0 → 1 timeline for the whole open — slab → glass push, diagonal
-     * scan, staggered decrypt of the info rows (each phase eases itself with [ProgressEasing]).
-     */
-    const val ARCHIVE_OPEN_MS = 1300
-    /** 2.1.9 档案: closing the detail — info fades, the glass shrinks back into its slot, the field clears. */
-    const val ARCHIVE_CLOSE_MS = 720
     /** Emphasized ease for one-shot 0 → 1 progress values (a wave or sweep has no value to retarget). */
     val ProgressEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     /** Ease-in for things leaving (the falling cards). */
@@ -151,7 +133,6 @@ object IrisMotion {
     fun <T> enter(): FiniteAnimationSpec<T> = Gentle.spec()
     fun <T> exit(): FiniteAnimationSpec<T> = FadeOut.spec()
     fun <T> standard(): FiniteAnimationSpec<T> = Smooth.spec()
-    fun <T> snappy(): FiniteAnimationSpec<T> = Snappy.spec()
 
     // ---- Enter / exit building blocks -------------------------------------------------------
     fun fadeIn(): EnterTransition = fadeIn(FadeIn.float())

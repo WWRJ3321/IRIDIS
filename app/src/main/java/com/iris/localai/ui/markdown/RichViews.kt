@@ -266,7 +266,7 @@ private fun sandboxWebView(ctx: Context, allowImages: Boolean, onHeight: ((Int) 
             // 2.2.17: bundled Three.js for any CDN `three` URL (any version), with CORS for module scripts.
             ThreeAssets.assetFor(url)?.let { asset ->
                 return runCatching {
-                    WebResourceResponse(ThreeAssets.MIME, "utf-8", 200, "OK", ThreeAssets.HEADERS, view.context.assets.open(asset))
+                    WebResourceResponse(ThreeAssets.MIME, "utf-8", 200, "OK", ThreeAssets.HEADERS, ThreeAssets.open(asset) { view.context.assets.open(it) })
                 }.getOrElse { blocked() }
             }
             val image = HtmlSandbox.looksLikeImage(url, request.requestHeaders["Accept"])

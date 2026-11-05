@@ -19,7 +19,6 @@ class V240Test {
     @Test fun sdModelsHaveTheirFiles() {
         for (m in listOf(ImageCatalog.FLUX2_KLEIN, ImageCatalog.Z_IMAGE_TURBO)) {
             assertEquals(Backend.SDCPP, m.backend)
-            assertFalse(m.needsHexagonRuntime)
             val sd = assertNotNull(m.sdFiles).let { m.sdFiles!! }
             val paths = m.files.map { it.path }.toSet()
             assertTrue(sd.diffusion in paths && sd.llm in paths && sd.vae in paths)

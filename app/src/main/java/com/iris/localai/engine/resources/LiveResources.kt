@@ -170,8 +170,6 @@ object LiveResourcePolicy {
     /** 1.7.8: the full sentence for settings pages. */
     val GPU_SCOPE_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2203f1)
 
-    /** 1.7.4: while the same model reloads to apply a tier. */
-    val RELOADING_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ccf322)
 }
 
 /**

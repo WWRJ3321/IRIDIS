@@ -295,7 +295,6 @@ class MnnHub(private val repo: ModelRepository) {
         LocalModel(main.name, main.absolutePath, files.filterNot { isProjectorFile(it.third) }.sumOf { it.second }, ModelFormat.GGUF)
     }
 
-    val canRetry: Boolean get() = retry != null
 
     /** User 「取消」: stop and clear the card (the .part files stay, a later download of the same model resumes). */
     fun cancel() { pausing = false; job?.cancel(); if (_state.value.paused) { repo.unholdParts(); _state.value = State() } }

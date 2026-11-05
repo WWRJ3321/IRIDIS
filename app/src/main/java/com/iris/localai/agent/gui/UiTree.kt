@@ -41,7 +41,6 @@ data class UiNode(
     val children: List<UiNode> = emptyList(),
 ) {
     val shortClass get() = cls.substringAfterLast('.')
-    val shortId get() = viewId.substringAfter(":id/", viewId)
 }
 
 /** One element the model is shown: its line in the prompt and the node behind it. */

@@ -63,8 +63,6 @@ class V180Test {
         // The small bar title appears only near the end, so both titles are never fully shown.
         assertEquals(0f, LargeTitleMath.barTitleAlpha(0.5f), 0f)
         assertEquals(1f, LargeTitleMath.barTitleAlpha(1f), 0f)
-        assertEquals(0f, LargeTitleMath.hairlineAlpha(0.99f), 0f)
-        assertEquals(1f, LargeTitleMath.hairlineAlpha(1f), 0f)
     }
 
     // ---------------------------------------------------------------- palettes (黑白都要)

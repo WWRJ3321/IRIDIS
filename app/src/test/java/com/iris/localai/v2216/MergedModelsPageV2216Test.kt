@@ -30,7 +30,7 @@ class MergedModelsPageV2216Test {
         assertFalse("ModelBackendPage(" in all)
         assertFalse("Route.MODEL_BACKEND" in all)
         assertTrue("SettingsPage.MODEL_BACKEND -> Route.MODELS" in all)
-        val menu = File(src, "ui/chat/ChatScreen.kt").readText()
+        val menu = listOf("ChatScreen.kt", "ChatTopBar.kt", "ChatBanners.kt", "ChatScreenParts.kt").joinToString("\n") { File(src, "ui/chat/$it").readText() } // 2.4.1: ChatScreen split
         assertEquals(1, Regex("CompactMenuRow\\(ModelMenuText.MODELS_AND_LOADING").findAll(menu).count())
     }
 }

@@ -143,8 +143,10 @@ class PromptBudgetTest {
     }
 
     @Test fun chatViewModelUsesTheStableLayout() {
-        val vm = listOf("src/main/java/com/iris/localai/ui/chat/ChatViewModel.kt", "app/src/main/java/com/iris/localai/ui/chat/ChatViewModel.kt")
-            .map { File(it) }.first { it.exists() }.readText()
+        // 2.4.1: ChatViewModel is split into ChatViewModel*.kt (same package).
+        val vm = listOf("src/main/java/com/iris/localai/ui/chat", "app/src/main/java/com/iris/localai/ui/chat")
+            .map { File(it) }.first { it.isDirectory }.listFiles { f -> f.name.startsWith("ChatViewModel") && f.name.endsWith(".kt") }!!
+            .sortedBy { it.name }.joinToString("\n") { it.readText() }
         assertTrue(vm.contains("KbChat.attachAll(m, kbBlocks)"))
         assertTrue(vm.contains("AgentPrompt.withPlanNote(history, c.agent.plans.get(convId))"))
         assertTrue(vm.contains("lead = com.iris.localai.context.ContextAssembly.lead(compaction, recall = "))

@@ -13,7 +13,8 @@ import kotlinx.serialization.json.jsonObject
  *
  * Assets (paths inside the package):
  *  - build/three.module.js — ES module (r170 three.module.min.js)
- *  - build/three.min.js    — classic script that sets `window.THREE` (generated from the module)
+ *  - build/three.min.js    — classic script that sets `window.THREE`; 2.4.1: not shipped, generated from the
+ *                            module at first use ([classicFromModule], ~690 KB less in the APK)
  *  - examples/jsm/{controls/OrbitControls,loaders/GLTFLoader,utils/BufferGeometryUtils}.js — ES modules (import bare `three`)
  *  - examples/js/… the same three as classic scripts (THREE.OrbitControls, THREE.GLTFLoader, THREE.BufferGeometryUtils)
  *
@@ -97,6 +98,41 @@ object ThreeAssets {
 
     private val MODULE_FILES = setOf("three.module.js", "three.module.min.js", "three.core.js", "three.core.min.js", "three.mjs")
     private val CLASSIC_FILES = setOf("three.js", "three.min.js", "three.cjs")
+
+    /** 2.4.1: bundled paths that are not files in `assets/` but built at runtime ([open]). */
+    val GENERATED: Set<String> = setOf(CLASSIC)
+
+    /**
+     * 2.4.1: the classic build from the ES module: the module body wrapped in an IIFE, its single trailing
+     * `export{a as B,…}` turned into `THREE = Object.assign(THREE || {}, {B:a,…})` on `self`/`globalThis`.
+     * Byte-identical to the three.min.js shipped up to 2.4.0. Null when [module] does not look like the module build.
+     */
+    fun classicFromModule(module: String): String? {
+        val at = module.lastIndexOf("export{")
+        val end = module.lastIndexOf('}')
+        val hdrEnd = module.indexOf("*/")
+        if (at < 0 || end < at || hdrEnd < 0 || hdrEnd > at) return null
+        val header = module.substring(0, minOf(hdrEnd + 3, module.length))
+        val pairs = module.substring(at + "export{".length, end).split(',').filter { it.isNotBlank() }.joinToString(",") { p ->
+            val parts = p.split(" as ")
+            if (parts.size == 2) parts[1].trim() + ":" + parts[0].trim() else p.trim() + ":" + p.trim()
+        }
+        val g = "(typeof self!=='undefined'?self:globalThis)"
+        return header + "(function(){'use strict';\n" + module.substring(0, at) + "\n;" + g + ".THREE=Object.assign(" + g + ".THREE||{},{" + pairs + "});})();\n"
+    }
+
+    @Volatile private var classicCache: java.lang.ref.SoftReference<ByteArray>? = null
+
+    /** Opens the bundled [asset] (`three/…`, from [assetFor]); generated files are built from their source with [readAsset]. */
+    fun open(asset: String, readAsset: (String) -> java.io.InputStream): java.io.InputStream {
+        if (asset.removePrefix("three/") !in GENERATED) return readAsset(asset)
+        val bytes = classicCache?.get() ?: run {
+            val module = readAsset("three/$MODULE").use { it.readBytes().toString(Charsets.UTF_8) }
+            (classicFromModule(module) ?: throw java.io.IOException("three.module.js has no export list")).toByteArray(Charsets.UTF_8)
+                .also { classicCache = java.lang.ref.SoftReference(it) }
+        }
+        return java.io.ByteArrayInputStream(bytes)
+    }
 
     /** The asset file (under `assets/`) to serve for [url], or null when it is not a bundled `three` file. */
     fun assetFor(url: String): String? = threePath(url)?.takeIf { it in BUNDLED }?.let { "three/$it" }

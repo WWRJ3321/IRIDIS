@@ -28,7 +28,6 @@ class ImageGenFilesTest {
         val ws = tmp()
         val f = ImageGenFiles.outputFile(ws, t)
         assertEquals(File(File(ws, "images"), "IMG_20261022_020405.png"), f)
-        assertEquals("![](images/IMG_20261022_020405.png)", ImageGenFiles.markdownRef(f))
         assertEquals("models/imagegen", ImageGenFiles.MODELS_SUB)
     }
 

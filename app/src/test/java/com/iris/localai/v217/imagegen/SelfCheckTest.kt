@@ -15,8 +15,8 @@ class SelfCheckTest {
         val m = v(good)
         assertTrue(m["sd15-qnn"]!!.ok); assertFalse(m["sd15-qnn"]!!.reasonZh.contains("未下载"))
         assertTrue(m["sd15-mnn"]!!.ok); assertTrue(m["sd15-mnn"]!!.reasonZh.contains("未下载"))
-        assertFalse(m["flux2-klein-4b"]!!.ok); assertEquals(SelfCheck.HEXAGON_PENDING, m["flux2-klein-4b"]!!.reasonZh)
-        assertFalse(m["z-image-turbo"]!!.ok)
+        assertTrue(m["flux2-klein-4b"]!!.ok)
+        assertTrue(m["z-image-turbo"]!!.ok)
     }
 
     @Test fun qnnRules() {

@@ -226,7 +226,9 @@ fun AssistantMessage(
                 TranslationBlock(message.id)
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
-                if (message.kbSources.isNotEmpty()) KbSourceChips(message.kbSources)
+                // 2.4.1: only the snippets the reply really cites (file name or [n]); none → no chips.
+                val citedKb = remember(message.content, message.kbSources) { com.iris.localai.knowledge.KbPrompt.cited(message.content, message.kbSources) }
+                if (citedKb.isNotEmpty()) KbSourceChips(citedKb)
                 if (sources.isNotEmpty()) WebSourceChips(sources)
                 val suggestion = message.memorySuggestion
                 if (suggestion != null && onAcceptMemory != null) {
@@ -328,10 +330,10 @@ private fun ActionRow(
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(copied) { if (copied) { delay(1500); copied = false } }
-    val meta = remember(message.outputChars, message.outputMs, message.totalMs, message.interrupted, message.stats, message.edited, message.kbRefs) {
+    val meta = remember(message.outputChars, message.outputMs, message.totalMs, message.interrupted, message.stats, message.edited, message.kbRefs, message.content) {
         buildList {
             if (message.edited) add(VersionText.EDITED)
-            if (message.kbRefs > 0 && message.kbSources.isEmpty()) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
+            if (message.kbRefs > 0 && message.kbSources.isEmpty() && com.iris.localai.knowledge.KbPrompt.citesAny(message.content, message.kbRefs)) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
             if (message.interrupted) add(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778))
             // Measured for this reply on the device: output speed (first char → end) and total time.
             com.iris.localai.util.ReplySpeed.format(message.outputChars, message.outputMs, message.totalMs,

@@ -19,7 +19,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     val apiStatus = ApiService.status
     val engine = c.engine.state
     val performanceCores: Int get() = c.engine.threadPolicy.performanceCores
-    val autoThreads: Int get() = c.engine.threadPolicy.nominal(c.engine.tier).threads
     // ---- 1.7.8: 资源档配置 ----
     val topology: com.iris.localai.engine.CpuTopology get() = c.engine.threadPolicy.topology
     /** Profile set of the backend the loaded model really runs on (CPU when nothing is loaded). */
@@ -77,7 +76,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun cancelGeniex() { geniexJob?.cancel(); geniexJob = null }
     fun deleteGeniex() { cancelGeniex(); geniex?.delete() }
-    fun setGgufEngine(engine: String) = update { it.copy(ggufEngine = engine) }
 
     // ---- speed test ----
     sealed interface Bench {
@@ -350,8 +348,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         if (settings.value.cloneVoiceId == id) update { it.copy(cloneVoiceId = "") }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { c.cloneVoices.delete(id) }
     }
-    fun renameClone(id: String, name: String, text: String) =
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { c.cloneVoices.update(id, name, text); c.synthesizer.release() }
 
     /** Which voice the 试听 button is playing ("" = the selected voice). */
     val previewTarget = kotlinx.coroutines.flow.MutableStateFlow("")

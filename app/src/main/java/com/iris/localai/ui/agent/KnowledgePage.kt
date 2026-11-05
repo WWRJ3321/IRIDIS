@@ -74,9 +74,7 @@ object KnowledgeText {
     val REBUILD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_be0ade)
     val ADD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2a6c4d)
     val DELETE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
-    val PASTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cf3ae4)
     val PASTE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_32c65d)
-    val PASTE_BODY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2d711b)
     const val MAX_TITLE = 40
 
     /** 2.2.17 D: a pasted entry's title — its first non-blank line (markdown #/-/> stripped), short. */

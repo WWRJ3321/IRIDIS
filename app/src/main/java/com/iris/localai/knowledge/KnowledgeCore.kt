@@ -83,8 +83,19 @@ data class KbIndexData(val version: Int = 1, val files: List<KbFileEntry> = empt
 /** A file as seen in the folder (mtime 0 when unknown, e.g. through the SAF grant). */
 data class KbSourceFile(val path: String, val size: Long, val mtime: Long)
 
-/** 2.2.9: [chunkIndex] = position of the chunk in its file (-1 unknown); 「第 chunkIndex+1 段」. */
-data class KbHit(val file: String, val text: String, val score: Double, val chunkIndex: Int = -1, val covers: List<Int> = emptyList()) {
+/**
+ * 2.4.1: how well a hit covers its query. [matched] = distinct query terms found in the chunk (or its file name),
+ * [terms] = query terms that count (no stop words, present in the index, not in most chunks), [share] = idf of the
+ * matched terms / idf of all [terms], [norm] = BM25 score / the query's upper bound Σ idf·(k1+1),
+ * [nameHit] = a query term is in the file name, [longSingle] = the only term has ≥ 3 characters.
+ */
+data class KbCover(val matched: Int, val terms: Int, val share: Double, val norm: Double, val nameHit: Boolean, val longSingle: Boolean)
+
+/** 2.2.9: [chunkIndex] = position of the chunk in its file (-1 unknown); 「第 chunkIndex+1 段」. 2.4.1: [cover] from [KbRanker.search]. */
+data class KbHit(
+    val file: String, val text: String, val score: Double, val chunkIndex: Int = -1, val covers: List<Int> = emptyList(),
+    val cover: KbCover? = null,
+) {
     /** 2.3.2: (file, chunk) pairs this hit's text holds (after [KbMerge.expand]: the merged neighbours too). */
     val keys: Set<Pair<String, Int>> get() = (covers.ifEmpty { listOf(chunkIndex) }).filter { it >= 0 }.map { file to it }.toSet()
 }
@@ -112,6 +123,8 @@ object KbChanges {
 class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val b: Double = 0.75) {
     private val docs = chunks
     private val tf: List<Map<String, Int>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/') + " " + c.text).groupingBy { it }.eachCount() }
+    /** 2.4.1: tokens of each chunk's file name (a term found there makes a one-word query count). */
+    private val nameTokens: List<Set<String>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/').substringBeforeLast('.')).toSet() }
     private val len = tf.map { m -> m.values.sum() }
     private val avg = if (len.isEmpty()) 1.0 else len.average().coerceAtLeast(1.0)
     private val df: Map<String, Int> = HashMap<String, Int>().also { d -> tf.forEach { m -> m.keys.forEach { d[it] = (d[it] ?: 0) + 1 } } }
@@ -125,21 +138,45 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
         return ln(1 + (n - d + 0.5) / (d + 0.5))
     }
 
+    /**
+     * 2.4.1: the query terms that count: no stop words ([KbQuery.STOP]), present in the index, and — with at least
+     * [COMMON_MIN_CHUNKS] chunks — in no more than [COMMON_SHARE] of them (a word in most chunks says nothing),
+     * unless every term is that common (then they still rank; the coverage gate judges them).
+     */
+    fun terms(query: String): List<String> {
+        val n = docs.size
+        val seen = KbQuery.meaningful(query).distinct().filter { it in df }
+        val rare = seen.filter { t -> n < COMMON_MIN_CHUNKS || df.getValue(t) <= n * COMMON_SHARE }
+        return rare.ifEmpty { seen }
+    }
+
     /** 2.2.9: [boostFiles] = files the previous turn hit (a follow-up likely continues there): score ×[BOOST]. */
     fun search(query: String, limit: Int, boostFiles: Collection<String> = emptyList()): List<KbHit> {
-        val q = KbTokenizer.tokens(query).distinct()
+        val q = terms(query)
         if (q.isEmpty() || docs.isEmpty()) return emptyList()
         val n = docs.size.toDouble()
+        val idfs = q.associateWith { t -> ln(1 + (n - df.getValue(t) + 0.5) / (df.getValue(t) + 0.5)) }
+        val idfSum = idfs.values.sum().coerceAtLeast(1e-9)
+        val upper = idfSum * (k1 + 1)
         val scored = ArrayList<KbHit>()
         for (i in docs.indices) {
             var s = 0.0
+            var matched = 0
+            var matchedIdf = 0.0
             val m = tf[i]
             for (t in q) {
                 val f = m[t] ?: continue
-                val idf = ln(1 + (n - df.getValue(t) + 0.5) / (df.getValue(t) + 0.5))
+                val idf = idfs.getValue(t)
                 s += idf * f * (k1 + 1) / (f + k1 * (1 - b + b * len[i] / avg))
+                matched++; matchedIdf += idf
             }
-            if (s > 0) scored += KbHit(docs[i].file, docs[i].text, if (docs[i].file in boostFiles) s * BOOST else s, docs[i].index)
+            if (s > 0) {
+                val cover = KbCover(
+                    matched = matched, terms = q.size, share = matchedIdf / idfSum, norm = s / upper,
+                    nameHit = q.any { it in nameTokens[i] }, longSingle = q.size == 1 && q[0].length >= 3,
+                )
+                scored += KbHit(docs[i].file, docs[i].text, if (docs[i].file in boostFiles) s * BOOST else s, docs[i].index, cover = cover)
+            }
         }
         // One file may fill the list only when nothing else matches.
         val sorted = scored.sortedByDescending { it.score }
@@ -157,14 +194,24 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
 
 /** 2.2.9: score factor for files the previous turn cited. */
 const val BOOST = 1.3
+/** 2.4.1: with this many chunks or more, a term found in more than [COMMON_SHARE] of them is not counted. */
+const val COMMON_MIN_CHUNKS = 4
+const val COMMON_SHARE = 0.5
 
 /** 2.2.9 D2: follow-up questions borrow the previous user question's keywords. Pure. */
 object KbQuery {
     private val LEAD = Regex("^(?:那|这|它|第[0-9一二三四五六七八九十百]+|上面|刚才|还有)")
     private val TAIL = Regex("(?:呢|那个|这个)[？?。！!\\s]*$")
     /** Bigrams too common to say what a question is about. */
-    val STOP = setOf("什么", "怎么", "么时", "时候", "一下", "是不", "不是", "可以", "这个", "那个", "我们", "你们", "一个", "有没", "没有",
-        "我的", "你的", "的是", "是什", "怎样", "如何", "多少", "哪里", "请问", "还有", "上面", "刚才", "the", "a", "is", "of", "to", "and", "what")
+    val STOP: Set<String> = setOf("什么", "怎么", "么时", "时候", "一下", "是不", "不是", "可以", "这个", "那个", "我们", "你们", "一个", "有没", "没有",
+        "我的", "你的", "的是", "是什", "怎样", "如何", "多少", "哪里", "请问", "还有", "上面", "刚才", "the", "a", "is", "of", "to", "and", "what") +
+        // 2.4.1: everyday chat words (as the tokenizer's bigrams), so 你好 / 今天心情不错 retrieve nothing.
+        listOf("你好", "您好", "今天", "明天", "昨天", "现在", "觉得", "感觉", "知道", "这样", "那样", "这么", "那么", "我想", "想要", "帮我",
+            "帮忙", "怎么样", "聊聊", "聊天", "谢谢", "不错", "哈哈", "嘿嘿", "真的", "有点", "非常", "特别", "一些", "一点", "可能", "应该",
+            "需要", "因为", "所以", "但是", "然后", "如果", "就是", "还是", "或者", "已经", "自己", "大家", "东西", "事情", "为什么", "是吗",
+            "好吗", "行吗", "对吧", "给我", "告诉", "一起", "我是", "你是", "他是", "她是").flatMap { KbTokenizer.tokens(it) } +
+        listOf("i", "me", "my", "you", "your", "it", "this", "that", "in", "on", "for", "with", "be", "are", "was", "can", "how", "do",
+            "does", "hi", "hello", "hey", "please", "thanks", "tell", "about", "an", "we", "some")
     const val TOP_K = 4
     /**
      * 2.3.4: whole-message acknowledgements. Retrieval is skipped only when the ENTIRE trimmed message
@@ -277,7 +324,7 @@ object KbPrompt {
         if (hits.isEmpty()) return ""
         val per = maxChars / hits.size
         return buildString {
-            append("<knowledge>\n参考资料（来自用户的知识库，相关时引用并注明文件名，无关就忽略）：\n")
+            append("<knowledge>\n参考资料（来自用户的知识库）。仅当资料直接回答用户的问题时才引用，并注明文件名或编号 [n]；与问题无关时不要提及这些资料，正常回答即可：\n")
             hits.forEachIndexed { i, h -> append("[${i + 1}] ").append(h.file).append(": ").append(clip(h.text, per)).append('\n') }
             append("</knowledge>")
         }
@@ -287,8 +334,26 @@ object KbPrompt {
         if (hits.isEmpty()) "No knowledge snippets match \"$query\"."
         else hits.mapIndexed { i, h -> "${i + 1}. [${h.file}] ${clip(h.text, perChars)}" }.joinToString("\n")
 
-    /** Label under a reply that was given knowledge snippets. */
+    /** Label under a reply that was given knowledge snippets (2.4.1: only shown when the reply cites them, [cited]). */
     fun chip(n: Int): String = "引用 $n 段知识库"
+
+    /**
+     * 2.4.1: the [sources] labels (「租房合同.md · 第 3 段」, in injection order) that [reply] actually cites: by
+     * its number `[n]` / `【n】`, its file name, or the file name without extension (≥ 2 characters). Pure.
+     */
+    fun cited(reply: String, sources: List<String>): List<String> {
+        if (reply.isBlank() || sources.isEmpty()) return emptyList()
+        return sources.filterIndexed { i, label ->
+            val n = i + 1
+            val path = KbSource.parse(label).first
+            val name = path.substringAfterLast('/')
+            val base = name.substringBeforeLast('.')
+            "[$n]" in reply || "【$n】" in reply || "［$n］" in reply || name in reply || (base.length >= 2 && base in reply)
+        }
+    }
+
+    /** 2.4.1: a legacy reply (count only, no labels) cites its snippets when it has a `[n]` marker. */
+    fun citesAny(reply: String, n: Int): Boolean = (1..n.coerceAtMost(9)).any { "[$it]" in reply || "【$it】" in reply }
 
     fun clip(s: String, n: Int): String {
         val t = s.replace(Regex("\\s+"), " ").trim()
@@ -328,7 +393,7 @@ object KbChat {
         val pool = KbPrompt.INJECT_SNIPPETS + exclude.size.coerceAtMost(6)
         var found = keep(kb.search(q, pool, boostFiles))
         if (q != current) {
-            val direct = keep(kb.search(current, pool * 3)).flatMap { it.keys }.toSet()
+            val direct = reach(kb.search(current, pool * 3)).flatMap { it.keys }.toSet()
             found = gateCarried(found, direct)
         }
         found = dedupe(found, exclude).take(KbPrompt.INJECT_SNIPPETS)
@@ -346,15 +411,39 @@ object KbChat {
     /** 2.3.2: carried-over keywords alone must score at least this. */
     const val CARRIED_MIN_SCORE = 1.5
 
-    /** Below this BM25 score a snippet shares only a common word or two with the question. */
+    /**
+     * Below this BM25 score a snippet shares only a common word or two with the question. 2.4.1: only for hits
+     * without a [KbCover] (fakes / old callers); ranked hits use [relevant] + [MIN_NORM] instead.
+     */
     const val MIN_SCORE = 0.6
     /** 2.2.9 D5: a hit is kept when it scores at least this share of the best one. */
     const val REL_SCORE = 0.35
+    /** 2.4.1: at least this share of the query's idf must be matched (≥ 2 distinct terms). */
+    const val MIN_SHARE = 0.35
+    /** 2.4.1: score / the query's BM25 upper bound must reach this. */
+    const val MIN_NORM = 0.15
 
-    fun threshold(hits: List<KbHit>): Double = maxOf(MIN_SCORE, (hits.maxOfOrNull { it.score } ?: 0.0) * REL_SCORE)
+    /**
+     * 2.4.1 覆盖度门槛: ≥ 2 distinct terms matched covering ≥ [MIN_SHARE] of the query's idf — or, for a one-term
+     * query, a term of ≥ 3 characters or one found in the file name — and a normalised score ≥ [MIN_NORM].
+     * Hits without a [KbCover] pass (nothing to judge). Pure.
+     */
+    fun relevant(h: KbHit): Boolean {
+        val c = h.cover ?: return true
+        val covered = if (c.terms <= 1) c.matched >= 1 && (c.longSingle || c.nameHit) else c.matched >= 2 && c.share >= MIN_SHARE
+        return covered && c.norm >= MIN_NORM
+    }
 
-    /** 2.2.9 D5: adaptive cut: max(0.6, top1 × 0.35). Pure. */
-    fun keep(hits: List<KbHit>): List<KbHit> { val t = threshold(hits); return hits.filter { it.score >= t } }
+    fun threshold(hits: List<KbHit>): Double {
+        val top = hits.maxOfOrNull { it.score } ?: 0.0
+        return if (hits.any { it.cover != null }) top * REL_SCORE else maxOf(MIN_SCORE, top * REL_SCORE)
+    }
+
+    /** 2.2.9 D5: adaptive cut, top1 × 0.35 (2.4.1: after [relevant]; max(0.6, …) only for hits without a cover). Pure. */
+    fun keep(hits: List<KbHit>): List<KbHit> { val r = hits.filter(::relevant); val t = threshold(r); return r.filter { it.score >= t } }
+
+    /** 2.4.1: the relative cut alone — used to see which chunks the current words reach for [gateCarried]. Pure. */
+    fun reach(hits: List<KbHit>): List<KbHit> { val t = (hits.maxOfOrNull { it.score } ?: 0.0) * REL_SCORE; return hits.filter { it.score >= t } }
 
     /** Puts [block] in front of the message [id]'s text (prompt only; the stored message is untouched). Pure. */
     fun attach(msgs: List<com.iris.localai.util.CtxMessage>, id: String, block: String): List<com.iris.localai.util.CtxMessage> =
@@ -467,6 +556,4 @@ object KbPaths {
     /** Direct sub-folders of [folder] among [all] folder paths. */
     fun subfolders(all: List<String>, folder: String): List<String> = all.filter { parent(it) == folder && it != folder }
 
-    /** Files directly in [folder]. */
-    fun filesIn(paths: List<String>, folder: String): List<String> = paths.filter { parent(it) == folder }
 }

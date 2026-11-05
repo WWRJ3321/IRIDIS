@@ -34,7 +34,6 @@ class SpringValue(initial: Float, private val scope: CoroutineScope) {
     private var raw: Float = initial
     private var job: Job? = null
 
-    val isAnimating: Boolean get() = job?.isActive == true
 
     fun snapTo(v: Float) {
         job?.cancel()

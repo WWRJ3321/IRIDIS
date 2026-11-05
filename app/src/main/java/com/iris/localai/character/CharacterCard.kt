@@ -140,5 +140,4 @@ object CardSpec {
         return normalize(el as? JsonObject ?: throw IllegalArgumentException("not a character card"))
     }
 
-    internal fun specOf(o: JsonObject) = o["spec"]?.jsonPrimitive?.contentOrNull
 }

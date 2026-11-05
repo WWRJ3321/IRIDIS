@@ -17,12 +17,11 @@ class ImageCatalogTest {
 
     @Test fun invariants() {
         for (m in ImageCatalog.all) {
-            assertEquals(m.backend == Backend.HEXAGON, m.needsHexagonRuntime)
             assertTrue(m.defaultSteps in 1..50)
             assertTrue(m.defaultCfg in 1f..20f)
             m.fixedSize?.let { assertEquals(0, it % 16) }
             for (f in m.files) { assertTrue(f.url.startsWith("https://")); assertTrue(f.size > 0); assertTrue(f.path.isNotBlank()) }
-            if (m.backend != Backend.HEXAGON) assertTrue(m.files.isNotEmpty() || m.hfRepo != null)
+            assertTrue(m.files.isNotEmpty() || m.hfRepo != null)
         }
     }
 

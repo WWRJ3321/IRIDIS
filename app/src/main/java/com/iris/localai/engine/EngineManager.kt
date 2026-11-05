@@ -227,8 +227,6 @@ class EngineManager(
      */
     private val gate = ReloadGate()
 
-    /** 1.7.7: requests waiting for a tier reload to finish (UI: 「正在重载模型…」). */
-    val waitingForReload: StateFlow<Int> = gate.waiting
 
     /** 1.7.7: a model a failed tier reload left unloaded; the next request loads it again. */
     @Volatile private var lostByReload: LocalModel? = null
@@ -256,8 +254,6 @@ class EngineManager(
         log = { Log.i(RES_TAG, it) },
     )
 
-    /** True while a tier reload waits for the running reply to end. */
-    val tierReloadPending: Boolean get() = tierReload.pending
 
     /** 1.7.5: what the last tier change really did (null = none since launch). Drives the card status. */
     private val _tierApply = MutableStateFlow<TierApplyResult?>(null)
@@ -302,8 +298,6 @@ class EngineManager(
     /** 2.1.7: the load running / queued now; a message sent meanwhile waits for it ([ensureLoaded]). */
     private val inFlight = InFlightLoad()
 
-    /** 2.1.7: the model of the load in flight (null = none). */
-    val loadingModelPath: String? get() = inFlight.current()?.key
 
     suspend fun load(model: LocalModel, reason: String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373)): Boolean = inFlight.run(model.path) {
         lifecycle.withLock {

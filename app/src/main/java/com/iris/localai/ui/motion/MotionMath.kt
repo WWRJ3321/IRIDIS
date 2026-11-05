@@ -107,11 +107,5 @@ object MotionMath {
     fun progress(value: Float, from: Float, to: Float): Float =
         if (from == to) 1f else ((value - from) / (to - from)).coerceIn(0f, 1f)
 
-    /** Velocity in px/s that a spring needs to start with so it continues a gesture smoothly, normalised to travel. */
-    fun normalisedVelocity(velocityPx: Float, travelPx: Float): Float =
-        if (abs(travelPx) < 1e-3f) 0f else velocityPx / travelPx
 
-    /** Time constant (s) of an exponential glide that keeps [fractionPerFrame] each frame at [fps]. */
-    fun glideTimeConstant(fractionPerFrame: Float, fps: Float): Float =
-        (-1f / (fps * ln(1f - fractionPerFrame)))
 }

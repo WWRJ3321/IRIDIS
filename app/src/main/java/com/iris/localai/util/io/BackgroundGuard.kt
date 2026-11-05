@@ -21,7 +21,6 @@ object BackgroundGuard {
     fun isExempt(context: Context): Boolean =
         runCatching { context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName) }.getOrDefault(true)
 
-    fun isXiaomi(): Boolean = android.os.Build.MANUFACTURER.lowercase().let { it.contains("xiaomi") || it.contains("redmi") || it.contains("poco") }
 
     /** The system dialog「允许 IRIS 始终在后台运行？」. */
     fun requestIntent(context: Context): Intent =

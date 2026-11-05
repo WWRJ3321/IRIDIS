@@ -47,7 +47,6 @@ object SdNative {
     @Keep
     fun interface Progress { fun onStep(step: Int, steps: Int) }
 
-    @JvmStatic external fun nativeSystemInfo(): String
     @JvmStatic external fun nativeLastError(): String
     @JvmStatic external fun nativeLoad(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long
     @JvmStatic external fun nativeFree(handle: Long)

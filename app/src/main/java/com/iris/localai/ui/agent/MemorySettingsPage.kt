@@ -60,8 +60,6 @@ object MemoryText {
     val SUGGEST_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f7329b)
     fun listSubtitle(n: Int, pending: Int): String =
         (if (n == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c13df5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_15ec09, n)) + if (pending > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_11e7a2, pending) else ""
-    val COMPACT_AGENT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e2d210)
-    val COMPACT_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7114d8)
     /** 2.2.9 E: the merged switch, as seen in 开发者选项. */
     val COMPACT_ONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23641b)
     fun injectBudget(contextTokens: Int): String =

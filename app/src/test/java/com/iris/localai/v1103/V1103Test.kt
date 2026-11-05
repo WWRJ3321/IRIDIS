@@ -119,7 +119,7 @@ class V1103Test {
         val m = GpuCacheDiag.loadingMarker(model, Backend.GPU)
         assertEquals(".loading-GPU-$model", m)
         // LiteRT-LM DeleteStaleCaches removes names that start with "<model><suffix>" or start with the model name and end with the suffix
-        for (suffix in listOf(GpuCacheDiag.PROGRAM_SUFFIX, GpuCacheDiag.WEIGHT_SUFFIX, GpuCacheDiag.XNNPACK_SUFFIX)) {
+        for (suffix in listOf(GpuCacheDiag.PROGRAM_SUFFIX, GpuCacheDiag.WEIGHT_SUFFIX)) {
             assertFalse(m.startsWith(model + suffix) || (m.startsWith(model) && m.endsWith(suffix)))
         }
         val snap = LiteRtCacheFiles.snapshot(listOf(m to 13L), model, mtime, size, Backend.GPU)

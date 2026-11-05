@@ -69,7 +69,6 @@ import com.iris.localai.ui.theme.SmoothRoundedShape
 /** Visible copy of the 「文件」 page. */
 internal object FilesText {
     val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47)
-    val ARCHIVE_MODE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_331dd7)
     val VIEW_STYLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_096449)
     val SYSTEM_BADGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_8a8b89)
     val NEW_FOLDER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485)

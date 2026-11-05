@@ -85,6 +85,12 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 val dir = File(model.path)
                 val names = dir.list().orEmpty().toSet()
                 QairtBundle.missing(names)?.let { throw EngineException("QAIRT 模型文件夹不完整：$it（请完整解压 AI Hub 下载的 Genie 包）") }
+                // 2.4.1: a bundle built for another Hexagon generation or a newer QAIRT fails with a bare
+                // "Model loading failed"; say why before trying.
+                val meta = listOf(QairtCompat.HTP_EXT_CONFIG, QairtBundle.METADATA, QairtBundle.GENIE_CONFIG)
+                    .filter { it in names }
+                    .associateWith { n -> runCatching { File(dir, n).takeIf { it.length() < 4L shl 20 }?.readText() }.getOrNull().orEmpty() }
+                QairtCompat.problem(QairtCompat.info(meta), runtime.arch)?.let { throw EngineException(it) }
                 try {
                     runtime.ensureQnnLoaded()
                 } catch (e: IllegalStateException) {
@@ -164,7 +170,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
         }
 
     private fun createError(t: Throwable?, backend: Backend): EngineException {
-        val hint = GenieX.codeHint(t?.message)
+        val hint = GenieX.codeHint(t?.message, qairt)
         val where = if (qairt) "QAIRT" else "${backend.label}（llama.cpp）"
         val msg = GenieX.error("GenieX 在 $where 上加载失败" + (hint?.let { "：$it" } ?: ""), t ?: IllegalStateException("native create returned no handle"))
         return EngineException(msg, t)
@@ -232,7 +238,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 var attempt = 0
                 while (true) {
                 done = null
-                val flow = v?.generateStreamFlow(prompt, gen) ?: l!!.generateStreamFlow(prompt, gen)
+                val flow = v?.generateStreamFlow(prompt, gen) ?: l!!.generateStreamFlow(prompt, config = gen)
                 val channel = com.iris.localai.engine.ChannelThink()
                 flow.onCompletion { channel.push("", final = true).takeIf { it.isNotEmpty() && !cancelled }?.let { send(GenEvent.Piece(it)) } }.collect { r ->
                     when (r) {

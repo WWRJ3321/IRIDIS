@@ -90,5 +90,4 @@ object CpuFeatures {
         else "此设备 CPU 缺少 ${missing.joinToString("、")} 指令集，无法运行 GGUF 引擎（需骁龙 8 Gen 1 及以上）"
     }
 
-    val hasSve: Boolean get() = "sve" in features
 }

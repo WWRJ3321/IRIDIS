@@ -28,7 +28,6 @@ object MnnNative {
 
     @JvmStatic external fun nativeCreate(): Long
     @JvmStatic external fun nativeDestroy(handle: Long)
-    @JvmStatic external fun nativeHasOpenCl(): Boolean
     /** 2.0.4: "" when the OpenCL driver opens, otherwise the dlerror() text of every candidate. */
     @JvmStatic external fun nativeOpenClProbe(): String
     /** 1.8.0: directory for iris_mnn_load.log ("" = off); exported by the settings button. */
@@ -46,8 +45,6 @@ object MnnNative {
     @JvmStatic external fun nativeApplyLive(handle: Long, cpus: IntArray, nice: Int): String
     /** 1.7.5: pool worker tids still alive + the last generating thread. */
     @JvmStatic external fun nativeThreadIds(handle: Long): IntArray
-    /** 1.7.5: MNN threads working in a reply (workers + caller). */
-    @JvmStatic external fun nativePoolThreads(handle: Long): Int
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
     @JvmStatic external fun nativeClearCancel(handle: Long)

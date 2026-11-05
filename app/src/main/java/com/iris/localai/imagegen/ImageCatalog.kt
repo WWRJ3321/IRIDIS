@@ -2,7 +2,7 @@ package com.iris.localai.imagegen
 
 enum class Tier { LOW, MID, HIGH }
 /** 2.4.0: SDCPP = upstream stable-diffusion.cpp on the GPU (ggml Vulkan) with CPU fallback. */
-enum class Backend { QNN, MNN_CPU, HEXAGON, SDCPP }
+enum class Backend { QNN, MNN_CPU, SDCPP }
 
 /** A file inside a downloaded archive, after flattening its top-level folder; [path] is relative to the model folder. */
 data class UnpackedFile(val path: String, val size: Long)
@@ -40,7 +40,6 @@ data class ImageModel(
     val fixedSize: Int?,
     val defaultSteps: Int,
     val defaultCfg: Float,
-    val needsHexagonRuntime: Boolean = false,
     /** HF repo the files come from (informational; when [files] is empty its file list would be resolved at download time). */
     val hfRepo: String? = null,
     /** 2.2.12: prompt / negative put into empty (or still-default) fields when this model is picked. */

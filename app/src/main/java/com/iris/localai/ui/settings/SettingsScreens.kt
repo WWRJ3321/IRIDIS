@@ -104,8 +104,6 @@ object SettingsText {
     val MODEL_BACKEND: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_90aa74)
     val GENERATION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_28a1cc)
     val CONTEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0f3195)
-    /** 2.1.3: one entry for the merged 记忆与上下文 page. */
-    val MEMORY_CONTEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9284b2)
     /** 2.1.3: 关于 IRIDIS › 开发者选项. */
     val DEVELOPER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d6e5b3)
     val PERFORMANCE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3969dc)

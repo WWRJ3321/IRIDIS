@@ -29,7 +29,6 @@ internal object GuiAgentText {
     val RESTRICTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fd59e1)
     /** 2.1.9: 清后台 turns the service off on HyperOS. */
     val KEEP: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76907b)
-    val SELF_ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_13c890)
     val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b1aa64)
 }
 

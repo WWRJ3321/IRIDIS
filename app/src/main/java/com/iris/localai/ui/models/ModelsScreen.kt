@@ -314,10 +314,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     val search = _search.asStateFlow()
     private var searchJob: kotlinx.coroutines.Job? = null
 
-    /** Opens the sheet: the 热门 list unless something is already shown. */
-    fun openBrowse() { if (_search.value.hits.isEmpty() && !_search.value.loading) browse(_search.value.mode, _search.value.query) }
 
-    fun searchModels(q: String) = browse(_search.value.mode.takeIf { it != com.iris.localai.data.GgufSearch.Browse.NEW } ?: com.iris.localai.data.GgufSearch.Browse.HOT, q.trim())
 
     /** First page of [mode] (keyword [q] optional). */
     fun browse(mode: com.iris.localai.data.GgufSearch.Browse, q: String = _search.value.query) {
@@ -389,7 +386,6 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelDownload() = c.mnnHub.cancel()
-    fun clearDownloadError() = c.mnnHub.clearError()
     init { refresh(); refreshImageModels() }
 }
 
@@ -654,13 +650,6 @@ internal fun ModelDeleteDialog(m: LocalModel, onConfirm: () -> Unit, onDismiss: 
     )
 }
 
-/** Picker line with the backend: the real one once loaded, otherwise the one a load would start with. */
-internal fun LocalModel.pickerMeta(loadedBackend: String?, preferredBackend: String, engineTag: String? = null): String = when {
-    loadedBackend != null -> listOfNotNull(loadedBackend, quantization, Format.bytes(sizeBytes)).joinToString(" · ")
-    // 2.2.0: models run by GenieX show 「GenieX · NPU」 instead of the format label + backend.
-    engineTag != null -> listOfNotNull(engineTag, quantization, Format.bytes(sizeBytes)).joinToString(" · ")
-    else -> listOfNotNull(format.label, preferredBackend.ifBlank { null }, quantization, Format.bytes(sizeBytes)).joinToString(" · ")
-}
 
 /** "GGUF · Q4_K_M · 2.3 GB"; 2.2.0: 「GenieX · NPU · Q4_0 · 2.3 GB」 when GenieX runs it ([engineTag]). */
 internal fun LocalModel.metaLine(engineTag: String? = null): String = listOfNotNull(engineTag ?: format.label, quantization, Format.bytes(sizeBytes)).joinToString(" · ")
@@ -721,45 +710,6 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
     }
 }
 
-/** Selectable model row used by the model picker sheet. */
-@Composable
-fun ModelListItem(
-    model: LocalModel, loaded: Boolean, loading: Boolean, enabled: Boolean, onClick: () -> Unit,
-    meta: String = model.metaLine(), onSettings: (() -> Unit)? = null,
-    /** 1.10.2: a second caption line, e.g. 「上次加载 12 秒 · 已用缓存」 (null = none). */
-    extra: String? = null,
-) {
-    val c = Iris.colors
-    val bg by animateColorAsState(if (loaded) c.surfaceVariant else Color.Transparent, IrisMotion.standard(), label = "modelBg")
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space2)
-            .heightIn(min = 60.dp)
-            .clip(IrisRadius.mediumShape)
-            .background(bg)
-            .clickable(enabled = enabled && !loaded && !loading, onClick = onClick)
-            .padding(horizontal = IrisDimens.space12, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
-            Text(model.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (extra != null) Text(extra, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-            when {
-                loaded -> Icon(Icons.Outlined.CheckCircle, com.iris.localai.I18n.s(com.iris.localai.R.string.models_bec33d), tint = c.accent, modifier = Modifier.size(IrisDimens.iconMedium))
-                loading -> Box(Modifier.size(IrisDimens.space8).pulse(min = 0.3f).background(c.accent, androidx.compose.foundation.shape.CircleShape))
-            }
-        }
-        if (onSettings != null) {
-            com.iris.localai.ui.components.PressableIcon(
-                Icons.Outlined.Tune, com.iris.localai.I18n.s(com.iris.localai.R.string.models_fa1b10), iconSize = IrisDimens.iconMedium, tint = c.textSecondary, onClick = onSettings,
-            )
-        }
-    }
-}
 
 /** System 全部文件访问 screen for this app (same flow as 智能体 › 全部文件访问). */
 fun openAllFilesAccess(context: android.content.Context) {
