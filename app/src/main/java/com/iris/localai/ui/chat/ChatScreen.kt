@@ -745,7 +745,7 @@ fun ChatScreen(
                     onPick = { m ->
                         modelMenu = false
                         val locked = ui.isGenerating || backgroundRunId != null
-                        if (!locked && m.path != current) vm.loadModel(m)
+                        if (m.path != current) { if (locked) vm.noteSwitchBlocked() else vm.loadModel(m) }
                     },
                     onManage = { modelMenu = false; onOpenModels() },
                     // 2.2.9: free the model's memory; disabled while a reply / background run is going.

@@ -448,8 +448,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     private var loadJob: Job? = null
     fun loadModel(model: LocalModel): Job = viewModelScope.launch {
         if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7a0481); return@launch }
+        warmJob?.cancel() // 2.4.0: a pending warm-up of the old model never delays the switch
         c.engine.load(model)
     }.also { loadJob = it }
+    /** 2.4.0: a tap on another model while a reply / background run goes used to do nothing at all. */
+    fun noteSwitchBlocked() {
+        notice.value = if (viewing.value != null) "另一个对话正在后台生成，结束或停止后才能切换模型"
+            else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7a0481)
+    }
     fun unloadModel() = viewModelScope.launch {
         if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4a1a73); return@launch }
         c.engine.unload()

@@ -131,6 +131,9 @@ interface InferenceEngine {
      */
     val reusesCommonPrefix: Boolean get() = false
 
+    /** 2.4.0: native work that outlives the generation lock is still running (MNN prefill); unload waits for it. */
+    val busyNative: Boolean get() = false
+
     suspend fun unload()
 }
 

@@ -314,7 +314,22 @@ class EngineManager(
                 return@withLock true
             }
             cancelAll()
-            loadLocked(model, applyingTier = null, reason = reason)
+            // 2.4.0: switching models used to look like nothing happened — the old model kept showing
+            // as loaded while its unload waited for an uninterruptible MNN prefill (warm-up or a just
+            // stopped reply) to end. Show the new model as loading at once, and say why it waits.
+            val prev = state.value
+            val old = engine
+            _state.value = EngineState.Loading(model, 0f)
+            if (generation.isLocked || old?.busyNative == true) {
+                _notices.tryEmit("正在等待上一个任务停下，随后切换到 ${model.displayName}")
+            }
+            try {
+                loadLocked(model, applyingTier = null, reason = reason)
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                // cancelled before the old engine was released: it is still loaded, show it again
+                if (engine != null && engine === old && _state.value is EngineState.Loading) _state.value = prev
+                throw c
+            }
         }
     }
 

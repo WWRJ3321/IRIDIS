@@ -62,6 +62,9 @@ class MnnEngine(private val context: Context) : InferenceEngine {
     @Volatile private var loaded = false
     @Volatile private var visionLoaded = false
     @Volatile private var active: Request? = null
+    /** 2.4.0: a detached native generate (prefill cannot be interrupted) is still running. */
+    @Volatile private var nativeRunning = 0
+    override val busyNative: Boolean get() = nativeRunning > 0
     private var modelId = ""
     private var backendLabel = ""
     @Volatile private var onCpu = false
@@ -241,7 +244,8 @@ class MnnEngine(private val context: Context) : InferenceEngine {
         val call = kotlinx.coroutines.CompletableDeferred<String?>()
         val sink = MnnSink(req, channel)
         nativeScope.launch {
-            val r = runCatching {
+            nativeRunning++
+            val r = try { runCatching {
                 val h = handle
                 if (h == 0L || !loaded) null
                 else {
@@ -252,7 +256,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                         MnnNative.nativeGenerate(h, roles, contents, floats, ints, cpus, sink)
                     }
                 }
-            }
+            } } finally { nativeRunning-- }
             if (active === req) active = null
             r.fold({ call.complete(it) }, { call.completeExceptionally(it) })
         }
