@@ -9,7 +9,7 @@
 - 运行：GPU 走 Vulkan，失败自动改用 CPU；若 GPU 驱动让应用闪退，下次自动只用 CPU。生图前会先卸下对话模型，权重常驻到空闲超时后释放。尺寸 512–1024 可选，大于 512² 时 VAE 分块解码以省内存。
 - 智能体 generate_image：仍优先用较轻的 SD1.5 模型（对话模型此时不卸载）；只装了新模型时才用它们；带参考图时不会选到新模型。
 - 暂不支持：这两个模型的以图生图；骁龙 NPU（Hexagon）加速生图留待后续。CPU 路径与对话引擎一样需要 dotprod/i8mm（骁龙 8 Gen 1、天玑 9000 及以后）。
-- 安装包不变大：生图引擎 libiris_sd.so（约 64 MB）不放进 APK，下载 FLUX.2 / Z-Image 时一并下载（GitHub Release sdcpp-3e92bf9），校验 SHA-256 后才加载。
+- 安装包不变大：生图引擎 libiris_sd.so（约 64 MB）不放进 APK，下载 FLUX.2 / Z-Image 时一并下载（GitHub 标签 sdlib-3e92bf9），校验 SHA-256 后才加载。
 - 尚未真机实测：生图速度、峰值内存（自检的 4.5 GB 可用内存门槛为估计值）。
 - MOSS-Image：上游已支持，但 5B DiT + Qwen3.5-9B 编码器在手机上过重，且社区 Turbo 合并版许可未核实，本版不上架。
 

@@ -168,7 +168,7 @@ object ImageCatalog {
      */
     const val SD_LIB_SHA256 = "1e5b7a0afc68a8c230ff883a78a43223955ab31166526e8a4429256fef221297"
     val SD_LIB = RemoteFile(
-        "https://github.com/WWRJ3321/IRIDIS/releases/download/sdcpp-3e92bf9/libiris_sd-3e92bf9.so",
+        "https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-3e92bf9/prebuilt-native/arm64-v8a/libiris_sd.so",
         63_630_040L, "$SHARED_DIR/libiris_sd-3e92bf9.so",
     )
 

@@ -42,7 +42,7 @@ class V240Test {
 
     @Test fun engineLibIsDownloadedAndPinned() {
         val lib = ImageCatalog.SD_LIB
-        assertTrue(lib.url.startsWith("https://github.com/WWRJ3321/IRIDIS/releases/download/"))
+        assertTrue(lib.url.startsWith("https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-"))
         assertTrue(lib.path.endsWith(".so") && lib.size > 10_000_000L)
         assertTrue(Regex("[0-9a-f]{64}").matches(ImageCatalog.SD_LIB_SHA256))
         val f = File(tmp(), "x").apply { writeText("abc") }
