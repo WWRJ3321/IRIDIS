@@ -57,4 +57,33 @@ class V243Test {
         val sh = java.io.File("scripts/build-sdq-native.sh").readText()
         assertTrue(sh.contains("854c9d1019775a3565c819362ac2dec29675911e") && sh.contains("libirsd-htp"))
     }
+
+    // 2.4.3 生成历史管理: parameters read back from the PNG, only results deletable.
+    @Test fun historyParametersRoundTrip() {
+        val m = ImageCatalog.SD15_QNN
+        val req = com.iris.localai.imagegen.ImageRequest(prompt = "一只猫\n在窗台上", negative = "模糊, 低质量", width = 768, height = 512, steps = 8, cfg = 1.5f, seed = 42)
+        val text = com.iris.localai.imagegen.ImageGenFiles.parametersText(req, m)
+        val p = com.iris.localai.imagegen.ImageGenFiles.parseParameters(text)!!
+        assertEquals("一只猫\n在窗台上", p.prompt)
+        assertEquals("模糊, 低质量", p.negative)
+        assertEquals(8, p.steps); assertEquals(1.5f, p.cfg); assertEquals(42L, p.seed)
+        assertEquals(768, p.width); assertEquals(512, p.height); assertEquals(m.id, p.modelId)
+        assertEquals(null, p.strength)
+        // survives the PNG text chunk (iTXt for Chinese)
+        val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+        val back = com.iris.localai.imagegen.PngParams.read(com.iris.localai.imagegen.PngParams.insert(png, text))
+        assertEquals(p, com.iris.localai.imagegen.ImageGenFiles.parseParameters(back))
+        assertEquals(null, com.iris.localai.imagegen.ImageGenFiles.parseParameters(null))
+        assertEquals("hello", com.iris.localai.imagegen.ImageGenFiles.parseParameters("hello")!!.prompt)
+    }
+
+    @Test fun historyDeletesOnlyResults() {
+        val f = com.iris.localai.imagegen.ImageGenFiles
+        assertTrue(f.isHistoryFile(java.io.File("/x/images/IMG_20261106_101010.png")))
+        assertFalse(f.isHistoryFile(java.io.File("/x/images/photo.png")))
+        assertFalse(f.isHistoryFile(java.io.File("/x/models/IMG_20261106_101010.png")))
+        assertFalse(f.isHistoryFile(java.io.File("/x/images/IMG_20261106_101010.png.part")))
+        val src = java.io.File("app/src/main/java/com/iris/localai/ui/imagegen/ImageHistory.kt").readText()
+        assertTrue("用这组参数" in src && "复制提示词" in src && "全选" in src)
+    }
 }

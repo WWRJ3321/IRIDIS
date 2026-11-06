@@ -65,6 +65,37 @@ object ImageGenFiles {
             .filter { it.isFile && it.name.startsWith(PREFIX) && it.name.endsWith(".png") }
             .sortedByDescending { it.name } // the stamp sorts by time; "IMG_x_2.png" > "IMG_x.png"
 
+    /** 2.4.3: what [parametersText] wrote, read back (null fields when a line is missing or foreign). */
+    data class Params(
+        val prompt: String, val negative: String = "",
+        val steps: Int? = null, val cfg: Float? = null, val seed: Long? = null,
+        val width: Int? = null, val height: Int? = null, val modelId: String? = null, val strength: Float? = null,
+    )
+
+    fun parseParameters(text: String?): Params? {
+        if (text.isNullOrBlank()) return null
+        val lines = text.trimEnd().lines()
+        val metaIdx = lines.indexOfLast { it.startsWith("Steps:") }
+        val body = if (metaIdx >= 0) lines.subList(0, metaIdx) else lines
+        val negIdx = body.indexOfFirst { it.startsWith("Negative prompt:") }
+        val prompt = (if (negIdx >= 0) body.subList(0, negIdx) else body).joinToString("\n").trim()
+        val negative = if (negIdx >= 0) (listOf(body[negIdx].removePrefix("Negative prompt:")) + body.subList(negIdx + 1, body.size)).joinToString("\n").trim() else ""
+        val kv = if (metaIdx < 0) emptyMap() else lines[metaIdx].split(", ").mapNotNull { part ->
+            val i = part.indexOf(':'); if (i <= 0) null else part.substring(0, i).trim() to part.substring(i + 1).trim()
+        }.toMap()
+        val size = kv["Size"]?.split('x')?.mapNotNull { it.trim().toIntOrNull() }?.takeIf { it.size == 2 }
+        return Params(
+            prompt = prompt, negative = negative,
+            steps = kv["Steps"]?.toIntOrNull(), cfg = kv["CFG scale"]?.toFloatOrNull(), seed = kv["Seed"]?.toLongOrNull(),
+            width = size?.get(0), height = size?.get(1), modelId = kv["Model"]?.takeIf { it.isNotEmpty() },
+            strength = kv["Denoising strength"]?.toFloatOrNull(),
+        )
+    }
+
+    /** 2.4.3: only generated results (`images/IMG_*.png`) may be deleted from the history. */
+    fun isHistoryFile(f: File): Boolean =
+        f.name.startsWith(PREFIX) && f.name.endsWith(".png") && f.parentFile?.name == IMAGES_SUB
+
     /** Writes [png] with the parameters chunk into [file] (via `.part`, then rename). */
     fun write(file: File, png: ByteArray, parameters: String): File {
         file.parentFile?.mkdirs()
@@ -129,6 +160,19 @@ class ImageGenRepository(internal val context: Context) {
         return roots.flatMap { ImageGenFiles.history(it) }.distinctBy { it.absolutePath }
             .sortedByDescending { it.name }
     }
+
+    /** 2.4.3: deletes history images (results only; other paths are ignored). Returns the paths actually gone. */
+    fun deleteHistory(paths: Collection<String>): Set<String> {
+        val known = history().map { it.absolutePath }.toSet()
+        return paths.filter { p ->
+            val f = File(p)
+            f.absolutePath in known && ImageGenFiles.isHistoryFile(f) && (f.delete() || !f.exists())
+        }.toSet()
+    }
+
+    /** 2.4.3: the parameters embedded in a result, null for an image without them. */
+    fun params(path: String): ImageGenFiles.Params? =
+        runCatching { ImageGenFiles.parseParameters(PngParams.read(File(path).readBytes())) }.getOrNull()
 }
 
 /**

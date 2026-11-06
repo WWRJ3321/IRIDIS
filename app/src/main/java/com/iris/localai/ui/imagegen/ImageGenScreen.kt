@@ -108,10 +108,47 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             onDismiss = { deleting = null },
         )
     }
+    // 2.4.3: history manager state
+    var viewing by remember { mutableStateOf<Int?>(null) }
+    var selecting by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var confirmDelete by remember { mutableStateOf<List<String>?>(null) }
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // drop selections of images that are gone
+    androidx.compose.runtime.LaunchedEffect(s.history) {
+        selected = selected.filter { it in s.history }.toSet()
+        if (s.history.isEmpty()) { selecting = false; viewing = null }
+    }
+    viewing?.let { idx ->
+        HistoryViewer(
+            paths = s.history, index = idx, vm = vm,
+            onIndex = { viewing = it }, onClose = { viewing = null }, onSendToChat = onSendToChat,
+            onReused = { viewing = null; scope.launch { gridState.animateScrollToItem(0) } },
+            onDelete = { p -> confirmDelete = listOf(p) },
+        )
+    }
+    confirmDelete?.let { list ->
+        ConfirmDialog(
+            title = if (list.size == 1) HistoryText.DELETE_ONE_TITLE else HistoryText.deleteManyTitle(list.size),
+            message = HistoryText.DELETE_ONE_MSG,
+            confirmText = ImageGenText.DELETE,
+            onConfirm = {
+                val v = viewing
+                // the viewer stays open on the neighbour (or closes after the last image)
+                if (v != null && list.size == 1) viewing = if (s.history.size <= 1) null else v.coerceAtMost(s.history.size - 2)
+                vm.deleteHistory(list)
+                selected = selected - list.toSet()
+                if (list.size > 1) selecting = false
+            },
+            onDismiss = { confirmDelete = null },
+        )
+    }
     val pickRef = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::pickReference) }
 
     SubpageScaffold(ImageGenText.TITLE, onBack, scrollUnder = false) {
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Adaptive(104.dp),
             modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
             contentPadding = PaddingValues(bottom = IrisDimens.space32),
@@ -265,10 +302,26 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 }
             }
 
+            // 2.4.3: history manager — viewer with parameters, multi-select delete, 用这组参数.
             if (s.history.isNotEmpty()) {
-                full { SectionTitle(ImageGenText.HISTORY) }
+                full {
+                    HistoryHeader(
+                        count = s.history.size, bytes = s.historyBytes, selecting = selecting, selectedCount = selected.size,
+                        onManage = { selecting = true },
+                        onToggleAll = { selected = if (selected.size == s.history.size) emptySet() else s.history.toSet() },
+                        onDelete = { if (selected.isNotEmpty()) confirmDelete = selected.toList() },
+                        onDone = { selecting = false; selected = emptySet() },
+                    )
+                }
                 items(s.history, key = { it }) { p ->
-                    Thumb(p, Modifier.padding(horizontal = IrisDimens.space2).aspectRatio(1f).clickable { vm.showResult(p) })
+                    HistoryTile(
+                        p, selecting = selecting, selected = p in selected,
+                        onClick = {
+                            if (selecting) selected = if (p in selected) selected - p else selected + p
+                            else viewing = s.history.indexOf(p)
+                        },
+                        onLongClick = { selecting = true; selected = selected + p },
+                    )
                 }
             }
 
@@ -358,12 +411,13 @@ private fun tierLabel(m: ImageModel): String = when (m.tier) {
 
 /** Decoded thumbnail of a local PNG/JPEG (off the main thread). */
 @Composable
-private fun Thumb(path: String, modifier: Modifier, maxSide: Int = 320, fit: Boolean = false) {
+internal fun Thumb(path: String, modifier: Modifier, maxSide: Int = 320, fit: Boolean = false, plain: Boolean = false) {
     val c = Iris.colors
     val bmp by produceState<Bitmap?>(null, path, maxSide) {
         value = withContext(Dispatchers.IO) { runCatching { ChatImageLoader.decode(File(path).readBytes(), maxSide) }.getOrNull() }
     }
-    Box(modifier.clip(IrisRadius.mediumShape).background(c.surfaceVariant), contentAlignment = Alignment.Center) {
+    // plain: the full-screen viewer (no tile background / corners)
+    Box(if (plain) modifier else modifier.clip(IrisRadius.mediumShape).background(c.surfaceVariant), contentAlignment = Alignment.Center) {
         bmp?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = if (fit) ContentScale.Fit else ContentScale.Crop) }
     }
 }

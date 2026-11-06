@@ -81,6 +81,8 @@ data class ImageGenUi(
     val error: String? = null,
     val result: String? = null,
     val history: List<String> = emptyList(),
+    /** 2.4.3: disk used by [history]. */
+    val historyBytes: Long = 0L,
     val report: String? = null,
     /** 2.4.1: sd.cpp — the GPU crashed last time (runs on the CPU until 「重试 GPU」). */
     val sdGpuCrashed: Boolean = false,
@@ -157,10 +159,10 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         viewModelScope.launch {
             val (dl, hist) = withContext(Dispatchers.IO) {
-                runCatching { repo.downloaded() }.getOrDefault(emptySet()) to runCatching { repo.history().map { it.path } }.getOrDefault(emptyList())
+                runCatching { repo.downloaded() }.getOrDefault(emptySet()) to runCatching { repo.history() }.getOrDefault(emptyList())
             }
             val sd = engines.sdEngine()
-            _ui.update { it.copy(downloaded = dl, history = hist, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu, sdHtpCrashed = sd.htpCrashedBefore) }
+            _ui.update { it.copy(downloaded = dl, history = hist.map { f -> f.path }, historyBytes = hist.sumOf { f -> f.length() }, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu, sdHtpCrashed = sd.htpCrashedBefore) }
         }
     }
 
@@ -225,7 +227,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
-            saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }) } }
+            saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
                 .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName) } }
             if (model.backend == com.iris.localai.imagegen.Backend.SDCPP) refresh()
         }
@@ -242,6 +244,44 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun sdLog(): String = withContext(Dispatchers.IO) { com.iris.localai.imagegen.SdLog.recent() }
 
     fun showResult(path: String) = _ui.update { it.copy(result = path) }
+
+    /** 2.4.3: parameters embedded in a history image (prompt, seed, size …), null when it has none. */
+    suspend fun params(path: String): com.iris.localai.imagegen.ImageGenFiles.Params? = withContext(Dispatchers.IO) { repo.params(path) }
+
+    /** 2.4.3 「删除」 in the history (one image or a multi-select), after the page's confirm dialog. */
+    fun deleteHistory(paths: Collection<String>) {
+        if (paths.isEmpty()) return
+        viewModelScope.launch {
+            val gone = withContext(Dispatchers.IO) { repo.deleteHistory(paths) }
+            _ui.update { u ->
+                u.copy(
+                    history = u.history.filter { it !in gone },
+                    result = u.result?.takeIf { it !in gone },
+                    error = if (gone.size < paths.size) "有 ${paths.size - gone.size} 张图片删除失败" else u.error,
+                )
+            }
+            refresh()
+        }
+    }
+
+    /**
+     * 2.4.3 「用这组参数」: fills prompt / negative / steps / CFG / seed / size from a history image.
+     * Switches to its model when that model is still in the catalog; the size is kept for fixed-size models.
+     */
+    fun reuse(p: com.iris.localai.imagegen.ImageGenFiles.Params) {
+        val target = p.modelId?.let { id -> ImageCatalog.byId(id) }?.takeIf { m -> catalog.any { it.id == m.id } }
+        if (target != null && target.id != _ui.value.modelId) selectModel(target)
+        _ui.update { u ->
+            val m = u.model
+            u.copy(
+                prompt = p.prompt, negative = p.negative,
+                steps = p.steps ?: u.steps, cfg = p.cfg ?: u.cfg,
+                seed = p.seed?.toString() ?: u.seed,
+                width = m.fixedSize ?: p.width ?: u.width, height = m.fixedSize ?: p.height ?: u.height,
+                strength = p.strength ?: u.strength, error = null,
+            )
+        }
+    }
 
     /** The 生图 page left the screen: free the NPU graphs (now, or when a running generation ends). */
     fun onLeave() = engines.releaseWhenIdle()
