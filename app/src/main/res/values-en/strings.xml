@@ -1882,11 +1882,13 @@
     <string name="geniex241_oldrt">An older GenieX runtime (%1$s) is installed; this version needs %2$s (QAIRT %3$s). Please download it again</string>
     <string name="geniex241_arch">This QAIRT bundle was built for %1$s (Hexagon V%2$d), this phone is %3$s (Hexagon V%4$d), so the NPU cannot load it. Download the bundle for this chip on AI Hub</string>
     <string name="geniex241_qairt">This QAIRT bundle was built with QAIRT %1$s, newer than the QAIRT %2$s in the GenieX runtime of IRIDIS. Use a bundle built with QAIRT ≤ %2$s</string>
-    <string name="sd241_lowmem_gpu">About %1$s GB of memory is free; %2$d×%3$d on the GPU needs about %4$s GB and may freeze or crash. Use a smaller size (e.g. 768×768) or tap “Use CPU”</string>
+    <string name="sd241_lowmem_gpu">About %1$s GB of memory is free; %2$d×%3$d on the GPU needs about %4$s GB and may freeze or crash. Use a smaller size or tap “Use CPU”</string>
     <string name="sd241_lowmem_cpu">About %1$s GB of memory is free; %2$d×%3$d needs about %4$s GB. Use a smaller size or close other apps first</string>
     <string name="sd241_on_gpu">Runs on the GPU (Vulkan), text encoder on the CPU</string>
     <string name="sd241_on_cpu">Runs on the CPU (slower)</string>
     <string name="sd241_gpu_crashed">The GPU crashed last time; using the CPU</string>
     <string name="sd241_retry_gpu">Retry GPU</string>
     <string name="sd241_use_cpu">Use CPU</string>
+    <string name="sd243_lowmem_npu">About %1$s GB of memory is free; %2$s needs about %3$s GB (the weights alone are %4$s GB, so a smaller size barely helps) and may crash. Close background apps, or tap “Generate anyway”</string>
+    <string name="sd243_force">Generate anyway</string>
 </resources>

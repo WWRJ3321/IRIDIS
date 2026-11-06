@@ -57,6 +57,16 @@ object SdRules {
     fun neededMbHtp(diffusionBytes: Long, teBytes: Long, vaeBytes: Long, teOnDisk: Boolean, width: Int, height: Int): Long =
         neededMb(true, diffusionBytes + (if (teOnDisk) 0L else teBytes.coerceAtLeast(0)), vaeBytes, width, height)
 
+    /** 2.4.3: a generation stopped by the memory check (the page offers 「仍然生成」). */
+    class LowMemory(message: String) : IllegalStateException(message)
+
+    /** 2.4.3: NPU — the weights dominate (FP8 DiT ≈ 4–6 GB), so a smaller size barely helps; say so. */
+    fun memoryProblemHtp(availMb: Long, neededMb: Long, modelName: String, weightsMb: Long): String? {
+        if (availMb >= neededMb) return null
+        fun g(mb: Long) = "%.1f".format(java.util.Locale.ROOT, mb / 1024.0)
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.sd243_lowmem_npu, g(availMb), modelName, g(neededMb), g(weightsMb))
+    }
+
     /** Null when [availMb] covers [neededMb], else what to do (smaller size, or the CPU). */
     fun memoryProblem(availMb: Long, neededMb: Long, gpu: Boolean, width: Int, height: Int): String? {
         if (availMb >= neededMb) return null
@@ -134,6 +144,9 @@ class SdCppEngine(
         if (on) runCatching { stateDir.mkdirs(); f.writeText("1") } else f.delete()
     }
 
+    /** 2.4.3: set by 「仍然生成」 — the next generate() skips the memory check. */
+    @Volatile var forceOnce = false
+
     /** True when the next generation runs on the CPU (crash marker or the user's choice). */
     val usesCpu: Boolean get() = SdRules.backends(gpuCrashedBefore, preferCpu()).first() == SdRules.CPU
 
@@ -153,7 +166,14 @@ class SdCppEngine(
                 File(root, files.vae).length(), first == SdRules.HTP_LOWMEM, req.width, req.height)
             else SdRules.neededMb(gpu, File(root, files.diffusion).length(), File(root, files.vae).length(), req.width, req.height)
             val loadedHere = handle != 0L && loadedKey?.startsWith("$first|") == true
-            if (!loadedHere) SdRules.memoryProblem(availMb(), need, gpu, req.width, req.height)?.let { return Result.failure(IllegalStateException(it)) }
+            // 2.4.3: 「仍然生成」 skips the check once (MemAvailable leaves out apps Android can still kill).
+            val force = forceOnce.also { forceOnce = false }
+            if (!loadedHere && !force) {
+                val problem = if (model.sdq) SdRules.memoryProblemHtp(availMb(), need, model.name,
+                    (File(root, files.diffusion).length() + File(root, files.vae).length()) / (1024L * 1024L))
+                else SdRules.memoryProblem(availMb(), need, gpu, req.width, req.height)
+                problem?.let { return Result.failure(SdRules.LowMemory(it)) }
+            }
         }
         return try {
             synchronized(lock) {

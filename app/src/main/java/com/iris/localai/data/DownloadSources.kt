@@ -68,6 +68,9 @@ object DownloadSources {
         ).forEach { put("taobao-mnn/$it", MsRepo("MNN/$it")) }
         listOf("E2B", "E4B", "12B").forEach { put("litert-community/gemma-4-$it-it-litert-lm", MsRepo("litert-community/gemma-4-$it-it-litert-lm")) }
         listOf("1.7B", "4B").forEach { put("XHToken/Spark-X2.6-$it-GGUF", MsRepo("XHToken/Spark-X2.6-$it-GGUF")) }
+        // 2.4.3: GGUF twins of the MNN entries — same ids on ModelScope, sizes + SHA-256 checked against HF 2026-11-06.
+        (listOf("Qwen3.5-0.8B", "Qwen3.5-2B", "Qwen3.5-4B", "Qwen3.5-9B", "Qwen3-0.6B", "Qwen3-1.7B", "Qwen3-4B", "Qwen3-8B").map { "lmstudio-community/$it-GGUF" } +
+            listOf("0.8B", "2B", "4B").map { "Jackrong/Qwen3.5-$it-Claude-4.6-Opus-Reasoning-Distilled-GGUF" }).forEach { put(it, MsRepo(it)) }
         put("taobao-mnn/stable-diffusion-v1-5-mnn-general", MsRepo("MNN/stable-diffusion-v1-5-mnn", "general/"))
         put("csukuangfj/sherpa-onnx-zipformer-ctc-zh-int8-2025-07-03", MsRepo("csukuangfj/sherpa-onnx-zipformer-ctc-zh-int8-2025-07-03"))
     }

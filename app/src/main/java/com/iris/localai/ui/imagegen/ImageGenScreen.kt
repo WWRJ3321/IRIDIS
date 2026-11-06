@@ -276,7 +276,10 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         Spacer(Modifier.height(IrisDimens.space8))
                         Text(it, style = IrisType.secondary, color = Iris.colors.danger)
                         if (s.model.backend == com.iris.localai.imagegen.Backend.SDCPP && it != ImageGenText.CANCELLED) {
-                            IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (s.lowMem) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.sd243_force), onClick = vm::generateAnyway, style = IrisButtonStyle.Text, compact = true)
+                                IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                            }
                         }
                     }
                 }

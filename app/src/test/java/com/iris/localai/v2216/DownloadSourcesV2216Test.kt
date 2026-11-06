@@ -137,7 +137,7 @@ class DownloadSourcesV2216Test {
 
     @Test fun everyRecommendedChatModelHasModelScope() {
         val chat = com.iris.localai.data.RecommendedCatalog.section(com.iris.localai.data.RecommendedCatalog.Section.CHAT)
-        assertEquals(16, chat.size)
+        assertEquals(27, chat.size)
         chat.forEach { assertTrue(it.id, DownloadSources.MODELSCOPE.containsKey(it.id)) }
         // generic taobao-mnn → official MNN org; others none
         assertEquals("MNN/Foo-MNN", DownloadSources.modelScopeFor("taobao-mnn/Foo-MNN")!!.id)

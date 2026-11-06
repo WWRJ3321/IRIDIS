@@ -1882,11 +1882,13 @@
     <string name="geniex241_oldrt">已安裝的是舊版 GenieX 執行庫（%1$s），新版需要 %2$s（QAIRT %3$s），請重新下載</string>
     <string name="geniex241_arch">這個 QAIRT 包是為 %1$s（Hexagon V%2$d）編譯的，本機是 %3$s（Hexagon V%4$d），NPU 無法載入。請在 AI Hub 選擇本機晶片重新下載</string>
     <string name="geniex241_qairt">這個 QAIRT 包以 QAIRT %1$s 編譯，高於 IRIDIS 內建 GenieX 執行庫的 QAIRT %2$s，無法載入。請改用 QAIRT ≤ %2$s 編譯的包</string>
-    <string name="sd241_lowmem_gpu">可用記憶體約 %1$s GB，%2$d×%3$d 用 GPU 生圖約需 %4$s GB，可能卡死或閃退。請把解析度調小（如 768×768），或點「改用 CPU」</string>
+    <string name="sd241_lowmem_gpu">可用記憶體約 %1$s GB，%2$d×%3$d 用 GPU 生圖約需 %4$s GB，可能卡死或閃退。請把解析度調小，或點「改用 CPU」</string>
     <string name="sd241_lowmem_cpu">可用記憶體約 %1$s GB，%2$d×%3$d 生圖約需 %4$s GB。請把解析度調小，或先關閉其他應用程式</string>
     <string name="sd241_on_gpu">這張圖用 GPU（Vulkan）生成，文字編碼在 CPU</string>
     <string name="sd241_on_cpu">這張圖用 CPU 生成（較慢）</string>
     <string name="sd241_gpu_crashed">上次 GPU 生圖當機，已改用 CPU</string>
     <string name="sd241_retry_gpu">重試 GPU</string>
     <string name="sd241_use_cpu">改用 CPU</string>
+    <string name="sd243_lowmem_npu">可用記憶體約 %1$s GB，%2$s 約需 %3$s GB（模型權重就佔 %4$s GB，調小解析度幫助不大），可能閃退。可先清掉背景應用程式，或點「仍然生成」試試</string>
+    <string name="sd243_force">仍然生成</string>
 </resources>

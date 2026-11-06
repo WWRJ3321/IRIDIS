@@ -264,7 +264,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     fun localFor(item: com.iris.localai.data.RecommendedCatalog.Item, list: List<LocalModel>): LocalModel? {
         val repo = item.repoId ?: return null
         val k = item.kind
-        if (k is com.iris.localai.data.RecommendedCatalog.Kind.Gguf) return list.firstOrNull { it.fileName == com.iris.localai.data.ModelFiles.sanitizeFileName(k.file) }
+        if (k is com.iris.localai.data.RecommendedCatalog.Kind.Gguf) return list.firstOrNull { it.fileName == com.iris.localai.data.ModelFiles.sanitizeFileName(k.localFile) }
         return list.firstOrNull { com.iris.localai.data.RecommendedCatalog.matchesLocal(repo, it.fileName) }
     }
 
@@ -273,9 +273,14 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
             is com.iris.localai.data.RecommendedCatalog.Kind.Hub -> downloadMnn(k.repoId)
             is com.iris.localai.data.RecommendedCatalog.Kind.Gguf -> {
                 val hit = com.iris.localai.data.GgufSearch.RepoHit(k.repoId, com.iris.localai.data.GgufSearch.Site.HF, license = item.licence)
-                val main = com.iris.localai.data.GgufSearch.GgufFile(k.file, k.size)
-                val proj = k.mmproj?.takeIf { withVision }?.let { com.iris.localai.data.GgufSearch.GgufFile(it, k.mmprojSize) }
-                startGguf(hit, com.iris.localai.data.GgufSearch.Choice(listOf(main)), proj)
+                // 2.4.3: saved under k.localFile (a renamed file keeps the repo path for the URL)
+                val mainLocal = com.iris.localai.data.ModelFiles.sanitizeFileName(k.localFile)
+                val files = listOf(Triple(k.file, k.size, mainLocal)) + listOfNotNull(k.mmproj?.takeIf { withVision }?.let {
+                    Triple(it, k.mmprojSize, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it))
+                })
+                c.mnnHub.startGguf(c.scope, hit, files, c.settings.current.downloadSource) { m ->
+                    if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+                }
             }
             is com.iris.localai.data.RecommendedCatalog.Kind.Image -> downloadImageModel(k.modelId)
             is com.iris.localai.data.RecommendedCatalog.Kind.Voice -> com.iris.localai.voice.VoicePack.byId(k.packId)?.let(::downloadVoice)

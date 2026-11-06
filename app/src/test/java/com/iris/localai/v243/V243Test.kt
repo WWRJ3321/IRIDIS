@@ -6,6 +6,8 @@ import com.iris.localai.imagegen.ImageRules
 import com.iris.localai.imagegen.SdRules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import com.iris.localai.data.RecommendedCatalog as R
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -85,5 +87,38 @@ class V243Test {
         assertFalse(f.isHistoryFile(java.io.File("/x/images/IMG_20261106_101010.png.part")))
         val src = java.io.File("app/src/main/java/com/iris/localai/ui/imagegen/ImageHistory.kt").readText()
         assertTrue("用这组参数" in src && "复制提示词" in src && "全选" in src)
+    }
+
+    // 2.4.3: every MNN chat entry has a GGUF twin (Q4_K_M) right after it; neither claims the other's files.
+    @Test fun mnnEntriesHaveGgufTwins() {
+        val chat = R.section(R.Section.CHAT)
+        chat.forEachIndexed { i, it ->
+            if (it.engine == R.Engine.MNN) {
+                val twin = chat[i + 1]
+                assertEquals(it.name, twin.name); assertEquals(R.Engine.GGUF, twin.engine); assertEquals("Q4_K_M", twin.quant)
+                assertTrue(twin.kind is R.Kind.Gguf)
+            }
+        }
+        assertFalse(R.matchesLocal("taobao-mnn/Qwen3.5-4B-MNN", "Qwen3.5-4B-Q4_K_M.gguf"))
+        assertTrue(R.matchesLocal("taobao-mnn/Qwen3.5-4B-MNN", "Qwen3.5-4B-MNN"))
+        val opus = R.byId("Jackrong/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-GGUF")!!.kind as R.Kind.Gguf
+        assertEquals("Qwen3.5-4B.Q4_K_M.gguf", opus.file)
+        assertEquals("Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-Q4_K_M.gguf", opus.localFile)
+        assertEquals(5_627_044_256L, R.byId("lmstudio-community/Qwen3.5-9B-GGUF")!!.sizeBytes)
+    }
+
+    // 2.4.3: NPU memory message names the model and the weights, never a "bigger" size; GPU text has no fixed 768 hint.
+    @Test fun npuLowMemMessage() {
+        assertNull(SdRules.memoryProblemHtp(8000, 7000, "Z-Image Turbo（NPU）", 6000))
+        val m = SdRules.memoryProblemHtp(5734, 7168, "Z-Image Turbo（NPU）", 6025)!!
+        assertTrue(m, m.contains("Z-Image Turbo（NPU）") && m.contains("5.6") && m.contains("7.0") && m.contains("仍然生成") && !m.contains("GPU"))
+        val g = SdRules.memoryProblem(3000, 5000, true, 512, 512)!!
+        assertFalse(g, g.contains("768×768"))
+        assertTrue(SdRules.LowMemory("x") is IllegalStateException)
+    }
+
+    @Test fun bonsai9bIsUpstreamQ2() {
+        val k = R.byId("prism-ml/Ternary-Bonsai-2-9B-gguf")!!.kind as R.Kind.Gguf
+        assertEquals("Ternary-Bonsai-2-9B-Q2_0.gguf", k.file); assertEquals(2_556_640_128L, k.size)
     }
 }

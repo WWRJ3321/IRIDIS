@@ -14,7 +14,10 @@ object RecommendedCatalog {
         /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically). */
         data class Hub(val repoId: String) : Kind
         /** One known GGUF file (+ optional vision projector) through MnnHub.startGguf. */
-        data class Gguf(val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0) : Kind
+        data class Gguf(val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0, val localName: String? = null) : Kind {
+            /** 2.4.3: name on disk ([localName] renames a file like "Qwen3.5-4B.Q4_K_M.gguf" that would read as the base model). */
+            val localFile: String get() = localName ?: file
+        }
         /** A 生图 model (ImageGenDownloader). */
         data class Image(val modelId: String) : Kind
         /** A voice pack (VoiceModelStore); size comes from its bundled manifest. */
@@ -56,6 +59,26 @@ object RecommendedCatalog {
     private fun spark(name: String, repo: String, purpose: String, size: Double, top: Boolean = false) =
         Item("XHToken/$repo", Section.CHAT, name, purpose, gb(size), Engine.GGUF, Kind.Hub("XHToken/$repo"), top, quant = "Q4_K_M")
 
+    /**
+     * 2.4.3: GGUF twin of an MNN entry (llama.cpp: CPU / GPU / Hexagon), one Q4_K_M file + optional vision projector.
+     * Files and sizes from the HF tree API 2026-11-06 (lmstudio-community = Qwen's official weights; Jackrong = author of the Opus distills).
+     */
+    private fun gguf(
+        name: String, repo: String, file: String, size: Long, purpose: String,
+        mmproj: String? = null, mmprojSize: Long = 0, localName: String? = null, licence: String? = APACHE,
+    ) = Item(repo, Section.CHAT, name, purpose, size, Engine.GGUF, Kind.Gguf(repo, file, size, mmproj, mmprojSize, localName), quant = "Q4_K_M", licence = licence)
+    private fun lms35(size: String, bytes: Long, proj: Long, purpose: String) = gguf(
+        "Qwen3.5 $size", "lmstudio-community/Qwen3.5-$size-GGUF", "Qwen3.5-$size-Q4_K_M.gguf", bytes, purpose,
+        "mmproj-Qwen3.5-$size-BF16.gguf", proj,
+    )
+    private fun lms3(size: String, bytes: Long, purpose: String) =
+        gguf("Qwen3 $size", "lmstudio-community/Qwen3-$size-GGUF", "Qwen3-$size-Q4_K_M.gguf", bytes, purpose)
+    private const val OPUS_GGUF = "-Claude-4.6-Opus-Reasoning-Distilled-GGUF"
+    private fun opus(name: String, size: String, bytes: Long, proj: String, projBytes: Long, purpose: String) = gguf(
+        name, "Jackrong/Qwen3.5-$size$OPUS_GGUF", "Qwen3.5-$size.Q4_K_M.gguf", bytes, purpose, proj, projBytes,
+        localName = "Qwen3.5-$size-Claude-4.6-Opus-Reasoning-Distilled-Q4_K_M.gguf",
+    )
+
     const val CODER_REPO = "ccore/Qwen3.5-4B-3D-Coder"
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
         "有柔和灯光和阴影，可以用鼠标或手指拖动旋转视角。直接输出完整代码。"
@@ -64,20 +87,31 @@ object RecommendedCatalog {
         // ---- 对话 (top = the six shown before 展开全部) ----
         litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_73508c), 2.6, top = true),
         mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8), 2.9, top = true),
+        lms35("4B", 2_707_513_696L, 675_568_768L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8)),
         mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6eff8b), "Qwen3.5-4B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2814fe), 2.8, top = true, licence = null),
+        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6eff8b), "4B", 2_707_510_080L, "mmproj-BF16.gguf", 675_568_864L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_2814fe)),
         litert("Gemma 4 E4B", "gemma-4-E4B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_5fd1a5), 3.7, top = true),
         mnn("Qwen3.5 0.8B", "Qwen3.5-0.8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2b93b4), 0.55, top = true),
+        lms35("0.8B", 527_502_816L, 207_345_952L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_2b93b4)),
         spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aca2d5), 3.5, top = true),
         mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b), 1.4),
+        lms35("2B", 1_270_808_032L, 671_372_416L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b)),
         mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f), 7.3),
+        lms35("9B", 5_627_044_256L, 921_704_480L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f)),
         mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "Qwen3.5-2B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f), 1.4, licence = null),
+        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "2B", 1_270_804_416L, "mmproj-BF16.gguf", 671_372_512L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f)),
         mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_45dc04), "Qwen3.5-0.8B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aafdaf), 0.54, licence = null),
+        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_45dc04), "0.8B", 527_499_200L, "Qwen3.5-0.8B.BF16-mmproj.gguf", 207_346_048L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_aafdaf)),
         litert("Gemma 4 12B", "gemma-4-12B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_e0fccf), 6.9),
         spark("Spark X2.6 1.7B", "Spark-X2.6-1.7B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c8f8e), 1.8),
         mnn("Qwen3 0.6B", "Qwen3-0.6B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_eec245), 0.45),
+        lms3("0.6B", 484_219_808L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_eec245)),
         mnn("Qwen3 1.7B", "Qwen3-1.7B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9b89f0), 1.2),
+        lms3("1.7B", 1_282_439_328L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_9b89f0)),
         mnn("Qwen3 4B", "Qwen3-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79), 2.7),
+        lms3("4B", 2_497_280_704L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79)),
         mnn("Qwen3 8B", "Qwen3-8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462), 5.5),
+        lms3("8B", 5_027_783_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462)),
         // ---- 特色模型 ----
         Item(
             CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", com.iris.localai.I18n.s(com.iris.localai.R.string.data_c2d28e),
@@ -95,6 +129,12 @@ object RecommendedCatalog {
         Item(
             "prism-ml/Ternary-Bonsai-2-4B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "4B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
             1_212_103_520L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-4B-gguf", "Ternary-Bonsai-2-4B-Q2_0.gguf", 1_212_103_520L),
+            quant = "Q2_0", licence = APACHE,
+        ),
+        // 2.4.3: 9B, upstream Q2_0 only (2,556,640,128 B, HF tree 2026-11-06); PQ2_0 / PTQ1_0 / MTP / DFlash need PrismML's fork.
+        Item(
+            "prism-ml/Ternary-Bonsai-2-9B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "9B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            2_556_640_128L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-9B-gguf", "Ternary-Bonsai-2-9B-Q2_0.gguf", 2_556_640_128L),
             quant = "Q2_0", licence = APACHE,
         ),
         // ---- 生图 ----
@@ -143,6 +183,8 @@ object RecommendedCatalog {
         if (local == repo) return true
         val stem = repo.removeSuffix("-gguf").removeSuffix("-mnn").removeSuffix("-litert-lm")
         if (local == stem) return true
+        // 2.4.3: an MNN download is a folder named after the repo — never its GGUF twin "Qwen3.5-4B-Q4_K_M.gguf"
+        if (repo.endsWith("-mnn")) return false
         return Regex("^" + Regex.escape(stem) + "[-._](i?q\\d|f16|bf16|f32)").containsMatchIn(local)
     }
 

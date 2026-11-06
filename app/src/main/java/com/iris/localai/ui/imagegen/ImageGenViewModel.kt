@@ -90,6 +90,8 @@ data class ImageGenUi(
     val sdOnCpu: Boolean = false,
     /** 2.4.3: the app died during an NPU (sdq) run. */
     val sdHtpCrashed: Boolean = false,
+    /** 2.4.3: the last error was the memory check (offer 「仍然生成」). */
+    val lowMem: Boolean = false,
     /** Model id -> running / failed download (from [ImageGenDownloader.states]). */
     val downloads: Map<String, ImageDl> = emptyMap(),
 ) {
@@ -216,7 +218,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
         val req = s.request()
         val model = s.model
-        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, seed = req.seed.toString(),
+        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, lowMem = false, seed = req.seed.toString(),
             progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
@@ -228,9 +230,15 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
             saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
-                .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName) } }
+                .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName, lowMem = e is com.iris.localai.imagegen.SdRules.LowMemory) } }
             if (model.backend == com.iris.localai.imagegen.Backend.SDCPP) refresh()
         }
+    }
+
+    /** 2.4.3 「仍然生成」: run once past the memory check. */
+    fun generateAnyway() {
+        engines.sdEngine().forceOnce = true
+        generate()
     }
 
     fun cancel() {

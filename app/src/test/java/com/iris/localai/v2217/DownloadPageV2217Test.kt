@@ -17,7 +17,7 @@ import java.io.File
 class DownloadPageV2217Test {
     @Test fun sectionsAndFeaturedCoder() {
         assertEquals(listOf("对话", "特色模型", "生图", "语音", "翻译"), Section.entries.map { it.title })
-        assertEquals(16, RecommendedCatalog.section(Section.CHAT).size)
+        assertEquals(27, RecommendedCatalog.section(Section.CHAT).size)
         val coder = RecommendedCatalog.section(Section.FEATURED).first()
         assertEquals("ccore/Qwen3.5-4B-3D-Coder", coder.repoId)
         assertEquals("Apache-2.0", coder.licence)
@@ -30,7 +30,7 @@ class DownloadPageV2217Test {
         assertTrue(RecommendedCatalog.section(Section.SPEECH).isNotEmpty())
         // folded: 6 top chat models, expand shows all
         assertEquals(6, RecommendedCatalog.visible(Section.CHAT, false).size)
-        assertEquals(16, RecommendedCatalog.visible(Section.CHAT, true).size)
+        assertEquals(27, RecommendedCatalog.visible(Section.CHAT, true).size)
         assertEquals(1, RecommendedCatalog.visible(Section.FEATURED, false).size)
         // plain purposes, no jargon walls
         RecommendedCatalog.ITEMS.forEach { assertTrue(it.name, it.purpose.isNotBlank() && it.purpose.length <= 40) }
