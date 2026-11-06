@@ -14,6 +14,14 @@
 
 #define TAG "IrisSd"
 
+// 2.4.3: the Qualcomm Hexagon build (IRIS_SDQ, libiris_sdq.so) binds to SdqNative so both libraries can
+// live in one process without JNI symbol clashes.
+#ifdef IRIS_SDQ
+#define JNI_FN(n) Java_com_iris_localai_imagegen_SdqNative_##n
+#else
+#define JNI_FN(n) Java_com_iris_localai_imagegen_SdNative_##n
+#endif
+
 namespace {
 std::mutex g_err_mu;
 std::string g_last_error;
@@ -74,21 +82,21 @@ struct JStr {
 extern "C" {
 
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeSystemInfo(JNIEnv *env, jclass) {
+JNI_FN(nativeSystemInfo)(JNIEnv *env, jclass) {
     init_once();
     const char *s = sd_get_system_info();
     return env->NewStringUTF(s ? s : "");
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeLastError(JNIEnv *env, jclass) {
+JNI_FN(nativeLastError)(JNIEnv *env, jclass) {
     std::lock_guard<std::mutex> lk(g_err_mu);
     return env->NewStringUTF(g_last_error.c_str());
 }
 
 /** Loads diffusion model + LLM text encoder + VAE; returns the context handle or 0 (see nativeLastError). */
 JNIEXPORT jlong JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeLoad(JNIEnv *env, jclass, jstring diffusion, jstring llm, jstring vae,
+JNI_FN(nativeLoad)(JNIEnv *env, jclass, jstring diffusion, jstring llm, jstring vae,
                                                    jstring backend, jint threads, jboolean flash_attn) {
     init_once();
     set_error("");
@@ -103,6 +111,10 @@ Java_com_iris_localai_imagegen_SdNative_nativeLoad(JNIEnv *env, jclass, jstring 
     p.enable_mmap = true;
     p.flash_attn = flash_attn;
     p.diffusion_flash_attn = flash_attn;
+#ifdef IRIS_SDQ
+    // Hexagon path (PR #1970 README): direct-convolution VAE; the HTP kernels expect it.
+    if (p.backend && std::strstr(p.backend, "HTP")) p.vae_conv_direct = true;
+#endif
     sd_ctx_t *ctx = new_sd_ctx(&p);
     if (!ctx) {
         std::lock_guard<std::mutex> lk(g_err_mu);
@@ -112,12 +124,12 @@ Java_com_iris_localai_imagegen_SdNative_nativeLoad(JNIEnv *env, jclass, jstring 
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeFree(JNIEnv *, jclass, jlong h) {
+JNI_FN(nativeFree)(JNIEnv *, jclass, jlong h) {
     if (h) free_sd_ctx((sd_ctx_t *) (intptr_t) h);
 }
 
 JNIEXPORT void JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeCancel(JNIEnv *, jclass, jlong h) {
+JNI_FN(nativeCancel)(JNIEnv *, jclass, jlong h) {
     if (h) sd_cancel_generation((sd_ctx_t *) (intptr_t) h, SD_CANCEL_ALL);
 }
 
@@ -126,7 +138,7 @@ Java_com_iris_localai_imagegen_SdNative_nativeCancel(JNIEnv *, jclass, jlong h) 
  * [listener] gets onStep(step, steps) on this thread.
  */
 JNIEXPORT jbyteArray JNICALL
-Java_com_iris_localai_imagegen_SdNative_nativeGenerate(JNIEnv *env, jclass, jlong h, jstring prompt, jstring negative,
+JNI_FN(nativeGenerate)(JNIEnv *env, jclass, jlong h, jstring prompt, jstring negative,
                                                        jint width, jint height, jint steps, jfloat cfg, jlong seed,
                                                        jobject listener) {
     if (!h) return nullptr;
@@ -160,13 +172,21 @@ Java_com_iris_localai_imagegen_SdNative_nativeGenerate(JNIEnv *env, jclass, jlon
         env->DeleteLocalRef(cls);
         if (env->ExceptionCheck()) { env->ExceptionClear(); t_sink.on_step = nullptr; }
     }
+#ifdef IRIS_SDQ
+    sd_image_t *imgs = nullptr;
+    int n_imgs = 0;
+    bool ok = generate_image(ctx, &g, &imgs, &n_imgs);
+    const sd_image_t *first = (ok && imgs && n_imgs > 0) ? &imgs[0] : nullptr;
+#else
     sd_image_generation_result_t *res = nullptr;
     bool ok = generate_image(ctx, &g, &res);
+    const sd_image_t *first = (ok && res && res->count > 0) ? &res->items[0].image : nullptr;
+#endif
     t_sink = prev;
 
     jbyteArray out = nullptr;
-    if (ok && res && res->count > 0 && res->items[0].image.data) {
-        const sd_image_t &im = res->items[0].image;
+    if (first && first->data) {
+        const sd_image_t &im = *first;
         const size_t px = (size_t) im.width * im.height;
         out = env->NewByteArray((jsize) (px * 3));
         if (out) {
@@ -184,7 +204,11 @@ Java_com_iris_localai_imagegen_SdNative_nativeGenerate(JNIEnv *env, jclass, jlon
         std::lock_guard<std::mutex> lk(g_err_mu);
         if (g_last_error.empty()) g_last_error = "generate_image failed";
     }
+#ifdef IRIS_SDQ
+    if (imgs) free_sd_images(imgs, n_imgs);
+#else
     if (res) free_sd_image_generation_result(res);
+#endif
     return out;
 }
 

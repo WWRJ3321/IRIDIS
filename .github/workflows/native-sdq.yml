@@ -1,0 +1,41 @@
+# 2.4.3: builds the Qualcomm Hexagon image-generation engine (scripts/build-sdq-native.sh) inside the public
+# snapdragon toolchain image (NDK + Hexagon SDK, the same image llama.cpp's CI uses) and force-commits
+# prebuilt-assets/sdq/* to the branch ci/native-sdq-out (binaries only, never merged).
+name: native-sdq
+on:
+  push:
+    branches: ['native-sdq/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sdq:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: 'ghcr.io/snapdragon-toolchain/arm64-android:v0.3'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Tools
+        run: |
+          apt-get update
+          apt-get install -y build-essential git python3 ninja-build cmake
+          git config --global --add safe.directory '*'
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          echo "NDK=$ANDROID_NDK_ROOT"; echo "HEXAGON_SDK_ROOT=$HEXAGON_SDK_ROOT"; echo "HEXAGON_TOOLS_ROOT=${HEXAGON_TOOLS_ROOT:-}"
+          cmake --version
+      - name: libiris_sdq.so + HTP skels
+        run: sh scripts/build-sdq-native.sh
+      - name: Commit binaries
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan native-sdq-out
+          git rm -rq --cached .
+          git add -f prebuilt-assets/sdq
+          git commit -qm "sdq libs for ${GITHUB_SHA::7} (sd.cpp-qc $(cat prebuilt-assets/sdq/VERSION))"
+          git push -f origin "HEAD:refs/heads/ci/native-sdq-out"
