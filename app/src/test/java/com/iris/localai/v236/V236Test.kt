@@ -1,6 +1,5 @@
 package com.iris.localai.v236
 
-import com.iris.localai.chat.QuickTools
 import com.iris.localai.data.ModelFormat
 import com.iris.localai.engine.Backend
 import com.iris.localai.engine.BackendCapabilities
@@ -12,12 +11,6 @@ import org.junit.Test
 import java.io.File
 
 class V236Test {
-    @Test fun quickToolsPrefillOnly() {
-        assertEquals(6, QuickTools.all.size)
-        assertEquals(QuickTools.all.size, QuickTools.all.map { it.id }.toSet().size)
-        assertEquals("翻译：\n\n", QuickTools.draft("翻译：  "))
-    }
-
     @Test fun ggufGpuIsVulkanOffQualcomm() {
         val mali = BackendEnvironment(hasOpenCl = false, npuSoc = null, npuRuntimeInstalled = false, fullFlavor = true, hasVulkan = true)
         assertTrue(mali.ggufGpu)

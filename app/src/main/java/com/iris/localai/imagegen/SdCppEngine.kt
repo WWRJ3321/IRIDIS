@@ -64,7 +64,7 @@ object SdRules {
     fun memoryProblemHtp(availMb: Long, neededMb: Long, modelName: String, weightsMb: Long): String? {
         if (availMb >= neededMb) return null
         fun g(mb: Long) = "%.1f".format(java.util.Locale.ROOT, mb / 1024.0)
-        return com.iris.localai.I18n.s(com.iris.localai.R.string.sd243_lowmem_npu, g(availMb), modelName, g(neededMb), g(weightsMb))
+        return com.iris.localai.I18n.s(com.iris.localai.R.string.sd243_lowmem_npu, g(availMb), g(neededMb))
     }
 
     /** Null when [availMb] covers [neededMb], else what to do (smaller size, or the CPU). */

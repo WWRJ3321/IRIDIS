@@ -52,21 +52,25 @@ import java.io.File
 
 /** 2.4.3: copy of the 生图 history manager. */
 object HistoryText {
-    const val MANAGE = "管理"
-    const val DONE = "完成"
-    const val SELECT_ALL = "全选"
-    const val SELECT_NONE = "全不选"
-    const val REUSE = "用这组参数"
-    const val COPY_PROMPT = "复制提示词"
-    const val REUSED = "已填入参数"
-    const val COPIED = "已复制提示词"
-    const val NO_PARAMS = "这张图没有保存生成参数"
-    const val DELETE_ONE_TITLE = "删除这张图片？"
-    const val DELETE_ONE_MSG = "图片文件会从本机删除，无法恢复。"
-    fun deleteManyTitle(n: Int) = "删除 $n 张图片？"
-    fun header(n: Int, bytes: Long) = "历史 · $n 张 · ${Format.bytes(bytes)}"
-    fun selected(n: Int) = "已选 $n 张"
-    fun deleteN(n: Int) = "删除（$n）"
+    val MANAGE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_manage)
+    val DONE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_done)
+    val SELECT_ALL get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_select_all)
+    val SELECT_NONE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_select_none)
+    val REUSE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_reuse)
+    val COPY_PROMPT get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_copy_prompt)
+    val REUSED get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_reused)
+    val COPIED get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_copied)
+    val NO_PARAMS get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_no_params)
+    val DELETE_ONE_TITLE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_one_title)
+    val DELETE_ONE_MSG get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_one_msg)
+    fun deleteManyTitle(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_many_title, n)
+    fun header(n: Int, bytes: Long) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_header, n, Format.bytes(bytes))
+    fun selected(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_selected, n)
+    fun deleteN(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_delete_n, n)
+    fun negative(t: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_negative, t)
+    fun steps(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_steps, n)
+    fun seed(v: Any) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_seed, v.toString())
+    fun strength(v: Any) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_strength, v.toString())
     fun position(i: Int, n: Int) = "${i + 1} / $n"
 }
 
@@ -152,7 +156,7 @@ internal fun HistoryViewer(
                         Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = Iris.colors.textTertiary)
                     } else {
                         Text(p.prompt, style = IrisType.secondary, color = Iris.colors.text)
-                        if (p.negative.isNotBlank()) Text("反向：" + p.negative, style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4))
+                        if (p.negative.isNotBlank()) Text(HistoryText.negative(p.negative), style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4))
                         Text(metaLine(p, file), style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
                     }
                 }
@@ -183,14 +187,14 @@ internal fun HistoryViewer(
     }
 }
 
-/** "Z-Image Turbo · 512×512 · 8 步 · CFG 1.0 · 种子 123 · 1.2 MB". */
+/** "Z-Image Turbo · 512×512 · 8 steps · CFG 1.0 · seed 123 · 1.2 MB" (localized). */
 private fun metaLine(p: ImageGenFiles.Params, file: File): String = listOfNotNull(
     p.modelId?.let { id -> ImageCatalog.byId(id)?.name ?: id },
     if (p.width != null && p.height != null) "${p.width}×${p.height}" else null,
-    p.steps?.let { "$it 步" },
+    p.steps?.let { HistoryText.steps(it) },
     p.cfg?.let { "CFG $it" },
-    p.seed?.let { "种子 $it" },
-    p.strength?.let { "重绘 $it" },
+    p.seed?.let { HistoryText.seed(it) },
+    p.strength?.let { HistoryText.strength(it) },
     Format.bytes(file.length()),
 ).joinToString(" · ")
 

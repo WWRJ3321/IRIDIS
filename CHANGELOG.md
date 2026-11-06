@@ -4,12 +4,14 @@
 
 ## 2.4.3（2026-11-06）
 
+- 生图内存不足的提示缩短为一句。
+- 生成历史页跟随应用语言（之前固定中文）。
+- Qwen3.5 9B（MNN）显示的大小改按实际文件计算。
 - 新增 NPU 生图（实验，仅骁龙 8 Elite 及以上 / Hexagon HTP v79+）：「Z-Image Turbo（NPU）」与「FLUX.2 Klein 4B（NPU）」。文本编码器、扩散模型、VAE 全部在 NPU 上跑，扩散模型用 FP8（E4M3）权重。引擎来自 stable-diffusion.cpp 的高通分支（leejet/stable-diffusion.cpp PR #1970，happyyzy，MIT，固定在 854c9d1），新原生库 libiris_sdq.so 与 HTP v79/v81 运行库随模型下载（GitHub 标签 sdqlib-854c9d1），逐个校验 SHA-256 后才加载；与对话引擎、GPU 版生图库互不冲突。参考数据（分支 README，骁龙 8 Elite，端到端）：Z-Image 1024² 8 步 82.53 秒，FLUX.2 Klein 1024² 4 步 37.38 秒；README 未注明内存。Z-Image 文本编码器换成 unsloth Qwen3-4B Q4_0（README 用另一份），未验证。本版尚未在真机上验证。
 - 内存低于 15 GB 的手机，文本编码器算完提示词后即释放（te=disk），避免 6 GB 扩散模型和 2.4 GB 编码器同时常驻；16 GB 以下内存原作者未验证。
 - NPU 生图过程中应用若被系统杀掉，下次会先提示，可点「重试 NPU」或改用 GPU 版模型。
 - 非 8 Elite 的手机看不到这两个模型，原有 GPU/CPU 版不变。
 - 生成历史管理：标题显示张数与占用空间；点开大图可左右翻、查看提示词/尺寸/步数/种子等参数，可「用这组参数」一键填回、复制提示词、保存、分享、发到对话、删除；长按或点「管理」多选，全选、批量删除（删除前确认，只删生成结果）。
-- 修复：NPU 生图内存不足时误报为 GPU，并建议把 512 「调小」到 768。现在 NPU 有专用提示（权重占多少、调分辨率帮助不大），内存预检拦下时可点「仍然生成」跳过一次；GPU 提示去掉固定的 768×768 示例。
 - 修复：NPU 生图内存不足时误报为 GPU，并建议把 512 「调小」到 768。现在 NPU 有专用提示（权重占多少、调分辨率帮助不大），内存预检拦下时可点「仍然生成」跳过一次；GPU 提示去掉固定的 768×768 示例。
 - 特色模型：加 Ternary Bonsai 2 9B（上游 Q2_0，2.56 GB，纯文字）。同仓库的 PQ2_0、PTQ1_0、MTP、DFlash 文件需 PrismML 分支，本应用不支持。
 - 下载模型：每个 MNN 对话模型（Qwen3.5 0.8B/2B/4B/9B、三个 Opus 蒸馏版、Qwen3 0.6B/1.7B/4B/8B）旁边加了 GGUF 版（Q4_K_M，llama.cpp，可走 CPU/GPU），Qwen3.5 系列可勾选下载视觉模块。来源 lmstudio-community 与 Jackrong，魔搭有同名镜像（大小与 SHA-256 已核对）。Qwen3.5 9B GGUF 5.63 GB，比 MNN 版（7.27 GB）小。

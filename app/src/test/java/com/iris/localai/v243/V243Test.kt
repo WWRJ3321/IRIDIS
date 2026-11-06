@@ -86,7 +86,11 @@ class V243Test {
         assertFalse(f.isHistoryFile(java.io.File("/x/models/IMG_20261106_101010.png")))
         assertFalse(f.isHistoryFile(java.io.File("/x/images/IMG_20261106_101010.png.part")))
         val src = java.io.File("app/src/main/java/com/iris/localai/ui/imagegen/ImageHistory.kt").readText()
-        assertTrue("用这组参数" in src && "复制提示词" in src && "全选" in src)
+        assertFalse(Regex("\"[^\"\\n]*[\u4e00-\u9fff][^\"\\n]*\"").containsMatchIn(src))
+        for (d in listOf("values", "values-zh-rTW", "values-en", "values-ja", "values-de", "values-es", "values-hi")) {
+            val xml = java.io.File("app/src/main/res/$d/strings.xml").readText()
+            for (k in listOf("ih243_reuse", "ih243_select_all", "ih243_header", "ih243_steps")) assertTrue("$d $k", "name=\"$k\"" in xml)
+        }
     }
 
     // 2.4.3: every MNN chat entry has a GGUF twin (Q4_K_M) right after it; neither claims the other's files.
@@ -111,7 +115,7 @@ class V243Test {
     @Test fun npuLowMemMessage() {
         assertNull(SdRules.memoryProblemHtp(8000, 7000, "Z-Image Turbo（NPU）", 6000))
         val m = SdRules.memoryProblemHtp(5734, 7168, "Z-Image Turbo（NPU）", 6025)!!
-        assertTrue(m, m.contains("Z-Image Turbo（NPU）") && m.contains("5.6") && m.contains("7.0") && m.contains("仍然生成") && !m.contains("GPU"))
+        assertTrue(m, m.contains("5.6") && m.contains("7.0") && m.contains("仍然生成") && !m.contains("GPU"))
         val g = SdRules.memoryProblem(3000, 5000, true, 512, 512)!!
         assertFalse(g, g.contains("768×768"))
         assertTrue(SdRules.LowMemory("x") is IllegalStateException)

@@ -96,7 +96,7 @@ object RecommendedCatalog {
         spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aca2d5), 3.5, top = true),
         mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b), 1.4),
         lms35("2B", 1_270_808_032L, 671_372_416L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b)),
-        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f), 7.3),
+        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f), 7.274875830),
         lms35("9B", 5_627_044_256L, 921_704_480L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f)),
         mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "Qwen3.5-2B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f), 1.4, licence = null),
         opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "2B", 1_270_804_416L, "mmproj-BF16.gguf", 671_372_512L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f)),

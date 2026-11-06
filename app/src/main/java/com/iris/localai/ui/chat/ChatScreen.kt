@@ -405,7 +405,7 @@ fun ChatScreen(
                         engine = ui.engine,
                         topPadding = with(density) { topBarHeight.toDp() },
                         bottomPadding = with(density) { composerHeight.toDp() },
-                    ) { prompt -> input = prompt; runCatching { inputFocus.requestFocus() } }
+                    )
                 } else {
                     val lastAssistantId = messages.lastOrNull { it.role == Role.ASSISTANT }?.id
                     LazyColumn(
