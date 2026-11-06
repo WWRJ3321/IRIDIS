@@ -107,6 +107,15 @@ JNI_FN(nativeLoad)(JNIEnv *env, jclass, jstring diffusion, jstring llm, jstring 
     p.llm_path = l.get();
     p.vae_path = v.get();
     p.backend = b.get();
+#ifdef IRIS_SDQ
+    // "backend|params_backend" (SdRules.HTP_LOWMEM): e.g. te=disk drops the encoder weights after conditioning.
+    // static: kept alive in case the context holds on to the strings (one context at a time).
+    static std::string be, pbe;
+    be = b.get() ? b.get() : ""; pbe.clear();
+    if (auto bar = be.find('|'); bar != std::string::npos) { pbe = be.substr(bar + 1); be.resize(bar); }
+    p.backend = be.empty() ? nullptr : be.c_str();
+    p.params_backend = pbe.empty() ? nullptr : pbe.c_str();
+#endif
     p.n_threads = threads > 0 ? threads : sd_get_num_physical_cores();
     p.enable_mmap = true;
     p.flash_attn = flash_attn;
