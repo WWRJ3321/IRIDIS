@@ -190,6 +190,7 @@ fun ChatScreen(
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     // 2.0.x: 「记住这条」 dialog for this message (null = closed).
     var remembering by remember { mutableStateOf<com.iris.localai.data.ChatMessage?>(null) }
+    var deletingMsg by remember { mutableStateOf<com.iris.localai.data.ChatMessage?>(null) }
     // 1.10.12: attachments waiting for the next send (already copied into app storage).
     var pending by remember { mutableStateOf<List<com.iris.localai.data.Attachment>>(emptyList()) }
     /** 2.2 「技能」: references picked for the next message. */
@@ -437,6 +438,7 @@ fun ChatScreen(
                                         onEdit = { editingId = m.id; input = m.content; scope.launch { delay(50); runCatching { inputFocus.requestFocus() } } },
                                         onRemember = { remembering = m },
                                         onSwitchVersion = { v -> vm.switchVersion(m.id, v) },
+                                        onDelete = { deletingMsg = m },
                                     )
                                 } else {
                                     // 2.3.2 角色卡: the card's avatar + name above each of its replies.
@@ -469,6 +471,7 @@ fun ChatScreen(
                                         onSwitchVersion = { v -> vm.switchVersion(m.id, v) },
                                         onAcceptMemory = { vm.acceptMemorySuggestion(m.id) },
                                         onDismissMemory = { vm.dismissMemorySuggestion(m.id) },
+                                        onDelete = if (m.id == ui.streamingId) null else ({ deletingMsg = m }),
                                     )
                                 }
                                 if (ui.context.compactedMessages > 0 && m.id == ui.conversation.compaction?.upToId) {
@@ -782,6 +785,15 @@ fun ChatScreen(
     }
     }
 
+    deletingMsg?.let { m ->
+        com.iris.localai.ui.components.ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.del244_title),
+            message = com.iris.localai.I18n.s(if (com.iris.localai.data.MessageVersions.count(m) > 1) com.iris.localai.R.string.del244_message_versions else com.iris.localai.R.string.del244_message),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.del244_delete),
+            onConfirm = { vm.deleteMessage(m.id); deletingMsg = null },
+            onDismiss = { deletingMsg = null },
+        )
+    }
     remembering?.let { m ->
         RememberDialog(
             initial = vm.memoryEntryFor(m),

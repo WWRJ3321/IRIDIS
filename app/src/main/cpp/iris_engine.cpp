@@ -182,6 +182,11 @@ bool is_gemma4_template(const std::string &t) {
     return t.find("<|turn>") != std::string::npos && t.find("<turn|>") != std::string::npos;
 }
 bool is_k2_template(const std::string &t) { return t.find("<|ifm|im_start|>") != std::string::npos; }
+// 2.4.4: Spark X2.5 / X2.6 (XHToken, arch spark2_5): <｜start▁of▁sentence｜><|User|>…<｜end▁of▁sentence｜>, <|Bot|>.
+bool is_spark_template(const std::string &t) {
+    return t.find("<|Bot|>") != std::string::npos && t.find("<|User|>") != std::string::npos &&
+           t.find("\xEF\xBD\x9Cstart\xE2\x96\x81of\xE2\x96\x81sentence\xEF\xBD\x9C") != std::string::npos;
+}
 
 std::string trim_ws(const std::string &s) {
     const size_t b = s.find_first_not_of(" \t\r\n");
@@ -209,6 +214,45 @@ std::string format_gemma4(const std::vector<ChatMessage> &messages, bool think) 
     }
     out += "<|turn>model\n";
     if (!think) out += "<|channel>thought\n<channel|>";
+    return out;
+}
+
+// Spark X2.6 (chat_template in the GGUF): one system block (its default line, the thinking-effort note when
+// thinking is on, then ours); every past reply starts with </think>; the generation prompt opens <think>
+// (thinking) or closes it right away (no thinking). Consecutive tool results share one <|Tool|> turn.
+std::string format_spark(const std::vector<ChatMessage> &messages, bool think) {
+    static const std::string BOS = "\xEF\xBD\x9Cstart\xE2\x96\x81of\xE2\x96\x81sentence\xEF\xBD\x9C";
+    static const std::string EOS = "\xEF\xBD\x9C" "end\xE2\x96\x81of\xE2\x96\x81sentence\xEF\xBD\x9C";
+    const std::string bos = "<" + BOS + ">", eos = "<" + EOS + ">";
+    std::string out = bos + "<|System|>\nyou are a helpful assistant.";
+    if (think) {
+        out += "\n`thinking_effort` guides on how much to think in your thinking channel (not including the response channel), "
+               "supported values include `low` and `high`.\nNow the system is invoked with `thinking_effort=high`.";
+    }
+    size_t i = 0;
+    if (!messages.empty() && messages[0].role == "system") {
+        if (!messages[0].content.empty()) out += "\n\n" + messages[0].content;
+        i = 1;
+    }
+    out += eos;
+    for (; i < messages.size(); i++) {
+        const auto &m = messages[i];
+        if (m.role == "system") {
+            out += bos + "<|System|>\n" + m.content + eos;
+        } else if (m.role == "assistant") {
+            out += bos + "<|Bot|>";
+            if (m.content.rfind("<think>", 0) != 0) out += "</think>";
+            out += m.content + eos;
+        } else if (m.role == "tool") {
+            if (i == 0 || messages[i - 1].role != "tool") out += bos + "<|Tool|>";
+            out += "<tool_response>" + m.content + "</tool_response>";
+            if (i + 1 >= messages.size() || messages[i + 1].role != "tool") out += eos;
+        } else {
+            out += bos + "<|User|>" + m.content + eos;
+        }
+    }
+    out += bos + "<|Bot|>";
+    out += think ? "<think>" : "</think>";
     return out;
 }
 
@@ -385,7 +429,7 @@ bool Engine::load(const std::string &path, const LoadParams &params,
 
     // Verify that llama.cpp recognises the embedded template; otherwise use ChatML.
     use_chatml_fallback_ = template_.empty();
-    if (!use_chatml_fallback_ && !is_gemma4_template(template_) && !is_k2_template(template_)) {
+    if (!use_chatml_fallback_ && !is_gemma4_template(template_) && !is_k2_template(template_) && !is_spark_template(template_)) {
         llama_chat_message probe[] = {{"user", "hi"}};
         if (llama_chat_apply_template(template_.c_str(), probe, 1, true, nullptr, 0) < 0) {
             use_chatml_fallback_ = true;
@@ -562,6 +606,7 @@ ModelMeta Engine::meta() const {
 std::string Engine::format_prompt(const std::vector<ChatMessage> &messages, bool disable_thinking) const {
     if (is_gemma4_template(template_)) return format_gemma4(messages, !disable_thinking);
     if (is_k2_template(template_)) return format_k2(messages, !disable_thinking);
+    if (is_spark_template(template_)) return format_spark(messages, !disable_thinking);
     std::vector<llama_chat_message> chat;
     chat.reserve(messages.size());
     for (const auto &m : messages) chat.push_back({m.role.c_str(), m.content.c_str()});

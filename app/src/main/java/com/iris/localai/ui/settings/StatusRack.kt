@@ -361,7 +361,7 @@ fun StatusRack(
                 Spacer(Modifier.width(IrisDimens.space12))
                 Column(Modifier.weight(1f)) {
                     Text(m.name, style = IrisType.row, color = c.text, maxLines = 1)
-                    Text(m.detail, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(m.detail, style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(Modifier.width(IrisDimens.space8))
                 androidx.compose.animation.AnimatedContent(m.state.label, transitionSpec = { IrisMotion.roll(true) }, label = "rackLabel") { t ->

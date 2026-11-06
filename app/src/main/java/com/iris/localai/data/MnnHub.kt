@@ -58,7 +58,7 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var sources: List<DownloadSource> = emptyList()
     @Volatile private var lastRequest: Pair<String, DownloadSource>? = null
 
-    suspend fun download(input: String, source: DownloadSource, demote: DownloadSource? = null): LocalModel = withContext(Dispatchers.IO) {
+    suspend fun download(input: String, source: DownloadSource, demote: DownloadSource? = null, file: String? = null): LocalModel = withContext(Dispatchers.IO) {
         val repoId = MnnModels.parseRepoId(input) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81c8d3))
         val name = ModelFiles.sanitizeFileName(repoId.substringAfter('/'))
         val modelsDir = repo.modelsDir // resolved once: shared Download/IRIDIS/models when available
@@ -73,6 +73,12 @@ class MnnHub(private val repo: ModelRepository) {
             // speed probe); files then come from the ranked sources, each falling through to the next.
             val (order, all) = listAll(repoId, source, demote)
             sources = order
+            // 2.4.4: one named file (a chip-specific NPU build) instead of the repo's generic one.
+            if (file != null) {
+                val hit = all.firstOrNull { it.type == "file" && it.path == file } ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_file_missing, file, repoId))
+                repo.releasePart(partName)
+                return@withContext downloadSingle(order, repoId, hit.path, hit.size)
+            }
             // 1.12.1: a LiteRT-LM repo (litert-community/…) — download its one generic .litertlm file.
             pickLiteRtFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
                 repo.releasePart(partName)
@@ -108,7 +114,7 @@ class MnnHub(private val repo: ModelRepository) {
                 done = before + f.size
             }
             if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
-            _state.value = State()
+            lastDone = repoId; _state.value = State()
         } catch (t: Throwable) {
             _state.value = stopped(repoId, t)
             throw t
@@ -135,7 +141,7 @@ class MnnHub(private val repo: ModelRepository) {
             _state.value = _state.value.copy(totalBytes = size, doneBytes = have, file = fileName)
             // fetchOnce writes target.part and renames it when complete, so a half file is never listed.
             fetch(urlsFor(repoId, path, order), target, size) { got -> _state.value = _state.value.copy(doneBytes = got) }
-            _state.value = State()
+            lastDone = repoId; _state.value = State()
         } finally {
             repo.releasePart(partName)
         }
@@ -215,12 +221,12 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var job: kotlinx.coroutines.Job? = null
 
     /** Runs in the app scope so the download survives leaving the models screen. */
-    fun start(scope: kotlinx.coroutines.CoroutineScope, input: String, source: DownloadSource, demote: DownloadSource? = null, onDone: suspend (LocalModel) -> Unit) {
+    fun start(scope: kotlinx.coroutines.CoroutineScope, input: String, source: DownloadSource, demote: DownloadSource? = null, file: String? = null, onDone: suspend (LocalModel) -> Unit) {
         if (job?.isActive == true) return
         lastRequest = input to source
-        retry = { d -> start(scope, input, source, d, onDone) }
+        retry = { d -> start(scope, input, source, d, file, onDone) }
         job = scope.launch {
-            try { onDone(download(input, source, demote)) } catch (_: Throwable) { /* reported through state */ }
+            try { onDone(download(input, source, demote, file)) } catch (_: Throwable) { /* reported through state */ }
         }
     }
 
@@ -283,7 +289,7 @@ class MnnHub(private val repo: ModelRepository) {
                 }
                 done = before + size
             }
-            _state.value = State()
+            lastDone = hit.id; _state.value = State()
         } catch (t: Throwable) {
             _state.value = stopped(hit.id, t)
             throw t
@@ -304,6 +310,8 @@ class MnnHub(private val repo: ModelRepository) {
     fun resume() { if (job?.isActive != true) retry?.invoke(null) }
 
     @Volatile private var pausing = false
+    /** 2.4.4: repo of the last download that finished (for the 「下载完成」 notification). */
+    @Volatile var lastDone: String? = null; private set
 
     /** 2.3.1: `.part` names of the current download; held in [ModelRepository] while paused so cleanup keeps them. */
     @Volatile private var curParts: List<String> = emptyList()

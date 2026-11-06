@@ -161,7 +161,7 @@ private fun VoiceChoiceRow(
     ) {
         com.iris.localai.ui.components.IrisRadio(selected)
         Column(Modifier.weight(1f)) {
-            Text(title, style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(subtitle, style = IrisType.caption, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         trailing?.invoke()

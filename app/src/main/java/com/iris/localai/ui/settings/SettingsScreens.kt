@@ -671,10 +671,12 @@ private fun NpuRuntimeRow(
 ) {
     val st by npu.state.collectAsState()
     val chip = npu.chipLabel
+    val mtk = npu.vendor == com.iris.localai.engine.NpuVendor.MEDIATEK
     // 1.14.7: the QNN runtime is Qualcomm's proprietary software; ask once per session before downloading.
     var askConsent by remember { mutableStateOf(false) }
     val install: () -> Unit = {
-        if (NpuConsent.accepted) onInstall() else { askConsent = true }
+        // 2.4.4: MediaTek's dispatch library is Apache-2.0 and already in the APK — no Qualcomm terms to accept.
+        if (NpuConsent.accepted || mtk) onInstall() else { askConsent = true }
     }
     if (askConsent) {
         NpuLicenseDialog(
@@ -685,18 +687,18 @@ private fun NpuRuntimeRow(
     val (subtitle, action) = when (val s = st) {
         is com.iris.localai.engine.NpuState.Unsupported -> s.reason to null
         com.iris.localai.engine.NpuState.NotInstalled ->
-            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_001963, chip) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) to install)
+            (if (mtk) com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_not_installed, chip) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_001963, chip)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) to install)
         is com.iris.localai.engine.NpuState.Downloading ->
             com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b5c7e, s.downloaded shr 20, s.total shr 20) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2) to onCancel)
         com.iris.localai.engine.NpuState.Installed ->
-            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d9c3a7, chip) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) to onDelete)
+            (if (mtk) com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_installed, chip) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d9c3a7, chip)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) to onDelete)
         is com.iris.localai.engine.NpuState.Failed -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ce1a3a, s.message) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) to install)
         is com.iris.localai.engine.NpuState.NeedsRepair ->
             com.iris.localai.I18n.s(com.iris.localai.R.string.settings_501bdb, chip, s.reason) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f82661) to install)
     }
     Column {
         SettingsRow(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_42e701),
+            if (mtk) com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_title) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_42e701),
             subtitle = subtitle,
             subtitleColor = if (st is com.iris.localai.engine.NpuState.Failed || st is com.iris.localai.engine.NpuState.NeedsRepair) Iris.colors.danger else Iris.colors.textTertiary,
             trailing = action?.let { (label, fn) ->

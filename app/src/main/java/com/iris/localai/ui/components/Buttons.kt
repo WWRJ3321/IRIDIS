@@ -180,7 +180,7 @@ fun IrisButton(
     ) {
         if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(18.dp))
         AnimatedContent(text, transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "btnText") { t ->
-            Text(t, style = IrisType.label, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            FitText(t, style = IrisType.label, color = fg) // 2.4.4: shrink to fit instead of 「…」
         }
     }
 }
@@ -320,12 +320,10 @@ fun SegmentedControl(
                         .selectable(selected = selected, role = Role.RadioButton, interactionSource = null, indication = null, onClick = { if (!selected) onSelect(i) }),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    FitText(
                         label,
                         style = IrisType.segment,
                         color = color,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = IrisDimens.space4),
                     )
                 }

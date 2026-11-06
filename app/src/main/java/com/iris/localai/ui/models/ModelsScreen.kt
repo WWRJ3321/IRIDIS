@@ -208,8 +208,8 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun downloadMnn(repoId: String) {
-        c.mnnHub.start(c.scope, repoId, c.settings.current.downloadSource) { m ->
+    fun downloadMnn(repoId: String, file: String? = null) {
+        c.mnnHub.start(c.scope, repoId, c.settings.current.downloadSource, file = file) { m ->
             if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
         }
     }
@@ -265,12 +265,14 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         val repo = item.repoId ?: return null
         val k = item.kind
         if (k is com.iris.localai.data.RecommendedCatalog.Kind.Gguf) return list.firstOrNull { it.fileName == com.iris.localai.data.ModelFiles.sanitizeFileName(k.localFile) }
+        // 2.4.4: a named file (the Dimensity NPU build) is installed only when that very file is on disk.
+        if (k is com.iris.localai.data.RecommendedCatalog.Kind.Hub && k.file != null) return list.firstOrNull { it.fileName == com.iris.localai.data.ModelFiles.sanitizeFileName(k.file) }
         return list.firstOrNull { com.iris.localai.data.RecommendedCatalog.matchesLocal(repo, it.fileName) }
     }
 
     fun downloadCatalog(item: com.iris.localai.data.RecommendedCatalog.Item, withVision: Boolean = false) {
         when (val k = item.kind) {
-            is com.iris.localai.data.RecommendedCatalog.Kind.Hub -> downloadMnn(k.repoId)
+            is com.iris.localai.data.RecommendedCatalog.Kind.Hub -> downloadMnn(k.repoId, k.file)
             is com.iris.localai.data.RecommendedCatalog.Kind.Gguf -> {
                 val hit = com.iris.localai.data.GgufSearch.RepoHit(k.repoId, com.iris.localai.data.GgufSearch.Site.HF, license = item.licence)
                 // 2.4.3: saved under k.localFile (a renamed file keeps the repo path for the URL)
@@ -451,29 +453,37 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             // 2.3.5: 资源档位 removed from this page; the composer's speed chip sets the same value.
             item(key = "import", contentType = "import") {
                 Column(Modifier.padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)) {
-                    IrisButton(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
-                        enabled = !import.active, icon = Icons.Outlined.Add,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // 2.4.4: 下载模型 is the main way in (big button); importing a file / folder sits below.
                     if (vm.mnnSupported) {
+                        IrisButton(
+                            DownloadText.TITLE, onClick = onOpenDownload,
+                            icon = Icons.Outlined.CloudDownload, modifier = Modifier.fillMaxWidth(),
+                        )
                         Row(Modifier.padding(top = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                            IrisButton(
+                                com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
+                                enabled = !import.active, style = IrisButtonStyle.Tonal, icon = Icons.Outlined.Add,
+                                modifier = Modifier.weight(1f),
+                            )
                             IrisButton(
                                 com.iris.localai.I18n.s(com.iris.localai.R.string.models_238420), onClick = { folderPicker.launch(null) },
                                 enabled = !import.active, style = IrisButtonStyle.Tonal, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                                 modifier = Modifier.weight(1f),
                             )
-                            IrisButton(
-                                DownloadText.TITLE, onClick = onOpenDownload,
-                                style = IrisButtonStyle.Tonal, icon = Icons.Outlined.CloudDownload,
-                                modifier = Modifier.weight(1f),
-                            )
                         }
+                    } else {
+                        IrisButton(
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
+                            enabled = !import.active, icon = Icons.Outlined.Add,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (vm.mnnSupported) {
                         // 2.2.17 C: one status line; progress / pause / 换源重试 live on the card in 下载模型
                         DownloadText.statusLine(hub)?.let { line ->
                             Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8), verticalAlignment = Alignment.CenterVertically) {
                                 Text(line, style = IrisType.caption, color = if (hub.error != null) c.danger else c.textSecondary,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
                                 IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_607e7a), onOpenDownload, style = IrisButtonStyle.Text, compact = true)
                             }
                         }
@@ -488,7 +498,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                                 Text(
                                     com.iris.localai.I18n.s(com.iris.localai.R.string.models_99b61e, import.fileName.substringAfterLast('/').ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1) }),
                                     style = IrisType.labelSmall, color = c.textSecondary,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )
                                 Text("${(import.progress * 100).toInt()}%", style = IrisType.labelSmall, color = c.textSecondary)
                             }
@@ -600,12 +610,12 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                         )
                         // 1.10.2 / 1.10.3 (from the old 档位与加载 sheet): last load time + 「改用 CPU」 hint
                         com.iris.localai.engine.LoadTelemetry.latest(loadRecords.values, m.id)?.let(com.iris.localai.engine.LoadTelemetry::summary)?.let { t ->
-                            Text(t, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            Text(t, style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(start = 48.dp, end = IrisDimens.space16, bottom = IrisDimens.space6))
                         }
                         if (com.iris.localai.engine.CpuFasterHint.shouldShow(loadRecords.values, m.id, vm.preferredBackendLabel(m))) {
                             Row(Modifier.fillMaxWidth().padding(start = 48.dp, end = IrisDimens.space8), verticalAlignment = Alignment.CenterVertically) {
-                                Text(com.iris.localai.engine.CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent, maxLines = 1,
+                                Text(com.iris.localai.engine.CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent, maxLines = 2,
                                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 IrisButton(com.iris.localai.engine.CpuFasterHint.ACTION, { vm.switchModelToCpu(m) }, style = IrisButtonStyle.Text, compact = true, enabled = busy == null)
                             }
@@ -676,8 +686,8 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
             modifier = dragHandle.size(40.dp).padding(IrisDimens.space8),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
-            Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(m.displayName, style = IrisType.rowStrong, color = c.text)
+            Row(verticalAlignment = Alignment.Top) {
                 run {
                     // 2.3.5: 视觉 badge for every format, using the same test its engine uses when loading:
                     // GGUF = a linked/sibling mmproj; LiteRT-LM = multimodal file (Gemma 3n/4, VL…);
@@ -700,7 +710,7 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
                         modifier = Modifier.padding(end = IrisDimens.space4).border(IrisDimens.hairline, c.accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 6.dp),
                     )
                 }
-                Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary) // 2.4.4: never cut (size was hidden behind …)
             }
         }
         Spacer(Modifier.width(IrisDimens.space8))

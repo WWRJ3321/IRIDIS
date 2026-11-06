@@ -175,10 +175,10 @@ internal fun RowScope.ModelPillContent(engine: EngineState, chevronTurn: Float, 
             is EngineState.Loading -> engine.model
             else -> null
         }?.let { com.iris.localai.data.ModelNames.short(it.displayName) }
-        Text(
-            name ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), style = IrisType.pillTitle, color = c.text, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 168.dp),
+        // 2.4.4: the full short name, shrinking a little before anything is cut (was 「Spark …」).
+        com.iris.localai.ui.components.FitText(
+            name ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), style = IrisType.pillTitle, color = c.text,
+            modifier = Modifier.widthIn(max = 196.dp),
         )
     }
     Icon(
@@ -340,7 +340,7 @@ internal fun ModelMorphPanel(
                                 Text(
                                     m.displayName,
                                     style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
-                                    color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                    color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )
                                 Text(
                                     engineTag(m), style = IrisType.micro.copy(fontSize = 12.sp, lineHeight = 16.sp), color = c.textSecondary,
@@ -394,11 +394,10 @@ internal fun RowScope.CharacterPillContent(
             com.iris.localai.ui.character.CharacterAvatar(entry.avatar, entry.card.name, 28.dp)
             Spacer(Modifier.width(IrisDimens.space8))
         }
-        Text(
+        com.iris.localai.ui.components.FitText(
             entry?.card?.name?.ifBlank { null } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.ch232_nav),
-            style = IrisType.pillTitle, color = c.text, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 120.dp),
+            style = IrisType.pillTitle, color = c.text,
+            modifier = Modifier.widthIn(max = 132.dp),
         )
     }
     Icon(
@@ -473,7 +472,7 @@ internal fun CharRow(selected: Boolean, enabled: Boolean, name: String, onClick:
         Text(
             name,
             style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
-            color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).then(if (fill) Modifier.weight(1f) else Modifier),
+            color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).then(if (fill) Modifier.weight(1f) else Modifier),
         )
         if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
     }

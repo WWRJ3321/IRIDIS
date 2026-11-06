@@ -425,7 +425,7 @@ private fun KbFileRow(f: KbFileInfo, onDelete: () -> Unit, onMove: () -> Unit = 
             Text(KnowledgeText.badge(f.path), style = IrisType.caption, color = c.textSecondary, maxLines = 1)
         }
         Column(Modifier.weight(1f).padding(start = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
-            Text(f.path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(KnowledgeText.fileLine(f), style = IrisType.caption, color = if (f.indexed) c.textSecondary else c.warning)
         }
         Box {
@@ -452,7 +452,7 @@ private fun KbFolderRow(path: String, onOpen: () -> Unit, onRename: () -> Unit, 
             androidx.compose.material3.Icon(IrisIcons.Folder, null, tint = c.textSecondary, modifier = Modifier.size(20.dp))
         }
         Column(Modifier.weight(1f).padding(start = IrisDimens.space16)) {
-            Text(path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(path.substringAfterLast('/'), style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_folder), style = IrisType.caption, color = c.textSecondary)
         }
         Box {

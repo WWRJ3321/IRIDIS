@@ -1584,7 +1584,7 @@
     <string name="engine_5d3c02">llama.cpp 沒有高通 NPU 後端；NPU 請用 _sm8750 編譯的 .litertlm 模型</string>
     <string name="engine_68c04c">此版本不含 LiteRT-LM</string>
     <string name="engine_38a7f5">這是 %1$s NPU 專用編譯的模型，只能在 NPU 上執行</string>
-    <string name="engine_03e4b1">本機晶片沒有受支援的高通 NPU</string>
+    <string name="engine_03e4b1">本機晶片沒有受支援的 NPU</string>
     <string name="engine_81efa3">模型為 %1$s 編譯，本機是 %2$s</string>
     <string name="engine_f2f7b2">需要先在 設定 › 模型與載入 下載 NPU 執行庫</string>
     <string name="engine_1b7218">此版本不含 MNN</string>
@@ -1898,4 +1898,28 @@
     <string name="ih243_steps">%1$d 步</string>
     <string name="ih243_seed">種子 %1$s</string>
     <string name="ih243_strength">重繪 %1$s</string>
+    <string name="mtk244_unsupported">此晶片（%1$s）暫無聯發科 NPU 模型。目前只有天璣 9300 / 9400 / 9500 有官方 NPU 版</string>
+    <string name="mtk244_not_mtk">這是聯發科 NPU 專用模型（%1$s），本機是 %2$s，無法執行。請改用通用 .litertlm 版本</string>
+    <string name="mtk244_wrong_soc">這個 NPU 模型是為 %1$s 編譯的，本機是 %2$s，無法執行。請下載帶 _%3$s 的版本</string>
+    <string name="mtk244_init_failed">聯發科 NPU 初始化失敗（實驗功能）。常見原因：手機的 NeuroPilot 驅動比模型舊，需等系統更新；或模型不是為本機晶片編譯的。可改用通用版或 GGUF 模型</string>
+    <string name="mtk244_title">NPU 執行庫（聯發科 NeuroPilot）</string>
+    <string name="mtk244_not_installed">%1$s。已內建於安裝包（約 330 KB），無需下載，載入 NPU 專用模型（檔名帶 _mt6991 等）時自動啟用。實驗功能</string>
+    <string name="mtk244_installed">%1$s · 已就緒（LiteRT 2.3.2 調度庫 + 手機內建 NeuroPilot 驅動）。載入 NPU 專用模型時自動使用。實驗功能</string>
+    <string name="mtk244_gemma_purpose">Google 官方天璣 NPU 版，1K 上下文，純文字（實驗）</string>
+    <string name="mtk244_file_missing">倉庫 %2$s 中找不到 %1$s</string>
+    <string name="del244_delete">刪除</string>
+    <string name="del244_title">刪除這則訊息？</string>
+    <string name="del244_message">刪除後無法復原，只刪這一則，前後的訊息都保留。</string>
+    <string name="del244_message_versions">這則訊息的所有版本會一起刪除，無法復原；前後的訊息都保留。</string>
+    <string name="del244_busy">正在產生回覆，停止後再刪除</string>
+    <string name="del244_done">已刪除這則訊息</string>
+    <string name="dl244_channel">模型下載</string>
+    <string name="dl244_title_one">正在下載 %1$s</string>
+    <string name="dl244_title_many">正在下載 %1$d 個模型</string>
+    <string name="dl244_progress">%1$d%% · %2$s / %3$s</string>
+    <string name="dl244_extracting">正在解壓縮…</string>
+    <string name="dl244_preparing">正在準備…</string>
+    <string name="dl244_done">%1$s 下載完成</string>
+    <string name="dl244_failed">%1$s 下載失敗</string>
+    <string name="dl244_done_hint">點按開啟 IRIDIS，在「模型與載入」裡載入使用</string>
 </resources>

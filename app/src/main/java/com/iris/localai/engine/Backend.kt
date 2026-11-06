@@ -63,7 +63,8 @@ data class BackendEnvironment(
             return BackendEnvironment(
                 hasOpenCl = !BackendCrashMemory.openClDisabled && OPENCL_PATHS.any { java.io.File(it).exists() },
                 npuSoc = npu?.takeIf { it.chipLabel != null }?.let { socModel() },
-                npuRuntimeInstalled = npu?.state?.value is NpuState.Installed,
+                // 2.4.4: the MediaTek dispatch library is in the APK and copied on load, so it never waits on a download.
+                npuRuntimeInstalled = npu?.state?.value is NpuState.Installed || npu?.vendor == NpuVendor.MEDIATEK,
                 fullFlavor = ModelFormat.LITERT in EngineFactory.supportedFormats,
                 geniexBlock = com.iris.localai.engine.geniex.GenieXRules.block(gx?.state?.value),
                 geniexQairt = gx?.qairtSupported == true,
@@ -128,7 +129,7 @@ object BackendCapabilities {
                     listOf(
                         BackendOption(Backend.CPU, false, onlyNpu),
                         BackendOption(Backend.GPU, false, onlyNpu),
-                        BackendOption(Backend.NPU, npuReason == null, npuReason, "Hexagon · QNN"),
+                        BackendOption(Backend.NPU, npuReason == null, npuReason, if (NpuIds.isMediatekTarget(target)) "MediaTek · NeuroPilot" else "Hexagon · QNN"),
                     )
                 } else listOf(
                     BackendOption(Backend.CPU, true, detail = "XNNPACK"),

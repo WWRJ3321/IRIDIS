@@ -228,7 +228,7 @@ private fun CardRow(e: CharacterStore.Entry, onOpen: () -> Unit, onEdit: () -> U
         CharacterAvatar(e.avatar, e.card.name, 44.dp)
         Spacer(Modifier.width(IrisDimens.space12))
         Column(Modifier.weight(1f)) {
-            Text(e.card.name.ifBlank { e.id }, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(e.card.name.ifBlank { e.id }, style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val line = e.card.blurb()
             if (line.isNotEmpty()) Text(line, style = IrisType.secondary, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }

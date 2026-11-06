@@ -433,8 +433,8 @@ private fun RefRow(item: RefItem, onClick: () -> Unit) {
         Icon(if (item.ref.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.space20))
         Spacer(Modifier.width(IrisDimens.space12))
         Column(Modifier.weight(1f)) {
-            Text(item.title, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (item.subtitle.isNotBlank()) Text(item.subtitle, style = IrisType.labelSmall, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.title, style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (item.subtitle.isNotBlank()) Text(item.subtitle, style = IrisType.labelSmall, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

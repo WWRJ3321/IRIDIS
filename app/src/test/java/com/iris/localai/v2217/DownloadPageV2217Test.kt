@@ -58,7 +58,7 @@ class DownloadPageV2217Test {
         assertEquals("下载失败", RecommendedCatalog.shortReason(null))
         assertEquals("需要登录或申请权限，暂不支持", RecommendedCatalog.shortReason(MnnHub.GATED))
         assertEquals("存储空间不足：需要 2.00 GB，可用 1.00 GB", RecommendedCatalog.shortReason("存储空间不足：需要 2.00 GB，可用 1.00 GB"))
-        assertTrue(RecommendedCatalog.shortReason("x".repeat(100)).length <= 40)
+        assertTrue(RecommendedCatalog.shortReason("x".repeat(200)).length <= 120) // 2.4.4: 40 → 120, reasons are no longer cut short
     }
 
     @Test fun localMatching() {

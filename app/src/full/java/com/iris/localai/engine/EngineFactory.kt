@@ -17,7 +17,10 @@ import com.iris.localai.engine.mnn.MnnEngine
 object EngineFactory {
     val supportedFormats: Set<ModelFormat> = setOf(ModelFormat.GGUF, ModelFormat.LITERT, ModelFormat.MNN, ModelFormat.QAIRT)
 
-    fun npu(context: Context): NpuSupport = com.iris.localai.engine.litert.QualcommNpuRuntime.get(context)
+    fun npu(context: Context): NpuSupport =
+        // 2.4.4 (Issue #6): Dimensity phones get the MediaTek NeuroPilot runtime, everything else the Qualcomm one.
+        if (com.iris.localai.engine.litert.MediaTekNpuRuntime.isMediatek()) com.iris.localai.engine.litert.MediaTekNpuRuntime.get(context)
+        else com.iris.localai.engine.litert.QualcommNpuRuntime.get(context)
 
     /** 2.2.0: the downloadable GenieX runtime. */
     fun geniex(context: Context): GenieXSupport = GenieXRuntime.get(context)

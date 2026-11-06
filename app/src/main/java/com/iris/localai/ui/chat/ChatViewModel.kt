@@ -763,6 +763,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         persist()
     }
 
+    /** 2.4.4: long-press / ⋯ 「删除」 on any message, user or assistant. Refused while a reply is generating. */
+    fun deleteMessage(messageId: String) {
+        if (viewingOther()) return
+        if (busy()) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.del244_busy); return }
+        val old = conversation.value
+        val next = com.iris.localai.data.MessageVersions.delete(old.messages, messageId) ?: return
+        val start = com.iris.localai.data.MessageVersions.markerAfterDelete(old.messages, old.contextStartAfterId, messageId)
+        val upTo = old.compaction?.let { com.iris.localai.data.MessageVersions.markerAfterDelete(old.messages, it.upToId, messageId) }
+        conversation.update {
+            it.copy(
+                messages = next, updatedAt = System.currentTimeMillis(), contextStartAfterId = start,
+                compaction = it.compaction?.let { c -> if (upTo == null) null else c.copy(upToId = upTo) },
+            )
+        }
+        measured.update { it - conversation.value.id }
+        persist()
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.del244_done)
+    }
+
     /** 2.0.x: ‹ › under a message with several versions; a user message brings its own branch back. */
     fun switchVersion(messageId: String, target: Int) {
         if (viewingOther()) return

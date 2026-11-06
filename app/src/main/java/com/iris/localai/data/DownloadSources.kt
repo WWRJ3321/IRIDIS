@@ -67,6 +67,8 @@ object DownloadSources {
             "Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-MNN",
         ).forEach { put("taobao-mnn/$it", MsRepo("MNN/$it")) }
         listOf("E2B", "E4B", "12B").forEach { put("litert-community/gemma-4-$it-it-litert-lm", MsRepo("litert-community/gemma-4-$it-it-litert-lm")) }
+        // 2.4.4: gated on Hugging Face (Gemma terms), open on ModelScope; the mt69xx files match HF by size (HF hides the SHA of gated files).
+        put("litert-community/Gemma3-1B-IT", MsRepo("litert-community/Gemma3-1B-IT"))
         listOf("1.7B", "4B").forEach { put("XHToken/Spark-X2.6-$it-GGUF", MsRepo("XHToken/Spark-X2.6-$it-GGUF")) }
         // 2.4.3: GGUF twins of the MNN entries — same ids on ModelScope, sizes + SHA-256 checked against HF 2026-11-06.
         (listOf("Qwen3.5-0.8B", "Qwen3.5-2B", "Qwen3.5-4B", "Qwen3.5-9B", "Qwen3-0.6B", "Qwen3-1.7B", "Qwen3-4B", "Qwen3-8B").map { "lmstudio-community/$it-GGUF" } +

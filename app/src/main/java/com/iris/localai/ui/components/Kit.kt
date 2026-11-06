@@ -183,7 +183,7 @@ fun IrisTopBar(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    title, style = IrisType.title, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    title, style = IrisType.title, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
             }

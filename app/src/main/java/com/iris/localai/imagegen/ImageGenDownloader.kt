@@ -237,6 +237,8 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
     private val _states = MutableStateFlow<Map<String, ImageDl>>(emptyMap())
     val states: StateFlow<Map<String, ImageDl>> = _states.asStateFlow()
     private val jobs = mutableMapOf<String, Job>()
+    /** 2.4.4: id of the last model whose download finished (for the 「下载完成」 notification). */
+    @Volatile var lastFinished: String? = null; private set
 
     fun isActive(id: String): Boolean = synchronized(jobs) { jobs[id]?.isActive == true }
 
@@ -248,6 +250,7 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
         val job = scope.launch(Dispatchers.IO) {
             try {
                 downloadInto(root, model, source, demote)
+                lastFinished = model.id
                 _states.update { it - model.id }
                 onDone()
             } catch (e: CancellationException) {

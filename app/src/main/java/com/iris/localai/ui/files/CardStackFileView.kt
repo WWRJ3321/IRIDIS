@@ -322,7 +322,7 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space6)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                state.crumbs.last().label, style = IrisType.display, color = c.text, maxLines = 1,
+                state.crumbs.last().label, style = IrisType.display, color = c.text, maxLines = 2,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             Spacer(Modifier.width(10.dp))
@@ -431,12 +431,12 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(entryIcon(e), null, Modifier.size(22.dp), tint = if (e.isDir) c.accent else c.textSecondary)
                 Spacer(Modifier.width(10.dp))
-                Text(e.displayName, style = IrisType.titleSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(e.displayName, style = IrisType.titleSmall, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(IrisDimens.space4))
             Text(
                 entrySubtitle(e), style = IrisType.caption.copy(fontFamily = FontFamily.Monospace), color = c.textTertiary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
         }
     }

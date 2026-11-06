@@ -1584,7 +1584,7 @@
     <string name="engine_5d3c02">llama.cpp には Qualcomm NPU バックエンドがありません。NPU には _sm8750 向けにコンパイルされた .litertlm モデルを使ってください</string>
     <string name="engine_68c04c">このバージョンには LiteRT-LM が含まれていません</string>
     <string name="engine_38a7f5">これは %1$s NPU 専用にコンパイルされたモデルで、NPU でのみ動作します</string>
-    <string name="engine_03e4b1">この端末のチップには対応する Qualcomm NPU がありません</string>
+    <string name="engine_03e4b1">この端末のチップには対応する NPU がありません</string>
     <string name="engine_81efa3">モデルは %1$s 向けにコンパイルされています。この端末は %2$s です</string>
     <string name="engine_f2f7b2">先に 設定 › モデルと読み込み で NPU ランタイムをダウンロードしてください</string>
     <string name="engine_1b7218">このバージョンには MNN が含まれていません</string>
@@ -1898,4 +1898,28 @@
     <string name="ih243_steps">%1$d ステップ</string>
     <string name="ih243_seed">シード %1$s</string>
     <string name="ih243_strength">強度 %1$s</string>
+    <string name="mtk244_unsupported">This chip (%1$s) has no MediaTek NPU models yet. Only Dimensity 9300 / 9400 / 9500 have official NPU builds</string>
+    <string name="mtk244_not_mtk">This model is built for a MediaTek NPU (%1$s); this phone is %2$s, so it can’t run here. Use the generic .litertlm instead</string>
+    <string name="mtk244_wrong_soc">This NPU model is built for %1$s; this phone is %2$s, so it can’t run here. Download the _%3$s version</string>
+    <string name="mtk244_init_failed">MediaTek NPU failed to start (experimental). Usually the phone’s NeuroPilot driver is older than the model and needs a system update, or the model isn’t built for this chip. Use the generic version or a GGUF model instead</string>
+    <string name="mtk244_title">NPU runtime (MediaTek NeuroPilot)</string>
+    <string name="mtk244_not_installed">%1$s. Built into the app (about 330 KB), nothing to download; turned on automatically for NPU-only models (file names with _mt6991 etc.). Experimental</string>
+    <string name="mtk244_installed">%1$s · Ready (LiteRT 2.3.2 dispatch library + the phone’s NeuroPilot driver). Used automatically for NPU-only models. Experimental</string>
+    <string name="mtk244_gemma_purpose">Google 公式の Dimensity NPU 版、1K 文脈、テキストのみ（実験）</string>
+    <string name="mtk244_file_missing">%1$s not found in %2$s</string>
+    <string name="del244_delete">削除</string>
+    <string name="del244_title">このメッセージを削除しますか？</string>
+    <string name="del244_message">元に戻せません。このメッセージだけが削除され、前後のメッセージは残ります。</string>
+    <string name="del244_message_versions">このメッセージのすべてのバージョンが削除され、元に戻せません。前後のメッセージは残ります。</string>
+    <string name="del244_busy">返信を生成中です。停止してから削除してください</string>
+    <string name="del244_done">メッセージを削除しました</string>
+    <string name="dl244_channel">モデルのダウンロード</string>
+    <string name="dl244_title_one">%1$s をダウンロード中</string>
+    <string name="dl244_title_many">%1$d 個のモデルをダウンロード中</string>
+    <string name="dl244_progress">%1$d%% · %2$s / %3$s</string>
+    <string name="dl244_extracting">展開中…</string>
+    <string name="dl244_preparing">準備中…</string>
+    <string name="dl244_done">%1$s のダウンロードが完了しました</string>
+    <string name="dl244_failed">%1$s のダウンロードに失敗しました</string>
+    <string name="dl244_done_hint">タップして IRIDIS を開き、モデル画面で読み込んでください</string>
 </resources>

@@ -7,10 +7,10 @@ package com.iris.localai.engine
  */
 object NpuIds {
     /** `sm8750` / `SM8750P` / `sm8750-ab` / `QCS8550` → base family id; anything else → null. */
-    private val BASE = Regex("^(sm|qcs)(\\d{4})")
+    private val BASE = Regex("^(sm|qcs|mt)(\\d{4})")
 
     /** `_sm8750` / `.sm8750.` / `-qcs8550.` (optionally `sm8750p`) in a LiteRT-LM file name. */
-    private val FILE_SOC = Regex("(?i)(?:^|[_\\-.])((?:sm|qcs)\\d{4})[a-z]{0,2}(?:[_\\-.]|$)")
+    private val FILE_SOC = Regex("(?i)(?:^|[_\\-.])((?:sm|qcs|mt)\\d{4})[a-z]{0,2}(?:[_\\-.]|$)")
     private val FILE_EKV = Regex("(?i)(?:^|[_\\-.])ekv(\\d{3,6})(?:[_\\-.]|$)")
 
     /**
@@ -42,6 +42,17 @@ object NpuIds {
         if (t.startsWith("qcs")) return true
         return t == baseSocId(deviceSoc)
     }
+
+    /**
+     * 2.4.4: MediaTek Dimensity SoCs with official LiteRT-LM NeuroPilot builds (litert-community
+     * Gemma3-1B-IT `_mt6989` / `_mt6991` / `_mt6993`): 9300, 9400, 9500. Null for any other chip.
+     */
+    fun mediatekNpu(manufacturer: String?, model: String?): String? {
+        if (!manufacturer.orEmpty().contains("mediatek", true)) return null
+        return baseSocId(model)?.takeIf { it in MEDIATEK_NPU }
+    }
+    val MEDIATEK_NPU = mapOf("mt6989" to "Dimensity 9300", "mt6991" to "Dimensity 9400", "mt6993" to "Dimensity 9500")
+    fun isMediatekTarget(target: String?): Boolean = target.orEmpty().lowercase().startsWith("mt")
 
     /** Hexagon HTP architecture for Snapdragon SoCs LiteRT ships a dispatch library for. */
     fun hexagonArch(manufacturer: String?, model: String?): Int? {
@@ -122,6 +133,8 @@ object NpuLog {
         "qnn", "htp", "dispatch", "adsprpc", "fastrpc", "cdsp", "rpcmem", "litert", "skel",
         // 2.1.2: the warm-up failure itself is logged by tflite / the LM executor, not QNN.
         "tflite", "allocate", "tensor", "enomem", "mmap", "dmabuf",
+        // 2.4.4: MediaTek NeuroPilot (Neuron adapter, APU / MDLA driver).
+        "neuron", "apusys", "apu", "mdla",
     )
     private val LEVEL = Regex("^[EWF]/")
 

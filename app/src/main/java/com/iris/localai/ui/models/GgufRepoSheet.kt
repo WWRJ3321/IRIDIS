@@ -121,11 +121,11 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                             val best = ch.quant.equals("Q4_K_M", ignoreCase = true)
                             Row(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = if (best) c.accent else c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = if (best) c.accent else c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     Text(
                                         listOfNotNull(Format.bytes(ch.size), if (ram > 0) GgufSearch.fitHint(ch.size, ram) else null, variant)
                                             .joinToString(" · ") + if (!ch.complete) com.iris.localai.I18n.s(com.iris.localai.R.string.models_1366d0) else "",
-                                        style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                                 IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9), {

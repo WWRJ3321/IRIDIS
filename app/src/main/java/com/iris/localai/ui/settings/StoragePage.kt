@@ -799,7 +799,7 @@ private fun Legend(r: StorageUsage.Report) {
                         Spacer(Modifier.width(IrisDimens.space8))
                         Text(
                             "${cat.title} ${Format.bytes(r.group(cat)?.appBytes ?: 0L)}",
-                            style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = IrisType.caption, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }

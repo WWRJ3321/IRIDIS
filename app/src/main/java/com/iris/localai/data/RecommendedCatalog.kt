@@ -11,8 +11,8 @@ object RecommendedCatalog {
     enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot") }
 
     sealed interface Kind {
-        /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically). */
-        data class Hub(val repoId: String) : Kind
+        /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically); 2.4.4: [file] = that one file instead. */
+        data class Hub(val repoId: String, val file: String? = null) : Kind
         /** One known GGUF file (+ optional vision projector) through MnnHub.startGguf. */
         data class Gguf(val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0, val localName: String? = null) : Kind {
             /** 2.4.3: name on disk ([localName] renames a file like "Qwen3.5-4B.Q4_K_M.gguf" that would read as the base model). */
@@ -42,6 +42,8 @@ object RecommendedCatalog {
         val licence: String? = null,
         /** Tap to try after loading (特色模型). */
         val demoPrompt: String? = null,
+        /** 2.4.4: listed only on this chip (base id like "mt6991"); an NPU build runs nowhere else. */
+        val onlySoc: String? = null,
     ) {
         /** Repo the MnnHub state names while this downloads (null for 生图 / 语音). */
         val repoId: String? get() = when (kind) { is Kind.Hub -> kind.repoId; is Kind.Gguf -> kind.repoId; else -> null }
@@ -83,7 +85,21 @@ object RecommendedCatalog {
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
         "有柔和灯光和阴影，可以用鼠标或手指拖动旋转视角。直接输出完整代码。"
 
+    /** 2.4.4: base SoC id of this phone ("mt6991"), set once at app start; null in unit tests. */
+    @Volatile var deviceSoc: String? = null
+
+    const val GEMMA3_1B = "litert-community/Gemma3-1B-IT"
+    /** 2.4.4 (Issue #6): Google's official MediaTek NPU builds — Dimensity 9300 / 9400 / 9500 only. */
+    private fun mtkGemma(soc: String, bytes: Long) = Item(
+        "$GEMMA3_1B#$soc", Section.CHAT, "Gemma 3 1B（NPU）", com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_gemma_purpose), bytes, Engine.LITERT,
+        Kind.Hub(GEMMA3_1B, "Gemma3-1B-IT_q4_ekv1280_$soc.litertlm"), top = true, licence = "Gemma", onlySoc = soc,
+    )
+
     val ITEMS: List<Item> = listOf(
+        // 2.4.4: shown first on a matching Dimensity phone, hidden everywhere else (sizes: HF + ModelScope, 2026-11-07).
+        mtkGemma("mt6989", 1_032_830_976L),
+        mtkGemma("mt6991", 1_033_814_016L),
+        mtkGemma("mt6993", 1_020_411_904L),
         // ---- 对话 (top = the six shown before 展开全部) ----
         litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_73508c), 2.6, top = true),
         mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8), 2.9, top = true),
@@ -160,7 +176,7 @@ object RecommendedCatalog {
         Item("translate:" + p.id, Section.TRANSLATE, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8df05e, p.title), com.iris.localai.I18n.s(com.iris.localai.R.string.data_4b65d4, p.blurb), p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
     }
 
-    fun section(s: Section): List<Item> = ITEMS.filter { it.section == s }
+    fun section(s: Section): List<Item> = ITEMS.filter { it.section == s && (it.onlySoc == null || it.onlySoc == deviceSoc) }
     fun byId(id: String): Item? = ITEMS.firstOrNull { it.id == id }
     fun byRepo(repoId: String): Item? = ITEMS.firstOrNull { it.repoId == repoId }
 
@@ -198,7 +214,7 @@ object RecommendedCatalog {
         val labels = DownloadSource.CONCRETE.map { it.label } + listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.data_662005), "hf-mirror", "HuggingFace", "Hugging Face")
         if (head.isNotEmpty() && head.length <= 24 && labels.any { head.contains(it, ignoreCase = true) }) line = line.substringAfter('：').trim()
         if (line.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
-        return if (line.length > 40) line.take(39) + "…" else line
+        return if (line.length > 120) line.take(119) + "…" else line
     }
 }
 

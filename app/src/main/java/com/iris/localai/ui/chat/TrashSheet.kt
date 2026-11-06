@@ -66,7 +66,7 @@ fun TrashSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(e.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = IrisType.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(e.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cab824, TrashPolicy.daysLeft(e.deletedAt, now)), style = IrisType.caption, color = c.textTertiary)
                         }
                         Spacer(Modifier.width(IrisDimens.space8))

@@ -169,7 +169,7 @@ fun ValueRow(title: String, value: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun ValueText(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = IrisType.secondary, color = Iris.colors.textSecondary, modifier = modifier, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(text, style = IrisType.secondary, color = Iris.colors.textSecondary, modifier = modifier, maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
@@ -369,7 +369,7 @@ fun NavRow(
         Icon(icon, null, tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
         Text(
             text, style = if (emphasized) IrisType.rowStrong else IrisType.body, color = c.text,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
         trailing?.invoke()
     }

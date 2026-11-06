@@ -59,6 +59,8 @@ class IrisApp : Application() {
         // 2.2.14: the tiny restart process (AppRestart) needs none of the app.
         if (android.os.Build.VERSION.SDK_INT >= 28 && android.app.Application.getProcessName().endsWith(":restart")) return
         com.iris.localai.util.CrashReporter.install(this)
+        // 2.4.4: chip-specific catalog entries (Dimensity NPU builds) are listed only on their chip.
+        com.iris.localai.data.RecommendedCatalog.deviceSoc = com.iris.localai.engine.NpuIds.baseSocId(android.os.Build.SOC_MODEL)
         // 2.2.2: remove the leftover rootfs of a removed feature once, never following links.
         java.io.File(filesDir, "alpine").takeIf { it.exists() }?.let { dir ->
             Thread({ runCatching { com.iris.localai.util.io.Trees.deleteNoFollow(dir.toPath()) } }, "iris-cleanup").start()
@@ -69,6 +71,7 @@ class IrisApp : Application() {
             android.system.Os.setenv("GGML_OPENCL_KERNEL_CACHE_DIR", dir.path, true)
         }
         container = AppContainer(this)
+        com.iris.localai.service.DownloadNotifier.start(this, container) // 2.4.4: progress notification for every model download
         // 2.1.9: 清后台 switched the GUI 无障碍 service off → back on (only with WRITE_SECURE_SETTINGS).
         com.iris.localai.agent.gui.android.A11yKeepAlive.ensure(this) // 2.2.14 无障碍保活
         // 1.10.2: 「启动时预加载上次的模型」 — start loading the last model in the background right away,

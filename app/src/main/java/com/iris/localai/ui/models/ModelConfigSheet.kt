@@ -158,7 +158,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 ) {
                     Text(
                         com.iris.localai.engine.CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent,
-                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                     )
                     IrisButton(
                         com.iris.localai.engine.CpuFasterHint.ACTION, { set { it.copy(backend = Backend.CPU.name) } },

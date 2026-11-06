@@ -1584,7 +1584,7 @@
     <string name="engine_5d3c02">llama.cpp में Qualcomm NPU बैकएंड नहीं है; NPU के लिए _sm8750 के लिए कंपाइल किए .litertlm मॉडल इस्तेमाल करें</string>
     <string name="engine_68c04c">इस वर्शन में LiteRT-LM नहीं है</string>
     <string name="engine_38a7f5">यह मॉडल %1$s NPU के लिए कंपाइल किया गया है और सिर्फ़ NPU पर चलता है</string>
-    <string name="engine_03e4b1">इस चिप में कोई सपोर्टेड Qualcomm NPU नहीं है</string>
+    <string name="engine_03e4b1">इस चिप में कोई सपोर्टेड NPU नहीं है</string>
     <string name="engine_81efa3">मॉडल %1$s के लिए कंपाइल है, यह डिवाइस %2$s है</string>
     <string name="engine_f2f7b2">पहले सेटिंग › मॉडल और लोडिंग में NPU रनटाइम डाउनलोड करें</string>
     <string name="engine_1b7218">इस वर्शन में MNN नहीं है</string>
@@ -1898,4 +1898,28 @@
     <string name="ih243_steps">%1$d स्टेप</string>
     <string name="ih243_seed">सीड %1$s</string>
     <string name="ih243_strength">स्ट्रेंथ %1$s</string>
+    <string name="mtk244_unsupported">This chip (%1$s) has no MediaTek NPU models yet. Only Dimensity 9300 / 9400 / 9500 have official NPU builds</string>
+    <string name="mtk244_not_mtk">This model is built for a MediaTek NPU (%1$s); this phone is %2$s, so it can’t run here. Use the generic .litertlm instead</string>
+    <string name="mtk244_wrong_soc">This NPU model is built for %1$s; this phone is %2$s, so it can’t run here. Download the _%3$s version</string>
+    <string name="mtk244_init_failed">MediaTek NPU failed to start (experimental). Usually the phone’s NeuroPilot driver is older than the model and needs a system update, or the model isn’t built for this chip. Use the generic version or a GGUF model instead</string>
+    <string name="mtk244_title">NPU runtime (MediaTek NeuroPilot)</string>
+    <string name="mtk244_not_installed">%1$s. Built into the app (about 330 KB), nothing to download; turned on automatically for NPU-only models (file names with _mt6991 etc.). Experimental</string>
+    <string name="mtk244_installed">%1$s · Ready (LiteRT 2.3.2 dispatch library + the phone’s NeuroPilot driver). Used automatically for NPU-only models. Experimental</string>
+    <string name="mtk244_gemma_purpose">Google का Dimensity NPU बिल्ड, 1K संदर्भ, केवल टेक्स्ट (बीटा)</string>
+    <string name="mtk244_file_missing">%1$s not found in %2$s</string>
+    <string name="del244_delete">हटाएं</string>
+    <string name="del244_title">यह संदेश हटाएं?</string>
+    <string name="del244_message">इसे वापस नहीं लाया जा सकता। सिर्फ़ यही संदेश हटेगा; इससे पहले और बाद के संदेश बने रहेंगे।</string>
+    <string name="del244_message_versions">इस संदेश के सभी संस्करण हट जाएंगे और वापस नहीं आएंगे; पहले और बाद के संदेश बने रहेंगे।</string>
+    <string name="del244_busy">जवाब बन रहा है। पहले रोकें, फिर हटाएं</string>
+    <string name="del244_done">संदेश हटाया गया</string>
+    <string name="dl244_channel">मॉडल डाउनलोड</string>
+    <string name="dl244_title_one">%1$s डाउनलोड हो रहा है</string>
+    <string name="dl244_title_many">%1$d मॉडल डाउनलोड हो रहे हैं</string>
+    <string name="dl244_progress">%1$d%% · %2$s / %3$s</string>
+    <string name="dl244_extracting">निकाला जा रहा है…</string>
+    <string name="dl244_preparing">तैयारी हो रही है…</string>
+    <string name="dl244_done">%1$s डाउनलोड हो गया</string>
+    <string name="dl244_failed">%1$s डाउनलोड नहीं हो सका</string>
+    <string name="dl244_done_hint">IRIDIS खोलने और मॉडल पेज पर लोड करने के लिए टैप करें</string>
 </resources>

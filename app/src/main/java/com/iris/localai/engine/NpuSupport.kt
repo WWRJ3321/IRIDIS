@@ -12,7 +12,11 @@ interface NpuSupport {
     val state: StateFlow<NpuState>
     suspend fun install()
     fun delete()
+    /** 2.4.4: whose NPU this runtime drives. MediaTek's dispatch library ships in the APK (no download, no QNN licence). */
+    val vendor: NpuVendor get() = NpuVendor.QUALCOMM
 }
+
+enum class NpuVendor { QUALCOMM, MEDIATEK }
 
 sealed interface NpuState {
     data class Unsupported(val reason: String) : NpuState

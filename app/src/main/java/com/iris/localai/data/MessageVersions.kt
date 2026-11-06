@@ -134,4 +134,21 @@ object MessageVersions {
     /** Attachments of the path and of every stored version / branch. */
     fun allAttachments(messages: List<ChatMessage>): List<Attachment> =
         allMessages(messages).flatMap { m -> m.attachments + m.versions.flatMap { it.attachments } }
+
+    /**
+     * 2.4.4: deleting message [id] from the active path (its stored versions go with it). A marker that
+     * pointed at it (compaction end, context break) moves to the message before it; null = not found.
+     */
+    fun delete(messages: List<ChatMessage>, id: String): List<ChatMessage>? {
+        val i = messages.indexOfFirst { it.id == id }
+        if (i < 0) return null
+        return messages.toMutableList().apply { removeAt(i) }
+    }
+
+    /** The id a marker on [id] moves to once [id] is deleted (the previous message), null when none is left. */
+    fun markerAfterDelete(messages: List<ChatMessage>, marker: String?, id: String): String? {
+        if (marker != id) return marker
+        val i = messages.indexOfFirst { it.id == id }
+        return if (i > 0) messages[i - 1].id else null
+    }
 }

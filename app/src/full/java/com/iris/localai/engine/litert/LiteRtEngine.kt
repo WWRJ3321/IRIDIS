@@ -157,7 +157,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                     e.initialize()
                     engine = e
                     visionOn = vision
-                    backend = if (name == "NPU") "NPU · Hexagon · LiteRT-LM" else "$name · LiteRT-LM"
+                    backend = if (name == "NPU") (if (com.iris.localai.engine.NpuIds.isMediatekTarget(npuModel)) "NPU · NeuroPilot · LiteRT-LM" else "NPU · Hexagon · LiteRT-LM") else "$name · LiteRT-LM"
                     if (name == "NPU" && kv != null) maxTokens = kv
                     break@outer
                 } catch (t: Throwable) {
@@ -177,7 +177,8 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 throw EngineException(
                     when {
                         npuModel != null ->
-                            "NPU 初始化失败。常见原因：系统 DSP 固件与运行库版本不兼容，或模型不是为本机芯片编译的。\n$msg" +
+                            (if (com.iris.localai.engine.NpuIds.isMediatekTarget(npuModel)) com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_init_failed) + "\n$msg"
+                            else "NPU 初始化失败。常见原因：系统 DSP 固件与运行库版本不兼容，或模型不是为本机芯片编译的。\n$msg") +
                                 "── 设备 ──\n" + npuDeviceInfo(modelFile) +
                                 npuLogTail().let { if (it.isEmpty()) "\n（没有读到原生日志）" else "\n── 原生日志 ──\n$it" }
                         "npu" in lower || "dispatch" in lower || "signature" in lower ->
@@ -415,6 +416,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
 
     /** Backend for a model AOT-compiled for a Qualcomm NPU. Such files cannot fall back to CPU/GPU. */
     private fun npuBackend(fileName: String, target: String): Pair<String, () -> Backend> {
+        if (com.iris.localai.engine.NpuIds.isMediatekTarget(target)) return mediatekBackend(target)
         val rt = QualcommNpuRuntime.get(context)
         if (rt.arch == null) throw EngineException("这是高通 NPU 专用模型（$target），但本机芯片不支持。请改用通用 .litertlm 版本。")
         // 2.0: one rule with the backend picker (NpuIds): an _sm8750 file runs on SM8750 / SM8750P / SM8750-AB.
@@ -436,6 +438,22 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 true,
             )
         }
+        return "NPU" to { Backend.NPU(nativeLibraryDir = rt.dir.path) }
+    }
+
+    /**
+     * 2.4.4 (Issue #6): a model AOT-compiled for a MediaTek NPU (`_mt6991`). The dispatch library ships
+     * in the APK and is copied on demand; the NeuroPilot driver is the phone's own.
+     */
+    private fun mediatekBackend(target: String): Pair<String, () -> Backend> {
+        val rt = MediaTekNpuRuntime.get(context)
+        val here = rt.socId
+            ?: throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_not_mtk, target.uppercase(), "${android.os.Build.SOC_MANUFACTURER} ${android.os.Build.SOC_MODEL}".trim()))
+        if (!com.iris.localai.engine.NpuIds.socMatches(target, here)) {
+            throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_wrong_soc, target.uppercase(), here.uppercase(), here))
+        }
+        rt.ensureInstalled()
+        rt.refreshState()
         return "NPU" to { Backend.NPU(nativeLibraryDir = rt.dir.path) }
     }
 

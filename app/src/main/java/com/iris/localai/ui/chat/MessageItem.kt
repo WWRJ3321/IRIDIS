@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Psychology
@@ -91,6 +92,8 @@ fun UserMessage(
     onRemember: (() -> Unit)? = null,
     /** 2.0.x: ‹ › between the versions of this message (and the conversation that followed each). */
     onSwitchVersion: (Int) -> Unit = {},
+    /** 2.4.4: 「删除」 (null = hidden). */
+    onDelete: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
     val clipboard = LocalClipboardManager.current
@@ -130,6 +133,7 @@ fun UserMessage(
             com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { menu = false; translator.translateMessage(message.id, message.content) }
             com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_27a36e), Icons.Outlined.Edit) { menu = false; onEdit() }
             if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { menu = false; onRemember() }
+            if (onDelete != null) com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
         }
     }
 }
@@ -163,6 +167,8 @@ fun AssistantMessage(
     /** 2.2.9: 「＋ 记住？」 chip (shown when [ChatMessage.memorySuggestion] is set). */
     onAcceptMemory: (() -> Unit)? = null,
     onDismissMemory: (() -> Unit)? = null,
+    /** 2.4.4: 「删除」 in ⋯ (null = hidden). */
+    onDelete: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
     val cache = remember(message.id) { ThinkParseCache() }
@@ -225,7 +231,7 @@ fun AssistantMessage(
             Column {
                 TranslationBlock(message.id)
                 VersionSwitcher(message, onSwitchVersion)
-                ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember)
+                ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember, onDelete = onDelete)
                 // 2.4.1: only the snippets the reply really cites (file name or [n]); none → no chips.
                 val citedKb = remember(message.content, message.kbSources) { com.iris.localai.knowledge.KbPrompt.cited(message.content, message.kbSources) }
                 if (citedKb.isNotEmpty()) KbSourceChips(citedKb)
@@ -325,6 +331,7 @@ private fun ActionRow(
     onShowPrompt: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onRemember: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
     val clipboard = LocalClipboardManager.current
@@ -370,6 +377,7 @@ private fun ActionRow(
                     if (onEdit != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.EDIT_REPLY, com.iris.localai.ui.icons.IrisIcons.Edit) { overflow = false; onEdit() }
                     if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { overflow = false; onRemember() }
                     if (onShowPrompt != null) com.iris.localai.ui.components.IrisMenuItem(ActionRowText.SHOW_PROMPT, com.iris.localai.ui.icons.IrisIcons.Prompt) { overflow = false; onShowPrompt() }
+                    if (onDelete != null) com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { overflow = false; onDelete() }
                 }
             }
         }

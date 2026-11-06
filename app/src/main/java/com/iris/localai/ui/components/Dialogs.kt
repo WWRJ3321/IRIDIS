@@ -321,7 +321,7 @@ fun SheetHeader(title: String, trailing: @Composable (() -> Unit)? = null) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = IrisType.title, color = Iris.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(title, style = IrisType.title, color = Iris.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         trailing?.invoke()
     }
 }

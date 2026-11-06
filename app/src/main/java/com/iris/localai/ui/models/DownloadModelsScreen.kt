@@ -146,6 +146,19 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     val voiceStates by vm.voiceStates.collectAsStateWithLifecycle()
     val translateStates by vm.translateStates.collectAsStateWithLifecycle()
     val ram = remember { vm.availRam() }
+    // 2.4.4: downloads show their progress in the notification shade; ask once (Android 13+).
+    run {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            val prefs = ctx.getSharedPreferences("iris_dl244", android.content.Context.MODE_PRIVATE)
+            if (android.os.Build.VERSION.SDK_INT >= 33 && !prefs.getBoolean("asked", false) &&
+                ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                prefs.edit().putBoolean("asked", true).apply()
+                runCatching { ask.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+            }
+        }
+    }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf(search.query) }
     var expanded by remember { mutableStateOf(emptySet<Section>()) }
@@ -280,7 +293,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     CardShell(onClick = null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(hub.repoId.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(hub.repoId.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(hub.repoId.substringBefore('/'), style = IrisType.caption, color = c.textTertiary, maxLines = 1)
                             }
                             if (s is RecStatus.Paused) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56), vm::resumeDownload, compact = true)
@@ -419,8 +432,8 @@ private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ram
     CardShell(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
-                Text(item.name, style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.purpose, style = IrisType.secondary, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.name, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(item.purpose, style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.height(IrisDimens.space4))
                 Badges(item, size, ramHint)
             }
@@ -442,23 +455,23 @@ private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit
             IrisProgressBar(progress = s.fraction)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(DownloadText.progressLine(s.done, s.total, s.source), style = IrisType.caption, color = c.textSecondary,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 if (s.pausable) IrisButton(DownloadText.PAUSE, onPause, style = IrisButtonStyle.Text, compact = true)
                 IrisButton(DownloadText.CANCEL, onCancel, style = IrisButtonStyle.Text, compact = true)
             }
-            s.notice?.let { Text(RecommendedCatalog.shortReason(it), style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            s.notice?.let { Text(RecommendedCatalog.shortReason(it), style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
         is RecStatus.Paused -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
             IrisProgressBar(progress = if (s.total > 0) (s.done.toDouble() / s.total).toFloat() else 0f)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_80e506) + DownloadText.progressLine(s.done, s.total), style = IrisType.caption, color = c.textSecondary,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Text, compact = true)
                 IrisButton(DownloadText.CANCEL, onCancel, style = IrisButtonStyle.Text, compact = true)
             }
         }
         is RecStatus.Failed -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-            Text(s.reason, style = IrisType.caption, color = c.danger, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(s.reason, style = IrisType.caption, color = c.danger)
             Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Refresh)
                 IrisButton(SourceText.IMPORT, onImport, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.Add)
@@ -473,9 +486,9 @@ private fun OnlineCard(h: GgufSearch.RepoHit, ram: Long, onOpen: () -> Unit) {
     val c = Iris.colors
     CardShell(onClick = onOpen) {
         Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
-            Text(h.id.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(h.id.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOf(h.id.substringBefore('/'), SearchText.stats(h)).joinToString(" · "), style = IrisType.caption, color = c.textTertiary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
             Badge(h.site.tag)
