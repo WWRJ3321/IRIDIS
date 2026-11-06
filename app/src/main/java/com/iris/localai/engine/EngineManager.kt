@@ -399,7 +399,9 @@ class EngineManager(
             runCatching {
                 val mi = android.app.ActivityManager.MemoryInfo()
                 appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
-                val v = MemoryPreflight.check(mi.availMem, model.sizeBytes, cfg.contextLength, preferred == Backend.GPU)
+                // 2.4.4: the vision projector (mmproj) is loaded too — count it.
+                val proj = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj)?.let { java.io.File(it).length() } ?: 0L else 0L
+                val v = MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, preferred == Backend.GPU)
                 Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)}")
                 v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
             }

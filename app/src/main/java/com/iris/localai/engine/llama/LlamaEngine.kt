@@ -105,7 +105,10 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             var vision = false
             var visionNote: String? = null
             config.mmprojPath?.let { mp ->
-                val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), gpu && !npu) }
+                // 2.4.4: never on Adreno's OpenCL — the vision encoder there could hang the GPU and freeze
+                // the whole phone (群友 iQOO Neo11, 9B + mmproj). CPU encodes one picture in seconds.
+                val projGpu = gpu && !npu && !VisionGpu.adrenoOpenCl(m.gpu)
+                val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), projGpu) }
                     .getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
                 if (e == null) vision = true
                 else { visionNote = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
@@ -341,4 +344,11 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             }.asCoroutineDispatcher()
         }
     }
+}
+
+
+/** 2.4.4: where the vision projector (mtmd) runs. Pure, unit-tested. */
+object VisionGpu {
+    /** The GPU llama.cpp reports is a Qualcomm Adreno (OpenCL backend): the projector stays on the CPU. */
+    fun adrenoOpenCl(gpuName: String?): Boolean = gpuName.orEmpty().let { it.contains("adreno", ignoreCase = true) || it.contains("qualcomm", ignoreCase = true) }
 }

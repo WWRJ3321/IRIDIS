@@ -152,5 +152,17 @@ class V244Test {
         assertFalse(Regex("\\\\x9Cend").containsMatchIn(cpp)) // \x9Ce would be read as one hex escape
     }
 
+    // ---- mmproj 卡死 ----
+    @Test fun visionProjectorOffAdrenoGpuAndCountedInPreflight() {
+        val V = com.iris.localai.engine.llama.VisionGpu
+        assertTrue(V.adrenoOpenCl("QUALCOMM Adreno(TM) 830"))
+        assertFalse(V.adrenoOpenCl("Mali-G925-Immortalis MC12"))
+        assertFalse(V.adrenoOpenCl(""))
+        val llama = src("app/src/main/java/com/iris/localai/engine/llama/LlamaEngine.kt")
+        assertTrue("jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), projGpu)" in llama)
+        val mgr = src("app/src/main/java/com/iris/localai/engine/EngineManager.kt")
+        assertTrue("MemoryPreflight.check(mi.availMem, model.sizeBytes + proj," in mgr)
+    }
+
     private fun src(p: String) = java.io.File(p).readText()
 }
