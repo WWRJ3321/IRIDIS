@@ -295,6 +295,9 @@ class EngineManager(
         }
     }
 
+    /** 2.4.2: a reply or native computation is running (an unload now waits for it). */
+    val busyNow: Boolean get() = generation.isLocked || engine?.busyNative == true
+
     /** 2.1.7: the load running / queued now; a message sent meanwhile waits for it ([ensureLoaded]). */
     private val inFlight = InFlightLoad()
 
@@ -306,6 +309,13 @@ class EngineManager(
             if (ReloadRules.alreadyLoaded(state.value, model.path)) {
                 Log.i(LoadTelemetry.TAG, "load skipped ($reason): ${model.fileName} is already loaded")
                 return@withLock true
+            }
+            // 2.4.2 终止温度: no new load while still over the cutoff; otherwise arm again (a reload
+            // after a trip used to stay unprotected until the phone had cooled 2°C below the setting).
+            ThermalCutoff.startOrRefuse()?.let { msg ->
+                _notices.tryEmit(msg)
+                if (engine == null) _state.value = EngineState.Failed(model, msg)
+                return@withLock false
             }
             cancelAll()
             // 2.4.0: switching models used to look like nothing happened — the old model kept showing
@@ -712,6 +722,7 @@ class EngineManager(
         requester: Requester,
         owner: GenOwner = GenOwner(requester.name),
     ): Flow<GenEvent> = flow {
+        ThermalCutoff.startOrRefuse()?.let { msg -> emit(GenEvent.Done(StopReason.ERROR, null, msg)); return@flow }
         gate.request(onWaiting = { w ->
             if (w) Log.i(RES_TAG, "request ($requester) queued: tier reload in progress, starts when it ends")
             else Log.i(RES_TAG, "request ($requester) released: tier reload finished, state=${state.value.javaClass.simpleName}")

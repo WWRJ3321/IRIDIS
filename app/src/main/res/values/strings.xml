@@ -532,7 +532,7 @@
     <string name="settings_e5ffc0">手机过热时立即停止生成并卸载所有模型（%1$s）</string>
     <string name="settings_a5ae10">达到 %1$s°C 或系统报告严重过热时停止并卸载全部模型，需手动重新加载</string>
     <string name="settings_82a989">终止于</string>
-    <string name="settings_153dc8">按电池温度判断；停止对话、GUI 智能体和生图，卸载语言/视觉、语音和生图模型</string>
+    <string name="settings_153dc8">按电池温度判断，系统持续报告临界过热也会触发；停止对话、GUI 智能体和生图，卸载语言/视觉、语音、翻译和生图模型</string>
     <string name="settings_3ffddc">生成时保持屏幕常亮</string>
     <string name="settings_65fb6d">回复没写完时屏幕不熄灭</string>
     <string name="settings_539cb2">推理线程</string>

@@ -531,7 +531,7 @@
     <string name="settings_e5ffc0">Stoppt bei Überhitzung sofort die Generierung und entlädt alle Modelle (%1$s)</string>
     <string name="settings_a5ae10">Bei %1$s°C oder kritischer Überhitzungsmeldung des Systems wird gestoppt und alle Modelle entladen; manuell neu laden</string>
     <string name="settings_82a989">Stopp bei</string>
-    <string name="settings_153dc8">Nach Akkutemperatur; stoppt Chat, GUI-Agent und Bildgenerierung und entlädt Sprach-/Bild-, Sprachausgabe- und Bildmodelle</string>
+    <string name="settings_153dc8">Nach Akkutemperatur oder anhaltender kritischer Überhitzungsmeldung des Systems; stoppt Chat, GUI-Agent und Bildgenerierung und entlädt Sprach-/Bild-, Sprachausgabe-, Übersetzungs- und Bildmodelle</string>
     <string name="settings_3ffddc">Bildschirm beim Generieren anlassen</string>
     <string name="settings_65fb6d">Bildschirm bleibt an, bis die Antwort fertig ist</string>
     <string name="settings_539cb2">Inferenz-Threads</string>

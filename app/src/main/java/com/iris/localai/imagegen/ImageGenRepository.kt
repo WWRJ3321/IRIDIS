@@ -208,6 +208,8 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
         idle.track {
+            // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image.
+            com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return@track Result.failure(IllegalStateException(it)) }
             val e = runCatching { engineFor(model) }.getOrElse { return@track Result.failure(it) }
             active = e
             try { e.generate(req, model, onProgress) } finally { if (active === e) active = null }

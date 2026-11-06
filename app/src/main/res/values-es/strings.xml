@@ -531,7 +531,7 @@
     <string name="settings_e5ffc0">Detiene la generación y descarga todos los modelos si el teléfono se sobrecalienta (%1$s)</string>
     <string name="settings_a5ae10">A %1$s°C o ante un aviso crítico de temperatura del sistema, se detiene y descarga todos los modelos; recarga manual</string>
     <string name="settings_82a989">Detener a</string>
-    <string name="settings_153dc8">Según la temperatura de la batería; detiene chat, agente GUI y generación de imágenes, y descarga los modelos de lenguaje/visión, voz e imagen</string>
+    <string name="settings_153dc8">Según la temperatura de la batería o un aviso crítico sostenido del sistema; detiene chat, agente GUI y generación de imágenes, y descarga los modelos de lenguaje/visión, voz, traducción e imagen</string>
     <string name="settings_3ffddc">Pantalla encendida al generar</string>
     <string name="settings_65fb6d">La pantalla no se apaga hasta terminar la respuesta</string>
     <string name="settings_539cb2">Hilos de inferencia</string>

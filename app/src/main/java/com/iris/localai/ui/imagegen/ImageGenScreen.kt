@@ -76,6 +76,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -90,6 +91,13 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     // Leaving 生图 frees the NPU graphs (≈1.1 GB); generate_image keeps its own 60 s idle release.
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.onLeave() } }
     fun toast(t: String) = Toast.makeText(context, t, Toast.LENGTH_SHORT).show()
+    val logScope = androidx.compose.runtime.rememberCoroutineScope()
+    // 2.4.2: copy the recent sd.cpp log (for a frozen / failed image) to the clipboard.
+    fun copySdLog() = logScope.launch {
+        val text = vm.sdLog()
+        context.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IRIDIS sd log", text))
+        toast("已复制生图日志，可直接发给开发者")
+    }
     var deleting by remember { mutableStateOf<ImageModel?>(null) }
     deleting?.let { m ->
         ConfirmDialog(
@@ -198,9 +206,23 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         }
                     }
                     if (s.running) {
-                        IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
-                        Spacer(Modifier.height(IrisDimens.space6))
-                        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption, color = Iris.colors.textSecondary)
+                        val sd = s.model.backend == com.iris.localai.imagegen.Backend.SDCPP
+                        // 2.4.2: tick the elapsed time every second; sd.cpp phases (weights / step / decode) told apart.
+                        val elapsed by androidx.compose.runtime.produceState(0L, s.startedAt) {
+                            while (true) { value = ((System.currentTimeMillis() - s.startedAt) / 1000).coerceAtLeast(0); kotlinx.coroutines.delay(1000) }
+                        }
+                        if (sd) {
+                            IrisProgressBar(com.iris.localai.imagegen.SdProgress.fraction(s.progress, s.steps))
+                            Spacer(Modifier.height(IrisDimens.space6))
+                            Text(com.iris.localai.imagegen.SdProgress.label(s.progress, s.steps, elapsed, !s.sdOnCpu), style = IrisType.caption, color = Iris.colors.textSecondary)
+                            if (elapsed >= com.iris.localai.imagegen.SdProgress.LOG_HINT_SEC) {
+                                IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                            }
+                        } else {
+                            IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
+                            Spacer(Modifier.height(IrisDimens.space6))
+                            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption, color = Iris.colors.textSecondary)
+                        }
                         Spacer(Modifier.height(IrisDimens.space8))
                         IrisButton(ImageGenText.CANCEL, onClick = vm::cancel, modifier = Modifier.fillMaxWidth(), style = IrisButtonStyle.Tonal, icon = IrisIcons.Stop)
                     } else {
@@ -209,6 +231,9 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     s.error?.let {
                         Spacer(Modifier.height(IrisDimens.space8))
                         Text(it, style = IrisType.secondary, color = Iris.colors.danger)
+                        if (s.model.backend == com.iris.localai.imagegen.Backend.SDCPP && it != ImageGenText.CANCELLED) {
+                            IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                        }
                     }
                 }
             }

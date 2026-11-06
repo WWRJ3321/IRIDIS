@@ -531,7 +531,7 @@
     <string name="settings_e5ffc0">Stops generating and unloads all models when the phone overheats (%1$s)</string>
     <string name="settings_a5ae10">At %1$s°C or a critical system thermal warning, stops and unloads all models; reload manually</string>
     <string name="settings_82a989">Stop at</string>
-    <string name="settings_153dc8">Based on battery temperature; stops chat, GUI agent and image generation and unloads language/vision, voice and image models</string>
+    <string name="settings_153dc8">Based on battery temperature, or a sustained critical system thermal warning; stops chat, GUI agent and image generation and unloads language/vision, voice, translation and image models</string>
     <string name="settings_3ffddc">Keep screen on while generating</string>
     <string name="settings_65fb6d">Screen stays on until the reply is finished</string>
     <string name="settings_539cb2">Inference threads</string>

@@ -16,9 +16,10 @@ class ThermalTtsV2210Test {
         assertFalse(ThermalCutoff.over(70f, 0))             // off
         assertFalse(ThermalCutoff.over(47.9f, 48))
         assertTrue(ThermalCutoff.over(48f, 48))
-        assertTrue(ThermalCutoff.over(Float.NaN, 48, thermalStatus = 3))
-        assertTrue(ThermalCutoff.over(40f, 48, headroom = 1.05f))
-        assertFalse(ThermalCutoff.over(Float.NaN, 48, thermalStatus = 2, headroom = 0.8f))
+        // 2.4.2: SEVERE alone no longer trips (left to 温度限速); CRITICAL does
+        assertFalse(ThermalCutoff.over(Float.NaN, 48, thermalStatus = 3))
+        assertTrue(ThermalCutoff.over(Float.NaN, 48, thermalStatus = 4))
+        assertFalse(ThermalCutoff.over(Float.NaN, 48, thermalStatus = 2))
     }
 
     @Test fun tripLatchesUntilCooled() {

@@ -184,7 +184,9 @@ class IrisApp : Application() {
         val status = runCatching { pm?.currentThermalStatus ?: 0 }.getOrDefault(0)
         val headroom = if (android.os.Build.VERSION.SDK_INT >= 30) runCatching { pm?.getThermalHeadroom(10) ?: Float.NaN }.getOrDefault(Float.NaN) else Float.NaN
         if (!com.iris.localai.engine.ThermalCutoff.check(tempC, status, headroom, thermalActive())) return
-        val msg = com.iris.localai.engine.ThermalCutoff.notice(tempC)
+        // 2.4.2: an MNN prefill cannot be interrupted, so the unload waits for it — say so.
+        val waiting = runCatching { container.engine.busyNow }.getOrDefault(false)
+        val msg = com.iris.localai.engine.ThermalCutoff.notice(tempC) + (if (waiting) "，当前计算结束后完成卸载" else "")
         android.util.Log.w("IrisThermal", msg)
         container.scope.launch {
             // Stop everything first (GUI agent, every engine generation, image gen), then unload.
@@ -195,6 +197,7 @@ class IrisApp : Application() {
             runCatching { container.engine.unload("温度过高") }
             runCatching { container.recognizer.release() }
             runCatching { container.synthesizer.release() }
+            runCatching { container.translator.release() }   // 2.4.2: the offline translation model too
             launch(Dispatchers.IO) { runCatching { img.release() } }
         }
         com.iris.localai.util.HintLog.add(msg, com.iris.localai.util.HintLog.Source.SYSTEM)

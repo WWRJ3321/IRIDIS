@@ -51,6 +51,18 @@ object SdRules {
         else com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_lowmem_cpu, have, width, height, need)
     }
 
+    /**
+     * 2.4.2: CPU threads for sd.cpp. Left at 0 it used one thread per core including the little
+     * cores, and every graph op then waits for the slowest one; use the performance cores only
+     * (same rule as the chat engine's ThreadPolicy.performanceCores).
+     */
+    fun threads(t: com.iris.localai.engine.CpuTopology): Int {
+        val n = t.count
+        if (n <= 0) return 0
+        val perf = if (t.clusters.size >= 3) n - t.clusters.first().size else n
+        return perf.coerceIn(2, 8)
+    }
+
     fun backends(gpuCrashedBefore: Boolean, preferCpu: Boolean): List<String> =
         if (gpuCrashedBefore || preferCpu) listOf(CPU) else listOf(GPU, CPU)
 
@@ -161,11 +173,13 @@ class SdCppEngine(
         val key = "$backend|${File(root, f.diffusion).path}"
         if (handle != 0L && loadedKey == key) return handle
         freeLocked()
-        val h = SdNative.nativeLoad(File(root, f.diffusion).path, File(root, f.llm).path, File(root, f.vae).path, backend, 0, true)
+        val h = SdNative.nativeLoad(File(root, f.diffusion).path, File(root, f.llm).path, File(root, f.vae).path, backend, sdThreads, true)
         if (h == 0L) return null
         handle = h; loadedKey = key
         return h
     }
+
+    private val sdThreads: Int by lazy { runCatching { SdRules.threads(com.iris.localai.engine.CpuTopology.read()) }.getOrDefault(0).also { Log.i(TAG, "sd.cpp threads = $it") } }
 
     private fun freeLocked() {
         if (handle != 0L) runCatching { SdNative.nativeFree(handle) }

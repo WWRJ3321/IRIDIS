@@ -75,6 +75,9 @@ data class ImageGenUi(
     val running: Boolean = false,
     val step: Int = 0,
     val total: Int = 0,
+    /** 2.4.2: load / step / decode phase of the running generation, and when it started. */
+    val progress: com.iris.localai.imagegen.SdProgress.State = com.iris.localai.imagegen.SdProgress.State(),
+    val startedAt: Long = 0L,
     val error: String? = null,
     val result: String? = null,
     val history: List<String> = emptyList(),
@@ -209,12 +212,15 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
         val req = s.request()
         val model = s.model
-        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, seed = req.seed.toString()) }
+        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, seed = req.seed.toString(),
+            progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
             if (model.backend == com.iris.localai.imagegen.Backend.QNN || model.backend == com.iris.localai.imagegen.Backend.SDCPP) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
             val r = withContext(Dispatchers.Default) {
-                engine.generate(req, model) { step, total -> _ui.update { it.copy(step = step, total = total) } }
+                engine.generate(req, model) { step, total ->
+                    _ui.update { it.copy(step = step, total = total, progress = com.iris.localai.imagegen.SdProgress.next(it.progress, step, total, req.steps)) }
+                }
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
             saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }) } }
@@ -229,6 +235,9 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         job = null
         _ui.update { it.copy(running = false, error = ImageGenText.CANCELLED) }
     }
+
+    /** 2.4.2: recent sd.cpp log lines for a bug report (copied by the page). */
+    suspend fun sdLog(): String = withContext(Dispatchers.IO) { com.iris.localai.imagegen.SdLog.recent() }
 
     fun showResult(path: String) = _ui.update { it.copy(result = path) }
 

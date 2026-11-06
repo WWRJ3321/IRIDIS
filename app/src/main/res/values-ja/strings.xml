@@ -531,7 +531,7 @@
     <string name="settings_e5ffc0">過熱時はすぐに生成を止め、すべてのモデルを解放します（%1$s）</string>
     <string name="settings_a5ae10">%1$s°C に達するか、システムが深刻な過熱を報告すると停止してすべてのモデルを解放します。再読み込みは手動です</string>
     <string name="settings_82a989">停止温度</string>
-    <string name="settings_153dc8">電池温度で判断。会話、GUI エージェント、画像生成を止め、言語/視覚・音声・画像生成モデルを解放します</string>
+    <string name="settings_153dc8">電池温度、またはシステムが重大な過熱を報告し続けた場合に作動。会話、GUI エージェント、画像生成を止め、言語/視覚・音声・翻訳・画像生成モデルを解放します</string>
     <string name="settings_3ffddc">生成中は画面をオンのままにする</string>
     <string name="settings_65fb6d">返信が終わるまで画面を消しません</string>
     <string name="settings_539cb2">推論スレッド</string>
