@@ -86,6 +86,8 @@ data class ImageGenUi(
     val sdGpuCrashed: Boolean = false,
     /** 2.4.1: sd.cpp — the next image runs on the CPU (crash or 「改用 CPU」). */
     val sdOnCpu: Boolean = false,
+    /** 2.4.3: the app died during an NPU (sdq) run. */
+    val sdHtpCrashed: Boolean = false,
     /** Model id -> running / failed download (from [ImageGenDownloader.states]). */
     val downloads: Map<String, ImageDl> = emptyMap(),
 ) {
@@ -158,7 +160,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { repo.downloaded() }.getOrDefault(emptySet()) to runCatching { repo.history().map { it.path } }.getOrDefault(emptyList())
             }
             val sd = engines.sdEngine()
-            _ui.update { it.copy(downloaded = dl, history = hist, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu) }
+            _ui.update { it.copy(downloaded = dl, history = hist, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu, sdHtpCrashed = sd.htpCrashedBefore) }
         }
     }
 

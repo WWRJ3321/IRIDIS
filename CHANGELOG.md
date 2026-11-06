@@ -2,6 +2,13 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.4.3（2026-11-06）
+
+- 新增 NPU 生图（实验，仅骁龙 8 Elite 及以上 / Hexagon HTP v79+）：「Z-Image Turbo（NPU）」与「FLUX.2 Klein 4B（NPU）」。文本编码器、扩散模型、VAE 全部在 NPU 上跑，扩散模型用 FP8（E4M3）权重。引擎来自 stable-diffusion.cpp 的高通分支（leejet/stable-diffusion.cpp PR #1970，happyyzy，MIT，固定在 854c9d1），新原生库 libiris_sdq.so 与 HTP v79/v81 运行库随模型下载（GitHub 标签 sdqlib-854c9d1），逐个校验 SHA-256 后才加载；与对话引擎、GPU 版生图库互不冲突。参考数据（分支 README，骁龙 8 Elite，端到端）：Z-Image 1024² 8 步 82.53 秒，FLUX.2 Klein 1024² 4 步 37.38 秒；README 未注明内存。Z-Image 文本编码器换成 unsloth Qwen3-4B Q4_0（README 用另一份），未验证。本版尚未在真机上验证。
+- 内存低于 15 GB 的手机，文本编码器算完提示词后即释放（te=disk），避免 6 GB 扩散模型和 2.4 GB 编码器同时常驻；16 GB 以下内存原作者未验证。
+- NPU 生图过程中应用若被系统杀掉，下次会先提示，可点「重试 NPU」或改用 GPU 版模型。
+- 非 8 Elite 的手机看不到这两个模型，原有 GPU/CPU 版不变。
+
 ## 2.4.2（2026-11-06）
 
 - 生图进度不再「卡在 452/452」：sd.cpp 会在第一次生成时才加载文本编码器和扩散模型的权重（如 386、452 个张量），2.4.1 把这些加载计数也显示成「第 x/y 步」，加载完开始算第 1 步时看上去就像卡住。现在分开显示「加载模型权重 x/y」「第 1/8 步计算中（首步最慢，含 GPU 初始化）」「已完成 n/8 步」「解码图片」，并显示已用时间。超过 2 分钟或出错时可「复制生图日志」发给开发者。

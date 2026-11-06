@@ -38,6 +38,8 @@ object SelfCheck {
                 if (f.freeRamMb < MNN_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, MNN_MIN_RAM_MB, f.freeRamMb))
             }
             Backend.SDCPP -> {
+                if (m.sdq && !ImageRules.sdqListed(f.htpArch)) problems.add(SdqNative.SDQ_NO_ARCH)
+                if (m.sdq && !f.cdspPresent) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_2a754e))
                 if (f.freeRamMb < SDCPP_MIN_RAM_MB) problems.add(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_8812a7, SDCPP_MIN_RAM_MB, f.freeRamMb))
             }
         }

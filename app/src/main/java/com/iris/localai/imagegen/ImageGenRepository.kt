@@ -174,7 +174,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     /** 2.4.0: the stable-diffusion.cpp engine (FLUX.2 Klein / Z-Image), created on first use. */
     fun sdEngine(): SdCppEngine = sd ?: synchronized(this) {
-        sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir, availMb = ::availMb).also { sd = it }
+        sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir, availMb = ::availMb, totalMb = ::totalMb).also { sd = it }
     }
 
     /** 2.4.1: ActivityManager.MemoryInfo.availMem in MB (MAX when unknown). */
@@ -183,7 +183,17 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
         android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem / (1024L * 1024L)
     }.getOrDefault(Long.MAX_VALUE)
 
+    /** 2.4.3: ActivityManager.MemoryInfo.totalMem in MB (MAX when unknown). */
+    private fun totalMb(): Long = runCatching {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem / (1024L * 1024L)
+    }.getOrDefault(Long.MAX_VALUE)
+
     fun engineFor(model: ImageModel): ImageGenEngine {
+        if (model.sdq) {
+            SdqNative.ensureLoaded(context, repo.downloadedDir(model)?.parentFile)?.let { return UnavailableEngine(it) }
+            return sdEngine()
+        }
         if (model.backend == Backend.SDCPP) {
             val root = repo.downloadedDir(model)?.parentFile
             SdNative.ensureLoaded(context, root?.let { File(it, ImageCatalog.SD_LIB.path) })?.let { return UnavailableEngine(it) }

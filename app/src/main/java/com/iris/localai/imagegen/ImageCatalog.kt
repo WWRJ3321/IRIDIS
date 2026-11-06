@@ -57,6 +57,8 @@ data class ImageModel(
     val note: String = "",
     /** 2.4.0: [Backend.SDCPP] models — which downloaded file is the diffusion model, text encoder and VAE. */
     val sdFiles: SdFiles? = null,
+    /** 2.4.3: runs on the Hexagon NPU through libiris_sdq.so (sd.cpp Qualcomm branch, HTP v79+), FP8 DiT. */
+    val sdq: Boolean = false,
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
     val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }
@@ -159,6 +161,14 @@ object ImageCatalog {
     /** 2.4.0: files more than one model uses (the Qwen3-4B text encoder), relative to the imagegen root. */
     const val SHARED_DIR = "_shared"
 
+    // 2.4.3 sdq library sizes / SHA-256 (CI native-sdq.yml output, tag SDQ_TAG).
+    const val SDQ_JNI_SIZE = 55_852_080L
+    const val SDQ_JNI_SHA = "547c7f18216abfb82fbed7abfedbd15a5d2aadfd7c1388c77b3a46eaf4469bde"
+    const val SDQ_V79_SIZE = 917_960L
+    const val SDQ_V79_SHA = "e431c6764a24b52d3b57584a6e8c76df5b1299625a5af79accf5735d726826be"
+    const val SDQ_V81_SIZE = 917_992L
+    const val SDQ_V81_SHA = "92939059061c4c51114f649fe2ed5d6388b9e28b6c5ee315ae1a8974cd09576f"
+
     private fun hf(repo: String, rev: String, file: String) = "https://huggingface.co/$repo/resolve/$rev/$file"
 
     /**
@@ -214,7 +224,77 @@ object ImageCatalog {
         sdFiles = SdFiles("z-image-turbo/z_image_turbo-Q3_K.gguf", QWEN3_4B.path, "z-image-turbo/ae.safetensors"),
     )
 
-    val all: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO)
+    /**
+     * 2.4.3: Hexagon NPU image engine (scripts/build-sdq-native.sh, CI native-sdq.yml): stable-diffusion.cpp's
+     * Qualcomm branch (leejet/stable-diffusion.cpp PR #1970 by happyyzy, MIT) + JNI, with the HTP v79 / v81 skels.
+     * Downloaded with the NPU models from the GitHub tag [SDQ_TAG]; each file is loaded only when its SHA-256 matches.
+     */
+    const val SDQ_TAG = "sdqlib-854c9d1"
+    data class SdqLib(val name: String, val size: Long, val sha256: String) {
+        val file: RemoteFile get() = RemoteFile("https://raw.githubusercontent.com/WWRJ3321/IRIDIS/$SDQ_TAG/prebuilt-assets/sdq/$name", size, "$SHARED_DIR/sdq-854c9d1/$name")
+    }
+    val SDQ_LIBS: List<SdqLib> = listOf(
+        SdqLib("libiris_sdq.so", SDQ_JNI_SIZE, SDQ_JNI_SHA),
+        SdqLib("libirsd-htp-v79.so", SDQ_V79_SIZE, SDQ_V79_SHA),
+        SdqLib("libirsd-htp-v81.so", SDQ_V81_SIZE, SDQ_V81_SHA),
+    )
 
-    fun byId(id: String): ImageModel? = all.firstOrNull { it.id == id }
+    /** Qwen3-4B Q4_0 (unsloth/Qwen3-4B-GGUF): the HTP kernels take Q4_0 / Q8_0 / MXFP4, not Q4_K. */
+    private val QWEN3_4B_Q40 = RemoteFile(
+        hf("unsloth/Qwen3-4B-GGUF", "22c9fc8a8c7700b76a1789366280a6a5a1ad1120", "Qwen3-4B-Q4_0.gguf"),
+        2_375_773_472L, "$SHARED_DIR/Qwen3-4B-Q4_0.gguf",
+    )
+
+    /** 2.4.3: Z-Image Turbo FP8 E4M3 DiT (Kijai/Z-Image_comfy_fp8_scaled, Apache-2.0) on the NPU; listing read 2026-11-06. */
+    val Z_IMAGE_NPU = ImageModel(
+        id = "z-image-turbo-npu", tier = Tier.HIGH, name = "Z-Image Turbo（NPU）", backend = Backend.SDCPP,
+        files = listOf(
+            RemoteFile(hf("Kijai/Z-Image_comfy_fp8_scaled", "952c72754beb38038a35c87a03a6da85d8232278", "z-image-turbo_fp8_scaled_e4m3fn_KJ.safetensors"),
+                6_158_115_074L, "z-image-turbo-npu/z-image-turbo_fp8_scaled_e4m3fn_KJ.safetensors"),
+            QWEN3_4B_Q40,
+            RemoteFile(hf("Comfy-Org/Z-Image-Turbo", "6fc90a3b1b653e935a0d175e260736de25b84df5", "split_files/vae/ae.safetensors"),
+                335_304_388L, "z-image-turbo-npu/ae.safetensors"),
+        ) + SDQ_LIBS.map { it.file },
+        fixedSize = null, defaultSteps = 8, defaultCfg = 1f,
+        hfRepo = "Kijai/Z-Image_comfy_fp8_scaled",
+        minHtpArch = 79,
+        note = "实验 · 擅长中英文字 · 8 步 · NPU（骁龙 8 Elite 及以上），约 8.9 GB",
+        sdFiles = SdFiles("z-image-turbo-npu/z-image-turbo_fp8_scaled_e4m3fn_KJ.safetensors", QWEN3_4B_Q40.path, "z-image-turbo-npu/ae.safetensors"),
+        sdq = true,
+    )
+
+    /** 2.4.3: FLUX.2 Klein 4B FP8 (black-forest-labs/FLUX.2-klein-4b-fp8, Apache-2.0) on the NPU; listing read 2026-11-06. */
+    val FLUX2_KLEIN_NPU = ImageModel(
+        id = "flux2-klein-4b-npu", tier = Tier.MID, name = "FLUX.2 Klein 4B（NPU）", backend = Backend.SDCPP,
+        files = listOf(
+            RemoteFile(hf("black-forest-labs/FLUX.2-klein-4b-fp8", "5b4408e59397a4a37ccb46afe426d8ed86379441", "flux-2-klein-4b-fp8.safetensors"),
+                4_070_624_520L, "flux2-klein-4b-npu/flux-2-klein-4b-fp8.safetensors"),
+            QWEN3_4B_Q40,
+            RemoteFile(hf("Comfy-Org/Flux-2-Klein-4B", "5b3abca5c0dc1ecd4eaf3340868d09063fc1c965", "split_files/vae/flux2-vae.safetensors"),
+                336_211_292L, "flux2-klein-4b-npu/flux2-vae.safetensors"),
+        ) + SDQ_LIBS.map { it.file },
+        fixedSize = null, defaultSteps = 4, defaultCfg = 1f,
+        hfRepo = "black-forest-labs/FLUX.2-klein-4b-fp8",
+        minHtpArch = 79,
+        note = "实验 · 通用写实 · 4 步 · NPU（骁龙 8 Elite 及以上），约 6.8 GB",
+        sdFiles = SdFiles("flux2-klein-4b-npu/flux-2-klein-4b-fp8.safetensors", QWEN3_4B_Q40.path, "flux2-klein-4b-npu/flux2-vae.safetensors"),
+        sdq = true,
+    )
+
+    /** Every model the app knows (downloaded ones are found by id even on another phone). */
+    val known: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
+
+    /** 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer). */
+    val all: List<ImageModel> by lazy {
+        val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
+        known.filter { !it.sdq || ImageRules.sdqListed(arch) }
+    }
+
+    fun byId(id: String): ImageModel? = known.firstOrNull { it.id == id }
+}
+
+/** 2.4.3 pure rules (unit-tested). */
+object ImageRules {
+    const val SDQ_MIN_HTP = 79
+    fun sdqListed(htpArch: Int?): Boolean = (htpArch ?: 0) >= SDQ_MIN_HTP
 }

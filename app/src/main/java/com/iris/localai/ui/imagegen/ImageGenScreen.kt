@@ -188,14 +188,21 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         (if (s.running) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b8656e) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_62227c)) + s.model.name + " · " + when (s.model.backend) {
                             com.iris.localai.imagegen.Backend.QNN -> "NPU"
                             com.iris.localai.imagegen.Backend.MNN_CPU -> "CPU"
-                            com.iris.localai.imagegen.Backend.SDCPP -> if (s.sdOnCpu) "CPU" else "GPU"
+                            com.iris.localai.imagegen.Backend.SDCPP -> if (s.model.sdq) "NPU" else if (s.sdOnCpu) "CPU" else "GPU"
                         } +
                             (if (s.modelId in s.downloaded) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)),
                         style = IrisType.caption, color = Iris.colors.accent,
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
                     // 2.4.1: sd.cpp models — GPU or CPU for the next image, 「重试 GPU」 after a crash, 「改用 CPU」.
-                    if (s.model.backend == com.iris.localai.imagegen.Backend.SDCPP && !s.running) {
+                    // 2.4.3: NPU models — only 「重试 NPU」 after the app died during an NPU run.
+                    if (s.model.sdq && s.sdHtpCrashed && !s.running) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = IrisDimens.space6)) {
+                            Text(com.iris.localai.imagegen.SdCppEngine.SDQ_CRASHED, style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.weight(1f))
+                            IrisButton("重试 NPU", onClick = vm::retryGpu, style = IrisButtonStyle.Text, compact = true)
+                        }
+                    }
+                    if (s.model.backend == com.iris.localai.imagegen.Backend.SDCPP && !s.model.sdq && !s.running) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = IrisDimens.space6)) {
                             Text(
                                 if (s.sdGpuCrashed) ImageGenText.SD_GPU_CRASHED else if (s.sdOnCpu) ImageGenText.SD_ON_CPU else ImageGenText.SD_ON_GPU,
@@ -214,7 +221,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         if (sd) {
                             IrisProgressBar(com.iris.localai.imagegen.SdProgress.fraction(s.progress, s.steps))
                             Spacer(Modifier.height(IrisDimens.space6))
-                            Text(com.iris.localai.imagegen.SdProgress.label(s.progress, s.steps, elapsed, !s.sdOnCpu), style = IrisType.caption, color = Iris.colors.textSecondary)
+                            Text(com.iris.localai.imagegen.SdProgress.label(s.progress, s.steps, elapsed, !s.model.sdq && !s.sdOnCpu), style = IrisType.caption, color = Iris.colors.textSecondary)
                             if (elapsed >= com.iris.localai.imagegen.SdProgress.LOG_HINT_SEC) {
                                 IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
                             }

@@ -23,6 +23,17 @@ object SdRules {
      */
     const val GPU = "diffusion=vulkan0,te=cpu,vae=vulkan0"
     const val CPU = "cpu"
+    /**
+     * 2.4.3: NPU models (libiris_sdq.so): text encoder, DiT and VAE all on the Hexagon HTP (PR #1970 README).
+     * After '|' comes sd.cpp's params_backend: below ~15 GB of RAM the text encoder's weights go back to disk
+     * after conditioning (te=disk), so the 6 GB FP8 DiT and the 2.4 GB encoder are never resident together.
+     */
+    const val HTP = "diffusion=HTP0,te=HTP0,vae=HTP0"
+    const val HTP_LOWMEM = "$HTP|te=disk"
+    const val HTP_LOWMEM_BELOW_MB = 15L * 1024
+    fun htpBackend(totalMb: Long): String = if (totalMb < HTP_LOWMEM_BELOW_MB) HTP_LOWMEM else HTP
+    /** 2.4.3: left behind when the app died during an NPU run (the next run asks before trying again). */
+    const val HTP_CRASH_MARKER = "sd-htp.running"
     const val CRASH_MARKER = "sd-vulkan.running"
     /** 2.4.1: present = the user chose 「改用 CPU」 on the 生图 page. */
     const val PREFER_CPU_MARKER = "sd-prefer-cpu"
@@ -41,6 +52,10 @@ object SdRules {
         val weights = if (gpu) (diffusionBytes.coerceAtLeast(0) + vaeBytes.coerceAtLeast(0)) / MB else 0L
         return weights + compute + HEADROOM_MB
     }
+
+    /** 2.4.3: NPU — every resident weight (the encoder too unless te=disk) plus compute buffers. */
+    fun neededMbHtp(diffusionBytes: Long, teBytes: Long, vaeBytes: Long, teOnDisk: Boolean, width: Int, height: Int): Long =
+        neededMb(true, diffusionBytes + (if (teOnDisk) 0L else teBytes.coerceAtLeast(0)), vaeBytes, width, height)
 
     /** Null when [availMb] covers [neededMb], else what to do (smaller size, or the CPU). */
     fun memoryProblem(availMb: Long, neededMb: Long, gpu: Boolean, width: Int, height: Int): String? {
@@ -90,6 +105,8 @@ class SdCppEngine(
     private val preferCpu: () -> Boolean = { File(stateDir, SdRules.PREFER_CPU_MARKER).exists() },
     /** 2.4.1: available RAM in MB (ActivityManager.MemoryInfo.availMem); MAX = unknown, no check. */
     private val availMb: () -> Long = { Long.MAX_VALUE },
+    /** 2.4.3: total RAM in MB (MAX = unknown). */
+    private val totalMb: () -> Long = { Long.MAX_VALUE },
 ) : ImageGenEngine {
     private val lock = Any()
     private var handle = 0L
@@ -98,12 +115,18 @@ class SdCppEngine(
     @Volatile private var cancelled = false
 
     private val marker get() = File(stateDir, SdRules.CRASH_MARKER)
+    private val htpMarker get() = File(stateDir, SdRules.HTP_CRASH_MARKER)
+    /** 2.4.3: the native library the model runs on (set per generation, under [lock]). */
+    @Volatile private var api: SdApi = SdApi.Upstream
+
+    /** 2.4.3: the app died during an NPU run last time. */
+    val htpCrashedBefore: Boolean get() = htpMarker.exists()
 
     /** The GPU crashed the app last time (marker left by a dead process). */
     val gpuCrashedBefore: Boolean get() = marker.exists()
 
     /** User asked to try the GPU again (「重试 GPU」): forget the crash and the CPU choice. */
-    fun clearGpuCrash() { marker.delete(); File(stateDir, SdRules.PREFER_CPU_MARKER).delete() }
+    fun clearGpuCrash() { marker.delete(); htpMarker.delete(); File(stateDir, SdRules.PREFER_CPU_MARKER).delete() }
 
     /** 2.4.1: 「改用 CPU」 / back to the GPU on the 生图 page. */
     fun setPreferCpu(on: Boolean) {
@@ -115,41 +138,48 @@ class SdCppEngine(
     val usesCpu: Boolean get() = SdRules.backends(gpuCrashedBefore, preferCpu()).first() == SdRules.CPU
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> {
-        if (!SdNative.loaded) return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)))
+        if (!(if (model.sdq) SdqNative.loaded else SdNative.loaded)) return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)))
+        if (model.sdq && htpCrashedBefore) return Result.failure(IllegalStateException(SDQ_CRASHED))
         if (req.initImagePath != null) return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_noimg2img)))
         val files = model.sdFiles ?: return Result.failure(IllegalStateException("no sd.cpp files for ${model.id}"))
         val root = rootOf(model) ?: return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)))
         cancelled = false
-        val order = SdRules.backends(gpuCrashedBefore, preferCpu())
+        val order = if (model.sdq) listOf(SdRules.htpBackend(totalMb())) else SdRules.backends(gpuCrashedBefore, preferCpu())
         // 2.4.1: check free RAM before starting (a GPU run that does not fit froze the phone / got killed).
         run {
             val first = order.first()
-            val gpu = first == SdRules.GPU
-            val need = SdRules.neededMb(gpu, File(root, files.diffusion).length(), File(root, files.vae).length(), req.width, req.height)
+            val gpu = first == SdRules.GPU || model.sdq
+            val need = if (model.sdq) SdRules.neededMbHtp(File(root, files.diffusion).length(), File(root, files.llm).length(),
+                File(root, files.vae).length(), first == SdRules.HTP_LOWMEM, req.width, req.height)
+            else SdRules.neededMb(gpu, File(root, files.diffusion).length(), File(root, files.vae).length(), req.width, req.height)
             val loadedHere = handle != 0L && loadedKey?.startsWith("$first|") == true
             if (!loadedHere) SdRules.memoryProblem(availMb(), need, gpu, req.width, req.height)?.let { return Result.failure(IllegalStateException(it)) }
         }
         return try {
             synchronized(lock) {
+                val want = if (model.sdq) SdApi.Qualcomm else SdApi.Upstream
+                if (want !== api) { freeLocked(); api = want }
                 var lastErr: String? = null
                 for (backend in order) {
                     val gpu = backend == SdRules.GPU
-                    if (gpu) runCatching { stateDir.mkdirs(); marker.writeText(System.currentTimeMillis().toString()) }
+                    val htp = model.sdq
+                    val mark = if (htp) htpMarker else marker
+                    if (gpu || htp) runCatching { stateDir.mkdirs(); mark.writeText(System.currentTimeMillis().toString()) }
                     try {
                         val h = ensureLoaded(root, files, backend) ?: run {
-                            lastErr = SdNative.nativeLastError().ifBlank { "load failed ($backend)" }
+                            lastErr = api.lastError().ifBlank { "load failed ($backend)" }
                             Log.w(TAG, "load on $backend failed: $lastErr")
                             null
                         } ?: continue
                         if (cancelled) throw CancellationException()
                         running = h
-                        val rgb = SdNative.nativeGenerate(h, req.prompt, req.effectiveNegative, req.width, req.height, req.steps, req.cfg, req.seed) { s, n ->
+                        val rgb = api.generate(h, req.prompt, req.effectiveNegative, req.width, req.height, req.steps, req.cfg, req.seed, SdNative.Progress { s, n ->
                             onProgress(s, n)
-                        }
+                        })
                         running = 0L
                         if (cancelled) throw CancellationException()
                         if (rgb == null) {
-                            lastErr = SdNative.nativeLastError().ifBlank { "generate failed ($backend)" }
+                            lastErr = api.lastError().ifBlank { "generate failed ($backend)" }
                             Log.w(TAG, "generate on $backend failed: $lastErr")
                             freeLocked()
                             continue
@@ -157,7 +187,7 @@ class SdCppEngine(
                         return Result.success(png(rgb, req.width, req.height))
                     } finally {
                         running = 0L
-                        if (gpu) marker.delete()
+                        if (gpu || htp) mark.delete()
                     }
                 }
                 Result.failure(IllegalStateException(lastErr ?: "generate failed"))
@@ -173,7 +203,7 @@ class SdCppEngine(
         val key = "$backend|${File(root, f.diffusion).path}"
         if (handle != 0L && loadedKey == key) return handle
         freeLocked()
-        val h = SdNative.nativeLoad(File(root, f.diffusion).path, File(root, f.llm).path, File(root, f.vae).path, backend, sdThreads, true)
+        val h = api.load(File(root, f.diffusion).path, File(root, f.llm).path, File(root, f.vae).path, backend, sdThreads, true)
         if (h == 0L) return null
         handle = h; loadedKey = key
         return h
@@ -182,13 +212,13 @@ class SdCppEngine(
     private val sdThreads: Int by lazy { runCatching { SdRules.threads(com.iris.localai.engine.CpuTopology.read()) }.getOrDefault(0).also { Log.i(TAG, "sd.cpp threads = $it") } }
 
     private fun freeLocked() {
-        if (handle != 0L) runCatching { SdNative.nativeFree(handle) }
+        if (handle != 0L) runCatching { api.free(handle) }
         handle = 0L; loadedKey = null
     }
 
     override fun cancel() {
         cancelled = true
-        running.takeIf { it != 0L }?.let { runCatching { SdNative.nativeCancel(it) } }
+        running.takeIf { it != 0L }?.let { runCatching { api.cancel(it) } }
     }
 
     /** Frees the loaded weights (several GB). Waits for a running generation. */
@@ -202,5 +232,8 @@ class SdCppEngine(
         return ByteArrayOutputStream().use { out -> bmp.compress(Bitmap.CompressFormat.PNG, 100, out); bmp.recycle(); out.toByteArray() }
     }
 
-    private companion object { const val TAG = "IrisSd" }
+    companion object {
+        private const val TAG = "IrisSd"
+        const val SDQ_CRASHED = "上次用 NPU 生图时应用退出了。点「重试 NPU」再试一次，或改用 GPU 版模型。"
+    }
 }

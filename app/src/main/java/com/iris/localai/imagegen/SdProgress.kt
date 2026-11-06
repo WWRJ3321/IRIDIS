@@ -64,7 +64,7 @@ object SdProgress {
 /** 2.4.2: the app's own recent sd.cpp / thermal log lines (logcat of this process), for 「复制生图日志」. */
 object SdLog {
     fun recent(lines: Int = 400): String = runCatching {
-        val p = ProcessBuilder("logcat", "-d", "-v", "time", "-t", lines.toString(), "-s", "IrisSd:V", "IrisThermal:V", "AndroidRuntime:E", "DEBUG:V")
+        val p = ProcessBuilder("logcat", "-d", "-v", "time", "-t", lines.toString(), "-s", "IrisSd:V", "IrisSdq:V", "IrisThermal:V", "AndroidRuntime:E", "DEBUG:V")
             .redirectErrorStream(true).start()
         val out = p.inputStream.bufferedReader().use { it.readText() }
         p.waitFor()
