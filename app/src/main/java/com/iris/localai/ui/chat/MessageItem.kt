@@ -427,11 +427,8 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
         }
         // While thinking streams the body is already there (one line tall), so the first words do
         // not arrive together with an expand animation of a container that is still growing.
-        AnimatedVisibility(
-            visible = expanded && (hasText || (streaming && thinking)),
-            enter = if (reduce) fadeIn(snap()) else fadeIn(IrisMotion.enter()) + expandVertically(IrisMotion.enter()),
-            exit = if (reduce) fadeOut(snap()) else fadeOut(IrisMotion.standard()) + shrinkVertically(IrisMotion.standard()),
-        ) {
+        // 2.4.5 (#10): jumps to its end as soon as the list scrolls (garbled text under a fling mid-animation).
+        com.iris.localai.ui.components.ScrollSafeFold(visible = expanded && (hasText || (streaming && thinking))) {
             Row(Modifier.padding(start = IrisDimens.space6, top = IrisDimens.space4).height(IntrinsicSize.Min)) {
                 Box(Modifier.width(IrisDimens.space2).fillMaxHeight().clip(IrisRadius.pillShape).background(c.outline))
                 ThinkingParagraphs(text, animate = streaming && thinking, modifier = Modifier.padding(start = IrisDimens.space12))

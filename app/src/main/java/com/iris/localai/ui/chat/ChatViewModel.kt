@@ -567,7 +567,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (busy()) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_94d50d); return }
         val agentMode = c.agent.settings.current.agentMode
         val ready = c.engine.state.value as? EngineState.Ready
-        val maxNew = if (agentMode) minOf(c.engine.effective().maxNewTokens, AGENT_MAX_NEW) else c.engine.effective().maxNewTokens
+        val maxNew = if (agentMode) com.iris.localai.agent.AgentOutput.maxNew(c.engine.effective().maxNewTokens, ready?.details?.contextLength?.takeIf { it > 0 } ?: c.engine.effective().contextLength) else c.engine.effective().maxNewTokens
         val n = compactIfNeeded(agentMode, ready, maxNew, manual = true)
         notice.value = if (n > 0) ContextText.compactNotice(n) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5aa0db)
     }
@@ -1159,7 +1159,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val memoryOn = c.agent.memorySettings.current.enabled
         val tools = com.iris.localai.agent.AgentTools.enabled(ag, c.agent.history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
         val eff = c.engine.effective()
-        val maxNew = minOf(eff.maxNewTokens, AGENT_MAX_NEW)
+        val maxNew = com.iris.localai.agent.AgentOutput.maxNew(eff.maxNewTokens, ready?.details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength)
         freezeMemory(agentMode = true, ready = ready)
         val p = planFor(conversation.value, ready, voice = false, agent = true, maxNewOverride = maxNew)
         return listOf(PromptMessage(PromptMessage.SYSTEM, agentSystemFor(conversation.value, ready, tools))) +

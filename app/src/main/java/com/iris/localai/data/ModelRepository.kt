@@ -258,25 +258,44 @@ class ModelRepository(private val context: Context) {
 
     private fun sanitizeFileName(name: String): String = ModelFiles.sanitizeFileName(name)
 
-    /** 2.3.5 (#8): copy a user-picked mmproj GGUF next to [model]; returns its file name (always contains "mmproj"). */
+    /**
+     * 2.3.5 (#8): copy a user-picked mmproj GGUF next to [model]; returns its file name (always contains "mmproj").
+     * 2.4.5 (#12): models imported before 2.3.5 sit directly in models/ (no folder of their own). Returning
+     * from the file picker resumes 模型与加载, whose [refresh] deleted every unregistered `.part` in that
+     * top-level folder — the copy failed half way and the error was swallowed, so picking did nothing.
+     * The `.part` is now registered in [activeParts], the name is tied to the model ([mmprojTargetName]),
+     * and an existing file of another size is replaced instead of being reused.
+     */
     suspend fun importMmproj(model: LocalModel, uri: Uri): String = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val raw = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-            ?: uri.lastPathSegment?.substringAfterLast('/') ?: "mmproj.gguf"
-        var name = sanitizeFileName(raw)
-        if (!GgufFolder.isGguf(name)) throw IOException("请选择 .gguf 格式的 mmproj 文件")
-        if (!isProjectorFile(name)) name = "mmproj-$name"
+        var raw: String? = null
+        var srcSize = -1L
+        runCatching {
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
+                if (c.moveToFirst()) {
+                    raw = c.getString(0)
+                    if (!c.isNull(1)) srcSize = c.getLong(1)
+                }
+            }
+        }
+        val picked = sanitizeFileName(raw ?: uri.lastPathSegment?.substringAfterLast('/') ?: "mmproj.gguf")
+        if (!GgufFolder.isGguf(picked)) throw IOException("请选择 .gguf 格式的 mmproj 文件")
         val dir = File(model.path).parentFile ?: modelsDir
+        val flat = location().listDirs.any { runCatching { it.canonicalPath == dir.canonicalPath }.getOrDefault(false) }
+        val name = mmprojTargetName(File(model.path).name, picked, flat)
         val target = File(dir, name)
-        if (target.exists()) return@withContext name
+        if (target.isFile && (srcSize < 0 || target.length() == srcSize)) return@withContext name
         val part = File(dir, name + PART_SUFFIX)
+        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ba8e0, name))
         try {
             (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, name))).use { ins ->
                 part.outputStream().buffered(1 shl 20).use { os -> ins.copyTo(os, 1 shl 20) }
             }
+            if (srcSize > 0 && part.length() != srcSize) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_incomplete, name))
             target.parentFile?.mkdirs()
+            if (target.exists()) target.delete()
             if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
-        } catch (t: Throwable) { part.delete(); throw t }
+        } catch (t: Throwable) { part.delete(); throw t } finally { activeParts.remove(part.name) }
         name
     }
 
@@ -525,6 +544,21 @@ fun companionOf(model: String, other: String): Boolean {
     }
     val stem = model.replace(GgufSearch.SPLIT, ".gguf").removeSuffix(".gguf")
     return other.startsWith("$stem-") && isProjectorFile(other)
+}
+
+/**
+ * 2.4.5 (#12): file name for a projector the user picked for [modelFile]. In a shared top-level folder
+ * ([flat]: models imported before 2.3.5) it starts with the model's stem, so it pairs automatically
+ * ([com.iris.localai.engine.llama.MmprojPairing.pick]), is deleted with the model ([companionOf]) and
+ * never collides with another model's generic `mmproj-F16.gguf`. Always contains "mmproj". Pure.
+ */
+fun mmprojTargetName(modelFile: String, picked: String, flat: Boolean): String {
+    val name = if (isProjectorFile(picked)) picked else "mmproj-$picked"
+    if (!flat) return name
+    val stem = modelFile.replace(GgufSearch.SPLIT, ".gguf").removeSuffix(".gguf").removeSuffix(".GGUF")
+    if (name.startsWith("$stem-")) return name
+    val joined = "$stem-$name"
+    return if (joined.length <= 180) joined else "${stem.take(160)}-mmproj.gguf"
 }
 
 /** 2.2.5: vision projector files (mmproj etc.) — attached to their parent model, never a model themselves. */

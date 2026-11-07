@@ -187,6 +187,8 @@ class SpeechSynthesizer(
     private val settings: SettingsRepository,
     private val clones: CloneVoiceStore,
     context: Context? = null,
+    /** 2.4.5: imported models (null in host tests). */
+    private val customs: CustomTtsStore? = null,
 ) {
     /** 2.2.10: 朗读引擎「系统 TTS」 (null in host tests). */
     val system: SystemTts? = context?.let { SystemTts(it.applicationContext) }
@@ -218,7 +220,13 @@ class SpeechSynthesizer(
     private var clone: ClonedVoice? = null
     private var cloneAudio: FloatArray? = null
 
-    val isAvailable: Boolean get() = (systemSelected() && system?.hasEngine() == true) || activeClone() != null || activePack() != null
+    val isAvailable: Boolean get() = (systemSelected() && system?.hasEngine() == true) || activeClone() != null || activeCustom() != null || activePack() != null
+    /** 2.4.5: the chosen imported model, if it is still on disk. */
+    fun activeCustom(): InstalledTts? = customs?.find(sel().pack)
+    /** Imported model loaded right now (its id), and its voice count. */
+    @Volatile private var loadedCustom: String? = null
+    private var customSpeakers = 1
+    val speakingCustom: Boolean get() = loadedCustom != null
     fun activePack(): VoicePack? = store.active(VoiceKind.TTS, sel().pack)
     /** The selected cloned voice, if it and the ZipVoice model are both present. */
     fun activeClone(): ClonedVoice? = sel().clone.takeIf { it.isNotEmpty() }
@@ -261,18 +269,20 @@ class SpeechSynthesizer(
         if (override == null && systemSelected()) {
             if (system?.prepare() != true) throw IllegalStateException("没有可用的系统 TTS 引擎，请在系统设置中安装或启用")
             // Free the built-in voice model while the system engine speaks.
-            tts?.release(); tts = null; loadedPack = null; clone = null; cloneAudio = null
+            tts?.release(); tts = null; loadedPack = null; loadedCustom = null; clone = null; cloneAudio = null
             usingSystem = true
             return@withContext
         }
         system?.release() // no-op unless the system engine was in use
         val wantClone = override ?: activeClone()
-        if (wantClone != null) { prepareClone(wantClone); return@withContext }
+        if (wantClone != null) { loadedCustom = null; prepareClone(wantClone); return@withContext }
+        activeCustom()?.let { prepareCustom(it); return@withContext }
         val pack = activePack() ?: return@withContext
-        if (tts != null && loadedPack == pack) return@withContext
+        if (tts != null && loadedPack == pack && loadedCustom == null) return@withContext
         tts?.release()
         tts = null
         loadedPack = null
+        loadedCustom = null
         val d = store.dir(pack)
         fun p(name: String) = File(d, name).absolutePath
         when (pack) {
@@ -297,7 +307,7 @@ class SpeechSynthesizer(
                         tokens = p("tokens.txt"),
                         dictDir = "", // unused since sherpa-onnx 1.12; passing it trips the jieba path
                     ),
-                    numThreads = 2,
+                    numThreads = 4,
                     provider = "cpu",
                 ),
                 ruleFsts = listOf("date.fst", "number.fst").joinToString(",") { p(it) }, // as in sherpa-onnx's own melo example
@@ -312,7 +322,7 @@ class SpeechSynthesizer(
                         vits = OfflineTtsVitsModelConfig(
                             model = p("zh_CN-xiao_ya-medium.onnx"), lexicon = p("lexicon.txt"), tokens = p("tokens.txt"),
                         ),
-                        numThreads = 2, provider = "cpu",
+                        numThreads = 4, provider = "cpu",
                     ),
                     ruleFsts = zhFsts, maxNumSentences = 1,
                 ),
@@ -324,7 +334,7 @@ class SpeechSynthesizer(
                             acousticModel = p("model-steps-3.onnx"), vocoder = p("vocos-22khz-univ.onnx"),
                             lexicon = p("lexicon.txt"), tokens = p("tokens.txt"),
                         ),
-                        numThreads = 2, provider = "cpu",
+                        numThreads = 4, provider = "cpu",
                     ),
                     ruleFsts = zhFsts, maxNumSentences = 1,
                 ),
@@ -339,7 +349,7 @@ class SpeechSynthesizer(
                         dataDir = p("espeak-ng-data"),
                         lexicon = "${p("lexicon-us-en.txt")},${p("lexicon-zh.txt")}",
                     ),
-                    numThreads = 2,
+                    numThreads = 4,
                     provider = "cpu",
                 ),
                 ruleFsts = listOf("date-zh.fst", "phone-zh.fst", "number-zh.fst").joinToString(",") { p(it) },
@@ -352,6 +362,46 @@ class SpeechSynthesizer(
         cloneAudio = null
         com.iris.localai.util.CrashReporter.breadcrumb("预热语音合成 ${pack.id}")
         runCatching { tts!!.generateWithCallback("你好", 0, 1f, TtsChunkCallback { false }) } // warm-up, discarded
+        } finally {
+            com.iris.localai.util.CrashReporter.breadcrumb(null)
+        }
+    }
+
+    /** 2.4.5: loads an imported sherpa-onnx model (Kokoro / Matcha / VITS) from its detected files. Runs on the TTS worker. */
+    private fun prepareCustom(m: InstalledTts) {
+        if (tts != null && loadedCustom == m.id) return
+        tts?.release()
+        tts = null
+        loadedPack = null
+        loadedCustom = null
+        clone = null
+        cloneAudio = null
+        val sp = m.model.spec
+        fun p(name: String) = if (name.isEmpty()) "" else File(m.dir, name).absolutePath
+        requireFiles(*(listOf(sp.model, sp.tokens, sp.vocoder, sp.voices, sp.dataDir).filter { it.isNotEmpty() } + sp.lexicons).map { p(it) }.toTypedArray())
+        val lexicon = sp.lexicons.joinToString(",") { p(it) }
+        val fsts = sp.ruleFsts.joinToString(",") { p(it) }
+        try {
+            com.iris.localai.util.CrashReporter.breadcrumb("加载导入的语音合成 ${m.id} (${sp.type})")
+            val modelConfig = when (sp.type) {
+                CustomTtsType.KOKORO -> OfflineTtsModelConfig(
+                    kokoro = OfflineTtsKokoroModelConfig(model = p(sp.model), voices = p(sp.voices), tokens = p(sp.tokens), dataDir = p(sp.dataDir), lexicon = lexicon, dictDir = "" /* unused since sherpa-onnx 1.12; a path trips the jieba code (see TTS_MELO) */),
+                    numThreads = 4, provider = "cpu",
+                )
+                CustomTtsType.MATCHA -> OfflineTtsModelConfig(
+                    matcha = OfflineTtsMatchaModelConfig(acousticModel = p(sp.model), vocoder = p(sp.vocoder), lexicon = lexicon, tokens = p(sp.tokens), dataDir = p(sp.dataDir), dictDir = "" /* unused since sherpa-onnx 1.12; a path trips the jieba code (see TTS_MELO) */),
+                    numThreads = 4, provider = "cpu",
+                )
+                CustomTtsType.VITS -> OfflineTtsModelConfig(
+                    vits = OfflineTtsVitsModelConfig(model = p(sp.model), lexicon = lexicon, tokens = p(sp.tokens), dataDir = p(sp.dataDir), dictDir = "" /* unused since sherpa-onnx 1.12; a path trips the jieba code (see TTS_MELO) */),
+                    numThreads = 4, provider = "cpu",
+                )
+            }
+            val engine = OfflineTts(config = OfflineTtsConfig(model = modelConfig, ruleFsts = fsts, maxNumSentences = 1))
+            tts = engine
+            loadedCustom = m.id
+            customSpeakers = runCatching { engine.numSpeakers() }.getOrDefault(1)
+            runCatching { engine.generateWithCallback("你好", 0, 1f, TtsChunkCallback { false }) } // warm-up, discarded
         } finally {
             com.iris.localai.util.CrashReporter.breadcrumb(null)
         }
@@ -377,7 +427,7 @@ class SpeechSynthesizer(
                                 tokens = p("tokens.txt"), encoder = p("encoder.int8.onnx"), decoder = p("decoder.int8.onnx"),
                                 vocoder = p("vocos_24khz.onnx"), dataDir = p("espeak-ng-data"), lexicon = p("lexicon.txt"),
                             ),
-                            numThreads = 2, provider = "cpu",
+                            numThreads = 4, provider = "cpu",
                         ),
                         maxNumSentences = 1,
                     ),
@@ -424,8 +474,8 @@ class SpeechSynthesizer(
                 return@withContext
             }
             val engine = tts ?: return@withContext
-            val sid = if (loadedPack?.singleSpeaker != false) 0 else speakerId
-            com.iris.localai.util.CrashReporter.breadcrumb("语音合成 ${loadedPack?.id} 音色$sid：${text.take(40)}")
+            val sid = if (loadedCustom != null) CustomTts.speaker(speakerId, customSpeakers) else if (loadedPack?.singleSpeaker != false) 0 else speakerId
+            com.iris.localai.util.CrashReporter.breadcrumb("语音合成 ${loadedCustom ?: loadedPack?.id} 音色$sid：${text.take(40)}")
             try {
                 if (loadedPack == VoicePack.CLONE_ZIPVOICE && clone != null) {
                     // ZipVoice re-encodes the reference with every call; one sentence per call keeps the first audio early.
@@ -444,6 +494,7 @@ class SpeechSynthesizer(
         tts?.release()
         tts = null
         loadedPack = null
+        loadedCustom = null
         clone = null
         cloneAudio = null
     }

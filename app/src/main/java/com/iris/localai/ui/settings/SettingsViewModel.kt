@@ -151,6 +151,27 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun cancelDownload(pack: VoicePack) { downloads.remove(pack)?.cancel() }
 
+    // ---- 2.4.5: imported sherpa-onnx TTS models ----
+    val customTts get() = c.customTts.models
+    val customImport get() = c.customTts.importState
+    private var customJob: Job? = null
+    fun refreshCustomTts() { c.scope.launch(kotlinx.coroutines.Dispatchers.IO) { c.customTts.refresh() } }
+    private fun startImport(block: suspend () -> Unit) {
+        if (customJob?.isActive == true) return
+        customJob = c.scope.launch { block() }
+    }
+    fun importTtsFolder(uri: android.net.Uri) = startImport { c.customTts.importTree(uri) }
+    fun importTtsArchive(uri: android.net.Uri) = startImport { c.customTts.importArchive(uri) }
+    fun importTtsUrl(url: String) = startImport { c.customTts.importUrl(url) }
+    fun cancelTtsImport() { customJob?.cancel(); c.customTts.clearImportMessage() }
+    fun clearTtsImportMessage() = c.customTts.clearImportMessage()
+    fun useCustomTts(m: com.iris.localai.voice.InstalledTts) = update { it.copy(ttsPack = m.packId, cloneVoiceId = "") }
+    fun activeCustomTts(): com.iris.localai.voice.InstalledTts? = c.customTts.find(c.settings.current.ttsPack)
+    fun deleteCustomTts(m: com.iris.localai.voice.InstalledTts) = viewModelScope.launch {
+        if (c.settings.current.ttsPack == m.packId) c.synthesizer.release()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.customTts.delete(m.id) }
+    }
+
     fun usePack(pack: VoicePack) = update {
         if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) it.copy(asrPack = pack.id) else it.copy(ttsPack = pack.id)
     }
@@ -198,7 +219,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 val out = PcmPlayer(c.synthesizer.sampleRate).also { previewPlayer = it }
                 player = out
                 val s = c.settings.current
-                val text = if (c.synthesizer.usingSystem || c.synthesizer.speakingWithClone || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
+                val text = if (c.synthesizer.usingSystem || c.synthesizer.speakingWithClone || c.synthesizer.speakingCustom || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
                     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48574b) else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
                 val job = kotlin.coroutines.coroutineContext[Job]
                 c.synthesizer.speak(text, s.ttsSpeakerId, s.ttsSpeed) { chunk ->

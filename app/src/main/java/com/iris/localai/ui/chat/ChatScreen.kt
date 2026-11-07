@@ -409,6 +409,9 @@ fun ChatScreen(
                     )
                 } else {
                     val lastAssistantId = messages.lastOrNull { it.role == Role.ASSISTANT }?.id
+                    // 2.4.5 (#10): expand / collapse inside the list snaps to its end while the list moves.
+                    val listScrolling = remember(listState) { derivedStateOf { listState.isScrollInProgress } }
+                    androidx.compose.runtime.CompositionLocalProvider(com.iris.localai.ui.components.LocalListScrolling provides listScrolling) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -491,6 +494,7 @@ fun ChatScreen(
                                 vm.cancelQueued(q.id)
                             }
                         }
+                    }
                     }
                 }
             }
@@ -826,7 +830,10 @@ fun ChatScreen(
         if (permissionAsk != null && backgroundRunId != null) vm.showNotice(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3b8d7a))
     }
     permissionAsk?.takeIf { backgroundRunId == null }?.let { ask ->
-        com.iris.localai.ui.agent.AgentPermissionDialog(ask.toolLabel, ask.toolName, ask.preview, alwaysPrefix = ask.alwaysPrefix, onAnswer = vm::answerPermission)
+        // 2.4.5 (#9): tapping outside folds the question into a corner pill; only the buttons answer it.
+        var collapsed by remember(ask.answer) { mutableStateOf(false) }
+        if (collapsed) com.iris.localai.ui.agent.AgentPermissionPill(ask.toolLabel, with(density) { composerHeight.toDp() } + 12.dp) { collapsed = false }
+        else com.iris.localai.ui.agent.AgentPermissionDialog(ask.toolLabel, ask.toolName, ask.preview, alwaysPrefix = ask.alwaysPrefix, onCollapse = { collapsed = true }, onAnswer = vm::answerPermission)
     }
     if (showContext) {
         ContextSheet(

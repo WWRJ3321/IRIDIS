@@ -457,6 +457,7 @@ class EngineManager(
                                 noVisual = settings.current.mnnNoVisual,
                                 resources = plan,
                                 mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
+                                mmprojGpu = settings.current.visionGpu,
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

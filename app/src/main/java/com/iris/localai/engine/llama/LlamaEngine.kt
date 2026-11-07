@@ -107,7 +107,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             config.mmprojPath?.let { mp ->
                 // 2.4.4: never on Adreno's OpenCL — the vision encoder there could hang the GPU and freeze
                 // the whole phone (群友 iQOO Neo11, 9B + mmproj). CPU encodes one picture in seconds.
-                val projGpu = gpu && !npu && !VisionGpu.adrenoOpenCl(m.gpu)
+                // 2.4.5: 设置 › 模型与加载「识图用 GPU」 lifts that rule (off by default).
+                val projGpu = VisionGpu.useGpu(gpu, npu, m.gpu, config.mmprojGpu)
                 val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), projGpu) }
                     .getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
                 if (e == null) vision = true
@@ -351,4 +352,11 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
 object VisionGpu {
     /** The GPU llama.cpp reports is a Qualcomm Adreno (OpenCL backend): the projector stays on the CPU. */
     fun adrenoOpenCl(gpuName: String?): Boolean = gpuName.orEmpty().let { it.contains("adreno", ignoreCase = true) || it.contains("qualcomm", ignoreCase = true) }
+
+    /**
+     * 2.4.5: does the projector go to the GPU? Only when the model itself is on the GPU (not NPU); on
+     * Adreno only when the user turned on 识图用 GPU ([allowAdreno]).
+     */
+    fun useGpu(modelOnGpu: Boolean, npu: Boolean, gpuName: String?, allowAdreno: Boolean): Boolean =
+        modelOnGpu && !npu && (allowAdreno || !adrenoOpenCl(gpuName))
 }

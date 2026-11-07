@@ -89,7 +89,8 @@ internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: (
     val memoryOn = c.agent.memorySettings.current.enabled
     val tools = com.iris.localai.agent.AgentTools.enabled(ag, history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
     val ctxTokens = details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength
-    val maxNew = minOf(eff.maxNewTokens, AGENT_MAX_NEW)
+    // 2.4.5 (#11): the turn cap scales with the window (was min(最大生成长度, 1536) — long writes were cut).
+    val maxNew = com.iris.localai.agent.AgentOutput.maxNew(eff.maxNewTokens, ctxTokens)
     val sampling = c.engine.samplingFor(disableThinking).copy(maxNewTokens = maxNew, contextShift = false)
     streamingId.value = reply.id
     val timer = com.iris.localai.util.ReplyTimer().also { liveTimer = it }
@@ -160,6 +161,7 @@ internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: (
         return com.iris.localai.agent.ModelTurn(
             prefix + sb.toString(),
             error = d?.takeIf { it.reason == StopReason.ERROR && sb.isBlank() }?.let { it.error ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7f7de8) },
+            truncated = !cut && (d?.reason == StopReason.MAX_TOKENS || d?.reason == StopReason.CONTEXT_FULL),
         )
       }
     }

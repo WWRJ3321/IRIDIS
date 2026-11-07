@@ -91,6 +91,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
     val c = Iris.colors
     val s by vm.settings.collectAsStateWithLifecycle()
     val packs by vm.voicePacks.collectAsStateWithLifecycle()
+    val customList by vm.customTts.collectAsStateWithLifecycle()
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.stopPreview() } }
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), onBack) {
@@ -120,7 +121,8 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     Divider()
                 }
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
-                if (!sys && ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
+                val customVoice = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                if (!sys && customVoice == null && ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
                     val female = s.ttsSpeakerId in 3..57
                     val male = s.ttsSpeakerId >= 58
                     SettingsRow(
@@ -176,23 +178,29 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
             for ((kind, label) in listOf(VoiceKind.ASR to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a6541c), VoiceKind.TTS to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27eaa4))) {
                 SectionTitle(label)
                 val active = remember(packs, s.asrPack, s.ttsPack) { vm.activePack(kind) }
+                // 2.4.5: an imported model chosen as the voice wins over the packs (CustomTtsSection).
+                val customSel = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                val customOn = kind == VoiceKind.TTS && customSel != null
                 SettingsGroup {
                     VoicePack.entries.filter { it.kind == kind }.forEachIndexed { i, pack ->
                         if (i > 0) Divider()
                         PackRow(
-                            pack, packs[pack] ?: PackState.NotInstalled, vm.packBytes(pack), selected = pack == active,
+                            pack, packs[pack] ?: PackState.NotInstalled, vm.packBytes(pack), selected = pack == active && !customOn,
                             onUse = { vm.usePack(pack) },
                             onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
                         )
                     }
                 }
             }
+            CustomTtsSection(vm)
             CloneVoiceSection(vm)
             TranslateSection(vm, s)
 
             com.iris.localai.ui.components.SectionFold("voice-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9efdd4)) {
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
-                if (ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
+                val customAdv = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                // 2.4.5: an imported multi-voice model (Kokoro, multi-speaker VITS) uses the same 音色编号 (clamped to its voices).
+                if (((customAdv == null && ttsActive?.singleSpeaker == false) || (customAdv != null && customAdv.model.spec.type != com.iris.localai.voice.CustomTtsType.MATCHA)) && s.cloneVoiceId.isEmpty()) {
                     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10))
                     SettingsGroup {
                         SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10), s.ttsSpeakerId.toFloat(), 0f..102f, "#${s.ttsSpeakerId}") { v -> vm.update { it.copy(ttsSpeakerId = v.toInt()) } }

@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -95,7 +96,7 @@ internal fun rememberRichSettings(): RichSettings {
     return RichSettings(s.renderHtml, s.loadNetworkImages)
 }
 
-private object RichText {
+internal object RichText {
     val PREVIEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_7056bd)
     val OPEN_IMAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_3bc999)
     val SVG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_e077ad)
@@ -393,13 +394,24 @@ private fun ImageNote(alt: String, reason: String) {
 
 /** Full screen: pinch / double-tap zoom, pan; 保存到相册 (MediaStore) and 分享. */
 @Composable
-private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) {
+private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) = ChatImageViewer(listOf(src to alt), 0, onDismiss)
+
+/**
+ * 2.4.5 (Issue #13): the full-screen viewer for pictures in a conversation (sent photos, markdown
+ * images, step pictures). Pinch or double-tap to zoom, drag to pan (kept inside the picture), left /
+ * right through the pictures of one message like the 生成历史 viewer; 保存到相册 and 分享.
+ */
+@Composable
+internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int, onDismiss: () -> Unit) {
     val c = Iris.colors
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    var index by remember { mutableIntStateOf(start.coerceIn(0, (items.size - 1).coerceAtLeast(0))) }
+    val (src, alt) = items.getOrNull(index) ?: run { onDismiss(); return }
     val bitmap by produceState<Bitmap?>(null, src) { value = ChatImageLoader.load(ctx, src, 2048) }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    var scale by remember(index) { mutableFloatStateOf(1f) }
+    var offset by remember(index) { mutableStateOf(Offset.Zero) }
+    var box by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     fun withBytes(block: (ByteArray) -> Boolean, failed: String, done: String?) {
         scope.launch {
             val bytes = withContext(Dispatchers.IO) { ChatImageLoader.bytes(ctx, src) }
@@ -409,29 +421,46 @@ private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) {
         }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(c.background)) {
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).onSizeChanged { box = it }) {
             bitmap?.let { b ->
                 val img = remember(b) { b.asImageBitmap() }
                 Image(
                     img, alt.ifBlank { null }, contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
-                        .pointerInput(Unit) {
+                        .pointerInput(index) {
                             detectTransformGestures { _, pan, zoom, _ ->
-                                scale = (scale * zoom).coerceIn(1f, 6f)
-                                offset = if (scale <= 1f) Offset.Zero else offset + pan
+                                scale = ZoomMath.scale(scale, zoom)
+                                offset = ZoomMath.clamp(offset + pan, scale, box.width.toFloat(), box.height.toFloat())
                             }
                         }
-                        .pointerInput(Unit) {
-                            detectTapGestures(onDoubleTap = { if (scale > 1f) { scale = 1f; offset = Offset.Zero } else scale = 2.5f })
+                        .pointerInput(index) {
+                            detectTapGestures(onDoubleTap = { at ->
+                                if (scale > 1f) { scale = 1f; offset = Offset.Zero }
+                                else {
+                                    scale = ZoomMath.DOUBLE_TAP
+                                    // zoom towards the tapped point
+                                    val center = Offset(box.width / 2f, box.height / 2f)
+                                    offset = ZoomMath.clamp((center - at) * (ZoomMath.DOUBLE_TAP - 1f), scale, box.width.toFloat(), box.height.toFloat())
+                                }
+                            })
                         }
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                 )
-            } ?: Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.align(Alignment.Center).size(IrisDimens.space32))
+            } ?: Icon(IrisIcons.Image, null, tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.Center).size(IrisDimens.space32))
+            if (items.size > 1 && scale <= 1f) {
+                if (index > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) {
+                    PressableIcon(IrisIcons.ChevronLeft, RichText.OPEN_IMAGE, tint = androidx.compose.ui.graphics.Color.White, background = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)) { index-- }
+                }
+                if (index < items.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) {
+                    PressableIcon(IrisIcons.ChevronRight, RichText.OPEN_IMAGE, tint = androidx.compose.ui.graphics.Color.White, background = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)) { index++ }
+                }
+            }
             Row(
                 Modifier.fillMaxWidth().systemBarsPadding().background(c.background.copy(alpha = 0.7f)).padding(horizontal = IrisDimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
+                if (items.size > 1) Text("${index + 1} / ${items.size}", color = c.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = IrisDimens.space4))
                 Spacer(Modifier.weight(1f))
                 CardAction(IrisIcons.Download, RichText.SAVE) { withBytes({ ChatImageLoader.saveToGallery(ctx, it) }, RichText.SAVE_FAILED, RichText.SAVED) }
                 CardAction(IrisIcons.Share, RichText.SHARE) {
@@ -442,5 +471,24 @@ private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** 2.4.5 (#13): zoom / pan limits of [ChatImageViewer]. Pure. */
+object ZoomMath {
+    const val MIN = 1f
+    const val MAX = 6f
+    const val DOUBLE_TAP = 2.5f
+    fun scale(current: Float, zoom: Float): Float = (current * zoom).coerceIn(MIN, MAX)
+
+    /** Keeps the scaled picture covering the box: at most (scale − 1) · size / 2 each way; zero at 1×. */
+    fun clamp(offset: Offset, scale: Float, width: Float, height: Float): Offset =
+        if (scale <= 1f) Offset.Zero else Offset(axis(offset.x, scale, width), axis(offset.y, scale, height))
+
+    /** One axis of [clamp]. */
+    fun axis(v: Float, scale: Float, size: Float): Float {
+        if (scale <= 1f) return 0f
+        val m = (scale - 1f) * size / 2f
+        return v.coerceIn(-m, m)
     }
 }

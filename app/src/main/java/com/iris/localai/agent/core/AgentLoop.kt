@@ -203,7 +203,8 @@ fun retryHint(error: String): String =
     const val ELIDED = "<tool_response>\n(earlier tool output removed to save context)\n</tool_response>"
 }
 
-data class ModelTurn(val text: String, val error: String? = null)
+/** [truncated] (2.4.5): the engine stopped at the output-length / context limit, not at the end of the reply. */
+data class ModelTurn(val text: String, val error: String? = null, val truncated: Boolean = false)
 
 /** One model completion; the app's adapter streams through [onText] (full text so far). */
 interface AgentModel {
@@ -404,10 +405,26 @@ class AgentLoop(
                         msgs += PromptMessage(PromptMessage.USER, AgentPrompt.unknownToolHint(call.name, avail))
                         continue
                     }
+                    // 2.4.5 (#11): a write the length limit cut off saves its complete lines only, then
+                    // asks for the rest with append=true (it used to save the cut text and say OK).
+                    var cut: AgentOutput.Cut? = null
+                    var cutNothing = false
+                    if (tool != null && turn.truncated && call.name in AgentOutput.WRITE_TOOLS && AgentOutput.callUnclosed(answer)) {
+                        val content = Args.str(call.args, "content", "text", "data")
+                        cut = content?.let { AgentOutput.cutWrite(it) }
+                        if (cut == null) cutNothing = true
+                        else call = call.copy(args = kotlinx.serialization.json.JsonObject(call.args.filterKeys { it != "text" && it != "data" } +
+                            ("content" to kotlinx.serialization.json.JsonPrimitive(cut.kept))))
+                        android.util.Log.w(AGENT_TAG, "${call.name} cut by the length limit: kept ${cut?.lines ?: 0} line(s)")
+                    }
                     publish(step)
-                    val result: ToolResult
+                    var result: ToolResult
                     val status: StepStatus
-                    if (tool == null) {
+                    if (cutNothing) {
+                        result = ToolResult(false, AgentOutput.nothingNote(Args.str(call.args, "path", "file", "file_path", "filename")),
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.agent245_cut_nothing))
+                        status = StepStatus.ERROR
+                    } else if (tool == null) {
                         // Still unknown after the retry: a gray note, not a red error card.
                         result = ToolResult(false, "Error: unknown tool \"${call.name}\". Available: ${avail.joinToString()}", "未知工具（已忽略）")
                         status = StepStatus.DENIED
@@ -443,6 +460,16 @@ class AgentLoop(
                             android.util.Log.i(AGENT_TAG, "step $calls: tool=${call.name} ok=${result.ok} ${System.currentTimeMillis() - stepStart}ms")
                             if (result.ok && tool.risk in CHANGES) callbacks.onWorkspaceChanged()
                             if (result.ok && tool.risk == ToolRisk.MEMORY) callbacks.onMemoryChanged()
+                        }
+                    }
+                    cut?.let { k ->
+                        if (result.ok) {
+                            val path = Args.str(call.args, "path", "file", "file_path", "filename").orEmpty()
+                            val appended = Args.bool(call.args, "append") == true
+                            result = result.copy(
+                                output = result.output + "\n" + AgentOutput.continueNote(path, k, appended),
+                                summary = com.iris.localai.I18n.s(com.iris.localai.R.string.agent245_cut_saved, k.lines),
+                            )
                         }
                     }
                     update(step.copy(result = result.summary, status = status, detail = result.output, plan = result.plan, images = result.images))

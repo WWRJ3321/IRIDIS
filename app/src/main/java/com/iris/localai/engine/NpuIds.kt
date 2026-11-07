@@ -76,7 +76,8 @@ object NpuIds {
      */
     fun defaultKv(fileName: String): Int {
         val n = fileName.lowercase()
-        return if (GEMMA4.any { it in n }) GEMMA4_NPU_KV else UNKNOWN_NPU_KV
+        // 2.4.5: litert-community Qwen3-0.6B.mediatek.mt6993 — model card: a16w8, context 4096.
+        return if (GEMMA4.any { it in n } || (n.startsWith("qwen3-0.6b") && "mediatek" in n)) GEMMA4_NPU_KV else UNKNOWN_NPU_KV
     }
 
     /** History budget of an NPU file: its compiled KV size, else [defaultKv]. */

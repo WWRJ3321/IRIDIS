@@ -88,9 +88,16 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     var editSeed by remember { mutableStateOf(false) }
     var pickMmproj by remember { mutableStateOf(false) }
     var mmprojTick by remember { mutableIntStateOf(0) }
+    // 2.4.5 (#12): copying a projector takes a while and could fail; both used to be invisible.
+    var mmprojBusy by remember { mutableStateOf(false) }
+    var mmprojError by remember { mutableStateOf<String?>(null) }
     val mmprojFilePicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            runCatching { container.models.importMmproj(model, uri) }.onSuccess { n -> set { it.copy(mmproj = n) }; mmprojTick++ }
+        if (uri != null) container.scope.launch {
+            mmprojBusy = true; mmprojError = null
+            runCatching { container.models.importMmproj(model, uri) }
+                .onSuccess { n -> set { it.copy(mmproj = n) }; mmprojTick++ }
+                .onFailure { t -> mmprojError = com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_attach_failed, t.message ?: t.javaClass.simpleName) }
+            mmprojBusy = false
         }
     }
     // 2.2.17: projectors in the model's folder (GGUF vision through llama.cpp mtmd).
@@ -374,7 +381,9 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_57ed11), o.mmproj == com.iris.localai.engine.llama.MmprojPairing.OFF) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
                 mmprojChoices.forEach { f -> CheckRow(f, o.mmproj == f) { set { it.copy(mmproj = f) } } }
                 // 2.3.5 (#8): pick / replace from a file; 移除 = never load one
-                CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
+                if (mmprojBusy) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_copying), trailing = { com.iris.localai.ui.components.TypingDots() })
+                else CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
+                mmprojError?.let { err -> Text(err, style = com.iris.localai.ui.theme.IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) }
                 if (o.mmproj != com.iris.localai.engine.llama.MmprojPairing.OFF && (o.mmproj != null || mmprojAuto != null))
                     CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_remove), false) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
             }

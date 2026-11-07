@@ -314,6 +314,11 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
 
             vm.geniex?.let { gx -> GenieXSection(vm, gx) }
 
+            // 2.4.5: 识图用 GPU (GGUF vision projector). Off = 2.4.4: on Snapdragon (Adreno) the projector runs on the CPU.
+            SettingsGroup {
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.vg245_title), s.visionGpu, subtitle = com.iris.localai.I18n.s(if (s.visionGpu) com.iris.localai.R.string.vg245_on else com.iris.localai.R.string.vg245_off)) { on -> vm.update { it.copy(visionGpu = on) } }
+            }
+
             // 2.1.3: every load option sits behind 「高级」 (defaults unchanged).
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_04e3d1))
             SettingsGroup {

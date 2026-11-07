@@ -46,7 +46,9 @@ class AppContainer(app: Application) {
     val translator by lazy { com.iris.localai.translate.Translator(engine, settings, com.iris.localai.translate.TranslatePackStore(app), scope) }
     val recognizer = SpeechRecognizer(app, voiceStore, settings)
     val cloneVoices = com.iris.localai.voice.CloneVoiceStore(app)
-    val synthesizer = SpeechSynthesizer(voiceStore, settings, cloneVoices, app)
+    /** 2.4.5: imported sherpa-onnx TTS models (设置 › 语音 › 导入). */
+    val customTts = com.iris.localai.voice.CustomTtsStore(app, voiceStore)
+    val synthesizer = SpeechSynthesizer(voiceStore, settings, cloneVoices, app, customTts)
 }
 
 class IrisApp : Application() {

@@ -95,11 +95,24 @@ object RecommendedCatalog {
         Kind.Hub(GEMMA3_1B, "Gemma3-1B-IT_q4_ekv1280_$soc.litertlm"), top = true, licence = "Gemma", onlySoc = soc,
     )
 
+    const val QWEN3_06B = "litert-community/Qwen3-0.6B"
+    /**
+     * 2.4.5: Qwen3-0.6B compiled for the Dimensity 9500 NPU (MT6993; a16w8, 4096-token context, Apache-2.0).
+     * Size from the HF tree API 2026-11-07 (1,202,913,280 B; the model card's table says 992 MB) — ModelScope
+     * mirror lists the same size. The file carries no Jinja template: LiteRT-LM builds the prompt from the
+     * file's own turn markers, so the NPU path needs no template of ours.
+     */
+    private val mtkQwen3 = Item(
+        "$QWEN3_06B#mt6993", Section.CHAT, "Qwen3 0.6B（NPU）", com.iris.localai.I18n.s(com.iris.localai.R.string.mtk245_qwen_purpose), 1_202_913_280L, Engine.LITERT,
+        Kind.Hub(QWEN3_06B, "Qwen3-0.6B.mediatek.mt6993.litertlm"), top = true, licence = APACHE, onlySoc = "mt6993",
+    )
+
     val ITEMS: List<Item> = listOf(
         // 2.4.4: shown first on a matching Dimensity phone, hidden everywhere else (sizes: HF + ModelScope, 2026-11-07).
         mtkGemma("mt6989", 1_032_830_976L),
         mtkGemma("mt6991", 1_033_814_016L),
         mtkGemma("mt6993", 1_020_411_904L),
+        mtkQwen3,
         // ---- 对话 (top = the six shown before 展开全部) ----
         litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_73508c), 2.6, top = true),
         mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8), 2.9, top = true),

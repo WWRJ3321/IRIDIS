@@ -206,6 +206,8 @@ data class AppSettings(
     val autoLoadLastModel: Boolean = true,
     /** 1.8.0 crash-diag: skip loading visual.mnn (treat vision models as text-only). Takes effect on next model load. */
     val mnnNoVisual: Boolean = false,
+    /** 2.4.5: 识图用 GPU — let the vision projector (mmproj) run on an Adreno GPU too (2.4.4 keeps it on the CPU there). Next load. */
+    val visionGpu: Boolean = false,
     /** 1.8.0 crash-diag: global override — force off mmap weight mapping on every load. Takes effect on next model load. */
     val mnnForceNoMmap: Boolean = false,
     val keepScreenOn: Boolean = true,

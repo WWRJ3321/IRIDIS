@@ -3,6 +3,7 @@ package com.iris.localai.ui.chat
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +72,12 @@ fun AttachmentStrip(
     val haptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val spacingPx = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
     var dragKey by remember { mutableStateOf<String?>(null) }
+    // 2.4.5 (#13): tap a picture → full-screen viewer (zoom, pan, left / right through the message's pictures).
+    var viewing by remember { mutableStateOf<Int?>(null) }
+    viewing?.let { start ->
+        val pics = list.filter { it.kind == AttachmentKind.IMAGE }
+        com.iris.localai.ui.markdown.ChatImageViewer(pics.map { com.iris.localai.ui.markdown.ImageSource.LocalFile(it.path) to it.name }, start) { viewing = null }
+    }
     var dragDx by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val latest = androidx.compose.runtime.rememberUpdatedState(list)
     val gestures = if (onMove == null || list.size < 2) Modifier else Modifier.pointerInput(Unit) {
@@ -129,7 +136,7 @@ fun AttachmentStrip(
                         shape = IrisRadius.smallShape; clip = false
                     },
             ) {
-                if (a.kind == AttachmentKind.IMAGE) ImageThumb(a, 64.dp) else FileChip(a)
+                if (a.kind == AttachmentKind.IMAGE) ImageThumb(a, 64.dp) { viewing = list.filter { it.kind == AttachmentKind.IMAGE }.indexOfFirst { it.path == a.path }.coerceAtLeast(0) } else FileChip(a)
                 if (onRemove != null) {
                     Box(Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                         PressableIcon(
@@ -155,7 +162,7 @@ object AttachmentOrder {
 }
 
 @Composable
-private fun ImageThumb(a: Attachment, size: Dp) {
+private fun ImageThumb(a: Attachment, size: Dp, onOpen: () -> Unit) {
     val c = Iris.colors
     var bmp by remember(a.path) { mutableStateOf<ImageBitmap?>(null) }
     val px = with(androidx.compose.ui.platform.LocalDensity.current) { size.roundToPx() }
@@ -163,7 +170,8 @@ private fun ImageThumb(a: Attachment, size: Dp) {
         bmp = withContext(Dispatchers.IO) { decodeThumb(a.path, px * 2) }
     }
     Box(
-        Modifier.size(size).clip(IrisRadius.smallShape).background(c.surfaceVariant),
+        Modifier.size(size).clip(IrisRadius.smallShape).background(c.surfaceVariant)
+            .clickable(onClickLabel = com.iris.localai.ui.markdown.RichText.OPEN_IMAGE, onClick = onOpen),
         contentAlignment = Alignment.Center,
     ) {
         val b = bmp

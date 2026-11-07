@@ -30,6 +30,8 @@ data class LoadConfig(
     val resources: ResourcePlan? = null,
     /** 2.2.17, GGUF (llama.cpp): absolute path of the vision projector to load with the model, or null. */
     val mmprojPath: String? = null,
+    /** 2.4.5 设置「识图用 GPU」: allow the projector on an Adreno GPU (off = 2.4.4 rule, CPU there). */
+    val mmprojGpu: Boolean = false,
 )
 
 data class SamplingConfig(

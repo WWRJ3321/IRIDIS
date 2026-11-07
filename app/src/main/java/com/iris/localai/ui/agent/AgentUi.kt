@@ -92,7 +92,9 @@ fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (Ag
     // earlier steps fold into one 「已执行 N 步」 row; the newest steps always stay visible.
     val keep = StepFold.visible(steps.size)
     var expanded by rememberSaveable(steps.first().id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+    // 2.4.5 (#10): no size animation while the chat list scrolls (removing the modifier lands on the final size).
+    val listScrolling by com.iris.localai.ui.components.LocalListScrolling.current
+    Column(Modifier.fillMaxWidth().then(if (listScrolling) Modifier else Modifier.animateContentSize()), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
         val folded = if (expanded) 0 else steps.size - keep
         if (steps.size > keep) {
             val hidden = steps.take(steps.size - keep)
@@ -211,13 +213,13 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                 step.images.take(4).forEach { com.iris.localai.ui.markdown.ImageThumbnail(it) }
             }
         }
-        if (plan != null) com.iris.localai.ui.components.Fold(open) {
+        if (plan != null) com.iris.localai.ui.components.ScrollSafeFold(open) {
             Column(Modifier.padding(top = IrisDimens.space6).fillMaxWidth()) {
                 if (plan.title.isNotBlank()) Text(plan.title, style = IrisType.labelSmall, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(StepText.PLAN_HINT, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space2, bottom = IrisDimens.space8))
                 plan.steps.forEachIndexed { i, ps -> FlowNode(i + 1, ps.text, ps.status, first = i == 0, last = i == plan.steps.lastIndex) }
             }
-        } else if (!planStep) com.iris.localai.ui.components.Fold(open) {
+        } else if (!planStep) com.iris.localai.ui.components.ScrollSafeFold(open) {
             SelectionContainer {
                 Text(
                     step.detail.take(4000), style = IrisType.monoSmall, color = c.text,
@@ -235,13 +237,29 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
     }
 }
 
-/** In-chat confirmation for a tool whose permission is 询问: 允许一次 / 总是允许 / 拒绝. */
+/** 2.4.5 (Issue #9): what tapping outside / back does to the tool confirmation. Pure. */
+object PermissionAskFold {
+    enum class Action { COLLAPSE, DENY }
+    /** With a pill to bring it back the dialog folds away; it never answers 拒绝 on the user's behalf. */
+    fun onDismiss(collapsible: Boolean): Action = if (collapsible) Action.COLLAPSE else Action.DENY
+}
+
+/**
+ * In-chat confirmation for a tool whose permission is 询问: 允许一次 / 总是允许 / 拒绝.
+ * 2.4.5 (#9): with [onCollapse], tapping outside or back folds it into [AgentPermissionPill] (the
+ * agent keeps waiting) instead of answering 拒绝.
+ */
 @Composable
-fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, alwaysPrefix: String? = null, onAnswer: (UserDecision) -> Unit) {
+fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, alwaysPrefix: String? = null, onCollapse: (() -> Unit)? = null, onAnswer: (UserDecision) -> Unit) {
     val c = Iris.colors
     AlertDialog(
-        // Dismissing (back / outside tap) counts as 拒绝: the agent must never hang on a hidden dialog.
-        onDismissRequest = { onAnswer(UserDecision.DENY) },
+        // Without a pill, dismissing counts as 拒绝: the agent must never hang on a hidden dialog.
+        onDismissRequest = {
+            when (PermissionAskFold.onDismiss(onCollapse != null)) {
+                PermissionAskFold.Action.COLLAPSE -> onCollapse?.invoke()
+                PermissionAskFold.Action.DENY -> onAnswer(UserDecision.DENY)
+            }
+        },
         modifier = Modifier.largeSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
         shape = IrisRadius.dialogShape,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -270,4 +288,33 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
         },
         dismissButton = null,
     )
+}
+
+/**
+ * 2.4.5 (#9): the folded tool confirmation — a small pill in the bottom-right corner above the
+ * composer. Tapping it opens the dialog again; the agent waits until the user picks 允许 or 拒绝.
+ */
+@Composable
+fun AgentPermissionPill(toolLabel: String, bottom: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val c = Iris.colors
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val offset = with(density) { androidx.compose.ui.unit.IntOffset(-16.dp.roundToPx(), -bottom.roundToPx()) }
+    androidx.compose.ui.window.Popup(alignment = Alignment.BottomEnd, offset = offset) {
+        Row(
+            Modifier
+                .largeSurface(IrisRadius.pillShape, com.iris.localai.ui.theme.IrisElevation.menu)
+                .clip(IrisRadius.pillShape)
+                .background(c.accent)
+                .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.ask245_reopen), onClick = onClick)
+                .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space8),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = c.onAccent, modifier = Modifier.size(IrisDimens.space16).pulse(true, min = 0.5f))
+            Spacer(Modifier.width(IrisDimens.space6))
+            Text(
+                com.iris.localai.I18n.s(com.iris.localai.R.string.ask245_pill, toolLabel), style = IrisType.labelSmall, color = c.onAccent,
+                maxLines = 2, modifier = Modifier.widthIn(max = 200.dp),
+            )
+        }
+    }
 }
