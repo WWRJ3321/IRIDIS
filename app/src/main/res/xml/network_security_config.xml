@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2.4.6: 允许明文 HTTP，供用户自填的本机/局域网服务使用（MCP 如 http://127.0.0.1:8787/mcp、Termux、电脑上的服务）。
+     界面在填 http:// 地址时已有红字提示「不加密」。HTTPS 仍只信任系统证书。 -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
