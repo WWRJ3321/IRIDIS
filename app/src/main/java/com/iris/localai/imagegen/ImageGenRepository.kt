@@ -260,27 +260,44 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     /** Frees the NPU graphs [IdleReleaser.DEFAULT_TIMEOUT_MS] after the last generation (page or generate_image). */
     private val idle = IdleReleaser { release() }
 
-    override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
+    /** 2.4.6: in the app process, generations go to the `:imagegen` process ([RemoteImageGen]). */
+    private val remote: RemoteImageGen? by lazy { if (REMOTE && !ImageGenIpc.isImageGenProcess()) RemoteImageGen.get(context) else null }
+
+    override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> {
+        val r = remote ?: return generateLocal(req, model, onProgress)
+        // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image (app process state).
+        com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return Result.failure(IllegalStateException(it)) }
+        val force = sd?.forceOnce == true
+        sd?.forceOnce = false
+        return r.generate(req, model, force, onProgress)
+    }
+
+    /** Runs the native engine in this process (`:imagegen`, or the app process when [REMOTE] is off). */
+    suspend fun generateLocal(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
         idle.track {
-            // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image.
-            com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return@track Result.failure(IllegalStateException(it)) }
+            if (remote == null && !ImageGenIpc.isImageGenProcess()) {
+                // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image.
+                com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return@track Result.failure(IllegalStateException(it)) }
+            }
             val e = runCatching { engineFor(model) }.getOrElse { return@track Result.failure(it) }
             active = e
             try { e.generate(req, model, onProgress) } finally { if (active === e) active = null }
         }
 
-    override fun cancel() { active?.cancel() }
+    override fun cancel() { remote?.cancel(); active?.cancel() }
 
     /** 2.2.10 终止温度: a generation is running, or NPU graphs are held. */
-    val busy: Boolean get() = active != null
+    val busy: Boolean get() = active != null || remote?.busy == true
 
     /** Frees the NPU graphs (≈1.1 GB) now, until the next generation. */
-    fun release() { qnn?.release(); sd?.release() }
+    fun release() { remote?.release(); qnn?.release(); sd?.release() }
 
     /** Leaving the 生图 page: free the NPU graphs now, or as soon as a running generation ends. */
-    fun releaseWhenIdle() = idle.releaseWhenIdle()
+    fun releaseWhenIdle() { remote?.releaseWhenIdle(); idle.releaseWhenIdle() }
 
     companion object {
+        /** 2.4.6 kill switch for the separate `:imagegen` process. */
+        const val REMOTE = true
         @Volatile private var instance: ImageGenEngines? = null
         fun get(context: Context): ImageGenEngines =
             instance ?: synchronized(this) { instance ?: ImageGenEngines(context.applicationContext).also { instance = it } }

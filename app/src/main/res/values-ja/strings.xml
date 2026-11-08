@@ -1957,4 +1957,6 @@
     <string name="tts245_no_vocoder">Matcha モデルですがボコーダー（例：vocos-22khz-univ.onnx）がありません。ボコーダーの .onnx を同じフォルダに入れてから読み込んでください</string>
     <string name="tts245_no_frontend">テキスト前処理がありません。lexicon.txt または espeak-ng-data フォルダが必要です（Kokoro は espeak-ng-data が必要）</string>
     <string name="tts245_bad_url">https で始まり .tar.bz2 で終わるリンク、またはそのファイルを指定してください</string>
+    <string name="imagegen_proc_start_failed">画像生成プロセスを起動できませんでした。もう一度お試しください</string>
+    <string name="imagegen_proc_died">画像生成プロセスが予期せず終了しました（メモリ不足またはドライバのクラッシュの可能性）。チャットなど他の機能は影響を受けません。「CPU を使う」または小さいサイズで再試行してください</string>
 </resources>

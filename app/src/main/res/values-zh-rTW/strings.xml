@@ -1957,4 +1957,6 @@
     <string name="tts245_no_vocoder">這是 Matcha 模型，但缺少聲碼器（如 vocos-22khz-univ.onnx），請把聲碼器 .onnx 放進同一資料夾後再匯入</string>
     <string name="tts245_no_frontend">缺少文字前端：需要 lexicon.txt 或 espeak-ng-data 資料夾（Kokoro 需要 espeak-ng-data）</string>
     <string name="tts245_bad_url">請提供 https 開頭、以 .tar.bz2 結尾的連結或檔案</string>
+    <string name="imagegen_proc_start_failed">生圖程序啟動失敗，請重試</string>
+    <string name="imagegen_proc_died">生圖程序意外結束（可能是顯存/記憶體不足或驅動當機），對話與其他功能不受影響。可點「改用 CPU」或換小尺寸後重試</string>
 </resources>

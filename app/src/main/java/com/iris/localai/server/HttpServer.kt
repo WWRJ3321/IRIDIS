@@ -328,6 +328,9 @@ class HttpResponder(private val out: OutputStream, private val cors: Boolean = t
         out.flush()
     }
 
+    /** 2.4.6: a non-streaming JSON body, or its tail after [ApiKeepAlive] already sent the head + whitespace. */
+    fun finishJson(status: Int, body: String) = if (committed) chunk(body) else json(status, body)
+
     @Throws(IOException::class)
     fun chunk(text: String) {
         out.write(text.toByteArray(Charsets.UTF_8))

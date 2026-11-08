@@ -1957,4 +1957,6 @@
     <string name="tts245_no_vocoder">यह Matcha मॉडल है, पर वोकोडर (जैसे vocos-22khz-univ.onnx) नहीं है। वोकोडर .onnx उसी फ़ोल्डर में रखकर फिर आयात करें</string>
     <string name="tts245_no_frontend">टेक्स्ट फ़्रंट-एंड नहीं है: lexicon.txt या espeak-ng-data फ़ोल्डर चाहिए (Kokoro को espeak-ng-data चाहिए)</string>
     <string name="tts245_bad_url">https से शुरू होने वाला लिंक या फ़ाइल दें, जो .tar.bz2 पर खत्म हो</string>
+    <string name="imagegen_proc_start_failed">इमेज जनरेशन प्रोसेस शुरू नहीं हो सकी। कृपया फिर से कोशिश करें</string>
+    <string name="imagegen_proc_died">इमेज जनरेशन प्रोसेस अचानक बंद हो गई (संभवतः मेमोरी कम या ड्राइवर क्रैश)। चैट और बाकी सब चलता रहेगा। \"CPU इस्तेमाल करें\" या छोटा आकार आज़माएँ</string>
 </resources>

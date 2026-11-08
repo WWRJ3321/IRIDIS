@@ -3,6 +3,8 @@
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
 ## 2.4.6
+- 生图改在独立进程运行：显存/内存不足或驱动崩溃只结束生图进程，对话、智能体、终端、本地 API 不受影响，生图页提示原因。
+- 本地 API 非流式请求（stream:false）生成较慢时先回响应头并定时发空白保活，客户端不再报「Request timed out」反复重试。
 - 修复：MCP 填本机/局域网 http:// 地址（如 http://127.0.0.1:8787/mcp）报「Cleartext HTTP traffic not permitted」连不上。现在允许明文 HTTP（填 http 时界面仍有不加密提示）。
 
 ## 2.4.5（2026-11-07）

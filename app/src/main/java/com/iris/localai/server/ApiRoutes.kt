@@ -339,7 +339,7 @@ class ApiRoutes(
             }
             res.chunk("data: [DONE]\n\n")
         } else {
-            val c = collectWithContinuation(cr)
+            val c = ApiKeepAlive.run(res) { collectWithContinuation(cr) } ?: return
             val d = c.done
             val body = buildJsonObject {
                 put("id", id); put("object", "chat.completion"); put("created", created); put("model", modelId)
@@ -355,7 +355,7 @@ class ApiRoutes(
                 }
                 put("usage", usage(d))
             }
-            res.json(200, body.toString())
+            res.finishJson(200, body.toString())
         }
     }
 
@@ -394,8 +394,8 @@ class ApiRoutes(
             if (ev.reason == StopReason.ERROR || fail != null) res.chunk("""{"error":${HttpServer.jsonString(fail ?: ev.error ?: "generation failed")}}""" + "\n")
             else res.chunk(line("", "", true, ev) + "\n")
         } else {
-            val c = collectWithContinuation(cr)
-            res.json(200, line(c.answer, c.reasoning, true, c.done))
+            val c = ApiKeepAlive.run(res) { collectWithContinuation(cr) } ?: return
+            res.finishJson(200, line(c.answer, c.reasoning, true, c.done))
         }
     }
 }

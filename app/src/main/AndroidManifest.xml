@@ -105,6 +105,11 @@
                 android:value="On-device language model is generating a reply the user requested; runs only until that reply finishes or the user taps Stop." />
         </service>
         <!-- 2.4.4: keeps IRIDIS alive while a model the user chose downloads; runs only during that download. -->
+        <!-- 2.4.6: 生图 runs in its own process; a native crash there leaves the app running. -->
+        <service
+            android:name=".imagegen.ImageGenService"
+            android:exported="false"
+            android:process=":imagegen" />
         <service
             android:name=".service.DownloadService"
             android:exported="false"

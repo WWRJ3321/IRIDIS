@@ -1957,4 +1957,6 @@
     <string name="tts245_no_vocoder">Das ist ein Matcha-Modell, aber der Vocoder fehlt (z. B. vocos-22khz-univ.onnx). Vocoder-.onnx in denselben Ordner legen und erneut importieren</string>
     <string name="tts245_no_frontend">Text-Frontend fehlt: lexicon.txt oder ein espeak-ng-data-Ordner wird benötigt (Kokoro braucht espeak-ng-data)</string>
     <string name="tts245_bad_url">Bitte einen https-Link oder eine Datei mit der Endung .tar.bz2 verwenden</string>
+    <string name="imagegen_proc_start_failed">Der Bildgenerierungsprozess konnte nicht gestartet werden. Bitte erneut versuchen</string>
+    <string name="imagegen_proc_died">Der Bildgenerierungsprozess wurde unerwartet beendet (wahrscheinlich Speichermangel oder Treiberabsturz). Chat und alles andere laufen weiter. Versuche „CPU verwenden\" oder eine kleinere Größe</string>
 </resources>

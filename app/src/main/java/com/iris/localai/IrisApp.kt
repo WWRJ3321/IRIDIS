@@ -72,6 +72,8 @@ class IrisApp : Application() {
             val dir = java.io.File(cacheDir, "opencl").apply { mkdirs() }
             android.system.Os.setenv("GGML_OPENCL_KERNEL_CACHE_DIR", dir.path, true)
         }
+        // 2.4.6: the separate 生图 process (ImageGenService) needs only the OpenCL cache above.
+        if (com.iris.localai.imagegen.ImageGenIpc.isImageGenProcess()) return
         container = AppContainer(this)
         com.iris.localai.service.DownloadNotifier.start(this, container) // 2.4.4: progress notification for every model download
         // 2.1.9: 清后台 switched the GUI 无障碍 service off → back on (only with WRITE_SECURE_SETTINGS).
@@ -213,6 +215,7 @@ class IrisApp : Application() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        if (!::container.isInitialized) return // 2.4.6: :imagegen / :restart processes have no container
         // The system is under real memory pressure while we are in the background: release the
         // speech models first (cheap to reload); the LLM itself follows the idle-unload policy.
         if (level >= TRIM_MEMORY_BACKGROUND) {
