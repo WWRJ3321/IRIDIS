@@ -3,6 +3,7 @@ package com.iris.localai.ui.theme
 import android.app.Activity
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.remember
 import com.iris.localai.ui.glass.GlassQuality
 import com.iris.localai.ui.glass.LocalGlassQuality
@@ -180,6 +181,9 @@ fun IrisTheme(
             val window = (view.context as Activity).window
             // 2.1.5: no system contrast scrim behind the gesture pill (HyperOS draws one otherwise).
             window.isNavigationBarContrastEnforced = false
+            // 2.4.6: the window background follows the app's own light/dark choice (not only the
+            // system's), so the predictive-back preview no longer shows white behind a dark app.
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(c.background.toArgb() or 0xFF000000.toInt()))
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !dark
                 isAppearanceLightNavigationBars = !dark
