@@ -355,7 +355,7 @@ fun StoragePage(
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), onBack) {
         ScrollBody {
-            // 2.5.0: the page is split into 概览 / 清理 / 位置 (same rows and actions as before).
+            // 2.5.0 Beta3: two tabs, 占用 / 清理与备份 (the 位置 tab folded into 占用; its 模型与加载 jump row removed).
             var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
             com.iris.localai.ui.components.PageTabs(StorageTabs.labels(), tab, { tab = it })
             if (tab == StorageTabs.OVERVIEW) {
@@ -495,8 +495,6 @@ fun StoragePage(
             CategorySection(Category.OTHER, r) { g ->
                 g.entries.forEach { e -> SettingsRow(e.label, subtitle = Format.bytes(e.bytes)) }
             }
-            // 2.0.x: 备份与日志 moved here from 设置 › 智能体 (it is about the app's data).
-            com.iris.localai.ui.agent.BackupSection()
             }
 
             if (tab == StorageTabs.CLEAN) {
@@ -544,11 +542,15 @@ fun StoragePage(
             }
             }
 
-            if (tab == StorageTabs.LOCATION) {
-            // ---- 位置: where models / voice / workspace live (2.5.0: own tab) ----
+            if (tab == StorageTabs.CLEAN) {
+            // 2.0.x: 备份与日志 moved here from 设置 › 智能体 (it is about the app's data).
+            com.iris.localai.ui.agent.BackupSection()
+            }
+
+            if (tab == StorageTabs.OVERVIEW) {
+            // ---- 位置: where the models live ----
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_location))
             SettingsGroup {
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
                 ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
             GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
@@ -622,15 +624,13 @@ fun StoragePage(
     }
 }
 
-/** 2.5.0: the three tabs of 存储空间. */
+/** 2.5.0 Beta3: the two tabs of 存储空间 (占用 / 清理与备份). */
 object StorageTabs {
     const val OVERVIEW = 0
     const val CLEAN = 1
-    const val LOCATION = 2
     fun labels(): List<String> = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_overview),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_clean),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_location),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_usage),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_cleanup),
     )
 }
 

@@ -111,12 +111,10 @@ fun MemorySettingsPage(
     SubpageScaffold(title, onBack, actions = actions) {
         ScrollBody {
             header()
+            // 2.5.0 Beta3: the 长期记忆 master switch, 清空记忆 (→ 记忆 list page), 聊天时提议记住 and 自动压缩
+            // (→ 上下文 · 记忆 · 知识库, the one copy) and 重建索引 (→ 知识库 page) left this developer page.
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7))
             SettingsGroup {
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), ms.enabled, subtitle = MemoryText.MASTER, icon = com.iris.localai.ui.icons.IrisIcons.Memory) { on ->
-                    agent.memorySettings.update { it.copy(enabled = on) }
-                }
-                Divider()
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fcd608), ms.injectAgent, subtitle = MemoryText.INJECT_AGENT, icon = com.iris.localai.ui.icons.IrisIcons.Agent, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(injectAgent = on) }
                 }
@@ -125,79 +123,20 @@ fun MemorySettingsPage(
                     agent.memorySettings.update { it.copy(injectChat = on) }
                 }
             }
-
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7))
-            SettingsGroup {
-                SettingsRow(
-                    MemoryText.LIST, icon = Icons.Outlined.Face,
-                    subtitle = MemoryText.listSubtitle(counts.first, counts.second),
-                    onClick = { showList = true },
-                    trailing = { com.iris.localai.ui.components.Chevron() },
-                )
-                Divider()
-                SwitchRow(MemoryText.SUGGEST, ms.suggest, subtitle = MemoryText.SUGGEST_SUB, icon = Icons.Outlined.AutoAwesome, enabled = ms.enabled) { on ->
-                    agent.memorySettings.update { it.copy(suggest = on) }
-                }
-                Divider()
-                SettingsRow(
-                    MemoryText.CLEAR, icon = Icons.Outlined.DeleteSweep,
-                    titleColor = Iris.colors.danger,
-                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ab89b3),
-                    enabled = counts.first > 0 || counts.second > 0,
-                    onClick = { clearing = true },
-                )
-            }
-            GroupFootnote(MemoryText.DOC_NOTE)
+            if (!ms.enabled) GroupFootnote(MemoryText.MASTER)
 
             KnowledgeEntry(onOpen = { showKb = true })
 
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_593d49))
+            // Beta3 merge: 历史检索索引 + 记忆注入预算 (two read-only rows) → one status row.
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_mem_info))
             SettingsGroup {
-                // 2.2.9 E: 智能体自动压缩 + 对话自动压缩 → one switch (= 主页面「快满时自动整理」).
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc0f2e), ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
-                    agent.memorySettings.update { it.withAutoCompact(on) }
-                }
-                Divider()
                 SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_38d78c), icon = com.iris.localai.ui.icons.IrisIcons.Layers,
-                    subtitle = indexed?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3ac76a, it.first, it.second) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc9d89),
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_38d78c) + " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a67bd), icon = com.iris.localai.ui.icons.IrisIcons.Layers,
+                    subtitle = (indexed?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3ac76a, it.first, it.second) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc9d89)) +
+                        "\n" + MemoryText.injectBudget(ctxTokens),
                 )
             }
             GroupFootnote(MemoryText.COMPACT_NOTE)
-
-            // 2.2.9 F: index / budget details that used to sit on the normal page.
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23b687))
-            SettingsGroup {
-                SettingsRow(
-                    KnowledgeText.TITLE + " · " + KnowledgeText.REBUILD, icon = com.iris.localai.ui.icons.IrisIcons.Reload, enabled = !rebuilding,
-                    subtitle = if (rebuilding) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_34a084) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ac06c2),
-                    onClick = {
-                        rebuilding = true
-                        scope.launch {
-                            withContext(Dispatchers.IO) { runCatching { agent.knowledge.refresh(force = true) } }
-                            rebuilding = false
-                        }
-                    },
-                )
-                Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a67bd), icon = com.iris.localai.ui.icons.IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
-            }
         }
-    }
-
-    if (clearing) {
-        ConfirmDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5ad835),
-            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_49ac8d),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
-            onConfirm = {
-                scope.launch {
-                    withContext(Dispatchers.IO) { agent.memoryDocs.clear() }
-                    agent.memorySettings.update { it.copy(epoch = it.epoch + 1) }
-                    agent.memoryChanged()
-                }
-            },
-            onDismiss = { clearing = false },
-        )
     }
 }

@@ -107,12 +107,77 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
     val legacyHint by agent.legacyFolderHint.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
-    // 2.3.0 ②: MCP 服务 subpage.
-    var showMcp by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    if (showMcp) {
-        androidx.activity.compose.BackHandler { showMcp = false }
-        McpPage(onBack = { showMcp = false })
-        return
+    // 2.5.0 Beta3: no 「高级」 folds — 运行方式 / 工作区 / 工具与权限 are subpages; under 工具与权限:
+    // 联网搜索 (搜索服务 + 浏览器), 操控手机 (› 保活), 技能, MCP 服务.
+    var sub by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    val up: () -> Unit = { sub = when (sub) { "web", "gui", "skills", "mcp" -> "tools"; "keep" -> "gui"; else -> "" } }
+    if (sub.isNotEmpty()) androidx.activity.compose.BackHandler(onBack = up)
+    when (sub) {
+        "mcp" -> { McpPage(onBack = up); return }
+        "keep" -> { SubpageScaffold(KeepAliveText.TITLE, up) { ScrollBody { A11yKeepAliveCard() } }; return }
+        "gui" -> { SubpageScaffold(GuiAgentText.TITLE, up) { ScrollBody { GuiAgentSection(onKeepAlive = { sub = "keep" }) } }; return }
+        "skills" -> { SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143), up) { ScrollBody { SkillsSection() } }; return }
+        "web" -> {
+            SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7ad823), up) {
+                ScrollBody {
+                    AgentExtraSections()
+                    // the agent's in-app browser.
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302))
+                    SettingsGroup {
+                        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
+                            onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
+                    }
+                }
+            }
+            return
+        }
+        "tools" -> {
+            SubpageScaffold(AgentText.TOOLS, up) {
+                ScrollBody {
+                    // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
+                    // Beta3: the internal 载入工具 (activate) is not listed (the chat never offered it either).
+                    AgentTools.all.filter { it.name != com.iris.localai.agent.ActivateTool.name }.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
+                        SectionTitle(group.label)
+                        SettingsGroup {
+                            groupTools.forEachIndexed { i, tool ->
+                                if (i > 0) Divider()
+                                ToolRow(
+                                    label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
+                                    onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
+                                    onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
+                                )
+                            }
+                        }
+                    }
+                    GroupFootnote(AgentText.PERMISSION_NOTE)
+
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tool_settings))
+                    SettingsGroup {
+                        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7ad823), icon = com.iris.localai.ui.icons.IrisIcons.Globe,
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_web_sub) + " · " + s.search.label,
+                            onClick = { sub = "web" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                        Divider()
+                        SettingsRow(GuiAgentText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Eye,
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_gui_sub),
+                            onClick = { sub = "gui" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                        Divider()
+                        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143), icon = com.iris.localai.ui.icons.IrisIcons.Skill,
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_skills_sub),
+                            onClick = { sub = "skills" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                    }
+
+                    // 2.3.0 ②: remote MCP servers (tools join the built-in ones). Beta3: merged into 工具与权限.
+                    SectionTitle(McpText.TITLE)
+                    SettingsGroup {
+                        val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
+                        SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Plug,
+                            subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
+                            onClick = { sub = "mcp" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                    }
+                }
+            }
+            return
+        }
     }
     val treeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -144,29 +209,68 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
         value = withContext(Dispatchers.IO) { agent.undo.count() to agent.undo.peek()?.let { "${it.action} ${it.path}" } }
     }
 
-    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), onBack) {
-        ScrollBody {
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f0789e))
-            SettingsGroup {
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c), s.agentMode, subtitle = AgentText.MODE, icon = com.iris.localai.ui.icons.IrisIcons.Agent) { on ->
-                    agent.settings.update { it.copy(agentMode = on) }
-                }
-                Divider()
-                SliderRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c3e1c1), s.maxSteps.toFloat(), AgentSettings.MIN_STEPS.toFloat()..AgentSettings.MAX_STEPS.toFloat(),
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8fdb54, s.maxSteps), subtitle = AgentText.STEPS,
-                    steps = AgentSettings.MAX_STEPS - AgentSettings.MIN_STEPS - 1,
-                ) { v -> agent.settings.update { it.copy(maxSteps = v.toInt()) } }
-                // 2.0.x: the less-used switches fold away.
-                Divider()
-                com.iris.localai.ui.components.AdvancedFold("agent-mode") {
+    if (sub == "run") {
+        SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_run), up) {
+            ScrollBody {
+                SettingsGroup {
+                    SliderRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c3e1c1), s.maxSteps.toFloat(), AgentSettings.MIN_STEPS.toFloat()..AgentSettings.MAX_STEPS.toFloat(),
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8fdb54, s.maxSteps), subtitle = AgentText.STEPS,
+                        steps = AgentSettings.MAX_STEPS - AgentSettings.MIN_STEPS - 1,
+                    ) { v -> agent.settings.update { it.copy(maxSteps = v.toInt()) } }
+                    Divider()
                     SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_97de54), s.planFirst, subtitle = AgentText.PLAN_FIRST) { on -> agent.settings.update { it.copy(planFirst = on) } }
                     Divider()
                     SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e816f9), s.lazyTools, subtitle = AgentText.LAZY) { on -> agent.settings.update { it.copy(lazyTools = on) } }
                 }
             }
+        }
+        return
+    }
 
+    if (sub == "") {
+        SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), onBack) {
+            ScrollBody {
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f0789e))
+                SettingsGroup {
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c), s.agentMode, subtitle = AgentText.MODE, icon = com.iris.localai.ui.icons.IrisIcons.Agent) { on ->
+                        agent.settings.update { it.copy(agentMode = on) }
+                    }
+                    Divider()
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_run), icon = com.iris.localai.ui.icons.IrisIcons.Spark,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_run_sub),
+                        onClick = { sub = "run" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                }
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1))
+                SettingsGroup {
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+                        subtitle = AgentText.path(WorkspaceResolver.display(ws)) + (ws.fallbackReason?.let { "\n⚠ $it" } ?: "") + (legacyHint?.let { "\n⚠ $it" } ?: ""),
+                        subtitleColor = if (ws.fallbackReason != null || legacyHint != null) Iris.colors.danger else Iris.colors.textTertiary,
+                        onClick = { sub = "ws" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                    Divider()
+                    // 1.13.0: one row into the 文件 page (the inline list duplicated it and read whole files into memory).
+                    SettingsRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+                        subtitle = (if (files.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d22dc6) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, files.size, AgentText.size(files.sumOf { it.size }))),
+                        onClick = onOpenFiles,
+                        trailing = { com.iris.localai.ui.components.Chevron() },
+                    )
+                }
+                SectionTitle(AgentText.TOOLS)
+                SettingsGroup {
+                    SettingsRow(AgentText.TOOLS, icon = com.iris.localai.ui.icons.IrisIcons.Tool,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_agent_tools_sub),
+                        onClick = { sub = "tools" }, trailing = { com.iris.localai.ui.components.Chevron() })
+                }
+                message?.let { GroupFootnote(it) }
+            }
+        }
+        return
+    }
 
+    // sub == "ws": 2.5.0 Beta3 智能体 › 工作区 (location, file access, 撤销上次修改).
+    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1), up) {
+        ScrollBody {
             var allFiles by remember { mutableStateOf(agent.hasAllFilesAccess()) }
             var customAsk by remember { mutableStateOf(false) }
             var showPicker by remember { mutableStateOf(false) }
@@ -270,61 +374,9 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                         }
                     },
                 )
-                Divider()
-                // 1.13.0: one row into the 文件 page (the inline list duplicated it and read whole files into memory).
-                SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
-                    subtitle = (if (files.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d22dc6) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, files.size, AgentText.size(files.sumOf { it.size }))) +
-                        "\n" + ws.root.path,
-                    onClick = onOpenFiles,
-                    trailing = { com.iris.localai.ui.components.Chevron() },
-                )
             }
             GroupFootnote(AgentText.WORKSPACE_NOTE)
             message?.let { GroupFootnote(it) }
-            // 2.5.0: 常用项 (智能体模式、最大步数、工作区) stay on top; tools & permissions, MCP, browser,
-            // GUI agent, search/skills/backup fold under 「高级」 — every row kept, nothing removed.
-            com.iris.localai.ui.components.SectionFold("agent-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)) {
-                // Tools grouped by kind.
-                // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
-                SectionTitle(AgentText.TOOLS)
-                AgentTools.all.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
-                SectionTitle(group.label)
-                SettingsGroup {
-                    groupTools.forEachIndexed { i, tool ->
-                        if (i > 0) Divider()
-                        ToolRow(
-                            label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
-                            onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
-                            onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
-                        )
-                    }
-                }
-                }
-                GroupFootnote(AgentText.PERMISSION_NOTE)
-
-                // 2.3.0 ②: remote MCP servers (tools join the built-in ones).
-                SectionTitle(McpText.TITLE)
-                SettingsGroup {
-                    val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
-                    SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
-                        subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
-                        onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
-                }
-
-                // the agent's in-app browser.
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302))
-                SettingsGroup {
-                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
-                        onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
-                }
-
-                // 2.2: GUI 智能体（无障碍，形态 A）.
-                GuiAgentSection()
-
-                // search provider, skills, backup and logs.
-                AgentExtraSections()
-            }
         }
     }
 }

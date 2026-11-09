@@ -110,10 +110,8 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
     val revision by agent.memoryRevision.collectAsStateWithLifecycle()
     var showList by rememberSaveable { mutableStateOf(false) }
     var showKb by rememberSaveable { mutableStateOf(false) }
-    var hint by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (!s.contextHintShown) { hint = true; vm.update { it.copy(contextHintShown = true) } }
-    }
+    // 2.5.0 Beta3: the one-time 「高级设置在开发者选项」 hint row is gone (开发者 is a card on the 设置 home);
+    // the contextHintShown field stays in AppSettings for old backups.
 
     if (showList) {
         androidx.activity.compose.BackHandler { showList = false }
@@ -144,7 +142,6 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
     SubpageScaffold(ContextMemoryText.TITLE, onBack) {
         ScrollBody {
             PrivacyBanner()
-            if (hint) HintRow(onClick = onDeveloper)
 
             SectionTitle(ContextMemoryText.SEC_CONTEXT)
             SettingsGroup {
@@ -152,8 +149,10 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
                 InsetLine()
                 SwitchRow(
                     ContextText.AUTO, ms.autoCompact,
-                    subtitle = if (takeover) ContextAssembly.TAKEOVER else ContextText.AUTO_SUB,
+                    subtitle = if (takeover) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_dev_custom) + " · " + ContextAssembly.TAKEOVER else ContextText.AUTO_SUB,
                 ) { on -> agent.memorySettings.update { it.withAutoCompact(on) } }
+                // Beta3: a 开发者 strategy overrides 自动压缩 → 「恢复默认」 puts the default strategy back.
+                if (takeover) DevResetRow { vm.update { it.copy(contextStrategy = com.iris.localai.data.AppSettings().contextStrategy) } }
             }
 
             SectionTitle(ContextMemoryText.SEC_MEMORY)
@@ -206,24 +205,6 @@ private fun PrivacyBanner() {
     ) {
         Box(Modifier.size(IrisDimens.space8 + IrisDimens.space4).clip(CircleShape).background(c.success))
         Text(ContextMemoryText.PRIVACY, style = IrisType.body, color = fg)
-    }
-}
-
-@Composable
-private fun HintRow(onClick: () -> Unit) {
-    val c = Iris.colors
-    Row(
-        Modifier
-            .padding(horizontal = IrisDimens.groupGutter)
-            .fillMaxWidth()
-            .clip(IrisRadius.largeShape)
-            .background(c.accent.copy(alpha = 0.10f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(ContextMemoryText.HINT, style = IrisType.secondary, color = c.accent, modifier = Modifier.weight(1f))
-        Chevron()
     }
 }
 

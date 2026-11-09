@@ -143,8 +143,40 @@ fun MemoryListPage(onBack: () -> Unit) {
         }
     }
 
+    // 2.5.0 Beta3: 长期记忆 (master switch) and 清空记忆 moved here from 开发者 › 上下文与记忆.
+    val ms by agent.memorySettings.settings.collectAsStateWithLifecycle()
+    var clearing by remember { mutableStateOf(false) }
+    if (clearing) {
+        com.iris.localai.ui.components.ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5ad835),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_49ac8d),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
+            onConfirm = {
+                scope.launch {
+                    withContext(Dispatchers.IO) { agent.memoryDocs.clear() }
+                    agent.memorySettings.update { it.copy(epoch = it.epoch + 1) }
+                    agent.memoryChanged()
+                }
+            },
+            onDismiss = { clearing = false },
+        )
+    }
+
     SubpageScaffold(MemoryListText.TITLE, onBack) {
         ScrollBody {
+            SettingsGroup(Modifier.padding(top = IrisDimens.space8)) {
+                com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), ms.enabled, subtitle = MemoryText.MASTER, icon = com.iris.localai.ui.icons.IrisIcons.Memory) { on ->
+                    agent.memorySettings.update { it.copy(enabled = on) }
+                }
+                com.iris.localai.ui.components.Divider()
+                com.iris.localai.ui.components.SettingsRow(
+                    MemoryText.CLEAR, titleColor = c.danger,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ab89b3),
+                    enabled = data.items.isNotEmpty() || data.pending.isNotEmpty(),
+                    onClick = { clearing = true },
+                )
+            }
+            Spacer(Modifier.height(IrisDimens.space8))
             OutlinedTextField(
                 query, { query = it },
                 singleLine = true,

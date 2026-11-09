@@ -34,7 +34,7 @@ internal object GuiAgentText {
 
 /** 2.2 设置 › 智能体 › GUI 智能体: 无障碍 status and guide, 自检, and a test run (第一阶段入口). */
 @Composable
-fun GuiAgentSection() {
+fun GuiAgentSection(onKeepAlive: (() -> Unit)? = null) {
     val context = LocalContext.current
     val runner = remember { (context.applicationContext as IrisApp).container.gui }
     val run by runner.state.collectAsStateWithLifecycle()
@@ -68,8 +68,9 @@ fun GuiAgentSection() {
             SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_281ed1), icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
                 onClick = { IrisAccessibilityService.openAppInfo(context) })
         }
+        // 2.5.0 Beta3: 「自检与试运行」 fold removed — both rows are listed directly.
         Divider()
-        AdvancedFold("gui-agent", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3183f)) {
+        run {
             SettingsRow(
                 com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b7d06), icon = IrisIcons.Check,
                 subtitle = check ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e9e37),
@@ -92,7 +93,14 @@ fun GuiAgentSection() {
     }
     if (run.lines.isNotEmpty()) GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true)
     GroupFootnote(GuiAgentText.NOTE)
-    A11yKeepAliveCard()
+    // Beta3: 保活 (6 rows) is its own page under 操控手机; without a callback it stays inline.
+    if (onKeepAlive != null) {
+        SectionTitle(KeepAliveText.TITLE)
+        SettingsGroup {
+            SettingsRow(KeepAliveText.TITLE, icon = IrisIcons.Power, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_keepalive_sub),
+                onClick = onKeepAlive, trailing = { com.iris.localai.ui.components.Chevron() })
+        }
+    } else A11yKeepAliveCard()
 
     if (asking) {
         TextInputDialog(

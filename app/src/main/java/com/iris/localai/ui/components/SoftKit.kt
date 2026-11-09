@@ -49,6 +49,9 @@ fun HeroCard(
     action: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** 2.5.0 Beta3: optional second text action (重新加载), left of [action]. */
+    secondaryAction: String? = null,
+    onSecondary: () -> Unit = {},
 ) {
     val c = Iris.colors
     val soft = softStyle()
@@ -85,7 +88,15 @@ fun HeroCard(
                 )
             }
             Spacer(Modifier.height(IrisDimens.space12))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                if (secondaryAction != null) {
+                    Text(
+                        secondaryAction, style = IrisType.label, color = c.textSecondary,
+                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClick = onSecondary)
+                            .padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
+                    )
+                    Spacer(Modifier.width(IrisDimens.space8))
+                }
                 if (soft) {
                     Text(
                         action, style = IrisType.label, color = c.accent,

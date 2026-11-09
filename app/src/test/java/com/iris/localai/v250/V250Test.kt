@@ -69,14 +69,55 @@ class V250Test {
     }
 
     // ---- 2 slimming ----
-    @Test fun settingsHomeShowsAtMostSevenEntriesAndFoldsTheRest() {
+    @Test fun settingsHomeHasThreeGroupsOfThreeAboutAndDeveloperCard() {
+        // Beta3: 模型 / 能力 / 系统 × 3, then 关于 and the always-visible 开发者 card (5 groups); no 「高级」.
+        assertEquals(listOf("模型", "能力", "系统"), SettingsText.HOME_GROUPS.map { it.first })
+        SettingsText.HOME_GROUPS.forEach { assertEquals(it.first, 3, it.second.size) }
         val visible = SettingsText.HOME_GROUPS.sumOf { it.second.size }
-        assertTrue("visible=$visible", visible <= 7)
+        assertEquals(9, visible)
         assertEquals(SettingsHomeModel.VISIBLE_ENTRIES, visible)
         assertEquals("模型与加载", SettingsText.HOME_GROUPS.first().second.first())
-        // nothing removed: the former entries are all still reachable from home (visible or 高级)
-        val all = SettingsText.HOME_GROUPS.flatMap { it.second } + SettingsText.HOME_ADVANCED
-        for (t in listOf("性能与资源", "API 服务", "语言", "关于 IRIDIS", "删除全部对话", "外观", "存储空间")) assertTrue(t, t in all)
+        assertEquals(listOf("采样", "上下文与记忆", "后端与加载", "温度阈值", "诊断与工具"), SettingsText.HOME_DEVELOPER)
+        assertEquals(listOf("关于 IRIDIS"), SettingsText.HOME_FOOTER)
+        // nothing lost: the former home entries are still on home (API, 耗电与后台 = old 性能与资源) or one level down
+        val all = SettingsText.HOME_GROUPS.flatMap { it.second } + SettingsText.HOME_FOOTER
+        for (t in listOf("耗电与后台", "API 服务", "关于 IRIDIS", "外观", "存储空间", "智能体", "语音与翻译")) assertTrue(t, t in all)
+        val home = src("app/src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt").substringAfter("fun SettingsHome(").substringBefore("\n}\n")
+        assertTrue(home.contains("DeveloperCard(onOpen)"))
+        assertFalse(home.contains("SectionFold("))
+        assertFalse(home.contains("deleteAllConversations"))
+    }
+
+    @Test fun noAdvancedFoldsInSettingsPages() {
+        // Beta3: every 「高级」 fold of the v2 list is gone (the per-model config sheet keeps its own fold).
+        val dirs = listOf("app/src/main/java/com/iris/localai/ui/settings", "app/src/main/java/com/iris/localai/ui/agent")
+        val bad = dirs.flatMap { d -> File(root(), d).walkTopDown().filter { it.isFile && it.name.endsWith(".kt") }.toList() }
+            .filter { f -> Regex("""(?<!fun )\b(AdvancedFold|SectionFold)\(""").containsMatchIn(f.readText()) }.map { it.name }
+        assertTrue(bad.joinToString(), bad.isEmpty())
+        // no 7-tap unlock; 关于 no longer links to 开发者
+        val about = src("app/src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt").substringAfter("fun AboutPage(").substringBefore("internal val ABOUT_PRIVACY")
+        assertFalse(about.contains("onDeveloper)")); assertFalse(about.contains("NavItem("))
+        // cut items: QAIRT backend row, 载入工具 in the tool list, 顶栏按钮底色 switch; fields kept for old backups
+        val screens = src("app/src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
+        assertFalse(screens.contains("topBarCapsules = on"))
+        assertTrue(src("app/src/main/java/com/iris/localai/ui/agent/AgentSettingsPage.kt").contains("it.name != com.iris.localai.agent.ActivateTool.name"))
+        val d = com.iris.localai.data.AppSettings()
+        assertFalse(d.topBarCapsules); assertFalse(d.contextHintShown)
+    }
+
+    @Test fun answerStyleAndOverheatPresets() {
+        val d = com.iris.localai.data.AppSettings()
+        assertEquals(1, com.iris.localai.ui.settings.AnswerStyle.of(d)) // 均衡 = defaults
+        val p = com.iris.localai.ui.settings.AnswerStyle.apply(d.copy(topK = 5, seed = 7), 0)
+        assertEquals(0.3f, p.temperature, 0f); assertEquals(0.9f, p.topP, 0f); assertEquals(d.topK, p.topK); assertEquals(-1, p.seed)
+        assertEquals(0, com.iris.localai.ui.settings.AnswerStyle.of(p))
+        assertEquals(2, com.iris.localai.ui.settings.AnswerStyle.of(com.iris.localai.ui.settings.AnswerStyle.apply(d, 2)))
+        assertEquals(-1, com.iris.localai.ui.settings.AnswerStyle.of(d.copy(minP = 0.1f))) // 开发者自定义
+        assertEquals(-1, com.iris.localai.ui.settings.AnswerStyle.of(d.copy(temperature = 0.55f)))
+        val o = com.iris.localai.ui.settings.OverheatLevel
+        assertEquals(0, o.of(0, 0)); assertEquals(1, o.of(42, 0)); assertEquals(2, o.of(42, 48))
+        assertEquals(-1, o.of(45, 0)); assertEquals(-1, o.of(0, 48))
+        for (i in 0..2) assertEquals(i, o.of(o.values(i).first, o.values(i).second))
     }
 
     @Test fun heroCardModel() {
@@ -85,8 +126,8 @@ class V250Test {
         assertEquals(HeroStatus.FAILED, f.state); assertEquals("boom", f.detail)
     }
 
-    @Test fun storageHasThreeTabs() {
-        assertEquals(listOf("概览", "清理", "位置"), StorageTabs.labels())
+    @Test fun storageHasTwoTabs() {
+        assertEquals(listOf("占用", "清理与备份"), StorageTabs.labels())
     }
 
     @Test fun loadPresetsRoundTripAndOnlyTouchLoadFields() {
@@ -191,10 +232,11 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 240"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta2\""))
+        assertTrue(g.contains("versionCode = 241"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta3\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
     }
 
     @Test fun newStringsInEveryLanguage() {

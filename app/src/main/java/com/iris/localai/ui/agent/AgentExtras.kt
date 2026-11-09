@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 
 /**
- * Sections of 设置 › 智能体: 联网搜索 (provider), 技能, 备份与日志.
+ * 设置 › 智能体 › 工具与权限 › 联网搜索: the search provider (2.5.0 Beta3: 技能 is [SkillsSection]).
  */
 @Composable
 fun AgentExtraSections() {
@@ -89,6 +89,14 @@ fun AgentExtraSections() {
     }
     GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_add6ac))
 
+}
+
+/** 2.5.0 Beta3: 智能体 › 工具与权限 › 技能 (split from [AgentExtraSections]). */
+@Composable
+fun SkillsSection() {
+    val context = LocalContext.current
+    val agent = remember { (context.applicationContext as IrisApp).container.agent }
+    val s by agent.settings.settings.collectAsStateWithLifecycle()
     // ---- 技能 ----
     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143))
     val skills by produceState(emptyList<com.iris.localai.agent.SkillInfo>(), s) {
