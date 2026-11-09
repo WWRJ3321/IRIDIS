@@ -70,49 +70,41 @@ object GlassTokens {
 }
 
 /**
- * 2.5.0 柔光 matte (哑光磨砂) glass (user: the 2.4.6 glass looked plasticky): no sheen gradient,
- * no specular top highlight, no thick white rim — a 78 %-opaque surface-colour tint over a light
- * blur, a 0.75 dp low-contrast hairline and a soft, weak shadow. 经典 keeps the 2.2.5 glass.
- * Pure constants (unit-tested).
+ * 2.5.0 Beta2 柔光 solid surfaces (user: the matte glass still looked 花哨/廉价): fully opaque
+ * surface colour, no blur, no sheen/rim, a 0.5 dp low-contrast hairline, and at most a faint
+ * 2 dp shadow in light theme (none in dark). 经典 keeps the 2.2.5 glass. Pure constants (unit-tested).
  */
 object MatteGlass {
-    const val TINT_ALPHA = 0.78f
-    const val TINT_ALPHA_STRONG = 0.88f
-    const val BLUR_DP = 14f
-    const val HAIRLINE_DP = 0.75f
-    const val HAIRLINE_ALPHA_LIGHT = 0.07f
-    const val HAIRLINE_ALPHA_DARK = 0.09f
-    const val SHADOW_DP = 4f
-    const val SHADOW_ALPHA_LIGHT = 0.07f
-    const val SHADOW_ALPHA_DARK = 0.22f
-    const val NOISE = 0.06f
-    const val FALLBACK_ALPHA = 0.94f
+    const val TINT_ALPHA = 1f
+    const val TINT_ALPHA_STRONG = 1f
+    const val BLUR_DP = 0f
+    const val HAIRLINE_DP = 0.5f
+    const val HAIRLINE_ALPHA_LIGHT = 0.08f
+    const val HAIRLINE_ALPHA_DARK = 0.08f
+    const val SHADOW_DP = 2f
+    const val SHADOW_ALPHA_LIGHT = 0.05f
+    const val SHADOW_ALPHA_DARK = 0f
+    const val FALLBACK_ALPHA = 1f
 
     /** Hairline colour: black on light, white on dark, very low alpha. */
     fun hairline(dark: Boolean): Color = if (dark) Color.White.copy(alpha = HAIRLINE_ALPHA_DARK) else Color.Black.copy(alpha = HAIRLINE_ALPHA_LIGHT)
+
+    /** Shadow for a floating surface: faint in light, none in dark. */
+    fun shadowDp(dark: Boolean, elevated: Boolean): Float = if (!elevated || dark || SHADOW_ALPHA_LIGHT <= 0f) 0f else SHADOW_DP
 }
 
-/** 2.5.0: matte glass for the 柔光 style (see [MatteGlass]). */
+/** 2.5.0 Beta2: solid surface for the 柔光 style (see [MatteGlass]); [state]/[strong] are ignored. */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun Modifier.matteGlassSurface(shape: Shape, elevation: Dp, state: HazeState?, strong: Boolean): Modifier {
     val c = Iris.colors
     val dark = c.isDark
-    val blur = state != null && LocalGlassQuality.current.blurs
-    val base = c.surface
-    val tint = base.copy(alpha = if (strong) MatteGlass.TINT_ALPHA_STRONG else MatteGlass.TINT_ALPHA)
-    val fallback = base.copy(alpha = MatteGlass.FALLBACK_ALPHA)
-    val shadowColor = Color.Black.copy(alpha = if (dark) MatteGlass.SHADOW_ALPHA_DARK else MatteGlass.SHADOW_ALPHA_LIGHT)
-    val sh = if (elevation.value > 0f) MatteGlass.SHADOW_DP.dp else 0.dp
-    val clipped = (if (sh.value > 0f) this.shadow(sh, shape, clip = false, ambientColor = shadowColor, spotColor = shadowColor) else this)
+    val sh = MatteGlass.shadowDp(dark, elevation.value > 0f)
+    val shadowColor = Color.Black.copy(alpha = MatteGlass.SHADOW_ALPHA_LIGHT)
+    return (if (sh > 0f) this.shadow(sh.dp, shape, clip = false, ambientColor = shadowColor, spotColor = shadowColor) else this)
         .clip(shape)
-    val filled = if (blur) clipped.hazeEffect(state!!) {
-        backgroundColor = c.background
-        blurRadius = MatteGlass.BLUR_DP.dp
-        tints = listOf(HazeTint(tint))
-        fallbackTint = HazeTint(fallback)
-        noiseFactor = MatteGlass.NOISE
-    } else clipped.background(fallback)
-    return filled.border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(dark), shape)
+        .background(c.surface.copy(alpha = 1f))
+        .border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(dark), shape)
 }
 
 /** Captures this content as the backdrop of [state]'s glass surfaces. */
@@ -187,11 +179,12 @@ fun Modifier.largeSurface(shape: Shape, elevation: Dp = 0.dp): Modifier {
     val c = Iris.colors
     val dark = c.isDark
     if (softStyle()) {
-        // 2.5.0 柔光: opaque sheet with a low-contrast hairline, no white gradient rim.
-        val sc = Color.Black.copy(alpha = if (dark) MatteGlass.SHADOW_ALPHA_DARK else MatteGlass.SHADOW_ALPHA_LIGHT)
-        return (if (elevation.value > 0f) this.shadow(elevation, shape, clip = false, ambientColor = sc, spotColor = sc) else this)
+        // 2.5.0 Beta2 柔光: opaque neutral sheet, 0.5 dp hairline, faint shadow (light only).
+        val sh = MatteGlass.shadowDp(dark, elevation.value > 0f)
+        val sc = Color.Black.copy(alpha = MatteGlass.SHADOW_ALPHA_LIGHT)
+        return (if (sh > 0f) this.shadow(sh.dp, shape, clip = false, ambientColor = sc, spotColor = sc) else this)
             .clip(shape)
-            .background((if (dark) c.surfaceElevated else c.surface).copy(alpha = 1f))
+            .background(c.surface.copy(alpha = 1f))
             .border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(dark), shape)
     }
     val fill = (if (dark) c.surfaceElevated else c.surface).copy(alpha = 1f) // 2.2.6: fully opaque
@@ -217,6 +210,8 @@ val LARGE_SCRIM = Color.Black.copy(alpha = 0.32f)
  */
 @Composable
 fun HomeAmbientGlow(modifier: Modifier = Modifier) {
+    // 2.5.0 Beta2: no accent glow in 柔光 (restrained, no gradients); 经典 keeps it.
+    if (softStyle()) return
     val c = Iris.colors
     val a = if (c.isDark) 0.08f else 0.14f
     // 2.2.5: both blobs follow the theme accent (the second is the accent hue-shifted +40°).

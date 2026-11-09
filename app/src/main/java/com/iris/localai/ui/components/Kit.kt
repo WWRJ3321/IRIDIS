@@ -124,14 +124,14 @@ fun Modifier.pressTint(interaction: androidx.compose.foundation.interaction.Inte
 @Composable
 fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val c = Iris.colors
-    // 2.5.0 柔光: matte card — slightly translucent over the page gradient, 0.75 dp hairline, weak shadow.
+    // 2.5.0 Beta2 柔光: solid neutral card — opaque, no shadow, 0.5 dp low-contrast hairline.
     val soft = softStyle()
     Column(
         modifier
             .fillMaxWidth()
-            .softShadow(if (c.isDark) IrisElevation.none else IrisElevation.card, IrisRadius.largeShape, c.isDark)
+            .softShadow(if (c.isDark || soft) IrisElevation.none else IrisElevation.card, IrisRadius.largeShape, c.isDark)
             .clip(IrisRadius.largeShape)
-            .background(if (soft) c.surfaceElevated.copy(alpha = c.surfaceElevated.alpha * 0.88f) else c.surfaceElevated)
+            .background(c.surfaceElevated)
             .then(if (soft) Modifier.border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(c.isDark), IrisRadius.largeShape) else Modifier),
         content = content,
     )

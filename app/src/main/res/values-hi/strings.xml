@@ -1962,7 +1962,7 @@
     <string name="v250_style">शैली</string>
     <string name="v250_style_soft">सॉफ्ट</string>
     <string name="v250_style_classic">क्लासिक</string>
-    <string name="v250_style_sub">सॉफ्ट: ग्रेडिएंट पृष्ठभूमि, रंगीन मुख्य कार्ड और आइकन टाइल। क्लासिक: 2.4 का रूप</string>
+    <string name="v250_style_sub">सॉफ्ट: ठोस न्यूट्रल कार्ड, एक ही एक्सेंट रंग, एकरंगी आइकन। क्लासिक: 2.4 का रूप</string>
     <string name="v250_hero_label">वर्तमान मॉडल</string>
     <string name="v250_hero_none">कोई मॉडल लोड नहीं</string>
     <string name="v250_hero_idle">चैट शुरू करने के लिए एक मॉडल चुनें और लोड करें</string>

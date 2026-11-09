@@ -1963,7 +1963,7 @@
     <string name="v250_style">界面风格</string>
     <string name="v250_style_soft">柔光</string>
     <string name="v250_style_classic">经典</string>
-    <string name="v250_style_sub">柔光：渐变底、彩色重点卡、图标底块；经典：2.4 的样式</string>
+    <string name="v250_style_sub">柔光：中性实心卡片、单一强调色、单色图标；经典：2.4 的样式</string>
     <string name="v250_hero_label">当前模型</string>
     <string name="v250_hero_none">未加载模型</string>
     <string name="v250_hero_idle">选择并加载一个模型后即可聊天</string>

@@ -1962,7 +1962,7 @@
     <string name="v250_style">Estilo</string>
     <string name="v250_style_soft">Suave</string>
     <string name="v250_style_classic">Clásico</string>
-    <string name="v250_style_sub">Suave: fondo degradado, tarjeta destacada en color y mosaicos de iconos. Clásico: el aspecto de 2.4</string>
+    <string name="v250_style_sub">Suave: tarjetas neutras sólidas, un solo color de acento, iconos monocromos. Clásico: el aspecto de 2.4</string>
     <string name="v250_hero_label">Modelo actual</string>
     <string name="v250_hero_none">Ningún modelo cargado</string>
     <string name="v250_hero_idle">Elige y carga un modelo para chatear</string>

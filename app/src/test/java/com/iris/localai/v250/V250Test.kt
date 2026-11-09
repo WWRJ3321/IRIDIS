@@ -12,6 +12,7 @@ import com.iris.localai.ui.settings.SettingsText
 import com.iris.localai.ui.settings.StorageTabs
 import com.iris.localai.ui.theme.IrisDesignScale
 import com.iris.localai.ui.theme.IrisStyle
+import com.iris.localai.ui.theme.SoftNeutral
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -119,9 +120,42 @@ class V250Test {
     @Test fun softGlassIsMatte() {
         val g = src("app/src/main/java/com/iris/localai/ui/components/GlassSurface.kt")
         assertTrue(g.contains("MatteGlass"))
-        assertTrue(com.iris.localai.ui.components.MatteGlass.TINT_ALPHA in 0.70f..0.85f)
-        assertTrue(com.iris.localai.ui.components.MatteGlass.HAIRLINE_DP in 0.5f..1f)
-        assertTrue(com.iris.localai.ui.components.MatteGlass.BLUR_DP <= 16f)
+        // Beta2: solid — opaque, no blur, 0.5 dp hairline, no shadow in dark
+        assertEquals(1f, com.iris.localai.ui.components.MatteGlass.TINT_ALPHA, 0f)
+        assertEquals(1f, com.iris.localai.ui.components.MatteGlass.TINT_ALPHA_STRONG, 0f)
+        assertEquals(0f, com.iris.localai.ui.components.MatteGlass.BLUR_DP, 0f)
+        assertEquals(0.5f, com.iris.localai.ui.components.MatteGlass.HAIRLINE_DP, 0f)
+        assertEquals(0f, com.iris.localai.ui.components.MatteGlass.shadowDp(dark = true, elevated = true), 0f)
+        assertTrue(com.iris.localai.ui.components.MatteGlass.shadowDp(dark = false, elevated = true) <= 2f)
+        assertFalse(g.substringAfter("fun Modifier.matteGlassSurface").substringBefore("\n}\n").contains("hazeEffect"))
+        // IrisCard in 柔光: opaque, no alpha reduction
+        val kit = src("app/src/main/java/com/iris/localai/ui/components/Kit.kt").substringAfter("fun IrisCard(").substringBefore("\n}\n")
+        assertFalse(kit.contains("alpha *"))
+    }
+
+    /** No real hue cast: channels within 6 (the iOS-like greys lean ≤ 6 cool; the old Beta #141826 is +18). */
+    private fun neutral(argb: Long): Boolean {
+        val r = (argb shr 16) and 0xFF; val g = (argb shr 8) and 0xFF; val b = argb and 0xFF
+        return maxOf(r, g, b) - minOf(r, g, b) <= 6
+    }
+
+    @Test fun softIsNeutralWithoutGradient() {
+        // Beta2: 柔光 sets no page gradient and no icon tile; page/card colours are neutral grey.
+        val t = src("app/src/main/java/com/iris/localai/ui/theme/Theme.kt").substringAfter("object SoftLook").substringBefore("/** 2.2.14")
+        assertFalse(t.contains("backgroundTop = mix"))
+        assertEquals(2, Regex("backgroundTop = Color.Unspecified").findAll(t).count())
+        assertEquals(2, Regex("iconTile = Color.Unspecified").findAll(t).count())
+        assertEquals(0xFFF5F5F7, SoftNeutral.LIGHT_PAGE); assertEquals(0xFFFFFFFF, SoftNeutral.LIGHT_CARD)
+        assertEquals(0xFF111214, SoftNeutral.DARK_PAGE); assertEquals(0xFF1C1D20, SoftNeutral.DARK_CARD)
+        listOf(SoftNeutral.LIGHT_PAGE, SoftNeutral.LIGHT_VARIANT, SoftNeutral.DARK_PAGE, SoftNeutral.DARK_CARD,
+            SoftNeutral.DARK_VARIANT, SoftNeutral.DARK_THUMB, SoftNeutral.DARK_TEXT2, SoftNeutral.LIGHT_TEXT2)
+            .forEach { assertTrue(java.lang.Long.toHexString(it), neutral(it)) }
+        assertFalse(neutral(0xFF141826)) // the old Beta grey-blue
+        val hero = src("app/src/main/java/com/iris/localai/ui/components/SoftKit.kt").substringAfter("fun HeroCard(").substringBefore("\n}\n")
+        assertFalse(hero.contains("Brush")); assertFalse(hero.contains("Color.White"))
+        val lists = src("app/src/main/java/com/iris/localai/ui/components/Lists.kt")
+        assertFalse(lists.substringAfter("fun RowIcon(").substringBefore("\n}\n").contains("colors.accent"))
+        assertFalse(lists.substringAfter("fun SectionTitle(").substringBefore("\n}\n").contains("colors.accent"))
     }
 
     // ---- 4 Live Updates ----
@@ -157,9 +191,10 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 239"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta\""))
+        assertTrue(g.contains("versionCode = 240"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta2\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
     }
 
     @Test fun newStringsInEveryLanguage() {

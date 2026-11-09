@@ -111,16 +111,13 @@ fun Modifier.glass(
     style: GlassStyle = GlassStyle(),
 ): Modifier = composed {
     val quality = LocalGlassQuality.current
-    val source = if (quality.blurs) backdrop else null
-    val colors = Iris.colors
-    // 2.5.0 柔光 matte glass: ≥ 78 % opaque tint, gentler blur, no vibrancy boost, no sheen/rim.
+    // 2.5.0 Beta2 柔光: solid — no blur at all, an opaque surface-colour fill and a 0.5 dp hairline.
     val matte = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
-    val style = if (matte) style.copy(
-        blurRadius = style.blurRadius.coerceAtMost(com.iris.localai.ui.components.MatteGlass.BLUR_DP),
-        vibrancy = 1.05f, rimAlpha = 0f, sheen = false,
-    ) else style
+    val source = if (quality.blurs && !matte) backdrop else null
+    val colors = Iris.colors
+    val style = if (matte) style.copy(vibrancy = 1f, rimAlpha = 0f, sheen = false) else style
     val baseTint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
-    val tint = if (matte) baseTint.copy(alpha = baseTint.alpha.coerceAtLeast(com.iris.localai.ui.components.MatteGlass.TINT_ALPHA)) else baseTint
+    val tint = if (matte) (style.tint ?: colors.surface).copy(alpha = 1f) else baseTint
     val rim = colors.glassRim
     val solidBg = com.iris.localai.ui.theme.LocalSolidBackground.current
     val holder = remember { PanelState() }

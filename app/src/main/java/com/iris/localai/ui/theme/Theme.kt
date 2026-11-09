@@ -136,7 +136,7 @@ internal val IrisDarkColors = IrisColors(
 
 val LocalIrisColors = staticCompositionLocalOf { IrisLightColors }
 
-/** 2.5.0 界面风格: 柔光 (default, frosted gradient, deep grey-blue dark) or 经典 (≤ 2.4.6 look). */
+/** 2.5.0 界面风格: 柔光 (default; Beta2: solid neutral, one accent) or 经典 (≤ 2.4.6 look). */
 enum class IrisStyle(val id: String) {
     SOFT("soft"), CLASSIC("classic");
     companion object {
@@ -148,39 +148,93 @@ enum class IrisStyle(val id: String) {
 val LocalIrisStyle = staticCompositionLocalOf { IrisStyle.CLASSIC }
 
 /**
- * 2.5.0 柔光 colours, derived from any palette (默认 / 樱花 / 薄荷 / 丁香 / 奶油 keep their hue):
- * light gets a soft accent-tinted gradient at the top; dark turns from near-black into a deep
- * grey-blue (#141826 page, #1C2030 cards) mixed with the palette tint. Pure (unit-tested).
+ * 2.5.0 Beta2 柔光 = 克制 (restrained) look: solid neutral greys whatever the palette — no page
+ * gradient, no blue-violet dark, no icon tiles. The palette (默认 / 樱花 / 薄荷 / 丁香 / 奶油) only
+ * supplies the single accent (switches, selection, primary buttons, links). Values in [SoftNeutral]
+ * (pure ARGB longs, unit-tested).
  */
-object SoftLook {
-    val DARK_PAGE = Color(0xFF141826)
-    val DARK_CARD = Color(0xFF1C2030)
-    val DARK_RAISED = Color(0xFF262B3E)
+object SoftNeutral {
+    // light: iOS-settings grey page, white cards
+    const val LIGHT_PAGE = 0xFFF5F5F7
+    const val LIGHT_CHAT = 0xFFFFFFFF
+    const val LIGHT_CARD = 0xFFFFFFFF
+    const val LIGHT_VARIANT = 0xFFEDEDF0
+    const val LIGHT_CODE = 0xFFF2F2F4
+    const val LIGHT_THUMB = 0xFFFFFFFF
+    const val LIGHT_TEXT = 0xFF111214
+    const val LIGHT_TEXT2 = 0xFF6E6E73
+    const val LIGHT_TEXT3 = 0xFF8E8E93
+    const val LIGHT_OUTLINE = 0x14000000
+    const val LIGHT_SWITCH_OFF = 0xFFE5E5EA
+    // dark: neutral deep grey page, one step lighter cards
+    const val DARK_PAGE = 0xFF111214
+    const val DARK_CARD = 0xFF1C1D20
+    const val DARK_VARIANT = 0xFF26272B
+    const val DARK_CODE = 0xFF17181B
+    const val DARK_THUMB = 0xFF34353A
+    const val DARK_TEXT = 0xFFF2F2F3
+    const val DARK_TEXT2 = 0xFFA1A1A6
+    const val DARK_TEXT3 = 0xFF7C7C82
+    const val DARK_OUTLINE = 0x1AFFFFFF
+    const val DARK_SWITCH_OFF = 0xFF3A3A3E
+    const val DARK_SWITCH_OFF_THUMB = 0xFF7A7A80
 
+    /** True when [argb] has no hue cast (r == g == b ± 3): the neutral rule. */
+    fun isNeutral(argb: Long): Boolean {
+        val r = (argb shr 16) and 0xFF; val g = (argb shr 8) and 0xFF; val b = argb and 0xFF
+        return maxOf(r, g, b) - minOf(r, g, b) <= 3
+    }
+}
+
+object SoftLook {
     fun mix(a: Color, b: Color, t: Float): Color = Color(
         red = a.red + (b.red - a.red) * t, green = a.green + (b.green - a.green) * t,
         blue = a.blue + (b.blue - a.blue) * t, alpha = a.alpha + (b.alpha - a.alpha) * t,
     )
 
     fun apply(c: IrisColors): IrisColors = if (c.isDark) {
-        val page = mix(c.background, DARK_PAGE, 0.85f)
+        val card = Color(SoftNeutral.DARK_CARD)
         c.copy(
-            background = page,
-            chatBackground = page,
-            surface = mix(c.surface, DARK_CARD, 0.7f),
-            surfaceElevated = mix(c.surfaceElevated, DARK_CARD, 0.7f),
-            surfaceVariant = mix(c.surfaceVariant, DARK_RAISED, 0.6f),
-            codeBackground = mix(c.codeBackground, DARK_CARD, 0.7f),
-            segmentThumb = mix(c.segmentThumb, Color(0xFF3A4058), 0.6f),
-            glassTint = mix(c.glassTint, DARK_CARD.copy(alpha = c.glassTint.alpha), 0.7f),
-            glassTintOpaque = mix(c.glassTintOpaque, DARK_CARD.copy(alpha = c.glassTintOpaque.alpha), 0.7f),
-            backgroundTop = mix(page, c.accent, 0.12f),
-            iconTile = c.accentContainer,
+            background = Color(SoftNeutral.DARK_PAGE),
+            chatBackground = Color(SoftNeutral.DARK_PAGE),
+            surface = card,
+            surfaceElevated = card,
+            surfaceVariant = Color(SoftNeutral.DARK_VARIANT),
+            codeBackground = Color(SoftNeutral.DARK_CODE),
+            segmentThumb = Color(SoftNeutral.DARK_THUMB),
+            text = Color(SoftNeutral.DARK_TEXT),
+            textSecondary = Color(SoftNeutral.DARK_TEXT2),
+            textTertiary = Color(SoftNeutral.DARK_TEXT3),
+            outline = Color(SoftNeutral.DARK_OUTLINE),
+            switchOffTrack = Color(SoftNeutral.DARK_SWITCH_OFF),
+            switchOffThumb = Color(SoftNeutral.DARK_SWITCH_OFF_THUMB),
+            glassTint = card,
+            glassTintOpaque = card,
+            glassRim = Color.Transparent,
+            backgroundTop = Color.Unspecified,
+            iconTile = Color.Unspecified,
         )
     } else {
+        val card = Color(SoftNeutral.LIGHT_CARD)
         c.copy(
-            backgroundTop = mix(c.background, c.accentContainer, 0.75f),
-            iconTile = c.accentContainer,
+            background = Color(SoftNeutral.LIGHT_PAGE),
+            chatBackground = Color(SoftNeutral.LIGHT_CHAT),
+            surface = card,
+            surfaceElevated = card,
+            surfaceVariant = Color(SoftNeutral.LIGHT_VARIANT),
+            codeBackground = Color(SoftNeutral.LIGHT_CODE),
+            segmentThumb = Color(SoftNeutral.LIGHT_THUMB),
+            text = Color(SoftNeutral.LIGHT_TEXT),
+            textSecondary = Color(SoftNeutral.LIGHT_TEXT2),
+            textTertiary = Color(SoftNeutral.LIGHT_TEXT3),
+            outline = Color(SoftNeutral.LIGHT_OUTLINE),
+            switchOffTrack = Color(SoftNeutral.LIGHT_SWITCH_OFF),
+            switchOffThumb = card,
+            glassTint = card,
+            glassTintOpaque = card,
+            glassRim = Color.Transparent,
+            backgroundTop = Color.Unspecified,
+            iconTile = Color.Unspecified,
         )
     }
 }

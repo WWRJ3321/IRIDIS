@@ -69,9 +69,9 @@ internal val FootnoteInset = IrisDimens.groupGutter + 18.dp
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        // 2.5.0 柔光: accent-coloured, semibold group headers (经典: grey as before).
-        style = if (softStyle()) IrisType.sectionHeader.copy(fontWeight = FontWeight.SemiBold) else IrisType.sectionHeader,
-        color = if (softStyle()) Iris.colors.accent else Iris.colors.textTertiary,
+        // 2.5.0 Beta2 柔光: small secondary-grey headers (no accent colour); 经典: tertiary grey as before.
+        style = IrisType.sectionHeader,
+        color = if (softStyle()) Iris.colors.textSecondary else Iris.colors.textTertiary,
         modifier = modifier.padding(
             start = SectionInset,
             end = IrisDimens.pageGutter,
@@ -167,30 +167,17 @@ fun SettingsRow(
 fun softStyle(): Boolean = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
 
 /**
- * 2.5.0 柔光: row icons sit on a rounded tile in the theme's accent container colour and take the
- * accent tint; 经典 keeps the bare grey line icon. The tile is as wide as an icon slot plus padding,
- * so text alignment between rows with and without icons is unchanged within a group.
+ * Leading row icon. 2.5.0 Beta2: monochrome in both styles — a bare line icon in the secondary
+ * grey (onSurfaceVariant), no tinted tile, no accent colour.
  */
 @Composable
 fun RowIcon(icon: ImageVector, alpha: Float = 1f) {
-    val c = Iris.colors
-    if (softStyle() && c.iconTile != Color.Unspecified) {
-        Box(
-            Modifier.size(IrisDimens.iconLarge + IrisDimens.space12)
-                .clip(IrisRadius.smallShape)
-                .background(c.iconTile.copy(alpha = c.iconTile.alpha * alpha)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, null, tint = c.accent.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconMedium))
-        }
-    } else {
-        Icon(icon, null, tint = c.textSecondary.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconLarge))
-    }
+    Icon(icon, null, tint = Iris.colors.textSecondary.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconLarge))
 }
 
-/** 2.5.0: width of the leading icon slot of a row (tile in 柔光, bare icon in 经典). */
+/** 2.5.0: width of the leading icon slot of a row (Beta2: the bare icon in every style). */
 @Composable
-fun rowIconSlot(): Dp = if (softStyle() && Iris.colors.iconTile != Color.Unspecified) IrisDimens.iconLarge + IrisDimens.space12 else IrisDimens.iconLarge
+fun rowIconSlot(): Dp = IrisDimens.iconLarge
 
 /** Read-only key/value row. */
 @Composable

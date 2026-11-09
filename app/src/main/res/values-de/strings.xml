@@ -1962,7 +1962,7 @@
     <string name="v250_style">Stil</string>
     <string name="v250_style_soft">Sanft</string>
     <string name="v250_style_classic">Klassisch</string>
-    <string name="v250_style_sub">Sanft: Verlaufshintergrund, farbige Hervorhebungskarte und Symbolkacheln. Klassisch: das Aussehen von 2.4</string>
+    <string name="v250_style_sub">Sanft: neutrale, deckende Karten, eine Akzentfarbe, einfarbige Symbole. Klassisch: das Aussehen von 2.4</string>
     <string name="v250_hero_label">Aktuelles Modell</string>
     <string name="v250_hero_none">Kein Modell geladen</string>
     <string name="v250_hero_idle">Wähle und lade ein Modell, um zu chatten</string>

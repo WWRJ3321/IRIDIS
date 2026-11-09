@@ -1962,7 +1962,7 @@
     <string name="v250_style">Style</string>
     <string name="v250_style_soft">Soft</string>
     <string name="v250_style_classic">Classic</string>
-    <string name="v250_style_sub">Soft: gradient background, colourful highlight card and icon tiles. Classic: the 2.4 look</string>
+    <string name="v250_style_sub">Soft: solid neutral cards, a single accent colour, monochrome icons. Classic: the 2.4 look</string>
     <string name="v250_hero_label">Current model</string>
     <string name="v250_hero_none">No model loaded</string>
     <string name="v250_hero_idle">Pick and load a model to start chatting</string>

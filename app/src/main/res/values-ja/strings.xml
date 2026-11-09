@@ -1962,7 +1962,7 @@
     <string name="v250_style">スタイル</string>
     <string name="v250_style_soft">ソフト</string>
     <string name="v250_style_classic">クラシック</string>
-    <string name="v250_style_sub">ソフト：グラデーション背景、カラーのハイライトカード、アイコンタイル。クラシック：2.4 の外観</string>
+    <string name="v250_style_sub">ソフト：無彩色の不透明カード、アクセントカラーは1色、単色アイコン。クラシック：2.4 の外観</string>
     <string name="v250_hero_label">現在のモデル</string>
     <string name="v250_hero_none">モデル未読み込み</string>
     <string name="v250_hero_idle">モデルを選んで読み込むとチャットできます</string>
