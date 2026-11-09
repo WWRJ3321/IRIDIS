@@ -68,7 +68,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
-private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS }
+private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS,
+    /** 2.5.0 Beta5: 上下文、记忆和知识库 › 记忆列表 / 知识库 as real routes (push / pop animation like every subpage). */
+    MEMORY_LIST, KNOWLEDGE }
 
 class MainActivity : ComponentActivity() {
 
@@ -273,9 +275,16 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.CONTEXT, Route.MEMORY -> {
             // 2.2.9 F: one 上下文 · 记忆 · 知识库 page; the old controls are under 开发者选项.
             val ui by chat.state.collectAsStateWithLifecycle()
-            com.iris.localai.ui.settings.ContextMemoryPage(settingsVm, ui.context, onBack = pop, onDeveloper = { push(Route.DEVELOPER) })
+            com.iris.localai.ui.settings.ContextMemoryPage(
+                settingsVm, ui.context, onBack = pop, onDeveloper = { push(Route.DEVELOPER) },
+                onOpenList = { push(Route.MEMORY_LIST) }, onOpenKnowledge = { push(Route.KNOWLEDGE) },
+            )
         }
-        Route.DEV_CONTEXT -> com.iris.localai.ui.settings.DevContextMemoryPage(settingsVm, onBack = pop)
+        Route.MEMORY_LIST -> com.iris.localai.ui.agent.MemoryListPage(onBack = pop)
+        Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop)
+        Route.DEV_CONTEXT -> com.iris.localai.ui.settings.DevContextMemoryPage(
+            settingsVm, onBack = pop, onOpenList = { push(Route.MEMORY_LIST) }, onOpenKnowledge = { push(Route.KNOWLEDGE) },
+        )
         Route.PERFORMANCE -> com.iris.localai.ui.settings.PerformancePage(settingsVm, onBack = pop, onOpen = { p -> push(routeOf(p)) })
         Route.TIER_PROFILES -> com.iris.localai.ui.settings.TierProfilesPage(settingsVm, onBack = pop)
         Route.VOICE -> VoicePage(settingsVm, onBack = pop)

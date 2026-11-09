@@ -39,6 +39,10 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
     val state by vm.customImport.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshCustomTts() }
     val active = remember(models, s.ttsPack) { vm.activeCustomTts() }
+    // 2.5.0 Beta5: a cloned voice in force wins over imported models (same rule as the synthesizer).
+    val voices by vm.cloneVoices.collectAsStateWithLifecycle()
+    val packs by vm.voicePacks.collectAsStateWithLifecycle()
+    val cloneOn = VoiceChoice.cloneActive(s.cloneVoiceId, voices.map { it.id }, packs[com.iris.localai.voice.VoicePack.CLONE_ZIPVOICE] == PackState.Installed)
     var askUrl by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<InstalledTts?>(null) }
     val folderPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -54,7 +58,7 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             if (i > 0) Divider()
             PackRow(
                 m.model.name, I18n.s(R.string.tts245_blurb, m.model.spec.type.label), PackState.Installed, m.model.bytes,
-                selected = active?.id == m.id && s.cloneVoiceId.isEmpty(),
+                selected = active?.id == m.id && !cloneOn,
                 onUse = { vm.stopPreview(); vm.useCustomTts(m) }, onDownload = {}, onCancel = {}, onDelete = { deleting = m },
             )
         }

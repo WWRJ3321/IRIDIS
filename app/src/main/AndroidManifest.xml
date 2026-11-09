@@ -16,10 +16,8 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- Held only for the duration of an API request, never while idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- 2.1.9: optional, granted by the user over adb / Shizuku: switch the GUI 无障碍 service back on after 清后台. -->
+    <!-- 2.1.9: optional, granted by the user over adb: switch the GUI 无障碍 service back on before a task (IrisAccessibilityService.selfEnable). -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
-    <!-- 2.2.14 无障碍保活: put the GUI service back after reboot (only with WRITE_SECURE_SETTINGS). -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- 1.10.13: asks once to be left running in the background while a reply generates. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 1.12.0: phone tool (alarm / timer via the clock app). -->
@@ -126,22 +124,6 @@
                 android:value="On-device language model the user selected is being compiled for the GPU; runs only until that load finishes so the half-built compile cache is not lost." />
         </service>
         <!-- 2.2 GUI 智能体（形态 A）: sees the screen (screenshot + node tree) and taps / swipes / types for a task the user started; off until the user enables it in 系统设置 › 无障碍. -->
-        <receiver
-            android:name=".agent.gui.android.A11yBootReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
-        </receiver>
-        <provider
-            android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="${applicationId}.shizuku"
-            android:enabled="true"
-            android:exported="true"
-            android:multiprocess="false"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <service
             android:name=".agent.gui.android.IrisAccessibilityService"
             android:exported="false"

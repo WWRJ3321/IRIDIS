@@ -783,7 +783,7 @@
     <string name="agent_96cd4a">In den Systemeinstellungen aktiviert, verbinde…</string>
     <string name="agent_2696c0">Aus · tippen und unter Systemeinstellungen › Bedienungshilfen › Heruntergeladene Apps › IRIDIS-GUI-Agent einschalten</string>
     <string name="agent_fd59e1">Bei „Eingeschränkte Einstellung“: hier tippen, um App-Info zu öffnen, oben rechts ⋮ › Eingeschränkte Einstellungen zulassen, dann zurück und einschalten</string>
-    <string name="agent_76907b">Beim Leeren der letzten Apps schaltet das System die Bedienungshilfe ab: IRIDIS in den letzten Apps sperren und Akku auf uneingeschränkt setzen. Automatisch neu starten: Einstellungen › Agent › Bedienungshilfe aktiv halten (Shizuku mit einem Tipp oder adb-Befehl)</string>
+    <string name="agent_76907b">Beim Leeren der letzten Apps schaltet das System die Bedienungshilfe ab: IRIDIS in den letzten Apps sperren und Akku auf uneingeschränkt setzen.</string>
     <string name="agent_b1aa64">Bildschirm sehen → denken → handeln. Benötigt ein lokales Vision-Modell (z. B. Qwen3-VL, MAI-UI, AutoGLM-Phone). Jederzeit über die schwebende Leiste oben stoppbar; vor Zahlen, Senden oder Löschen wird gefragt.</string>
     <string name="agent_6279dc">Bedienungshilfe-Dienst</string>
     <string name="agent_281ed1">Eingeschränkte Einstellungen zulassen</string>
@@ -2048,4 +2048,6 @@
     <string name="v250_tab_cleanup">Aufräumen &amp; Backup</string>
     <string name="v250_api_clear">Löschen</string>
     <string name="v250_mem_info">Index &amp; Budget</string>
+    <string name="v250_tool_files">Dateien lesen, schreiben &amp; suchen</string>
+    <string name="v250_tool_files_sub">Arbeitsbereich-Dateien lesen und schreiben und im Arbeitsbereich suchen; ein Schalter für alles. „Fragen“ = vor dem Schreiben fragen, Lesen und Suchen erlaubt</string>
 </resources>

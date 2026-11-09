@@ -783,7 +783,7 @@
     <string name="agent_96cd4a">已在系統設定裡開啟，正在連線…</string>
     <string name="agent_2696c0">未開啟 · 輕觸去 系統設定 › 無障礙 › 已下載的應用 › IRIDIS GUI 智慧代理 開啟</string>
     <string name="agent_fd59e1">系統提示「受限設定」時：輕觸這裡開啟應用資訊，右上角 ⋮ › 允許受限制的設定，再回去開啟</string>
-    <string name="agent_76907b">清背景會讓系統關掉無障礙：在最近任務裡把 IRIDIS 加鎖，省電策略設為無限制。想掉了自動重開：設定 › 智慧代理 › 無障礙保活（Shizuku 一鍵授權或 adb 命令）</string>
+    <string name="agent_76907b">清背景會讓系統關掉無障礙：在最近任務裡把 IRIDIS 加鎖，省電策略設為無限制。</string>
     <string name="agent_b1aa64">看螢幕 → 思考 → 操作。需要能識圖的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。執行時可隨時在頂部懸浮條停止；支付、傳送、刪除前會先問你。</string>
     <string name="agent_6279dc">無障礙服務</string>
     <string name="agent_281ed1">允許受限制的設定</string>
@@ -2048,4 +2048,6 @@
     <string name="v250_tab_cleanup">清理與備份</string>
     <string name="v250_api_clear">清除</string>
     <string name="v250_mem_info">索引與預算</string>
+    <string name="v250_tool_files">讀寫檔案與本機搜尋</string>
+    <string name="v250_tool_files_sub">讀取、寫入工作區檔案，並在工作區裡搜尋；一個開關同時控制。「詢問」= 寫入前詢問，讀取與搜尋直接允許</string>
 </resources>

@@ -27,7 +27,7 @@ internal object GuiAgentText {
     val CONNECTING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_96cd4a)
     val OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2696c0)
     val RESTRICTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fd59e1)
-    /** 2.1.9: 清后台 turns the service off on HyperOS. */
+    /** 2.1.9: 清后台 turns the service off on HyperOS (2.5.0 Beta5: lock / battery tips only, 保活 removed). */
     val KEEP: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76907b)
     val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b1aa64)
 }
@@ -92,7 +92,7 @@ fun GuiAgentSection() {
     }
     if (run.lines.isNotEmpty()) GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true)
     GroupFootnote(GuiAgentText.NOTE)
-    A11yKeepAliveCard()
+    // 2.5.0 Beta5: 无障碍保活 card removed.
 
     if (asking) {
         TextInputDialog(

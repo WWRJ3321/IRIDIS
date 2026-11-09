@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 242
-        versionName = "2.5.0-beta4"
+        versionCode = 243
+        versionName = "2.5.0-beta5"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -159,9 +159,6 @@ android {
 }
 
 dependencies {
-    // 2.2.14 无障碍保活: one-tap WRITE_SECURE_SETTINGS grant through Shizuku (Apache-2.0).
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)

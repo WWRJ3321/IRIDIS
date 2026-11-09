@@ -1,9 +1,7 @@
 package com.iris.localai.v2214
 
 import com.iris.localai.agent.ToolCallParser
-import com.iris.localai.agent.gui.android.A11yKeepAlive
 import com.iris.localai.agent.gui.android.A11yList
-import com.iris.localai.agent.gui.android.KeepAliveStatus
 import com.iris.localai.data.TokenLimit
 import com.iris.localai.data.TrashPolicy
 import com.iris.localai.engine.GpuLoadWatchdog
@@ -98,13 +96,8 @@ class V2214Test {
         assertNull(MemoryPreflight.check(0, gb, 4096, false).message)
     }
 
-    @Test fun keepAlive() {
-        assertEquals(KeepAliveStatus.NOT_GRANTED, KeepAliveStatus.of(false, true, true))
-        assertEquals(KeepAliveStatus.ACTIVE, KeepAliveStatus.of(true, true, false))
-        assertEquals(KeepAliveStatus.GRANTED_SERVICE_OFF, KeepAliveStatus.of(true, false, false))
-        assertEquals("已保活", KeepAliveStatus.ACTIVE.label)
-        assertEquals("未授权", KeepAliveStatus.NOT_GRANTED.label)
-        assertEquals("adb shell pm grant com.iridis android.permission.WRITE_SECURE_SETTINGS", A11yKeepAlive.adbCommand())
+    // 2.5.0 Beta5: 无障碍保活 (KeepAliveStatus / A11yKeepAlive) removed; the enabled-list helper stays (selfEnable).
+    @Test fun a11yList() {
         val me = "com.iridis/com.iris.localai.agent.gui.android.IrisAccessibilityService"
         assertEquals("a/b", A11yList.remove("a/b:$me", me))
         assertEquals("a/b:$me", A11yList.add(A11yList.remove("a/b:$me", me), me))

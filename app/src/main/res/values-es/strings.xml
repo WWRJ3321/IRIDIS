@@ -783,7 +783,7 @@
     <string name="agent_96cd4a">Activado en Ajustes, conectando…</string>
     <string name="agent_2696c0">Desactivado · toca y actívalo en Ajustes › Accesibilidad › Apps descargadas › Agente GUI de IRIDIS</string>
     <string name="agent_fd59e1">Si aparece «Ajuste restringido»: toca aquí para abrir la información de la app, ⋮ (arriba a la derecha) › Permitir ajustes restringidos y vuelve a activarlo</string>
-    <string name="agent_76907b">Al cerrar las apps recientes el sistema apaga la accesibilidad: bloquea IRIDIS en Recientes y pon la batería sin restricciones. Para reactivarlo solo: Ajustes › Agente › Mantener accesibilidad activa (Shizuku con un toque o comando adb)</string>
+    <string name="agent_76907b">Al cerrar las apps recientes el sistema apaga la accesibilidad: bloquea IRIDIS en Recientes y pon la batería sin restricciones.</string>
     <string name="agent_b1aa64">Ver la pantalla → pensar → actuar. Necesita un modelo local con visión (p. ej. Qwen3-VL, MAI-UI, AutoGLM-Phone). Puedes detenerlo en cualquier momento desde la barra flotante superior; pregunta antes de pagar, enviar o eliminar.</string>
     <string name="agent_6279dc">Servicio de accesibilidad</string>
     <string name="agent_281ed1">Permitir ajustes restringidos</string>
@@ -2048,4 +2048,6 @@
     <string name="v250_tab_cleanup">Limpieza y copia</string>
     <string name="v250_api_clear">Borrar</string>
     <string name="v250_mem_info">Índice y presupuesto</string>
+    <string name="v250_tool_files">Leer, escribir y buscar archivos</string>
+    <string name="v250_tool_files_sub">Lee y escribe archivos del espacio de trabajo y busca en él; un solo interruptor. «Preguntar» = pregunta antes de escribir; leer y buscar están permitidos</string>
 </resources>

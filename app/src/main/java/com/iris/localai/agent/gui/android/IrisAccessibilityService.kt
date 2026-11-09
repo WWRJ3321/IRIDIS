@@ -56,13 +56,11 @@ class IrisAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         if (instance === this) instance = null
         GuiOverlay.hide()
-        A11yKeepAlive.onDisconnected(applicationContext)
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
         if (instance === this) instance = null
-        A11yKeepAlive.onDisconnected(applicationContext)
         super.onDestroy()
     }
 

@@ -61,6 +61,24 @@ import com.iris.localai.voice.VoicePack
 import java.util.Locale
 
 /**
+ * 2.5.0 Beta5: which read-aloud voice is in force, and the settings changes for a pick (pure; unit-tested).
+ * The synthesizer speaks with the cloned voice whenever cloneVoiceId names a saved voice and ZipVoice is
+ * installed, before any imported model or built-in pack — so the radios must use the same rule.
+ */
+internal object VoiceChoice {
+    fun cloneActive(cloneId: String, voiceIds: Collection<String>, zipInstalled: Boolean): Boolean =
+        cloneId.isNotEmpty() && zipInstalled && cloneId in voiceIds
+
+    fun pickClone(s: com.iris.localai.data.AppSettings, id: String): com.iris.localai.data.AppSettings =
+        if (id.isEmpty()) s.copy(cloneVoiceId = "") else s.copy(cloneVoiceId = id, ttsEngine = com.iris.localai.voice.TTS_ENGINE_LOCAL)
+
+    fun pickPack(s: com.iris.localai.data.AppSettings, packId: String): com.iris.localai.data.AppSettings =
+        s.copy(ttsPack = packId, cloneVoiceId = "", ttsEngine = com.iris.localai.voice.TTS_ENGINE_LOCAL)
+
+    fun pickCustom(s: com.iris.localai.data.AppSettings, packId: String): com.iris.localai.data.AppSettings = pickPack(s, packId)
+}
+
+/**
  * 设置 › 语音 › 克隆音色: ZipVoice model, saved voices (pick / 试听 / delete), a new voice from a
  * recording or an audio file, and the 快 / 像 trade-off.
  */
@@ -77,18 +95,20 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
     val installed = state == PackState.Installed
     var creating by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<ClonedVoice?>(null) }
+    // 2.5.0 Beta5: selected = the voice the synthesizer really uses (a deleted voice id no longer shows as chosen).
+    val cloneOn = VoiceChoice.cloneActive(s.cloneVoiceId, voices.map { it.id }, installed)
 
     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c548f))
     SettingsGroup {
         PackRow(
-            pack, state, vm.packBytes(pack), selected = installed && s.cloneVoiceId.isNotEmpty(),
+            pack, state, vm.packBytes(pack), selected = cloneOn,
             onUse = {}, onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
         )
         if (installed) {
             Divider()
             VoiceChoiceRow(
                 title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bf998), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41db47),
-                selected = s.cloneVoiceId.isEmpty() || voices.none { it.id == s.cloneVoiceId },
+                selected = !cloneOn,
                 onSelect = { vm.useClone("") },
             )
             voices.forEach { v ->
@@ -99,7 +119,7 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
                     subtitle = if (previewTarget == v.id && preview is SettingsViewModel.Preview.Failed)
                         (preview as SettingsViewModel.Preview.Failed).message
                     else String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_56de7d), v.durationMs / 1000f) + v.text,
-                    selected = s.cloneVoiceId == v.id,
+                    selected = cloneOn && s.cloneVoiceId == v.id,
                     onSelect = { vm.useClone(v.id) },
                 ) {
                     if (playing && preview == SettingsViewModel.Preview.Loading) TypingDots(Modifier.padding(horizontal = IrisDimens.space8))

@@ -784,7 +784,7 @@
     <string name="agent_96cd4a">已在系统设置里开启，正在连接…</string>
     <string name="agent_2696c0">未开启 · 点按去 系统设置 › 无障碍 › 已下载的应用 › IRIDIS GUI 智能体 开启</string>
     <string name="agent_fd59e1">系统提示「受限设置」时：点按这里打开应用信息，右上角 ⋮ › 允许受限制的设置，再回去开启</string>
-    <string name="agent_76907b">清后台会让系统关掉无障碍：在最近任务里把 IRIDIS 加锁，省电策略设为无限制。想掉了自动重开：设置 › 智能体 › 无障碍保活（Shizuku 一键授权或 adb 命令）</string>
+    <string name="agent_76907b">清后台会让系统关掉无障碍：在最近任务里把 IRIDIS 加锁，省电策略设为无限制。</string>
     <string name="agent_b1aa64">看屏幕 → 思考 → 操作。需要能识图的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。运行时可随时在顶部悬浮条停止；支付、发送、删除前会先问你。</string>
     <string name="agent_6279dc">无障碍服务</string>
     <string name="agent_281ed1">允许受限制的设置</string>
@@ -2049,4 +2049,6 @@
     <string name="v250_tab_cleanup">清理与备份</string>
     <string name="v250_api_clear">清除</string>
     <string name="v250_mem_info">索引与预算</string>
+    <string name="v250_tool_files">读写文件与本地搜索</string>
+    <string name="v250_tool_files_sub">读取、写入工作区文件，并在工作区里搜索；一个开关同时控制。「询问」= 写入前询问，读取与搜索直接允许</string>
 </resources>

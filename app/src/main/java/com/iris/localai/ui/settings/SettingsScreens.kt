@@ -427,11 +427,12 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
  * Both SettingsPage.CONTEXT and SettingsPage.MEMORY open it. 「恢复默认」 still only resets the context part.
  */
 @Composable
-fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit) {
+fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit, onOpenList: (() -> Unit)? = null, onOpenKnowledge: (() -> Unit)? = null) {
     val s by vm.settings.collectAsStateWithLifecycle()
     // 2.2.9 F: 开发者选项 › 上下文与记忆 — every control of the old 记忆与上下文 page, unchanged.
     com.iris.localai.ui.agent.MemorySettingsPage(
         onBack = onBack,
+        onOpenList = onOpenList, onOpenKnowledge = onOpenKnowledge,
         title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f7070),
         actions = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), vm::resetContext, style = IrisButtonStyle.Text, compact = true) },
     ) {

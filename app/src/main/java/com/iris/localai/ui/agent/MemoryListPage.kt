@@ -153,10 +153,11 @@ fun MemoryListPage(onBack: () -> Unit) {
                 textStyle = IrisType.body.copy(color = c.text),
                 shape = IrisRadius.pillShape,
                 colors = irisTextFieldColors(),
-                modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space8),
+                // 2.5.0 Beta5: ScrollBody has no side padding — inset to the card edge (groupGutter) like the groups.
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter).padding(top = IrisDimens.space8),
             )
             Spacer(Modifier.height(IrisDimens.space16))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.groupGutter), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 FilterPill("${MemoryListText.ALL} ${data.items.size}", kind == null) { kind = null }
                 MemoryItem.Kind.entries.forEach { k ->
                     FilterPill("${MemoryListText.kind(k)} ${data.items.count { it.kind == k }}", kind == k) { kind = if (kind == k) null else k }
@@ -164,7 +165,7 @@ fun MemoryListPage(onBack: () -> Unit) {
             }
             note?.let {
                 Spacer(Modifier.height(IrisDimens.space8))
-                Text(it, style = IrisType.caption, color = c.textSecondary)
+                Text(it, style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding))
             }
 
             val pending = MemoryListText.filter(data.pending, query, kind)
@@ -194,7 +195,7 @@ fun MemoryListPage(onBack: () -> Unit) {
                 Text(
                     if (data.items.isEmpty()) MemoryListText.EMPTY else MemoryListText.NO_MATCH,
                     style = IrisType.secondary, color = c.textTertiary,
-                    modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8),
+                    modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space8),
                 )
             } else {
                 val now = System.currentTimeMillis()
@@ -206,7 +207,7 @@ fun MemoryListPage(onBack: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(IrisDimens.space16))
-            IrisButton(MemoryListText.ADD, { adding = true }, style = IrisButtonStyle.Outline, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth())
+            IrisButton(MemoryListText.ADD, { adding = true }, style = IrisButtonStyle.Outline, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter))
             Spacer(Modifier.height(IrisDimens.space24))
         }
     }
@@ -269,7 +270,7 @@ private fun MemoryRow(item: MemoryItem, now: Long, onEdit: () -> Unit, onDelete:
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onEdit)
-            .padding(start = IrisDimens.space16, top = IrisDimens.space12, bottom = IrisDimens.space12, end = IrisDimens.space4),
+            .padding(start = IrisDimens.rowPadding, top = IrisDimens.rowVerticalPadding, bottom = IrisDimens.rowVerticalPadding, end = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {

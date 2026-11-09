@@ -783,7 +783,7 @@
     <string name="agent_96cd4a">Enabled in system settings, connecting…</string>
     <string name="agent_2696c0">Off · tap to enable in System settings › Accessibility › Downloaded apps › IRIDIS GUI agent</string>
     <string name="agent_fd59e1">If the system says \"Restricted setting\": tap here to open App info, then ⋮ (top right) › Allow restricted settings, and go back to enable it</string>
-    <string name="agent_76907b">Clearing recent apps lets the system turn accessibility off: lock IRIDIS in Recents and set battery to unrestricted. To auto-restart it when it drops: Settings › Agent › Accessibility keep-alive (one-tap Shizuku or an adb command)</string>
+    <string name="agent_76907b">Clearing recent apps lets the system turn accessibility off: lock IRIDIS in Recents and set battery to unrestricted.</string>
     <string name="agent_b1aa64">See the screen → think → act. Needs a local vision model (e.g. Qwen3-VL, MAI-UI, AutoGLM-Phone). Stop it anytime from the floating bar at the top; it asks before paying, sending or deleting.</string>
     <string name="agent_6279dc">Accessibility service</string>
     <string name="agent_281ed1">Allow restricted settings</string>
@@ -2048,4 +2048,6 @@
     <string name="v250_tab_cleanup">Clean-up &amp; backup</string>
     <string name="v250_api_clear">Clear</string>
     <string name="v250_mem_info">Index &amp; budget</string>
+    <string name="v250_tool_files">Read, write &amp; search files</string>
+    <string name="v250_tool_files_sub">Read and write workspace files and search the workspace; one switch for all three. \"Ask\" = ask before writing, reading and searching are allowed</string>
 </resources>

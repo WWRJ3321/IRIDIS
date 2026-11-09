@@ -87,6 +87,36 @@ object AgentText {
     fun path(p: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f89c73, p)
     val PERMISSION_OPTIONS = listOf(Permission.ALLOW, Permission.ASK, Permission.DENY)
 
+    // ---- 2.5.0 Beta5: 读写文件 + 本地搜索 as one row (each tool keeps its own enabled / permission key) ----
+    val FILES_LABEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tool_files)
+    val FILES_DESC: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tool_files_sub)
+    /** read_file, write_file, search_local — one switch and one permission value in settings. */
+    val FILE_TOOLS: List<com.iris.localai.agent.AgentTool> get() = listOf(
+        com.iris.localai.agent.ReadFileTool, com.iris.localai.agent.WriteFileTool, com.iris.localai.agent.SearchLocalTool,
+    )
+    /** Tools shown on their own row: not the merged file tools, not 长期记忆 (on 上下文、记忆和知识库), not the internal 载入工具. */
+    fun listedTools(): List<com.iris.localai.agent.AgentTool> = AgentTools.all.filter { t ->
+        FILE_TOOLS.none { it.name == t.name } && t.name != com.iris.localai.agent.MemoryTool.name && t.name != com.iris.localai.agent.ActivateTool.name
+    }
+    /** On while any of the three is on (so the row never hides a tool that can still run). */
+    fun filesOn(s: AgentSettings): Boolean = FILE_TOOLS.any { s.isEnabled(it) }
+    fun withFilesOn(s: AgentSettings, on: Boolean): AgentSettings = s.copy(enabled = s.enabled + FILE_TOOLS.map { it.name to on })
+    /** 拒绝 when all three are denied, 允许 when all three are allowed, otherwise 询问. */
+    fun filesPermission(s: AgentSettings): Permission {
+        val ps = FILE_TOOLS.map { s.permission(it) }
+        return when {
+            ps.all { it == Permission.DENY } -> Permission.DENY
+            ps.all { it == Permission.ALLOW } -> Permission.ALLOW
+            else -> Permission.ASK
+        }
+    }
+    /** 允许 / 拒绝 = all three; 询问 = ask before writing, read and search allowed (the default pair). */
+    fun withFilesPermission(s: AgentSettings, p: Permission): AgentSettings = s.copy(
+        permissions = s.permissions + FILE_TOOLS.map { t ->
+            t.name to (if (p == Permission.ASK && t.name != com.iris.localai.agent.WriteFileTool.name) Permission.ALLOW else p).name
+        },
+    )
+
     fun size(bytes: Long): String = when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1f KB", bytes / 1024.0)
@@ -166,21 +196,25 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 }
             }
 
-            // Tools grouped by kind.
+            // 2.5.0 Beta5: one group under 「工具」 (the per-kind headers held one row each); 读取/写入文件 +
+            // 本地搜索 are one row, 长期记忆 is on 上下文、记忆和知识库, the internal 载入工具 is not listed.
             // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
             SectionTitle(AgentText.TOOLS)
-            AgentTools.all.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
-            SectionTitle(group.label)
             SettingsGroup {
-                groupTools.forEachIndexed { i, tool ->
-                    if (i > 0) Divider()
+                ToolRow(
+                    label = AgentText.FILES_LABEL, description = AgentText.FILES_DESC,
+                    on = AgentText.filesOn(s), permission = AgentText.filesPermission(s),
+                    onToggle = { v -> agent.settings.update { AgentText.withFilesOn(it, v) } },
+                    onPermission = { p -> agent.settings.update { AgentText.withFilesPermission(it, p) } },
+                )
+                AgentText.listedTools().forEach { tool ->
+                    Divider()
                     ToolRow(
                         label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
                         onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
                         onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
                     )
                 }
-            }
             }
             GroupFootnote(AgentText.PERMISSION_NOTE)
 
@@ -200,7 +234,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                     onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
             }
 
-            // 2.2: GUI 智能体（无障碍，形态 A）.
+            // 2.2: GUI 智能体（无障碍，形态 A）. 2.5.0 Beta5: 无障碍保活 removed.
             GuiAgentSection()
 
             // search provider, skills, backup and logs.
@@ -313,8 +347,8 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 // 1.13.0: one row into the 文件 page (the inline list duplicated it and read whole files into memory).
                 SettingsRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), icon = com.iris.localai.ui.icons.IrisIcons.Folder,
-                    subtitle = (if (files.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d22dc6) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, files.size, AgentText.size(files.sumOf { it.size }))) +
-                        "\n" + ws.root.path,
+                    // 2.5.0 Beta5: no second copy of the workspace path (the 位置 row above shows it).
+                    subtitle = (if (files.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d22dc6) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9c50ee, files.size, AgentText.size(files.sumOf { it.size }))),
                     onClick = onOpenFiles,
                     trailing = { com.iris.localai.ui.components.Chevron() },
                 )

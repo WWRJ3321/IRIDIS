@@ -23,7 +23,6 @@
 | three.js | r170（HTML 预览内置，assets） | MIT | 保留版权声明（assets/licenses/mit-three.js.txt） |
 | Mika (wangzan101/Mika) | GUI 智能体的部分思路与代码（ScreenDiagnosis、StuckAdvice 等，已修改） | Apache-2.0 | 附许可证；修改说明见 assets/licenses/notice-mika.txt |
 | Haze (chrisbanes) | 1.2.2 | Apache-2.0 | 附许可证 |
-| Shizuku API / provider (RikkaApps) | 13.1.5 | Apache-2.0 | 附许可证 |
 | ML Kit 中文文字识别 (Google) | 16.0.1（full 版，GUI 智能体 OCR 兜底） | ML Kit 服务条款 | 遵守 Google ML Kit Terms |
 | Qualcomm GenieX Kotlin SDK 类 | 0.8.0 | BSD-3-Clause（原生运行库为高通条款，由用户下载） | 附许可证（assets/licenses/bsd-3-geniex.txt） |
 | LiteRT Dispatch (Qualcomm) | assets/npu/libLiteRtDispatch_Qualcomm.so（full 版），取自 Google AI Edge Gallery 1.0.20 随附的预编译库，与本项目使用的 litertlm-android 0.18.0 配套，运行时搭配 QNN/QAIRT 2.50.0（见下表，从 Maven Central 下载） | Apache-2.0（Google，源码公开） | 附许可证；注明来源版本 |

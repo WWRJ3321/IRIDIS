@@ -60,9 +60,6 @@
 # Vlm.extractMediaPaths returns a kotlin.Pair built in native code.
 -keep class kotlin.Pair { <init>(...); *; }
 
-# 2.2.14 Shizuku (newProcess is reached by reflection)
--keep class rikka.shizuku.** { *; }
--keep class moe.shizuku.** { *; }
 
 # 2.3.0 ③ 本地翻译: JNI entry points of libiris_bergamot.so
 -keep class com.iris.localai.translate.BergamotNative { native <methods>; *; }

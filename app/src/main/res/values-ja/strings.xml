@@ -783,7 +783,7 @@
     <string name="agent_96cd4a">システム設定で有効化済み、接続中…</string>
     <string name="agent_2696c0">オフ · タップして システム設定 › ユーザー補助 › ダウンロードしたアプリ › IRIDIS GUI エージェント を有効に</string>
     <string name="agent_fd59e1">「制限付き設定」と表示されたら：ここをタップしてアプリ情報を開き、右上の ⋮ › 制限付き設定を許可 を選んでから、戻って有効にしてください</string>
-    <string name="agent_76907b">履歴からアプリを消すとシステムがユーザー補助をオフにします：最近のタスクで IRIDIS をロックし、バッテリーを制限なしに。落ちたときに自動で戻すには：設定 › エージェント › ユーザー補助の維持（Shizuku ワンタップまたは adb コマンド）</string>
+    <string name="agent_76907b">履歴からアプリを消すとシステムがユーザー補助をオフにします：最近のタスクで IRIDIS をロックし、バッテリーを制限なしに。</string>
     <string name="agent_b1aa64">画面を見る → 考える → 操作する。画像を理解できるローカル モデル（Qwen3-VL、MAI-UI、AutoGLM-Phone など）が必要です。上部のフローティングバーでいつでも停止でき、支払い・送信・削除の前に確認します。</string>
     <string name="agent_6279dc">ユーザー補助サービス</string>
     <string name="agent_281ed1">制限付き設定を許可</string>
@@ -2048,4 +2048,6 @@
     <string name="v250_tab_cleanup">整理とバックアップ</string>
     <string name="v250_api_clear">消去</string>
     <string name="v250_mem_info">インデックスと予算</string>
+    <string name="v250_tool_files">ファイルの読み書きと検索</string>
+    <string name="v250_tool_files_sub">ワークスペースのファイルを読み書きし、ワークスペース内を検索します。スイッチ1つでまとめて切り替え。「確認」= 書き込み前に確認、読み取りと検索は許可</string>
 </resources>

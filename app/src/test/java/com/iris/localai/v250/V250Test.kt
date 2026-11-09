@@ -167,12 +167,13 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 242"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta4\""))
+        assertTrue(g.contains("versionCode = 243"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta5\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta4"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta5（2026-11-09，测试版，未在真机测试）"))
     }
 
     @Test fun newStringsInEveryLanguage() {
@@ -185,6 +186,76 @@ class V250Test {
             val t = File(d, "strings.xml").readText()
             for (k in keys) assertTrue("${d.name} $k", t.contains("name=\"$k\""))
         }
+    }
+
+    // ---- Beta5 ----
+    @Test fun fileToolsAreOneRow() {
+        val ui = com.iris.localai.ui.agent.AgentText
+        val names = ui.listedTools().map { it.name }
+        for (n in listOf("read_file", "write_file", "search_local", "memory", "activate")) assertFalse(n, n in names)
+        assertEquals(listOf("read_file", "write_file", "search_local"), ui.FILE_TOOLS.map { it.name })
+        val d = com.iris.localai.agent.AgentSettings()
+        assertTrue(ui.filesOn(d))
+        assertEquals(com.iris.localai.agent.Permission.ASK, ui.filesPermission(d)) // default: write asks
+        val off = ui.withFilesOn(d, false)
+        assertFalse(ui.filesOn(off)); ui.FILE_TOOLS.forEach { assertFalse(off.isEnabled(it)) }
+        // 「本地搜索」 alone still on → the row stays on (never hides a tool that can run)
+        assertTrue(ui.filesOn(off.copy(enabled = off.enabled + ("search_local" to true))))
+        val deny = ui.withFilesPermission(d, com.iris.localai.agent.Permission.DENY)
+        assertEquals(com.iris.localai.agent.Permission.DENY, ui.filesPermission(deny))
+        val allow = ui.withFilesPermission(deny, com.iris.localai.agent.Permission.ALLOW)
+        assertEquals(com.iris.localai.agent.Permission.ALLOW, ui.filesPermission(allow))
+        val ask = ui.withFilesPermission(allow, com.iris.localai.agent.Permission.ASK)
+        assertEquals(com.iris.localai.agent.Permission.ALLOW, ask.permission(com.iris.localai.agent.ReadFileTool))
+        assertEquals(com.iris.localai.agent.Permission.ASK, ask.permission(com.iris.localai.agent.WriteFileTool))
+        // per-tool keys stay (old backups import unchanged)
+        assertEquals(setOf("read_file", "write_file", "search_local"), ask.permissions.keys)
+        val page = src("app/src/main/java/com/iris/localai/ui/agent/AgentSettingsPage.kt")
+        assertTrue(page.contains("AgentText.FILES_LABEL")); assertTrue(page.contains("AgentText.listedTools()"))
+    }
+
+    @Test fun memorySwitchIsOnContextMemoryPage() {
+        val page = src("app/src/main/java/com/iris/localai/ui/settings/ContextMemoryPage.kt")
+        assertTrue(page.contains("ContextMemoryText.MEMORY_SWITCH"))
+        assertFalse(com.iris.localai.ui.agent.AgentText.listedTools().any { it.name == com.iris.localai.agent.MemoryTool.name })
+        val t = com.iris.localai.ui.settings.ContextMemoryText
+        val d = com.iris.localai.agent.AgentSettings()
+        assertTrue(t.memoryOn(true, d)); assertFalse(t.memoryOn(false, d))
+        val off = t.withMemoryTool(d, false)
+        assertFalse(t.memoryOn(true, off)); assertTrue(t.memoryOn(true, t.withMemoryTool(off, true)))
+    }
+
+    @Test fun keepAliveIsRemoved() {
+        val java = File(root(), "app/src/main/java/com/iris/localai")
+        assertFalse(File(java, "ui/agent/A11yKeepAliveCard.kt").exists())
+        assertFalse(File(java, "agent/gui/android/A11yKeepAlive.kt").exists())
+        assertFalse(src("app/src/main/java/com/iris/localai/ui/agent/GuiAgentSection.kt").contains("A11yKeepAliveCard("))
+        val m = src("app/src/main/AndroidManifest.xml")
+        assertFalse(m.contains("A11yBootReceiver")); assertFalse(m.contains("ShizukuProvider")); assertFalse(m.contains("RECEIVE_BOOT_COMPLETED"))
+        assertFalse(src("app/build.gradle.kts").contains("shizuku"))
+        assertFalse(java.walkTopDown().filter { it.isFile && it.name.endsWith(".kt") }.any { it.readText().contains("A11yKeepAlive") })
+        // the 2.1.9 pre-task self-enable stays
+        assertTrue(m.contains("WRITE_SECURE_SETTINGS"))
+    }
+
+    @Test fun memoryAndKnowledgeAreRoutes() {
+        val main = src("app/src/main/java/com/iris/localai/ui/MainActivity.kt")
+        assertTrue(main.contains("Route.MEMORY_LIST -> com.iris.localai.ui.agent.MemoryListPage(onBack = pop)"))
+        assertTrue(main.contains("Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop)"))
+        assertTrue(main.contains("onOpenList = { push(Route.MEMORY_LIST) }, onOpenKnowledge = { push(Route.KNOWLEDGE) }"))
+        val list = src("app/src/main/java/com/iris/localai/ui/agent/MemoryListPage.kt")
+        assertTrue(list.contains("padding(horizontal = IrisDimens.groupGutter)"))
+    }
+
+    @Test fun cloneVoiceChoiceIsExclusive() {
+        // VoiceChoice 是文件内 internal，测试按源码检查
+        val vc = src("app/src/main/java/com/iris/localai/ui/settings/CloneVoiceSection.kt") +
+            src("app/src/main/java/com/iris/localai/ui/settings/CustomTtsSection.kt") +
+            src("app/src/main/java/com/iris/localai/ui/settings/VoiceAndApiPages.kt") +
+            src("app/src/main/java/com/iris/localai/ui/settings/SettingsViewModel.kt")
+        assertTrue(vc.contains("object VoiceChoice"))
+        assertTrue(vc.contains("fun cloneActive(")); assertTrue(vc.contains("fun pickPack(")); assertTrue(vc.contains("fun pickClone("))
+        assertTrue(vc.contains("VoiceChoice.pickPack(it, pack.id)"))
     }
 
     @Test fun terminalAndSchedulesStayGone() {

@@ -165,7 +165,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun importTtsUrl(url: String) = startImport { c.customTts.importUrl(url) }
     fun cancelTtsImport() { customJob?.cancel(); c.customTts.clearImportMessage() }
     fun clearTtsImportMessage() = c.customTts.clearImportMessage()
-    fun useCustomTts(m: com.iris.localai.voice.InstalledTts) = update { it.copy(ttsPack = m.packId, cloneVoiceId = "") }
+    // 2.5.0 Beta5: picking a local voice (pack / imported / cloned) is exclusive and switches 朗读引擎 to 本机 —
+    // with 系统 TTS selected the synthesizer ignored the pick, so read-aloud kept the system voice.
+    fun useCustomTts(m: com.iris.localai.voice.InstalledTts) = update { VoiceChoice.pickCustom(it, m.packId) }
     fun activeCustomTts(): com.iris.localai.voice.InstalledTts? = c.customTts.find(c.settings.current.ttsPack)
     fun deleteCustomTts(m: com.iris.localai.voice.InstalledTts) = viewModelScope.launch {
         if (c.settings.current.ttsPack == m.packId) c.synthesizer.release()
@@ -173,7 +175,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun usePack(pack: VoicePack) = update {
-        if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) it.copy(asrPack = pack.id) else it.copy(ttsPack = pack.id)
+        // 2.5.0 Beta5: a built-in voice also clears the cloned voice (it won over every pack, so the pick did nothing).
+        if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) it.copy(asrPack = pack.id) else VoiceChoice.pickPack(it, pack.id)
     }
     fun activePack(kind: com.iris.localai.voice.VoiceKind): VoicePack? =
         c.voiceStore.active(kind, if (kind == com.iris.localai.voice.VoiceKind.ASR) c.settings.current.asrPack else c.settings.current.ttsPack)
@@ -352,7 +355,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         stopDraftPlayback()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val v = c.cloneVoices.save(name, text, d.samples, d.sampleRate)
-            update { it.copy(cloneVoiceId = v.id) }
+            update { VoiceChoice.pickClone(it, v.id) }
             _draft.value = CloneDraft.Idle
         }
     }
@@ -364,7 +367,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         _draft.value = CloneDraft.Idle
     }
 
-    fun useClone(id: String) = update { it.copy(cloneVoiceId = id) }
+    fun useClone(id: String) = update { VoiceChoice.pickClone(it, id) }
     fun deleteClone(id: String) {
         if (settings.value.cloneVoiceId == id) update { it.copy(cloneVoiceId = "") }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { c.cloneVoices.delete(id) }

@@ -211,20 +211,20 @@ fun KnowledgePage(onBack: () -> Unit) {
             IrisButton(
                 KnowledgeText.ADD, { pick.launch(arrayOf("text/*", "application/json", "application/octet-stream")) },
                 icon = Icons.Outlined.Add, enabled = !busy,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
             )
             Spacer(Modifier.height(IrisDimens.space8))
             // 2.2.17 D: paste text straight in (saved as a .md file and indexed like any import).
             IrisButton(
                 KnowledgeText.NEW_TEXT, { editor = KbEditorState("", "", "") }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
                 icon = IrisIcons.Copy, enabled = !busy,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
             )
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(
                 com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_new_folder), { newFolder = true }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
                 icon = IrisIcons.FolderPlus, enabled = !busy && com.iris.localai.knowledge.KbPaths.depth(folder) < com.iris.localai.knowledge.KbPaths.MAX_FOLDER_DEPTH,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
             )
             Spacer(Modifier.height(IrisDimens.space16))
             // 2.3.2: breadcrumbs (知识库 › a › b), each tappable.
@@ -232,9 +232,9 @@ fun KnowledgePage(onBack: () -> Unit) {
             val subs = com.iris.localai.knowledge.KbPaths.subfolders(folders, folder)
             val list = files?.filter { com.iris.localai.knowledge.KbPaths.parent(it.path) == folder }
             if (list == null) {
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
             } else if (list.isEmpty() && subs.isEmpty()) {
-                Text(KnowledgeText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
+                Text(KnowledgeText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
             } else {
                 SettingsGroup {
                     subs.forEachIndexed { i, sub ->

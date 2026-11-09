@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,6 +72,14 @@ object ContextMemoryText {
     val SUGGEST_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7f2a54)
     val KB_TOGGLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65e375)
     val KB_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cca5e7)
+    /** 2.5.0 Beta5: 长期记忆 — the switch that was the memory tool row on 设置 › 智能体. */
+    val MEMORY_SWITCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7)
+    val MEMORY_SWITCH_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1415ca)
+    /** On = memory on and the agent's memory tool on (either off means the agent cannot remember). */
+    fun memoryOn(memoryEnabled: Boolean, s: com.iris.localai.agent.AgentSettings): Boolean =
+        memoryEnabled && s.isEnabled(com.iris.localai.agent.MemoryTool)
+    fun withMemoryTool(s: com.iris.localai.agent.AgentSettings, on: Boolean): com.iris.localai.agent.AgentSettings =
+        s.copy(enabled = s.enabled + (com.iris.localai.agent.MemoryTool.name to on))
 
     fun memoryTitle(n: Int): String = if (n == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c13df5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_15ec09, n)
     fun memorySub(latest: String?, ago: String?, pending: Int): String = listOfNotNull(
@@ -101,12 +110,22 @@ object ContextMemoryText {
  * else (window, strategies, injection, indexes, 清空记忆) lives in 开发者选项 › 上下文与记忆.
  */
 @Composable
-fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> Unit, onDeveloper: () -> Unit) {
+fun ContextMemoryPage(
+    vm: SettingsViewModel, usage: ContextUsage, onBack: () -> Unit, onDeveloper: () -> Unit,
+    /**
+     * 2.5.0 Beta5: 记忆列表 / 知识库 open as their own routes in MainActivity's AnimatedContent (the same
+     * push / pop slide and predictive back as every other settings subpage). null = shown in place (old behaviour).
+     */
+    onOpenList: (() -> Unit)? = null,
+    onOpenKnowledge: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val container = remember { (context.applicationContext as IrisApp).container }
     val agent = container.agent
     val s by vm.settings.collectAsStateWithLifecycle()
     val ms by agent.memorySettings.settings.collectAsStateWithLifecycle()
+    // 2.5.0 Beta5: 长期记忆 switch moved here from 设置 › 智能体 (the memory tool row).
+    val agentSettings by agent.settings.settings.collectAsStateWithLifecycle()
     val revision by agent.memoryRevision.collectAsStateWithLifecycle()
     var showList by rememberSaveable { mutableStateOf(false) }
     var showKb by rememberSaveable { mutableStateOf(false) }
@@ -161,8 +180,16 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
                 StatusRow(
                     mem?.let { ContextMemoryText.memoryTitle(it.n) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
                     mem?.let { m -> ContextMemoryText.memorySub(m.latest, m.latest?.let { ContextMemoryText.ago(m.at) }, m.pending) } ?: "",
-                    onClick = { showList = true },
+                    onClick = { onOpenList?.invoke() ?: run { showList = true } },
                 )
+                InsetLine()
+                SwitchRow(
+                    ContextMemoryText.MEMORY_SWITCH, ContextMemoryText.memoryOn(ms.enabled, agentSettings),
+                    subtitle = ContextMemoryText.MEMORY_SWITCH_SUB,
+                ) { on ->
+                    agent.memorySettings.update { it.copy(enabled = on) }
+                    agent.settings.update { ContextMemoryText.withMemoryTool(it, on) }
+                }
                 InsetLine()
                 SwitchRow(ContextMemoryText.SUGGEST, ms.suggest, subtitle = ContextMemoryText.SUGGEST_SUB, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(suggest = on) }
@@ -174,7 +201,7 @@ fun ContextMemoryPage(vm: SettingsViewModel, usage: ContextUsage, onBack: () -> 
                 StatusRow(
                     kb?.let { ContextMemoryText.kbTitle(it.first) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
                     kb?.let { ContextMemoryText.kbSub(it.first, it.second) } ?: "",
-                    onClick = { showKb = true },
+                    onClick = { onOpenKnowledge?.invoke() ?: run { showKb = true } },
                 )
                 InsetLine()
                 SwitchRow(ContextMemoryText.KB_TOGGLE, s.knowledgeInChat, subtitle = ContextMemoryText.KB_SUB) { on ->
@@ -233,8 +260,9 @@ private fun UsageBlock(u: ContextUsage) {
     val frac by animateFloatAsState(u.fraction, motionSpec(IrisMotion.Gentle, 0.001f), label = "ctxCardFrac")
     val fill = if (u.nearFull) c.danger else c.accent
     val track = c.outline.copy(alpha = 0.45f)
-    Column(Modifier.fillMaxWidth().padding(IrisDimens.space16)) {
-        Text(ContextText.usageTitle(u), style = IrisType.title, color = c.text)
+    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.rowVerticalPadding + IrisDimens.space4)) {
+        // 2.5.0 Beta5: row title metrics (IrisType.title grew to 20 sp in 2.5.0 and no longer matched the rows).
+        Text(ContextText.usageTitle(u), style = IrisType.row, color = c.text)
         Spacer(Modifier.height(IrisDimens.space12))
         Canvas(Modifier.fillMaxWidth().height(IrisDimens.space8)) {
             val r = CornerRadius(size.height / 2)
@@ -250,14 +278,16 @@ private fun UsageBlock(u: ContextUsage) {
 private fun StatusRow(title: String, subtitle: String, onClick: () -> Unit) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(IrisDimens.space16),
+        // 2.5.0 Beta5: same paddings / min height / type as SettingsRow, so it lines up with the switch rows below.
+        Modifier.fillMaxWidth().heightIn(min = IrisDimens.rowMinHeight).clickable(onClick = onClick)
+            .padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.rowVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = IrisType.title, color = c.text)
+            Text(title, style = IrisType.row, color = c.text)
             if (subtitle.isNotEmpty()) {
                 Spacer(Modifier.height(IrisDimens.space4))
-                Text(subtitle, style = IrisType.secondary, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, style = IrisType.rowSummary, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
         Spacer(Modifier.width(IrisDimens.space12))
@@ -267,5 +297,5 @@ private fun StatusRow(title: String, subtitle: String, onClick: () -> Unit) {
 
 @Composable
 private fun InsetLine() {
-    Box(Modifier.padding(horizontal = IrisDimens.space16).fillMaxWidth().height(IrisDimens.hairline).background(Iris.colors.outline))
+    Box(Modifier.padding(horizontal = IrisDimens.rowPadding).fillMaxWidth().height(IrisDimens.hairline).background(Iris.colors.outline))
 }

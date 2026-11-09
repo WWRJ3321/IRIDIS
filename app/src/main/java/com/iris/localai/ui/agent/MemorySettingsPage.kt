@@ -76,6 +76,9 @@ fun MemorySettingsPage(
     /** 2.1.3: 「上下文与记忆」 and 「记忆」 are one page, 「记忆与上下文」 (the context sections come first). */
     title: String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dfeb13),
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+    /** 2.5.0 Beta5: open 记忆列表 / 知识库 as routes (animated); null = shown in place. Before [header]: callers pass it as the trailing lambda. */
+    onOpenList: (() -> Unit)? = null,
+    onOpenKnowledge: (() -> Unit)? = null,
     header: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -131,7 +134,7 @@ fun MemorySettingsPage(
                 SettingsRow(
                     MemoryText.LIST, icon = Icons.Outlined.Face,
                     subtitle = MemoryText.listSubtitle(counts.first, counts.second),
-                    onClick = { showList = true },
+                    onClick = { onOpenList?.invoke() ?: run { showList = true } },
                     trailing = { com.iris.localai.ui.components.Chevron() },
                 )
                 Divider()
@@ -149,7 +152,7 @@ fun MemorySettingsPage(
             }
             GroupFootnote(MemoryText.DOC_NOTE)
 
-            KnowledgeEntry(onOpen = { showKb = true })
+            KnowledgeEntry(onOpen = { onOpenKnowledge?.invoke() ?: run { showKb = true } })
 
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_593d49))
             SettingsGroup {
