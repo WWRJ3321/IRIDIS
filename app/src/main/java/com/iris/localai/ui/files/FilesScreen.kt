@@ -321,7 +321,7 @@ fun FilesDialogs(state: FilesState, actions: FilesActions) {
         ) {
             Box(
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(if (d.markdown) c.surfaceVariant else c.codeBackground)
-                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(10.dp),
+                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
             ) {
                 val text = d.text
                 when {

@@ -134,7 +134,7 @@ internal fun ComposerPill(
             )
             .padding(horizontal = (if (compact) ComposerPillStyle.COMPACT_H_PADDING_DP else ComposerPillStyle.H_PADDING_DP).dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 5.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) com.iris.localai.ui.theme.IrisSpace.XS else com.iris.localai.ui.theme.IrisSpace.XS, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = fg.copy(alpha = a), modifier = Modifier.size(if (compact) 14.dp else 16.dp))
         Text(text, style = if (compact) IrisType.labelSmall else IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = fg.copy(alpha = a), maxLines = 1)

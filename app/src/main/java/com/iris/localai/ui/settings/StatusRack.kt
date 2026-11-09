@@ -378,7 +378,7 @@ fun StatusRack(
                     .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
                     .clickable(onClickLabel = if (showAll) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { showAll = !showAll }
                     .heightIn(min = 40.dp)
-                    .padding(horizontal = IrisDimens.space16, vertical = 11.dp),
+                    .padding(horizontal = IrisDimens.space16, vertical = com.iris.localai.ui.theme.IrisSpace.M),
             )
         }
     }

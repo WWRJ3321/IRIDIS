@@ -76,7 +76,7 @@ fun TypingDots(modifier: Modifier = Modifier, color: Color = Iris.colors.textSec
     // flag is off by design). Shown only until the first token; the frame clock stops in background.
     val run = !reduce
     val t = rememberInfiniteTransition(label = "dots")
-    Row(modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(modifier.padding(vertical = com.iris.localai.ui.theme.IrisSpace.S), horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.XS)) {
         repeat(3) { i ->
             val v = if (!run) null else t.animateFloat(
                 0f, 1f,

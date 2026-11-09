@@ -108,7 +108,7 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
             AnimatedVisibility(open, enter = IrisMotion.expand(), exit = IrisMotion.collapse()) {
                 Column(
                     Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())
-                        .padding(start = IrisDimens.space12, end = IrisDimens.space12, bottom = 10.dp),
+                        .padding(start = IrisDimens.space12, end = IrisDimens.space12, bottom = com.iris.localai.ui.theme.IrisSpace.S),
                 ) {
                     if (p.title.isNotBlank()) Text(p.title, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(bottom = IrisDimens.space6))
                     p.steps.forEachIndexed { i, st -> FlowNode(i + 1, st.text, st.status, first = i == 0, last = i == p.steps.lastIndex) }

@@ -112,7 +112,7 @@ fun AttachmentStrip(
     androidx.compose.foundation.lazy.LazyRow(
         modifier = modifier.then(gestures),
         state = state,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.S),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items(list.size, key = { list[it].path }) { i ->
@@ -138,7 +138,7 @@ fun AttachmentStrip(
             ) {
                 if (a.kind == AttachmentKind.IMAGE) ImageThumb(a, 64.dp) { viewing = list.filter { it.kind == AttachmentKind.IMAGE }.indexOfFirst { it.path == a.path }.coerceAtLeast(0) } else FileChip(a)
                 if (onRemove != null) {
-                    Box(Modifier.align(Alignment.TopEnd).padding(2.dp)) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(com.iris.localai.ui.theme.IrisSpace.XS)) {
                         PressableIcon(
                             Icons.Rounded.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8506eb, a.name), size = 22.dp, iconSize = 13.dp,
                             tint = Iris.colors.onAccent, background = Iris.colors.text.copy(alpha = 0.55f),
@@ -189,7 +189,7 @@ private fun FileChip(a: Attachment) {
             .widthIn(min = 120.dp, max = 200.dp)
             .clip(IrisRadius.smallShape)
             .background(c.surfaceVariant)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(32.dp).background(c.accentContainer, CircleShape), contentAlignment = Alignment.Center) {
@@ -198,8 +198,8 @@ private fun FileChip(a: Attachment) {
                 null, tint = c.onAccentContainer, modifier = Modifier.size(17.dp),
             )
         }
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.padding(end = 14.dp)) {
+        Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
+        Column(Modifier.padding(end = com.iris.localai.ui.theme.IrisSpace.M)) {
             Text(a.name, style = IrisType.labelSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 Attachments.ext(a.name).uppercase().ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47) } + " · " + Attachments.sizeLabel(a.sizeBytes),

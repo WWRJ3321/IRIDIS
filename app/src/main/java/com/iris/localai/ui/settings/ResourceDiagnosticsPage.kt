@@ -140,7 +140,7 @@ private fun SegmentBody(s: SegmentReport, charging: Boolean) {
 @Composable
 private fun Metric(name: String, value: String) {
     val c = Iris.colors
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth().padding(vertical = com.iris.localai.ui.theme.IrisSpace.XS), verticalAlignment = Alignment.Top) {
         Text(name, style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.width(112.dp))
         Text(value, style = IrisType.labelSmall.copy(fontWeight = FontWeight.Medium), color = c.text, modifier = Modifier.weight(1f))
     }

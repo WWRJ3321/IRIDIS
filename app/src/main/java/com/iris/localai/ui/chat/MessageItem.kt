@@ -121,7 +121,7 @@ fun UserMessage(
                 .combinedClickable(onClick = {}, onLongClick = {
                     haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LONG_PRESS); menu = true
                 })
-                .padding(horizontal = IrisDimens.space16, vertical = 10.dp),
+                .padding(horizontal = IrisDimens.space16, vertical = com.iris.localai.ui.theme.IrisSpace.S),
         ) {
             Text(message.content, style = IrisType.message, color = c.text)
         }
@@ -471,7 +471,7 @@ fun MessageRow(message: ChatMessage, modifier: Modifier = Modifier, content: @Co
         modifier
             .fillMaxWidth()
             .widthIn(max = IrisDimens.messageMaxWidth)
-            .padding(horizontal = 18.dp)
+            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L)
             .graphicsLayer {
                 val v = rise.value
                 alpha = v.coerceIn(0f, 1f)

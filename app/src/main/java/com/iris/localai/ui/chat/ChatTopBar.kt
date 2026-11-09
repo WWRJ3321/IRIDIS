@@ -298,7 +298,7 @@ internal fun MorphPanel(
                             .graphicsLayer { alpha = ((progress() - 0.3f) / 0.7f).coerceIn(0f, 1f) }
                             // only scrolls if the list is taller than the whole space below the pill
                             .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                            .padding(bottom = 4.dp),
+                            .padding(bottom = com.iris.localai.ui.theme.IrisSpace.XS),
                     ) {
                         content()
                     }
@@ -334,19 +334,19 @@ internal fun ModelMorphPanel(
                         models.forEach { m ->
                             val selected = m.path == currentPath
                             Row(
-                                Modifier.fillMaxWidth().height(40.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = 16.dp),
+                                Modifier.fillMaxWidth().height(40.dp).clickable(enabled = expanded) { onPick(m) }.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     m.displayName,
-                                    style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
+                                    style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.S, lineHeight = 20.sp),
                                     color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )
                                 Text(
-                                    engineTag(m), style = IrisType.micro.copy(fontSize = 12.sp, lineHeight = 16.sp), color = c.textSecondary,
-                                    maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.padding(start = 8.dp),
+                                    engineTag(m), style = IrisType.micro.copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, lineHeight = 16.sp), color = c.textSecondary,
+                                    maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.S),
                                 )
-                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
+                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.S).size(16.dp))
                             }
                         }
                         }
@@ -383,9 +383,9 @@ internal fun RowScope.CharacterPillContent(
     val c = Iris.colors
     if (entry != null && compact) {
         // avatar only: 7 dp around a 28 dp avatar keeps the 42 dp pill round
-        Spacer(Modifier.width(7.dp))
+        Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
         com.iris.localai.ui.character.CharacterAvatar(entry.avatar, entry.card.name, 28.dp)
-        Spacer(Modifier.width(7.dp))
+        Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
         return
     }
     Spacer(Modifier.width(if (entry != null) 7.dp else hPad))
@@ -465,23 +465,23 @@ internal fun CharacterMorphPanel(
 internal fun CharRow(selected: Boolean, enabled: Boolean, name: String, onClick: () -> Unit, fill: Boolean = true, lead: @Composable () -> Unit) {
     val c = Iris.colors
     Row(
-        (if (fill) Modifier.fillMaxWidth() else Modifier).height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
+        (if (fill) Modifier.fillMaxWidth() else Modifier).height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         lead()
         Text(
             name,
-            style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = 15.sp, lineHeight = 20.sp),
-            color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).then(if (fill) Modifier.weight(1f) else Modifier),
+            style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.S, lineHeight = 20.sp),
+            color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.S).then(if (fill) Modifier.weight(1f) else Modifier),
         )
-        if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = 8.dp).size(16.dp))
+        if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.S).size(16.dp))
     }
 }
 
 /** 2.2.8: section hairline on the panel grid — inset 16 dp both sides, 8 dp section gap. */
 @Composable
 internal fun MorphHairline() {
-    Box(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().height(IrisDimens.hairline).background(Iris.colors.outline))
+    Box(Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.XS).fillMaxWidth().height(IrisDimens.hairline).background(Iris.colors.outline))
 }
 
 @Composable
@@ -489,10 +489,10 @@ internal fun CompactMenuRow(text: String, icon: androidx.compose.ui.graphics.vec
     val c = Iris.colors
     val a = if (enabled) 1f else 0.38f
     Row(
-        (if (fill) Modifier.fillMaxWidth() else Modifier).height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
+        (if (fill) Modifier.fillMaxWidth() else Modifier).height(44.dp).clickable(enabled = enabled, onClick = onClick).padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = c.textSecondary.copy(alpha = c.textSecondary.alpha * a), modifier = Modifier.size(18.dp))
-        Text(text, style = IrisType.menuItem.copy(fontSize = 15.sp, lineHeight = 20.sp), color = c.text.copy(alpha = c.text.alpha * a), maxLines = 1, modifier = Modifier.padding(start = 10.dp))
+        Text(text, style = IrisType.menuItem.copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.S, lineHeight = 20.sp), color = c.text.copy(alpha = c.text.alpha * a), maxLines = 1, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.S))
     }
 }

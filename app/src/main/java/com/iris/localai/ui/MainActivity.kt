@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
                 palette = com.iris.localai.ui.theme.IrisPalette.of(settings.themePalette),
                 backdrop = settings.backgroundImage.isNotEmpty() && !settings.solidBackground,
                 solid = settings.solidBackground,
+                style = com.iris.localai.ui.theme.IrisStyle.of(settings.uiStyle),
             ) {
                 // 1.14.7: first-launch welcome (carries the disclaimer) gates the app until accepted;
                 // fresh installs and upgrades see it once (welcomeAccepted defaults to false).
@@ -262,7 +263,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm, onOpenDownload = { push(Route.DOWNLOAD_MODELS) })
         // 2.2.17 C: full 下载模型 page; 「试一试」 puts the demo prompt into the chat input
         Route.DOWNLOAD_MODELS -> com.iris.localai.ui.models.DownloadModelsScreen(onBack = pop, onTryPrompt = { p -> chat.setDraft(p); home() })
-        Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)
+        Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop, onLanguage = { push(Route.LANGUAGE) })
         Route.LANGUAGE -> com.iris.localai.ui.settings.LanguagePage(onBack = pop)
         Route.SETTINGS -> SettingsHome(
             settingsVm, onBack = pop,

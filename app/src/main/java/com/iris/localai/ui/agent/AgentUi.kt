@@ -185,7 +185,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
             .clip(IrisRadius.mediumShape)
             .background(c.surfaceVariant)
             .clickable(enabled = expandable, onClickLabel = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { open = !open }
-            .padding(horizontal = IrisDimens.space12, vertical = 9.dp),
+            .padding(horizontal = IrisDimens.space12, vertical = com.iris.localai.ui.theme.IrisSpace.S),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(IrisDimens.space16).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.pulse(live, min = 0.4f))
@@ -230,7 +230,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                         .background(c.codeBackground)
                         .heightIn(max = 280.dp)
                         .verticalScroll(rememberScrollState())
-                        .padding(10.dp),
+                        .padding(com.iris.localai.ui.theme.IrisSpace.S),
                 )
             }
         }
@@ -273,7 +273,7 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
                 Spacer(Modifier.size(IrisDimens.space8))
                 Box(
                     Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
-                        .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(10.dp),
+                        .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
                 ) {
                     Text(preview, style = IrisType.monoSmall, color = c.text)
                 }

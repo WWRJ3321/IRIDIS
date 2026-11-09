@@ -113,7 +113,14 @@ fun Modifier.glass(
     val quality = LocalGlassQuality.current
     val source = if (quality.blurs) backdrop else null
     val colors = Iris.colors
-    val tint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
+    // 2.5.0 柔光 matte glass: ≥ 78 % opaque tint, gentler blur, no vibrancy boost, no sheen/rim.
+    val matte = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
+    val style = if (matte) style.copy(
+        blurRadius = style.blurRadius.coerceAtMost(com.iris.localai.ui.components.MatteGlass.BLUR_DP),
+        vibrancy = 1.05f, rimAlpha = 0f, sheen = false,
+    ) else style
+    val baseTint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
+    val tint = if (matte) baseTint.copy(alpha = baseTint.alpha.coerceAtLeast(com.iris.localai.ui.components.MatteGlass.TINT_ALPHA)) else baseTint
     val rim = colors.glassRim
     val solidBg = com.iris.localai.ui.theme.LocalSolidBackground.current
     val holder = remember { PanelState() }
@@ -168,6 +175,7 @@ fun Modifier.glass(
                 drawOutline(outline, if (solidBg) tint.copy(alpha = 1f) else tint)
                 if (style.sheen && !solidBg) drawOutline(outline, sheen)
                 if (drawRim) drawOutline(outline, rimBrush, style = rimStroke, blendMode = BlendMode.SrcOver)
+                if (matte) drawOutline(outline, com.iris.localai.ui.components.MatteGlass.hairline(colors.isDark), style = Stroke(width = com.iris.localai.ui.components.MatteGlass.HAIRLINE_DP.dp.toPx()))
             }
         }
 }

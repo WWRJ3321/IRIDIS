@@ -214,7 +214,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
             Row(
                 Modifier
                     .glass(backdrop, IrisRadius.pillShape, GlassStyle(tint = Iris.colors.glassTintOpaque))
-                    .padding(start = 10.dp, end = if (loading != null && loading.applyingTier == null) 2.dp else 10.dp)
+                    .padding(start = com.iris.localai.ui.theme.IrisSpace.S, end = if (loading != null && loading.applyingTier == null) com.iris.localai.ui.theme.IrisSpace.XS else com.iris.localai.ui.theme.IrisSpace.S)
                     .heightIn(min = 22.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -235,7 +235,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
                     Text(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2), style = IrisType.caption, color = c.accent,
                         modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e60d2), onClick = onCancelLoad)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = com.iris.localai.ui.theme.IrisSpace.XS),
                     )
                 }
             }

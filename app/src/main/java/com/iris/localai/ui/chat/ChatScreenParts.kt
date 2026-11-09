@@ -160,7 +160,7 @@ internal fun ChatEmptyState(
             painterResource(R.drawable.ic_iris_mark), null,
             tint = c.text,
             modifier = Modifier
-                .padding(6.dp)
+                .padding(com.iris.localai.ui.theme.IrisSpace.XS)
                 .size(44.dp)
                 .pulse(engine is EngineState.Loading, min = 0.35f, periodMs = 1100),
         )
@@ -202,15 +202,15 @@ internal fun RememberDialog(
                 colors = com.iris.localai.ui.components.irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.S))
             com.iris.localai.memory.MemoryTarget.entries.forEach { t ->
                 Row(
                     Modifier.fillMaxWidth().clip(com.iris.localai.ui.theme.IrisRadius.smallShape)
-                        .clickable { target = t }.padding(vertical = 8.dp, horizontal = 4.dp),
+                        .clickable { target = t }.padding(vertical = com.iris.localai.ui.theme.IrisSpace.S, horizontal = com.iris.localai.ui.theme.IrisSpace.XS),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     com.iris.localai.ui.components.IrisRadio(selected = target == t)
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
                     Text(t.label, style = com.iris.localai.ui.theme.IrisType.body, color = com.iris.localai.ui.theme.Iris.colors.text)
                 }
             }
@@ -229,13 +229,13 @@ internal fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCan
                     .clip(com.iris.localai.ui.theme.IrisRadius.bubbleShape)
                     .background(c.surfaceVariant.copy(alpha = 0.55f))
                     .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9ad32d)) { onCancel() }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M, vertical = com.iris.localai.ui.theme.IrisSpace.S),
             ) {
                 Text(q.text, style = com.iris.localai.ui.theme.IrisType.message, color = c.textSecondary)
             }
-            Row(Modifier.padding(top = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS), verticalAlignment = Alignment.CenterVertically) {
                 Icon(com.iris.localai.ui.icons.IrisIcons.Clock, null, tint = c.textTertiary, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
                 Text(
                     (if (q.forAgent) SendIntent.QUEUED_AGENT_LABEL else SendIntent.QUEUED_LABEL) + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6edc06),
                     style = com.iris.localai.ui.theme.IrisType.labelSmall, color = c.textTertiary,

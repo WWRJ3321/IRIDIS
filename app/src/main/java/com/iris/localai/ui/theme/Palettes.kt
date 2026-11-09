@@ -36,6 +36,7 @@ fun IrisColors.solid(): IrisColors = copy(
     glassTint = surface.copy(alpha = 1f),
     glassTintOpaque = surface.copy(alpha = 1f),
     glassRim = Color.Transparent,
+    backgroundTop = Color.Unspecified, // 2.5.0: no 柔光 gradient either
 )
 
 fun IrisColors.overBackdrop(): IrisColors = copy(
@@ -43,6 +44,7 @@ fun IrisColors.overBackdrop(): IrisColors = copy(
     surfaceElevated = surfaceElevated.copy(alpha = 0.88f),
     codeBackground = codeBackground.copy(alpha = 0.88f),
     accentContainer = accentContainer.copy(alpha = 0.9f),
+    backgroundTop = Color.Unspecified, // 2.5.0: the picture is the background
 )
 
 private fun tinted(

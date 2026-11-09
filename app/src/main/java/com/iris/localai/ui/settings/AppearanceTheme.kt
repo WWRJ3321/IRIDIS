@@ -44,7 +44,7 @@ object AppearanceText {
 @Composable
 fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
     val c = Iris.colors
-    Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = com.iris.localai.ui.theme.IrisSpace.M)) {
         SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = com.iris.localai.ui.icons.IrisIcons.Contrast)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding).selectableGroup(),

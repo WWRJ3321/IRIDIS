@@ -62,7 +62,7 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
             .clip(com.iris.localai.ui.theme.IrisRadius.pillShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_82e5eb, usage.used, usage.limit) }
-            .padding(horizontal = 10.dp, vertical = IrisDimens.space4),
+            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
     ) {

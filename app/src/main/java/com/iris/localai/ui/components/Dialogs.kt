@@ -264,7 +264,7 @@ fun IrisMenuItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
     val c = Iris.colors
     val tint = if (destructive) c.danger else c.text
     androidx.compose.material3.DropdownMenuItem(
-        text = { Text(text, style = IrisType.body.copy(fontSize = 16.sp), color = tint) },
+        text = { Text(text, style = IrisType.body.copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.M), color = tint) },
         leadingIcon = icon?.let { i -> { androidx.compose.material3.Icon(i, null, Modifier.size(IrisDimens.iconMedium), tint = if (destructive) c.danger else c.textSecondary) } },
         onClick = onClick,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = IrisDimens.space16),
@@ -301,7 +301,7 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 10.dp, bottom = IrisDimens.space6)
+                    .padding(top = com.iris.localai.ui.theme.IrisSpace.S, bottom = IrisDimens.space6)
                     .size(width = 36.dp, height = IrisDimens.space4)
                     .background(c.textTertiary.copy(alpha = 0.4f), IrisRadius.pillShape),
             )

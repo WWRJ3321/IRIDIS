@@ -320,7 +320,7 @@ private fun DrawerNavButton(icon: androidx.compose.ui.graphics.vector.ImageVecto
             .clip(IrisRadius.mediumShape)
             .clickable(onClickLabel = label, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) { if (badge) stateDescription = DrawerNavText.API_RUNNING }
-            .padding(horizontal = 10.dp, vertical = IrisDimens.space6),
+            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space6),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
@@ -391,7 +391,7 @@ private fun ConversationItem(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = IrisDimens.space8, vertical = 1.dp)
+                .padding(horizontal = IrisDimens.space8, vertical = com.iris.localai.ui.theme.IrisSpace.XS)
                 .heightIn(min = 44.dp)
                 .clip(IrisRadius.mediumShape)
                 .background(bg)
@@ -411,7 +411,7 @@ private fun ConversationItem(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     com.iris.localai.ui.components.IrisRadio(checked)
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
                 }
             }
             if (s.pinned) {

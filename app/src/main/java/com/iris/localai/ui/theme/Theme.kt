@@ -68,6 +68,10 @@ data class IrisColors(
     val glassTintOpaque: Color,
     val glassRim: Color,
     val scrim: Color,
+    /** 2.5.0 柔光: top colour of the page gradient (Unspecified = plain [background], 经典). */
+    val backgroundTop: Color = Color.Unspecified,
+    /** 2.5.0 柔光: the tinted tile behind row icons (Unspecified = no tile, 经典). */
+    val iconTile: Color = Color.Unspecified,
 )
 
 /** HyperOS blue (dark and light use the same hue; light is a touch deeper for contrast on white). */
@@ -132,6 +136,55 @@ internal val IrisDarkColors = IrisColors(
 
 val LocalIrisColors = staticCompositionLocalOf { IrisLightColors }
 
+/** 2.5.0 界面风格: 柔光 (default, frosted gradient, deep grey-blue dark) or 经典 (≤ 2.4.6 look). */
+enum class IrisStyle(val id: String) {
+    SOFT("soft"), CLASSIC("classic");
+    companion object {
+        fun of(id: String?): IrisStyle = entries.firstOrNull { it.id == id } ?: SOFT
+        fun isValid(id: String?): Boolean = entries.any { it.id == id }
+    }
+}
+
+val LocalIrisStyle = staticCompositionLocalOf { IrisStyle.CLASSIC }
+
+/**
+ * 2.5.0 柔光 colours, derived from any palette (默认 / 樱花 / 薄荷 / 丁香 / 奶油 keep their hue):
+ * light gets a soft accent-tinted gradient at the top; dark turns from near-black into a deep
+ * grey-blue (#141826 page, #1C2030 cards) mixed with the palette tint. Pure (unit-tested).
+ */
+object SoftLook {
+    val DARK_PAGE = Color(0xFF141826)
+    val DARK_CARD = Color(0xFF1C2030)
+    val DARK_RAISED = Color(0xFF262B3E)
+
+    fun mix(a: Color, b: Color, t: Float): Color = Color(
+        red = a.red + (b.red - a.red) * t, green = a.green + (b.green - a.green) * t,
+        blue = a.blue + (b.blue - a.blue) * t, alpha = a.alpha + (b.alpha - a.alpha) * t,
+    )
+
+    fun apply(c: IrisColors): IrisColors = if (c.isDark) {
+        val page = mix(c.background, DARK_PAGE, 0.85f)
+        c.copy(
+            background = page,
+            chatBackground = page,
+            surface = mix(c.surface, DARK_CARD, 0.7f),
+            surfaceElevated = mix(c.surfaceElevated, DARK_CARD, 0.7f),
+            surfaceVariant = mix(c.surfaceVariant, DARK_RAISED, 0.6f),
+            codeBackground = mix(c.codeBackground, DARK_CARD, 0.7f),
+            segmentThumb = mix(c.segmentThumb, Color(0xFF3A4058), 0.6f),
+            glassTint = mix(c.glassTint, DARK_CARD.copy(alpha = c.glassTint.alpha), 0.7f),
+            glassTintOpaque = mix(c.glassTintOpaque, DARK_CARD.copy(alpha = c.glassTintOpaque.alpha), 0.7f),
+            backgroundTop = mix(page, c.accent, 0.12f),
+            iconTile = c.accentContainer,
+        )
+    } else {
+        c.copy(
+            backgroundTop = mix(c.background, c.accentContainer, 0.75f),
+            iconTile = c.accentContainer,
+        )
+    }
+}
+
 /** 2.2.14 纯色背景 is on: decorative gradients / glows / top fades draw nothing. */
 val LocalSolidBackground = staticCompositionLocalOf { false }
 
@@ -142,7 +195,7 @@ object Iris {
 
 /** Material slots mapped onto the IRIS type scale, so stock M3 widgets (dialogs, menus, buttons) match. */
 private val IrisTypography = Typography(
-    headlineSmall = IrisType.title.copy(fontSize = 20.sp, lineHeight = 26.sp),
+    headlineSmall = IrisType.title.copy(fontSize = IrisFontSize.L, lineHeight = 26.sp),
     headlineMedium = IrisType.largeTitle,
     titleLarge = IrisType.display,
     titleMedium = IrisType.title,
@@ -167,6 +220,8 @@ fun IrisTheme(
     backdrop: Boolean = false,
     /** 2.2.14 纯色背景. */
     solid: Boolean = false,
+    /** 2.5.0 界面风格 (柔光 / 经典). */
+    style: IrisStyle = IrisStyle.CLASSIC,
     content: @Composable () -> Unit,
 ) {
     val dark = when (mode) {
@@ -174,7 +229,9 @@ fun IrisTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val c = palette.colors(dark).let { if (solid) it.solid() else if (backdrop) it.overBackdrop() else it }
+    val c = palette.colors(dark)
+        .let { if (style == IrisStyle.SOFT) SoftLook.apply(it) else it }
+        .let { if (solid) it.solid() else if (backdrop) it.overBackdrop() else it }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -222,6 +279,7 @@ fun IrisTheme(
     MaterialTheme(colorScheme = scheme, typography = IrisTypography) {
         CompositionLocalProvider(
             LocalIrisColors provides c,
+            LocalIrisStyle provides style,
             LocalSolidBackground provides solid,
             LocalGlassQuality provides glassQuality,
             LocalReduceMotion provides reduceMotion,

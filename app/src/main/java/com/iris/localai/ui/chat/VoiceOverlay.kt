@@ -172,7 +172,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
             Row(
                 Modifier
                     .background(c.surfaceVariant.copy(alpha = 0.7f), IrisRadius.pillShape)
-                    .padding(horizontal = 14.dp, vertical = IrisDimens.space8),
+                    .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M, vertical = IrisDimens.space8),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val dotColor by animateColorAsState(phaseColor, IrisMotion.standard(), label = "phaseColor")
@@ -188,7 +188,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 Text(
                     state.error.orEmpty(), style = IrisType.caption, color = c.danger, textAlign = TextAlign.Center,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = IrisDimens.space32, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = IrisDimens.space32, vertical = com.iris.localai.ui.theme.IrisSpace.S),
                 )
             }
 
@@ -210,7 +210,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             // Transcript
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 28.dp).height(190.dp),
+                Modifier.fillMaxWidth().padding(horizontal = com.iris.localai.ui.theme.IrisSpace.XL).height(190.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
             ) {
@@ -246,7 +246,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             // Controls
             Row(
-                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = 28.dp, start = IrisDimens.space24, end = IrisDimens.space24),
+                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = com.iris.localai.ui.theme.IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {

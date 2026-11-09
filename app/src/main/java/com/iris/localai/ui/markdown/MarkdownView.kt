@@ -77,7 +77,7 @@ fun Markdown(
     val color = textColor ?: c.text
     // 2.2: a finished reply that is one whole HTML document previews as a page (when 渲染网页代码 is on).
     val wholeHtml = remember(text, streaming) { !streaming && HtmlBlocks.wholeDocument(text) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.S)) {
         if (wholeHtml) HtmlCodeBlock(text.trim(), HtmlBlocks.Kind.HTML) { blocks.forEach { Block(it, c, color) } }
         else blocks.forEach { Block(it, c, color) }
     }
@@ -138,7 +138,7 @@ private fun inline(text: String, c: IrisColors): AnnotatedString = buildAnnotate
                 is MdInline.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { emit(n.children) }
                 is MdInline.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { emit(n.children) }
                 is MdInline.Code -> withStyle(
-                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp, background = c.surfaceVariant),
+                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.S, background = c.surfaceVariant),
                 ) { append("\u2009" + n.text + "\u2009") }
                 is MdInline.Link -> withLink(
                     LinkAnnotation.Url(
@@ -160,11 +160,11 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
     val shape = IrisRadius.mediumShape
     Column(Modifier.fillMaxWidth().clip(shape).background(c.codeBackground).border(IrisDimens.hairline, c.outline, shape)) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = IrisDimens.space4),
+            Modifier.fillMaxWidth().padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = IrisDimens.space4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                block.language.ifBlank { "text" }, color = c.textTertiary, fontSize = 12.sp,
+                block.language.ifBlank { "text" }, color = c.textTertiary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS,
                 fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f),
             )
             PressableIcon(
@@ -175,9 +175,9 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
                 copied = true
             }
         }
-        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = IrisDimens.space12)) {
+        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = com.iris.localai.ui.theme.IrisSpace.M, bottom = IrisDimens.space12)) {
             Text(
-                block.code, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = c.text,
+                block.code, fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, lineHeight = 20.sp, color = c.text,
                 softWrap = false,
             )
         }
@@ -201,10 +201,10 @@ private fun TableBlock(block: MdBlock.Table, c: IrisColors) {
                     Text(
                         rememberInline(row.getOrElse(col) { "" }, c),
                         style = TextStyle(
-                            fontSize = 14.sp, lineHeight = 20.sp, color = c.text, textAlign = align,
+                            fontSize = com.iris.localai.ui.theme.IrisFontSize.S, lineHeight = 20.sp, color = c.text, textAlign = align,
                             fontWeight = if (r == 0) FontWeight.SemiBold else FontWeight.Normal,
                         ),
-                        modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = IrisDimens.space12, vertical = 9.dp),
+                        modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = IrisDimens.space12, vertical = com.iris.localai.ui.theme.IrisSpace.S),
                     )
                 }
             }

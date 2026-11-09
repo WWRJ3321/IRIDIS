@@ -352,7 +352,7 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
                     .height(26.dp)
                     .clip(IrisRadius.pillShape)
                     .background(c.accentContainer)
-                    .padding(start = 9.dp, end = 3.dp),
+                    .padding(start = com.iris.localai.ui.theme.IrisSpace.S, end = com.iris.localai.ui.theme.IrisSpace.XS),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(if (r.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.onAccentContainer, modifier = Modifier.size(13.dp))
@@ -427,7 +427,7 @@ private fun EmptyLine(text: String) =
 private fun RefRow(item: RefItem, onClick: () -> Unit) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = IrisDimens.pageGutter, vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = IrisDimens.pageGutter, vertical = com.iris.localai.ui.theme.IrisSpace.S),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (item.ref.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.space20))

@@ -194,7 +194,7 @@ private fun CloneDialog(vm: SettingsViewModel, onClose: () -> Unit, onSaved: () 
             onSaved()
         },
     ) {
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.S)) {
             Text(
                 com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d2e526),
                 style = IrisType.secondary, color = c.textSecondary,

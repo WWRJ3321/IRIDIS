@@ -56,7 +56,7 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
     Column(
         modifier
             .background(c.surfaceVariant.copy(alpha = 0.92f), IrisRadius.smallShape)
-            .padding(horizontal = 10.dp, vertical = IrisDimens.space6),
+            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space6),
     ) {
         val style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight)
         Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4485a1) + (speed?.let { String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_292451), it) } ?: "—"), style = style, color = c.text)

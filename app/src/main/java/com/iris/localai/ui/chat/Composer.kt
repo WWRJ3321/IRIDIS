@@ -211,7 +211,7 @@ fun Composer(
             .glass(backdrop, shape)
             .border(IrisDimens.hairline + 0.1.dp, c.outline.copy(alpha = 0.55f), shape)
             .then(if (reduce) Modifier else Modifier.animateContentSize(IrisMotion.Snappy.size()))
-            .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 8.dp),
+            .padding(start = com.iris.localai.ui.theme.IrisSpace.S, end = com.iris.localai.ui.theme.IrisSpace.S, top = com.iris.localai.ui.theme.IrisSpace.XS, bottom = com.iris.localai.ui.theme.IrisSpace.S),
     ) {
         AnimatedVisibility(
             visible = state.editing,
@@ -219,11 +219,11 @@ fun Composer(
             exit = fadeOut(IrisMotion.standard()),
         ) {
             Row(
-                Modifier.fillMaxWidth().padding(start = 10.dp),
+                Modifier.fillMaxWidth().padding(start = com.iris.localai.ui.theme.IrisSpace.S),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Outlined.Edit, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
                 Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2fb441), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
                 PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cbb465), size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onCancelEdit)
             }
@@ -234,9 +234,9 @@ fun Composer(
             enter = fadeIn(IrisMotion.enter()),
             exit = fadeOut(IrisMotion.standard()),
         ) {
-            Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = com.iris.localai.ui.theme.IrisSpace.S), verticalAlignment = Alignment.CenterVertically) {
                 Icon(com.iris.localai.ui.icons.IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
                 Text(if (state.translating) TranslateText.TRANSLATING else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9aa52a), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
                 if (state.translating) com.iris.localai.ui.components.TypingDots()
                 PressableIcon(Icons.Outlined.Close, TranslateText.UNDO, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onUndoTranslate)
@@ -246,7 +246,7 @@ fun Composer(
         // 1.10.2: 「智能体」 is a small pill in the card's top-left corner, above the text field
         // (user: 「智能体放左上」). Same colours as the 1.10.1 pills, just smaller.
         Row(
-            Modifier.fillMaxWidth().padding(start = 4.dp, top = 2.dp, end = 1.dp),
+            Modifier.fillMaxWidth().padding(start = com.iris.localai.ui.theme.IrisSpace.XS, top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ComposerPill(
@@ -259,7 +259,7 @@ fun Composer(
             // 2.2 「技能」: pick an installed skill / agent tool for this message.
             var skillSheet by remember { mutableStateOf(false) }
             var catalog by remember { mutableStateOf(RefCatalog.EMPTY) }
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
             ComposerPill(
                 ComposerText.SKILLS,
                 selected = state.refs.isNotEmpty(),
@@ -293,14 +293,14 @@ fun Composer(
             enter = fadeIn(IrisMotion.enter()),
             exit = fadeOut(IrisMotion.standard()),
         ) {
-            AttachmentStrip(state.attachments, onRemove = onRemoveAttachment, onMove = onMoveAttachment, modifier = Modifier.padding(start = 6.dp, top = 6.dp, end = 6.dp))
+            AttachmentStrip(state.attachments, onRemove = onRemoveAttachment, onMove = onMoveAttachment, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.XS, top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS))
         }
         AnimatedVisibility(
             visible = state.refs.isNotEmpty(),
             enter = fadeIn(IrisMotion.enter()),
             exit = fadeOut(IrisMotion.standard()),
         ) {
-            RefChips(state.refs, onRemove = onRemoveRef, modifier = Modifier.padding(start = 6.dp, top = 6.dp, end = 6.dp))
+            RefChips(state.refs, onRemove = onRemoveRef, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.XS, top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS))
         }
 
         // 1.14.1: the text field stays in composition while dictating. Swapping it out (1.10–1.14.0)
@@ -324,7 +324,7 @@ fun Composer(
                         .graphicsLayer { alpha = fieldAlpha }
                         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
                     decorationBox = { inner ->
-                        Box(Modifier.padding(horizontal = 10.dp, vertical = 11.dp)) {
+                        Box(Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = com.iris.localai.ui.theme.IrisSpace.M)) {
                             if (state.text.isEmpty()) {
                                 Text(if (state.agentMode) ComposerText.AGENT_PLACEHOLDER else ComposerText.PLACEHOLDER, style = IrisType.message.copy(lineHeight = IrisType.row.lineHeight), color = c.textTertiary)
                             }
@@ -351,7 +351,7 @@ fun Composer(
             Row(
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.XS),
             ) {
                 Spacer(Modifier.width(0.dp))
                 ComposerPill(
@@ -363,7 +363,7 @@ fun Composer(
                     icon = com.iris.localai.ui.icons.IrisIcons.Think,
                 )
                 SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
             }
             // 2.2: one long accent capsule (users: the voice button was too small). Tap = 语音通话,
             // long-press = 语音输入 (slide up to cancel); with text / attachments 发送, while generating 停止.
@@ -392,9 +392,9 @@ fun Composer(
 private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed: Boolean = false) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.S),
     ) {
         LevelBars(if (transcribing) 0f else level)
         Text(
@@ -516,7 +516,7 @@ private fun ResourceCard(tier: Int, note: String?, onChange: (Int) -> Unit) {
             .fillMaxWidth()
             .background(c.surface, shape)
             .border(1.dp, c.outline.copy(alpha = 0.6f), shape)
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 10.dp),
+            .padding(start = com.iris.localai.ui.theme.IrisSpace.L, end = com.iris.localai.ui.theme.IrisSpace.L, top = com.iris.localai.ui.theme.IrisSpace.M, bottom = com.iris.localai.ui.theme.IrisSpace.S),
     ) {
         com.iris.localai.ui.components.TierSlider(
             labels = SpeedLevel.labels,

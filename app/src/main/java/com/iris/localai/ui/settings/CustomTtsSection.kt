@@ -70,7 +70,7 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             })
             IrisProgressBar(
                 progress = if (state.phase == 0 && state.total > 0) (state.done.toFloat() / state.total).coerceIn(0f, 1f) else null,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.L, end = com.iris.localai.ui.theme.IrisSpace.L, bottom = com.iris.localai.ui.theme.IrisSpace.S),
             )
         } else {
             SettingsRow(I18n.s(R.string.tts245_pick_folder), subtitle = I18n.s(R.string.tts245_pick_folder_sub), onClick = { vm.clearTtsImportMessage(); folderPicker.launch(null) })
@@ -79,8 +79,8 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             Divider()
             SettingsRow(I18n.s(R.string.tts245_paste_url), subtitle = I18n.s(R.string.tts245_paste_url_sub), onClick = { vm.clearTtsImportMessage(); askUrl = true })
         }
-        state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
-        state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+        state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }
+        state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }
     }
     GroupFootnote(I18n.s(R.string.tts245_footnote))
 

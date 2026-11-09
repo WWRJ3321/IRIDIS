@@ -175,7 +175,7 @@ private fun TierProfileEditor(vm: SettingsViewModel, kind: ResourceBackendKind, 
 private fun Stepper(value: Int, onMinus: () -> Unit, onPlus: () -> Unit, minusEnabled: Boolean, plusEnabled: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IrisButton("−", onMinus, style = IrisButtonStyle.Outline, compact = true, enabled = minusEnabled)
-        Text("$value", style = IrisType.label, color = Iris.colors.text, modifier = Modifier.padding(horizontal = 10.dp))
+        Text("$value", style = IrisType.label, color = Iris.colors.text, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S))
         IrisButton("+", onPlus, style = IrisButtonStyle.Outline, compact = true, enabled = plusEnabled)
     }
 }

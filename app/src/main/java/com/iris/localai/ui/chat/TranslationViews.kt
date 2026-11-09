@@ -78,7 +78,7 @@ internal fun TranslationBlock(id: String, modifier: Modifier = Modifier) {
         Column(
             modifier
                 .padding(top = IrisDimens.space6)
-                .background(c.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                .background(c.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(com.iris.localai.ui.theme.IrisCorner.S))
                 .padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space4, bottom = IrisDimens.space8),
             verticalArrangement = Arrangement.spacedBy(IrisDimens.space4),
         ) {

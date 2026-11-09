@@ -1,5 +1,6 @@
 package com.iris.localai.ui.welcome
 
+import com.iris.localai.ui.theme.irisPageBackground
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.Image
@@ -73,7 +74,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
     val last = 3 + WelcomeText.FEATURES.size
 
     BoxWithConstraints(
-        Modifier.fillMaxSize().background(c.chatBackground).safeDrawingPadding(),
+        // 2.5.0: shared page skeleton with the chat (柔光 gradient / 经典 plain colour).
+        Modifier.fillMaxSize().then(Modifier.irisPageBackground(com.iris.localai.ui.theme.PageKind.CHAT)).safeDrawingPadding(),
     ) {
         val minHeight = maxHeight
         Column(

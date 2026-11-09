@@ -49,6 +49,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.irisPageBackground
 
 /**
  * 1.8.0 large title (HyperOS, with the iOS collapse): a subpage shows its title big, bold and
@@ -102,12 +103,13 @@ fun SubpageScaffold(
     val inset = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
         IrisDimens.topBarHeight + IrisDimens.space8
     CompositionLocalProvider(LocalGlassHaze provides haze) {
-        Box(Modifier.fillMaxSize().background(c.background).horizontalCutoutPadding()) {
+        // 2.5.0: the shared page skeleton (柔光 gradient / 经典 plain colour).
+        Box(Modifier.fillMaxSize().then(Modifier.irisPageBackground()).horizontalCutoutPadding()) {
             CompositionLocalProvider(LocalLargeTitle provides state, LocalTopBarInset provides if (scrollUnder) inset else 0.dp) {
                 Box(
                     Modifier.fillMaxSize()
                         .glassBackdrop(haze)
-                        .background(c.background)
+                        .irisPageBackground()
                         .padding(top = if (scrollUnder) 0.dp else inset),
                 ) { content() }
             }
@@ -135,7 +137,7 @@ fun LargeTitle(modifier: Modifier = Modifier) {
     val inset = LocalTopBarInset.current
     Box(
         modifier.fillMaxWidth().padding(top = inset).height(IrisDimens.largeTitleHeight)
-            .padding(start = IrisDimens.groupGutter + 14.dp, end = IrisDimens.pageGutter),
+            .padding(start = IrisDimens.groupGutter + com.iris.localai.ui.theme.IrisSpace.M, end = IrisDimens.pageGutter),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
@@ -216,7 +218,7 @@ fun CodeSurface(text: String, modifier: Modifier = Modifier) {
     ) {
         Text(
             text, style = IrisType.monoSmall, color = c.text, softWrap = false,
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(14.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.M),
         )
     }
 }

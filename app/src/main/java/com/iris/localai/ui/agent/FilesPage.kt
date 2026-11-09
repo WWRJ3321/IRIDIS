@@ -282,7 +282,7 @@ fun FilesPage(onBack: () -> Unit) {
         IrisDialog(onDismiss = { viewing = null }, title = f.name, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { viewing = null }, dismissText = null) {
             Box(
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
-                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(10.dp),
+                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
             ) {
                 SelectionContainer { Text(text ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.monoSmall, color = c.text) }
             }

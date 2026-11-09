@@ -69,13 +69,14 @@ internal val FootnoteInset = IrisDimens.groupGutter + 18.dp
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        style = IrisType.sectionHeader,
-        color = Iris.colors.textTertiary,
+        // 2.5.0 柔光: accent-coloured, semibold group headers (经典: grey as before).
+        style = if (softStyle()) IrisType.sectionHeader.copy(fontWeight = FontWeight.SemiBold) else IrisType.sectionHeader,
+        color = if (softStyle()) Iris.colors.accent else Iris.colors.textTertiary,
         modifier = modifier.padding(
             start = SectionInset,
             end = IrisDimens.pageGutter,
             top = IrisDimens.space24 + IrisDimens.space4,
-            bottom = 10.dp,
+            bottom = com.iris.localai.ui.theme.IrisSpace.S,
         ),
     )
 }
@@ -98,7 +99,7 @@ fun GroupFootnote(text: String, modifier: Modifier = Modifier, monospace: Boolea
         text,
         style = if (monospace) IrisType.monoSmall else IrisType.secondary,
         color = Iris.colors.textTertiary,
-        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + IrisDimens.space16, top = 10.dp),
+        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + IrisDimens.space16, top = com.iris.localai.ui.theme.IrisSpace.S),
     )
 }
 
@@ -141,13 +142,13 @@ fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = c.textSecondary.copy(alpha = a), modifier = Modifier.size(IrisDimens.iconLarge))
+            RowIcon(icon, a)
             Spacer(Modifier.width(IrisDimens.space16))
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = IrisType.row, color = titleColor.copy(alpha = titleColor.alpha * a))
             if (subtitle != null) {
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.XS))
                 Text(
                     subtitle, style = IrisType.rowSummary, color = subtitleColor.copy(alpha = subtitleColor.alpha * a),
                     maxLines = subtitleMaxLines, overflow = TextOverflow.Ellipsis,
@@ -160,6 +161,36 @@ fun SettingsRow(
         }
     }
 }
+
+/** 2.5.0: true when the 柔光 style is on. */
+@Composable
+fun softStyle(): Boolean = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
+
+/**
+ * 2.5.0 柔光: row icons sit on a rounded tile in the theme's accent container colour and take the
+ * accent tint; 经典 keeps the bare grey line icon. The tile is as wide as an icon slot plus padding,
+ * so text alignment between rows with and without icons is unchanged within a group.
+ */
+@Composable
+fun RowIcon(icon: ImageVector, alpha: Float = 1f) {
+    val c = Iris.colors
+    if (softStyle() && c.iconTile != Color.Unspecified) {
+        Box(
+            Modifier.size(IrisDimens.iconLarge + IrisDimens.space12)
+                .clip(IrisRadius.smallShape)
+                .background(c.iconTile.copy(alpha = c.iconTile.alpha * alpha)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = c.accent.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconMedium))
+        }
+    } else {
+        Icon(icon, null, tint = c.textSecondary.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconLarge))
+    }
+}
+
+/** 2.5.0: width of the leading icon slot of a row (tile in 柔光, bare icon in 经典). */
+@Composable
+fun rowIconSlot(): Dp = if (softStyle() && Iris.colors.iconTile != Color.Unspecified) IrisDimens.iconLarge + IrisDimens.space12 else IrisDimens.iconLarge
 
 /** Read-only key/value row. */
 @Composable
@@ -208,7 +239,7 @@ fun SegmentedRow(
             options, selectedIndex, onSelect,
             Modifier
                 .fillMaxWidth()
-                .padding(start = if (icon != null) IrisDimens.rowPadding + IrisDimens.iconLarge + IrisDimens.space16 else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
+                .padding(start = if (icon != null) IrisDimens.rowPadding + rowIconSlot() + IrisDimens.space16 else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
         )
     }
 }
@@ -247,7 +278,7 @@ fun SliderRow(
             RollingText(display, style = IrisType.secondary.copy(fontWeight = FontWeight.Medium), color = c.textSecondary)
         }
         if (subtitle != null) {
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.XS))
             Text(subtitle, style = IrisType.rowSummary, color = c.textTertiary)
         }
         val interaction = remember { MutableInteractionSource() }
@@ -358,7 +389,7 @@ fun NavRow(
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = IrisDimens.space8, vertical = 1.dp)
+            .padding(horizontal = IrisDimens.space8, vertical = com.iris.localai.ui.theme.IrisSpace.XS)
             .heightIn(min = IrisDimens.touchTarget)
             .clip(IrisRadius.mediumShape)
             .clickable(onClick = onClick)

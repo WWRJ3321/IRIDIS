@@ -707,7 +707,7 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
                     }
                     if (vision) Text(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_badge), style = IrisType.caption, color = c.accent, maxLines = 1,
-                        modifier = Modifier.padding(end = IrisDimens.space4).border(IrisDimens.hairline, c.accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 6.dp),
+                        modifier = Modifier.padding(end = IrisDimens.space4).border(IrisDimens.hairline, c.accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = com.iris.localai.ui.theme.IrisSpace.XS),
                     )
                 }
                 Text(m.metaLine(tag), style = IrisType.caption, color = c.textTertiary) // 2.4.4: never cut (size was hidden behind …)

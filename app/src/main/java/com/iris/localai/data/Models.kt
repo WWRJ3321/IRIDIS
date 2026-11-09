@@ -337,6 +337,8 @@ data class AppSettings(
     // ---- 2.1.4 外观 ----
     /** 配色: [com.iris.localai.ui.theme.IrisPalette.id] — "default" / "sakura" / "mint" / "lilac" / "cream". */
     val themePalette: String = "default",
+    /** 2.5.0 界面风格: [com.iris.localai.ui.theme.IrisStyle.id] — "soft" (柔光, default) / "classic" (经典). */
+    val uiStyle: String = "soft",
     /** 自定义背景: file name in filesDir/backgrounds ([com.iris.localai.ui.theme.BackgroundImage]); "" = none. */
     val backgroundImage: String = "",
     /** 模糊程度 of the custom background, dp (0–25). */

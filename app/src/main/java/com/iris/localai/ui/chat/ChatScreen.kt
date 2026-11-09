@@ -304,7 +304,8 @@ fun ChatScreen(
         },
     ) {
         LaunchedEffect(drawer.targetValue) { if (drawer.targetValue == DrawerValue.Open) hideKeyboard() }
-        Box(Modifier.fillMaxSize().background(c.chatBackground)) {
+        // 2.5.0: shared page skeleton (柔光: faint accent tint at the top; 经典: plain colour). Layout unchanged.
+        com.iris.localai.ui.theme.IrisPageSurface(com.iris.localai.ui.theme.PageKind.CHAT) {
             val messages = ui.conversation.messages
             val listState = rememberLazyListState()
             val atBottom by remember { derivedStateOf { !listState.canScrollForward } }
@@ -422,7 +423,7 @@ fun ChatScreen(
                             start = com.iris.localai.ui.components.readableSidePadding(),
                             end = com.iris.localai.ui.components.readableSidePadding(),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.L),
                     ) {
                         items(messages, key = { it.id }, contentType = { it.role }) { m ->
                             // Appear is handled by MessageRow (new messages only); animateItem only moves / removes.
@@ -446,9 +447,9 @@ fun ChatScreen(
                                 } else {
                                     // 2.3.2 角色卡: the card's avatar + name above each of its replies.
                                     character?.let { ch ->
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = com.iris.localai.ui.theme.IrisSpace.XS)) {
                                             com.iris.localai.ui.character.CharacterAvatar(ch.avatar, ch.card.name, 26.dp)
-                                            Spacer(Modifier.width(8.dp))
+                                            Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
                                             Text(ch.card.name, style = com.iris.localai.ui.theme.IrisType.secondary, color = com.iris.localai.ui.theme.Iris.colors.textSecondary, maxLines = 1)
                                         }
                                     }
@@ -478,11 +479,11 @@ fun ChatScreen(
                                     )
                                 }
                                 if (ui.context.compactedMessages > 0 && m.id == ui.conversation.compaction?.upToId) {
-                                    Spacer(Modifier.height(16.dp))
+                                    Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.L))
                                     CompactionDivider(ui.context.compactedMessages, onClear = vm::clearCompaction)
                                 }
                                 if (m.id == ui.conversation.contextStartAfterId) {
-                                    Spacer(Modifier.height(16.dp))
+                                    Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.L))
                                     ContextBreakDivider(onClear = vm::clearContextBreak)
                                 }
                                 }
@@ -558,7 +559,7 @@ fun ChatScreen(
                     vm, generating = ui.isGenerating,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = with(density) { topBarHeight.toDp() } + 6.dp, end = 10.dp),
+                        .padding(top = with(density) { topBarHeight.toDp() } + com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.S),
                 )
             }
 
@@ -569,7 +570,7 @@ fun ChatScreen(
                 exit = fadeOut(IrisMotion.standard()) + scaleOut(IrisMotion.standard(), targetScale = 0.8f),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = with(density) { composerHeight.toDp() } + 8.dp),
+                    .padding(bottom = with(density) { composerHeight.toDp() } + com.iris.localai.ui.theme.IrisSpace.S),
             ) {
                 PressableIcon(
                     Icons.Outlined.KeyboardArrowDown, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d94f1), size = 40.dp, iconSize = 22.dp,
@@ -594,7 +595,7 @@ fun ChatScreen(
                     .onSizeChanged { composerHeight = it.height }
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(horizontal = com.iris.localai.ui.components.readableSidePadding(com.iris.localai.ui.components.Adaptive.chatMaxWidth + 24.dp))
+                    .padding(horizontal = com.iris.localai.ui.components.readableSidePadding(com.iris.localai.ui.components.Adaptive.chatMaxWidth + com.iris.localai.ui.theme.IrisSpace.XL))
                     .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space8),
             ) {
                 SlowLoadBanner(ui.engine, backdrop = backdrop, onUseCpu = vm::switchLoadingModelToCpu)
@@ -610,7 +611,7 @@ fun ChatScreen(
                     Row(
                         // 1.12.0: the 1.11.1 fade band behind this row is gone (user: too abrupt); only
                         // the frosted capsules themselves cover what scrolls underneath.
-                        Modifier.fillMaxWidth().heightIn(min = IrisDimens.activityRowHeight).padding(bottom = 2.dp), // 1.12.0: grows with large font
+                        Modifier.fillMaxWidth().heightIn(min = IrisDimens.activityRowHeight).padding(bottom = com.iris.localai.ui.theme.IrisSpace.XS), // 1.12.0: grows with large font
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ActivityIndicator(ui.engine, act, backdrop, onCancelLoad = vm::cancelLoad, modifier = Modifier.weight(1f))
@@ -815,7 +816,7 @@ fun ChatScreen(
         ) {
             Box(
                 Modifier.fillMaxWidth().clip(com.iris.localai.ui.theme.IrisRadius.smallShape).background(com.iris.localai.ui.theme.Iris.colors.codeBackground)
-                    .heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(10.dp),
+                    .heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
             ) {
                 androidx.compose.foundation.text.selection.SelectionContainer {
                     Text(text, style = com.iris.localai.ui.theme.IrisType.monoSmall, color = com.iris.localai.ui.theme.Iris.colors.text)
