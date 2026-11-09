@@ -355,6 +355,10 @@ fun StoragePage(
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), onBack) {
         ScrollBody {
+            // 2.5.0: the page is split into 概览 / 清理 / 位置 (same rows and actions as before).
+            var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
+            com.iris.localai.ui.components.PageTabs(StorageTabs.labels(), tab, { tab = it })
+            if (tab == StorageTabs.OVERVIEW) {
             StorageSummary(r, free, scanning, note)
 
             // ---- 模型 ----
@@ -387,13 +391,10 @@ fun StoragePage(
                     }
                 }
                 if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d38003), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e2b81b))
-                Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
-                ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
-            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
-            folder?.let { GroupFootnote(it.path, monospace = true) }
+            }
 
+            if (tab == StorageTabs.CLEAN) {
             // ---- 模型缓存 ----
             CategorySection(Category.MODEL_CACHE, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -422,7 +423,9 @@ fun StoragePage(
                 }
                 if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_373e22), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bc44bd))
             }
+            }
 
+            if (tab == StorageTabs.OVERVIEW) {
             // ---- 语音模型 ----
             CategorySection(Category.VOICE, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -487,8 +490,16 @@ fun StoragePage(
                 }
             }
             GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cb4eb0))
-            GroupFootnote(StorageLayoutText.SUMMARY)
 
+            // ---- 其他 ----
+            CategorySection(Category.OTHER, r) { g ->
+                g.entries.forEach { e -> SettingsRow(e.label, subtitle = Format.bytes(e.bytes)) }
+            }
+            // 2.0.x: 备份与日志 moved here from 设置 › 智能体 (it is about the app's data).
+            com.iris.localai.ui.agent.BackupSection()
+            }
+
+            if (tab == StorageTabs.CLEAN) {
             // ---- 聊天记录 ----
             CategorySection(Category.CHATS, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -531,13 +542,19 @@ fun StoragePage(
                     enabled = g.bytes > 0, onClick = { pending = StoragePending.Caches },
                 )
             }
-
-            // ---- 其他 ----
-            CategorySection(Category.OTHER, r) { g ->
-                g.entries.forEach { e -> SettingsRow(e.label, subtitle = Format.bytes(e.bytes)) }
             }
-            // 2.0.x: 备份与日志 moved here from 设置 › 智能体 (it is about the app's data).
-            com.iris.localai.ui.agent.BackupSection()
+
+            if (tab == StorageTabs.LOCATION) {
+            // ---- 位置: where models / voice / workspace live (2.5.0: own tab) ----
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_location))
+            SettingsGroup {
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
+                ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
+            }
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
+            folder?.let { GroupFootnote(it.path, monospace = true) }
+            GroupFootnote(StorageLayoutText.SUMMARY)
+            }
         }
     }
 
@@ -603,6 +620,18 @@ fun StoragePage(
             onDismiss = { pending = null },
         )
     }
+}
+
+/** 2.5.0: the three tabs of 存储空间. */
+object StorageTabs {
+    const val OVERVIEW = 0
+    const val CLEAN = 1
+    const val LOCATION = 2
+    fun labels(): List<String> = listOf(
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_overview),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_clean),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_location),
+    )
 }
 
 /** 2.3.1: kind label of a leftover in the models folder. */
@@ -742,7 +771,7 @@ private fun StorageSummary(r: StorageUsage.Report?, free: Long?, scanning: Boole
             Spacer(Modifier.height(IrisDimens.space16))
             StorageBar(r)
             if (r != null) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.M))
                 Legend(r)
             }
             if (note != null) {

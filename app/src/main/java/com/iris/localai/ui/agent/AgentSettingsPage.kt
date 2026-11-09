@@ -166,45 +166,6 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 }
             }
 
-            // Tools grouped by kind.
-            // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
-            SectionTitle(AgentText.TOOLS)
-            AgentTools.all.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
-            SectionTitle(group.label)
-            SettingsGroup {
-                groupTools.forEachIndexed { i, tool ->
-                    if (i > 0) Divider()
-                    ToolRow(
-                        label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
-                        onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
-                        onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
-                    )
-                }
-            }
-            }
-            GroupFootnote(AgentText.PERMISSION_NOTE)
-
-            // 2.3.0 ②: remote MCP servers (tools join the built-in ones).
-            SectionTitle(McpText.TITLE)
-            SettingsGroup {
-                val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
-                SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
-                    subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
-                    onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
-            }
-
-            // the agent's in-app browser.
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302))
-            SettingsGroup {
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
-                    onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
-            }
-
-            // 2.2: GUI 智能体（无障碍，形态 A）.
-            GuiAgentSection()
-
-            // search provider, skills, backup and logs.
-            AgentExtraSections()
 
             var allFiles by remember { mutableStateOf(agent.hasAllFilesAccess()) }
             var customAsk by remember { mutableStateOf(false) }
@@ -222,7 +183,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1))
             SettingsGroup {
                 // 1.10.0: 下载/IRIDIS/workspace (2.1.1, default) or 应用私有目录, with the real path.
-                Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+                Column(Modifier.fillMaxWidth().padding(bottom = com.iris.localai.ui.theme.IrisSpace.M)) {
                     SettingsRow(
                         AgentText.LOCATION, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                         subtitle = AgentText.path(WorkspaceResolver.display(ws)) + (ws.fallbackReason?.let { "\n⚠ $it" } ?: "") +
@@ -321,6 +282,49 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
             }
             GroupFootnote(AgentText.WORKSPACE_NOTE)
             message?.let { GroupFootnote(it) }
+            // 2.5.0: 常用项 (智能体模式、最大步数、工作区) stay on top; tools & permissions, MCP, browser,
+            // GUI agent, search/skills/backup fold under 「高级」 — every row kept, nothing removed.
+            com.iris.localai.ui.components.SectionFold("agent-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)) {
+                // Tools grouped by kind.
+                // 2.0.x: one line per tool — switch, and the permission as a value that opens a menu.
+                SectionTitle(AgentText.TOOLS)
+                AgentTools.all.groupBy { it.group }.toSortedMap(compareBy { it.ordinal }).forEach { (group, groupTools) ->
+                SectionTitle(group.label)
+                SettingsGroup {
+                    groupTools.forEachIndexed { i, tool ->
+                        if (i > 0) Divider()
+                        ToolRow(
+                            label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
+                            onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
+                            onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
+                        )
+                    }
+                }
+                }
+                GroupFootnote(AgentText.PERMISSION_NOTE)
+
+                // 2.3.0 ②: remote MCP servers (tools join the built-in ones).
+                SectionTitle(McpText.TITLE)
+                SettingsGroup {
+                    val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
+                    SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
+                        subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
+                        onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
+                }
+
+                // the agent's in-app browser.
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302))
+                SettingsGroup {
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), icon = com.iris.localai.ui.icons.IrisIcons.Globe, subtitle = ToolPageText.BROWSER_NAV,
+                        onClick = onOpenBrowser, trailing = { com.iris.localai.ui.components.Chevron() })
+                }
+
+                // 2.2: GUI 智能体（无障碍，形态 A）.
+                GuiAgentSection()
+
+                // search provider, skills, backup and logs.
+                AgentExtraSections()
+            }
         }
     }
 }

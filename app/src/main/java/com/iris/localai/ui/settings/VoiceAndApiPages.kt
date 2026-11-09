@@ -192,11 +192,11 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-            CustomTtsSection(vm)
-            CloneVoiceSection(vm)
-            TranslateSection(vm, s)
-
-            com.iris.localai.ui.components.SectionFold("voice-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9efdd4)) {
+            com.iris.localai.ui.components.SectionFold("voice-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)) {
+                // 2.5.0: imported voices, cloned voices and translation fold here (all kept).
+                CustomTtsSection(vm)
+                CloneVoiceSection(vm)
+                TranslateSection(vm, s)
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
                 val customAdv = remember(s.ttsPack, customList) { vm.activeCustomTts() }
                 // 2.4.5: an imported multi-voice model (Kokoro, multi-speaker VITS) uses the same 音色编号 (clamped to its voices).
@@ -228,6 +228,15 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
 
                 SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
                 SettingsGroup {
+                    // 2.5.0 柔光: a segmented choice instead of a list (经典 keeps the list).
+                    if (com.iris.localai.ui.components.softStyle()) {
+                        SegmentedRow(
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5), com.iris.localai.data.DownloadSource.entries.map { it.short },
+                            com.iris.localai.data.DownloadSource.entries.indexOf(s.downloadSource).coerceAtLeast(0),
+                            { i -> vm.update { it.copy(downloadSource = com.iris.localai.data.DownloadSource.entries[i]) } },
+                            subtitle = s.downloadSource.label,
+                        )
+                    } else
                     DownloadSource.entries.forEachIndexed { i, src ->
                         if (i > 0) Divider()
                         CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }

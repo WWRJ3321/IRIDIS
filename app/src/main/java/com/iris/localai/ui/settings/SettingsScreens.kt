@@ -126,13 +126,34 @@ object SettingsText {
     fun versionLine(versionName: String) = "IRIDIS $versionName"
 
     /** The pages HOME links to, with their titles: the structure the 1.7.8 tests check. */
+    /** 2.5.0: the seven home entries in their groups (the rest is in 「高级」, see [HOME_ADVANCED]). */
     val HOME_GROUPS: List<Pair<String, List<String>>> get() = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3dc3df) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), ContextMemoryText.NAV, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b)),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f492c) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7)),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_379b88) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2)),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0d8307) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe)),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78944f) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379)), // 2.1.3: 资源诊断 moved to 关于 IRIDIS › 开发者选项
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_group_model) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), ContextMemoryText.NAV),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f492c) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753)),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_group_system) to listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998)),
     )
+
+    /** 2.5.0: entries folded under 「高级」 on the home page (none removed). */
+    val HOME_ADVANCED: List<String> get() = listOf(
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379),
+        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe),
+    )
+}
+
+/** 2.5.0: what the 重点卡 shows for an engine state (pure, unit-tested). */
+object SettingsHomeModel {
+    data class Hero(val state: com.iris.localai.ui.components.HeroStatus, val title: String?, val detail: String?, val percent: Int = 0)
+
+    fun hero(e: com.iris.localai.engine.EngineState): Hero = when (e) {
+        is com.iris.localai.engine.EngineState.Ready -> Hero(com.iris.localai.ui.components.HeroStatus.READY, e.model.displayName, e.details.backend)
+        is com.iris.localai.engine.EngineState.Loading -> Hero(com.iris.localai.ui.components.HeroStatus.LOADING, e.model.displayName, null, (e.progress * 100).toInt().coerceIn(0, 100))
+        is com.iris.localai.engine.EngineState.Failed -> Hero(com.iris.localai.ui.components.HeroStatus.FAILED, e.model?.displayName, e.message.lineSequence().firstOrNull()?.take(60))
+        else -> Hero(com.iris.localai.ui.components.HeroStatus.NONE, null, null)
+    }
+
+    /** Entries visible on the home page (重点卡 not counted). */
+    const val VISIBLE_ENTRIES = 7
 }
 
 @Composable
@@ -176,60 +197,78 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e366cc), onBack) {
         ScrollBody {
-            // 2.1.3: the 运行状态 rack moved to 关于 IRIDIS › 开发者选项 (DeveloperPage).
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3dc3df))
+            // 2.5.0: 重点卡 (current model + state) on top; seven entries in three groups; everything
+            // else (性能、API、语言、删除全部对话、关于) sits in 「高级」 below — nothing was removed.
+            val engine by vm.engine.collectAsStateWithLifecycle()
+            val hero = SettingsHomeModel.hero(engine)
+            com.iris.localai.ui.components.HeroCard(
+                label = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_label),
+                title = hero.title ?: com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_none),
+                status = when (hero.state) {
+                    com.iris.localai.ui.components.HeroStatus.READY -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_ready, hero.detail.orEmpty())
+                    com.iris.localai.ui.components.HeroStatus.LOADING -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_loading, hero.percent)
+                    com.iris.localai.ui.components.HeroStatus.FAILED -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_failed) + (hero.detail?.let { " · $it" } ?: "")
+                    com.iris.localai.ui.components.HeroStatus.NONE -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_idle)
+                },
+                state = hero.state,
+                action = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_hero_action),
+                onClick = { onOpen(SettingsPage.MODEL_BACKEND) },
+                modifier = Modifier.padding(top = IrisDimens.space8),
+            )
+
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_group_model))
             SettingsGroup {
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
                 Divider()
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), SettingsText.GENERATION, com.iris.localai.ui.icons.IrisIcons.Spark) { onOpen(SettingsPage.GENERATION) }
                 Divider()
-                NavItem(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_40a98a, com.iris.localai.engine.ResourceTier.of(s.resourceTier).label),
-                    com.iris.localai.ui.icons.IrisIcons.Gauge,
-                ) { onOpen(SettingsPage.PERFORMANCE) }
-                Divider()
-                // 1.9.0: 智能体 (tools, permissions, workspace). Not part of the 1.7.8 HOME_GROUPS structure test.
+                // 1.9.0: 智能体 (tools, permissions, workspace).
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), com.iris.localai.ui.agent.AgentText.NAV, com.iris.localai.ui.icons.IrisIcons.Agent) { onOpen(SettingsPage.AGENT) }
                 Divider()
-                // 2.1.3: 「上下文与记忆」 + 「记忆」 → one entry 「记忆与上下文」 (one page, context sections first).
+                // 2.1.3: 「上下文与记忆」 + 「记忆」 → one entry 「记忆与上下文」.
                 NavItem(ContextMemoryText.NAV, ContextMemoryText.NAV_SUB, com.iris.localai.ui.icons.IrisIcons.Memory) { onOpen(SettingsPage.MEMORY) }
             }
 
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f492c))
             SettingsGroup {
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), SettingsText.VOICE, com.iris.localai.ui.icons.IrisIcons.Voice) { onOpen(SettingsPage.VOICE) }
-                Divider()
-                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), if (api.running) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27de1c, api.port) else SettingsText.API_OFF, com.iris.localai.ui.icons.IrisIcons.Plug) { onOpen(SettingsPage.API) }
             }
 
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_379b88))
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_group_system))
             SettingsGroup {
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_afcde2), SettingsText.APPEARANCE, com.iris.localai.ui.icons.IrisIcons.Contrast) { onOpen(SettingsPage.APPEARANCE) }
                 Divider()
-                // 2.3.4: 语言 is its own entry (moved out of 外观).
-                val ctx = LocalContext.current
-                val tag = remember { com.iris.localai.I18n.current(ctx) }
-                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang),
-                    com.iris.localai.I18n.LANGS.firstOrNull { it.first == tag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system),
-                    com.iris.localai.ui.icons.IrisIcons.Globe) { onOpen(SettingsPage.LANGUAGE) }
-            }
-
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0d8307))
-            SettingsGroup {
-                // 1.14.3: 存储空间 (sizes by category, clear / delete per item).
+                // 1.14.3: 存储空间 (2.5.0: 概览 / 清理 / 位置).
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), SettingsText.STORAGE, com.iris.localai.ui.icons.IrisIcons.Storage) { onOpen(SettingsPage.STORAGE) }
-                Divider()
-                // 1.8.0: HyperOS destructive row: red text, no icon.
-                SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe), titleColor = Iris.colors.danger,
-                    subtitle = SettingsText.DELETE_ALL, onClick = { confirmWipe = true },
-                )
             }
 
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78944f))
-            SettingsGroup {
-                // 2.1.3: 资源诊断 (with 故障排查) moved to 关于 IRIDIS › 开发者选项.
-                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
+            // 2.5.0 「高级」: the rest of the former home list, unchanged, folded.
+            com.iris.localai.ui.components.SectionFold("settings-home-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)) {
+                Spacer(Modifier.height(IrisDimens.space12))
+                SettingsGroup {
+                    NavItem(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7c2b), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_40a98a, com.iris.localai.engine.ResourceTier.of(s.resourceTier).label),
+                        com.iris.localai.ui.icons.IrisIcons.Gauge,
+                    ) { onOpen(SettingsPage.PERFORMANCE) }
+                    Divider()
+                    NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), if (api.running) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27de1c, api.port) else SettingsText.API_OFF, com.iris.localai.ui.icons.IrisIcons.Plug) { onOpen(SettingsPage.API) }
+                    Divider()
+                    // 2.3.4: 语言 is its own page (also linked from 外观 in 2.5.0).
+                    val ctx = LocalContext.current
+                    val tag = remember { com.iris.localai.I18n.current(ctx) }
+                    NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang),
+                        com.iris.localai.I18n.LANGS.firstOrNull { it.first == tag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system),
+                        com.iris.localai.ui.icons.IrisIcons.Globe) { onOpen(SettingsPage.LANGUAGE) }
+                    Divider()
+                    // 2.1.3: 资源诊断 (with 故障排查) lives in 关于 IRIDIS › 开发者选项.
+                    NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
+                    Divider()
+                    // 1.8.0: HyperOS destructive row: red text, no icon.
+                    SettingsRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_12ecbe), titleColor = Iris.colors.danger,
+                        subtitle = SettingsText.DELETE_ALL, onClick = { confirmWipe = true },
+                    )
+                }
             }
             VersionFooter(SettingsText.versionLine(BuildConfig.VERSION_NAME), SettingsText.TAGLINE)
         }
@@ -273,6 +312,15 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
             // 2.2.16: model / voice / 生图 downloads; 自动 picks the fastest reachable source and falls through.
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
             SettingsGroup {
+                // 2.5.0 柔光: a segmented choice instead of a list (经典 keeps the list).
+                if (com.iris.localai.ui.components.softStyle()) {
+                    SegmentedRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5), com.iris.localai.data.DownloadSource.entries.map { it.short },
+                        com.iris.localai.data.DownloadSource.entries.indexOf(s.downloadSource).coerceAtLeast(0),
+                        { i -> vm.update { it.copy(downloadSource = com.iris.localai.data.DownloadSource.entries[i]) } },
+                        subtitle = s.downloadSource.label,
+                    )
+                } else
                 com.iris.localai.data.DownloadSource.entries.forEachIndexed { i, src ->
                     if (i > 0) Divider()
                     CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
@@ -483,7 +531,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     index = s.resourceTier.coerceIn(0, com.iris.localai.engine.ResourceTier.entries.lastIndex),
                     onChange = { m -> vm.update { it.copy(resourceTier = m) } },
                     status = com.iris.localai.engine.LiveResourcePolicy.statusText(tierApply),
-                    modifier = Modifier.padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space12, bottom = 10.dp),
+                    modifier = Modifier.padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space12, bottom = com.iris.localai.ui.theme.IrisSpace.S),
                 )
                 // 2.1.3: 资源档配置 moved to 关于 IRIDIS › 开发者选项.
             }
@@ -907,7 +955,7 @@ fun LanguagePage(onBack: () -> Unit) {
 }
 
 @Composable
-fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
+fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit, onLanguage: () -> Unit = {}) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -926,6 +974,16 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
         ScrollBody {
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9970ad))
             SettingsGroup {
+                // 2.5.0 界面风格: 柔光 (default) / 经典 (the ≤ 2.4.6 look).
+                SegmentedRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.v250_style),
+                    listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_style_soft), com.iris.localai.I18n.s(com.iris.localai.R.string.v250_style_classic)),
+                    if (com.iris.localai.ui.theme.IrisStyle.of(s.uiStyle) == com.iris.localai.ui.theme.IrisStyle.CLASSIC) 1 else 0,
+                    { i -> vm.update { it.copy(uiStyle = if (i == 1) com.iris.localai.ui.theme.IrisStyle.CLASSIC.id else com.iris.localai.ui.theme.IrisStyle.SOFT.id) } },
+                    icon = com.iris.localai.ui.icons.IrisIcons.Image,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_style_sub),
+                )
+                Divider()
                 SegmentedRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9970ad), icon = com.iris.localai.ui.icons.IrisIcons.Contrast,
                     options = THEME_OPTIONS.map { it.second },
@@ -946,7 +1004,20 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41d7e0)
                     } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2232ee),
                 )
+                Divider()
+                // 2.5.0: 语言 is also reachable from here (its page is unchanged).
+                SettingsRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.set234_lang), icon = com.iris.localai.ui.icons.IrisIcons.Globe,
+                    subtitle = run {
+                        val ctx = LocalContext.current
+                        val tag = remember { com.iris.localai.I18n.current(ctx) }
+                        com.iris.localai.I18n.LANGS.firstOrNull { it.first == tag }?.second ?: com.iris.localai.I18n.s(com.iris.localai.R.string.lang_system)
+                    },
+                    onClick = onLanguage, trailing = { Chevron() },
+                )
             }
+            // 2.5.0: background, feedback and rendering options folded under 「高级」 (all kept).
+            com.iris.localai.ui.components.SectionFold("appearance-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15) + " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.v250_appearance_more)) {
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8e1b94))
             SettingsGroup {
                 val hasBg = s.backgroundImage.isNotEmpty()
@@ -1008,6 +1079,7 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_95ffd3), s.sound, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3666d0), icon = com.iris.localai.ui.icons.IrisIcons.Sound) { on -> vm.update { it.copy(sound = on) } }
             }
             RenderSettingsSection(s, vm::update) // 2.2 渲染网页代码 / 加载网络图片
+            }
         }
     }
 }
