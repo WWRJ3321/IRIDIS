@@ -23,7 +23,7 @@ val prebuiltNative = (project.findProperty("iris.prebuiltNative") as String?)?.l
 
 android {
     namespace = "com.iris.localai"
-    compileSdk = 35
+    compileSdk = 36
     buildToolsVersion = "35.0.0"
     // Optional: point at a specific NDK (e.g. an arm64-host NDK) via local.properties `ndk.path`.
     val customNdk = localProps.getProperty("ndk.path")
@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 238
-        versionName = "2.4.6"
+        versionCode = 239
+        versionName = "2.5.0-beta"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
@@ -101,6 +101,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // 2.5.0: skip AGP version-control info (extractFullReleaseVersionControlInfo failed: protobuf NoClassDefFound).
+            vcsInfo.include = false
             signingConfig = signingConfigs.findByName("release")
         }
         debug {
