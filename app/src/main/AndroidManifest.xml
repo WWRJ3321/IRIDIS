@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 2.5.0: Android 16 Live Updates (promoted ongoing 「生成中」 notification). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- Held only for the duration of an API request, never while idle. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- 2.1.9: optional, granted by the user over adb / Shizuku: switch the GUI 无障碍 service back on after 清后台. -->

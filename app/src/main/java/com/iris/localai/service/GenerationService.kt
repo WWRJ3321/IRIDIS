@@ -31,6 +31,8 @@ object GenerationMonitor {
         val chars: Int = 0,
         val finished: Boolean = false,
         val stopped: Boolean = false,
+        /** 2.5.0: when the reply started — the Live Update shows a running timer from here. */
+        val startedAt: Long = System.currentTimeMillis(),
     )
 
     private val _job = MutableStateFlow<Job?>(null)
@@ -138,18 +140,37 @@ class GenerationService : LifecycleService() {
         val stop = PendingIntent.getService(
             this, 11, Intent(this, GenerationService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE,
         )
-        return NotificationCompat.Builder(this, CHANNEL_PROGRESS)
+        val live = LiveUpdate.supported(android.os.Build.VERSION.SDK_INT)
+        val b = NotificationCompat.Builder(this, CHANNEL_PROGRESS)
             .setSmallIcon(R.drawable.ic_stat_iris)
-            .setContentTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.service_16efd7))
-            .setContentText(GenerationText.progress(j?.title, chars))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setProgress(0, 0, true)
             .setContentIntent(openIntent(j?.conversationId))
             .addAction(0, com.iris.localai.I18n.s(com.iris.localai.R.string.service_095e93), stop)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        if (!live) {
+            // ≤ Android 15: unchanged 2.4.6 notification.
+            return b.setContentTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.service_16efd7))
+                .setContentText(GenerationText.progress(j?.title, chars))
+                .setProgress(0, 0, true)
+                .build()
+        }
+        // 2.5.0 Android 16 Live Update (super island / status-bar chip on HyperOS 3 and Pixel):
+        // ongoing + contentTitle + standard BigText style + chronometer, not colorized, no custom
+        // views, and the promotion request flag. The system decides whether it is promoted.
+        val text = GenerationText.liveText(chars)
+        val n = b.setContentTitle(LiveUpdate.title(j?.title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setColorized(false)
+            .setShowWhen(true)
+            .setWhen(j?.startedAt ?: System.currentTimeMillis())
+            .setUsesChronometer(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .addExtras(android.os.Bundle().apply { putBoolean(LiveUpdate.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
             .build()
+        return runCatching { LiveUpdate.withChip(this, n, GenerationText.liveChip(chars)) }.getOrDefault(n)
     }
 
     private fun done(j: GenerationMonitor.Job): Notification =
@@ -190,8 +211,38 @@ class GenerationService : LifecycleService() {
     }
 }
 
+/**
+ * 2.5.0 Android 16 (API 36) Live Updates for the 「生成中」 notification. Pure parts unit-tested.
+ * Not using Xiaomi's private focus-island extras; HyperOS 3 maps promoted notifications to the island.
+ */
+object LiveUpdate {
+    const val MIN_SDK = 36
+    /** Notification.EXTRA_REQUEST_PROMOTED_ONGOING (what NotificationCompat 1.17 setRequestPromotedOngoing writes). */
+    const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
+    const val PERMISSION = "android.permission.POST_PROMOTED_NOTIFICATIONS"
+
+    fun supported(sdk: Int): Boolean = sdk >= MIN_SDK
+
+    /** contentTitle = the conversation name (promotion requires a title); fallback app name. */
+    fun title(conversation: String?): String = conversation?.trim()?.takeIf { it.isNotEmpty() }?.take(40) ?: "IRIDIS"
+
+    /** Short status-bar chip text (Notification.Builder#setShortCriticalText, API 36). */
+    @androidx.annotation.RequiresApi(36)
+    fun withChip(context: Context, n: Notification, chip: String): Notification =
+        Notification.Builder.recoverBuilder(context, n).setShortCriticalText(chip).build()
+}
+
 /** Notification wording (unit-tested). */
 object GenerationText {
+    /** 2.5.0 Live Update body: 「正在思考…」 before the first character, then 「生成中 · N 字」. */
+    fun liveText(chars: Int): String =
+        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_thinking)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_generating, chars)
+
+    fun liveChip(chars: Int): String =
+        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_chip_thinking)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_chip, chars)
+
     fun progress(title: String?, chars: Int): String {
         val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""
         return if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.service_fde415, t) else com.iris.localai.I18n.s(com.iris.localai.R.string.service_92cfe0, t, chars)
