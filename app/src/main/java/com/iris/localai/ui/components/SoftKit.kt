@@ -49,9 +49,6 @@ fun HeroCard(
     action: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    /** 2.5.0 Beta3: optional second text action (重新加载), left of [action]. */
-    secondaryAction: String? = null,
-    onSecondary: () -> Unit = {},
 ) {
     val c = Iris.colors
     val soft = softStyle()
@@ -88,15 +85,7 @@ fun HeroCard(
                 )
             }
             Spacer(Modifier.height(IrisDimens.space12))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                if (secondaryAction != null) {
-                    Text(
-                        secondaryAction, style = IrisType.label, color = c.textSecondary,
-                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClick = onSecondary)
-                            .padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
-                    )
-                    Spacer(Modifier.width(IrisDimens.space8))
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 if (soft) {
                     Text(
                         action, style = IrisType.label, color = c.accent,
@@ -116,13 +105,4 @@ fun HeroCard(
             }
         }
     }
-}
-
-/** 2.5.0: page-level tabs (a segmented control with the page's side insets), e.g. 存储 › 概览 / 清理 / 位置. */
-@Composable
-fun PageTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
-    SegmentedControl(
-        options, selected, onSelect,
-        Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8),
-    )
 }

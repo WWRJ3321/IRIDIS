@@ -123,20 +123,6 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
 
             // 2.1.3: no 「推理引擎」 switch any more — for GGUF the backend decides (NPU = GenieX, GPU / CPU = 内置 llama.cpp).
 
-            // ---- 2.5.0 加载预设 first; context / length and the rest are folded under 「高级」 ----
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_preset))
-            SettingsGroup {
-                val preset = LoadPreset.match(o, features)
-                val labels = LoadPreset.entries.map { com.iris.localai.I18n.s(it.labelRes) } +
-                    (if (preset == null) listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_preset_custom)) else emptyList())
-                SegmentedRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.v250_preset), labels,
-                    preset?.ordinal ?: LoadPreset.entries.size,
-                    { i -> LoadPreset.entries.getOrNull(i)?.let { p -> set { p.applyTo(it, features) } } },
-                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_preset_sub),
-                )
-            }
-
             // ---- Backend ----
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6))
             SettingsGroup {
@@ -207,31 +193,31 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 )
             }
 
+            // ---- Context & length ----
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_dfd0cd))
+            SettingsGroup {
+                val fixed = features.fixedContext
+                if (fixed != null) {
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c1185, fixed), enabled = false)
+                } else {
+                    OvSlider(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), eff.contextLength.toFloat(), o.contextLength == null, 512f..32768f, "${eff.contextLength}",
+                        onChange = { v -> set { it.copy(contextLength = ((v / 512).toInt() * 512).coerceAtLeast(512)) } },
+                        onReset = { set { it.copy(contextLength = null) } },
+                    )
+                }
+                Divider()
+                OvSlider(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_422a72), com.iris.localai.data.TokenLimit.toSlider(eff.maxNewTokens, 8192, 128), o.maxNewTokens == null, 128f..8320f, com.iris.localai.data.TokenLimit.label(eff.maxNewTokens),
+                    onChange = { v -> set { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 128)) } },
+                    onReset = { set { it.copy(maxNewTokens = null) } },
+                )
+            }
+
             // 2.0.x: what is rarely touched folds away; unsupported options are not drawn one by
             // one as grey rows any more but named once under their group.
             val unsupported = UnsupportedOptions.names(features, model.format)
-            com.iris.localai.ui.components.SectionFold("model-adv-" + model.id, com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15) + " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.models_528fa3)) {
-                // ---- Context & length ----
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_dfd0cd))
-                SettingsGroup {
-                    val fixed = features.fixedContext
-                    if (fixed != null) {
-                        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c1185, fixed), enabled = false)
-                    } else {
-                        OvSlider(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), eff.contextLength.toFloat(), o.contextLength == null, 512f..32768f, "${eff.contextLength}",
-                            onChange = { v -> set { it.copy(contextLength = ((v / 512).toInt() * 512).coerceAtLeast(512)) } },
-                            onReset = { set { it.copy(contextLength = null) } },
-                        )
-                    }
-                    Divider()
-                    OvSlider(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_422a72), com.iris.localai.data.TokenLimit.toSlider(eff.maxNewTokens, 8192, 128), o.maxNewTokens == null, 128f..8320f, com.iris.localai.data.TokenLimit.label(eff.maxNewTokens),
-                        onChange = { v -> set { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 128)) } },
-                        onReset = { set { it.copy(maxNewTokens = null) } },
-                    )
-                }
-
+            com.iris.localai.ui.components.SectionFold("model-adv-" + model.id, com.iris.localai.I18n.s(com.iris.localai.R.string.models_528fa3)) {
                 // ---- Sampling ----
                 SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_42ac9b))
                 SettingsGroup {

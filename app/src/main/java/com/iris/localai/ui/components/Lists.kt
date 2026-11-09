@@ -226,7 +226,7 @@ fun SegmentedRow(
             options, selectedIndex, onSelect,
             Modifier
                 .fillMaxWidth()
-                .padding(start = if (icon != null) IrisDimens.rowPadding + rowIconSlot() + IrisDimens.space16 else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
+                .padding(start = if (icon != null) IrisDimens.rowPadding + IrisDimens.iconLarge + IrisDimens.space16 else IrisDimens.rowPadding, end = IrisDimens.rowPadding),
         )
     }
 }

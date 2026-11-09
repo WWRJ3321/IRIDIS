@@ -186,7 +186,7 @@ object IrisType {
     /** Small grey header above a group. */
     val sectionHeader = TextStyle(fontSize = IrisFontSize.S, lineHeight = 18.sp)
     /** Segmented control labels. */
-    val segment = TextStyle(fontSize = IrisFontSize.S, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
+    val segment = TextStyle(fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
     /** Subtitles under row titles, meta lines. */
     val caption = TextStyle(fontSize = IrisFontSize.XS, lineHeight = 17.sp)
     val micro = TextStyle(fontSize = IrisFontSize.XS, lineHeight = 14.sp)

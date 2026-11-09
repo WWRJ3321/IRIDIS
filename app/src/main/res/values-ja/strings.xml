@@ -1168,7 +1168,7 @@
     <string name="settings_e011af">会話の使用量、覚えたこと、あなたの資料</string>
     <string name="settings_8c4fa6">すべてこのスマホに保存され、アップロードされません</string>
     <string name="settings_949d51">詳細設定は開発者向けオプションにあります</string>
-    <string name="settings_f7ccc4">インデックスと圧縮の詳細は 設定 › 開発者</string>
+    <string name="settings_f7ccc4">インデックスと圧縮の詳細は 情報 › 開発者向けオプション にあります</string>
     <string name="settings_7f2a54">「私は…」「今後は…」のような発言があると、回答の下に「記憶する？」が表示され、タップすると保存されます</string>
     <string name="settings_65e375">回答時にナレッジベースを参照</string>
     <string name="settings_cca5e7">関連する質問では該当箇所を自動でモデルに渡し、回答の下に出典を表示します</string>

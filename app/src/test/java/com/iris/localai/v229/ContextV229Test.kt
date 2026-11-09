@@ -71,7 +71,7 @@ class ContextV229Test {
         assertEquals("3 个文件", ContextMemoryText.kbTitle(3)); assertEquals("本周回答时引用了 9 次", ContextMemoryText.kbSub(3, 9))
         val page = src("src/main/java/com/iris/localai/ui/settings/ContextMemoryPage.kt")
         val body = page.substringAfter("fun ContextMemoryPage(")
-        for (t in listOf("PrivacyBanner()", "ContextText.AUTO", "MemoryListPage(", "KnowledgePage(", "ContextMemoryText.SUGGEST", "ContextMemoryText.KB_TOGGLE", "ContextMemoryText.FOOTNOTE"))
+        for (t in listOf("PrivacyBanner()", "ContextText.AUTO", "MemoryListPage(", "KnowledgePage(", "ContextMemoryText.SUGGEST", "ContextMemoryText.KB_TOGGLE", "ContextMemoryText.FOOTNOTE", "contextHintShown"))
             assertTrue(t, page.contains(t))
         // No implementation words on the normal page.
         val visible = listOf(ContextMemoryText.TITLE, ContextMemoryText.PRIVACY, ContextMemoryText.HINT, ContextMemoryText.FOOTNOTE,
@@ -83,11 +83,7 @@ class ContextV229Test {
         for (t in listOf("R.string.models_3b5663", "ContextStrategy.entries", "R.string.settings_dc8bfe", "R.string.settings_0e766b", "developerMode")) assertTrue(t, devPage.contains(t)) // 2.3.1: strings moved to res
         assertTrue(dev.substringAfter("fun DeveloperPage(").contains("SettingsPage.DEV_CONTEXT"))
         val mem = src("src/main/java/com/iris/localai/ui/agent/MemorySettingsPage.kt")
-        for (t in listOf("R.string.agent_de49f7", "R.string.agent_fcd608", "R.string.agent_ec50c7", "R.string.agent_38d78c", "R.string.agent_0a67bd")) assertTrue(t, mem.contains(t)) // 2.3.1: strings moved to res
-        // 2.5.0 Beta3: 长期记忆 master + 清空记忆 on the 记忆 list page, 重建索引 on the 知识库 page.
-        val list = src("src/main/java/com/iris/localai/ui/agent/MemoryListPage.kt")
-        assertTrue(list.contains("MemoryText.CLEAR") && list.contains("R.string.agent_de49f7"))
-        assertTrue(src("src/main/java/com/iris/localai/ui/agent/KnowledgePage.kt").contains("KnowledgeText.REBUILD"))
+        for (t in listOf("R.string.agent_de49f7", "R.string.agent_fcd608", "R.string.agent_ec50c7", "R.string.agent_38d78c", "KnowledgeText.REBUILD", "R.string.agent_0a67bd", "MemoryText.CLEAR")) assertTrue(t, mem.contains(t)) // 2.3.1: strings moved to res
         val sheet = src("src/main/java/com/iris/localai/ui/chat/ChatScreen.kt")
         assertTrue(sheet.contains("showStrategy = settings.developerMode"))
     }

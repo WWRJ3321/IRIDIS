@@ -1168,7 +1168,7 @@
     <string name="settings_e011af">Chat usage, things remembered, and your documents</string>
     <string name="settings_8c4fa6">All stored on this phone, never uploaded</string>
     <string name="settings_949d51">Advanced settings are in Developer options</string>
-    <string name="settings_f7ccc4">Index and compaction details are in Settings › Developer</string>
+    <string name="settings_f7ccc4">Indexing and compression details are in About › Developer options</string>
     <string name="settings_7f2a54">When you say things like \"I am…\" or \"from now on…\", a \"Remember?\" button appears below the reply; tap it to save</string>
     <string name="settings_65e375">Use knowledge base in replies</string>
     <string name="settings_cca5e7">When relevant, passages are passed to the model automatically and sources are cited below the reply</string>

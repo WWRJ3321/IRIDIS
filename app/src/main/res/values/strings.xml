@@ -1169,7 +1169,7 @@
     <string name="settings_e011af">对话用量、记住的事和你的资料</string>
     <string name="settings_8c4fa6">全部保存在这台手机里，不上传</string>
     <string name="settings_949d51">高级设置在开发者选项</string>
-    <string name="settings_f7ccc4">索引、压缩细节在 设置 › 开发者</string>
+    <string name="settings_f7ccc4">索引、压缩细节在 关于 › 开发者选项</string>
     <string name="settings_7f2a54">发现「我是…」「以后都…」这类话，回答下方出现一个「记住？」，点一下才保存</string>
     <string name="settings_65e375">回答时参考知识库</string>
     <string name="settings_cca5e7">问到相关内容时，自动把对应段落交给模型，并在回答下标出出处</string>

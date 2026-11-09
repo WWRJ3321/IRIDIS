@@ -1168,7 +1168,7 @@
     <string name="settings_e011af">對話用量、記住的事和你的資料</string>
     <string name="settings_8c4fa6">全部儲存在這臺手機裡，不上傳</string>
     <string name="settings_949d51">高階設定在開發者選項</string>
-    <string name="settings_f7ccc4">索引、壓縮細節在 設定 › 開發者</string>
+    <string name="settings_f7ccc4">索引、壓縮細節在 關於 › 開發者選項</string>
     <string name="settings_7f2a54">發現「我是…」「以後都…」這類話，回答下方出現一個「記住？」，點一下才儲存</string>
     <string name="settings_65e375">回答時參考知識庫</string>
     <string name="settings_cca5e7">問到相關內容時，自動把對應段落交給模型，並在回答下標出出處</string>

@@ -355,10 +355,6 @@ fun StoragePage(
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5b7998), onBack) {
         ScrollBody {
-            // 2.5.0 Beta3: two tabs, 占用 / 清理与备份 (the 位置 tab folded into 占用; its 模型与加载 jump row removed).
-            var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
-            com.iris.localai.ui.components.PageTabs(StorageTabs.labels(), tab, { tab = it })
-            if (tab == StorageTabs.OVERVIEW) {
             StorageSummary(r, free, scanning, note)
 
             // ---- 模型 ----
@@ -391,10 +387,13 @@ fun StoragePage(
                     }
                 }
                 if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d38003), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e2b81b))
+                Divider()
+                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
+                ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
-            }
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
+            folder?.let { GroupFootnote(it.path, monospace = true) }
 
-            if (tab == StorageTabs.CLEAN) {
             // ---- 模型缓存 ----
             CategorySection(Category.MODEL_CACHE, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -423,9 +422,7 @@ fun StoragePage(
                 }
                 if (g.entries.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_373e22), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_bc44bd))
             }
-            }
 
-            if (tab == StorageTabs.OVERVIEW) {
             // ---- 语音模型 ----
             CategorySection(Category.VOICE, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -490,14 +487,8 @@ fun StoragePage(
                 }
             }
             GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cb4eb0))
+            GroupFootnote(StorageLayoutText.SUMMARY)
 
-            // ---- 其他 ----
-            CategorySection(Category.OTHER, r) { g ->
-                g.entries.forEach { e -> SettingsRow(e.label, subtitle = Format.bytes(e.bytes)) }
-            }
-            }
-
-            if (tab == StorageTabs.CLEAN) {
             // ---- 聊天记录 ----
             CategorySection(Category.CHATS, r) { g ->
                 g.entries.forEachIndexed { i, e ->
@@ -540,23 +531,13 @@ fun StoragePage(
                     enabled = g.bytes > 0, onClick = { pending = StoragePending.Caches },
                 )
             }
-            }
 
-            if (tab == StorageTabs.CLEAN) {
+            // ---- 其他 ----
+            CategorySection(Category.OTHER, r) { g ->
+                g.entries.forEach { e -> SettingsRow(e.label, subtitle = Format.bytes(e.bytes)) }
+            }
             // 2.0.x: 备份与日志 moved here from 设置 › 智能体 (it is about the app's data).
             com.iris.localai.ui.agent.BackupSection()
-            }
-
-            if (tab == StorageTabs.OVERVIEW) {
-            // ---- 位置: where the models live ----
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_location))
-            SettingsGroup {
-                ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
-            }
-            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f3ac2))
-            folder?.let { GroupFootnote(it.path, monospace = true) }
-            GroupFootnote(StorageLayoutText.SUMMARY)
-            }
         }
     }
 
@@ -622,16 +603,6 @@ fun StoragePage(
             onDismiss = { pending = null },
         )
     }
-}
-
-/** 2.5.0 Beta3: the two tabs of 存储空间 (占用 / 清理与备份). */
-object StorageTabs {
-    const val OVERVIEW = 0
-    const val CLEAN = 1
-    fun labels(): List<String> = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_usage),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tab_cleanup),
-    )
 }
 
 /** 2.3.1: kind label of a leftover in the models folder. */

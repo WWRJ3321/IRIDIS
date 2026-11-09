@@ -73,17 +73,11 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
                 modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.L, end = com.iris.localai.ui.theme.IrisSpace.L, bottom = com.iris.localai.ui.theme.IrisSpace.S),
             )
         } else {
-            // 2.5.0 Beta3: the three import rows are one 「导入…」 row with a menu (文件夹 / 压缩包 / 下载链接).
-            var importMenu by remember { mutableStateOf(false) }
-            androidx.compose.foundation.layout.Box {
-                SettingsRow(I18n.s(R.string.v250_tts_import), subtitle = I18n.s(R.string.v250_tts_import_sub), icon = com.iris.localai.ui.icons.IrisIcons.Download,
-                    onClick = { vm.clearTtsImportMessage(); importMenu = true }, trailing = { com.iris.localai.ui.components.Chevron() })
-                com.iris.localai.ui.components.IrisMenu(importMenu, { importMenu = false }) {
-                    com.iris.localai.ui.components.IrisMenuItem(I18n.s(R.string.tts245_pick_folder), com.iris.localai.ui.icons.IrisIcons.Folder) { importMenu = false; folderPicker.launch(null) }
-                    com.iris.localai.ui.components.IrisMenuItem(I18n.s(R.string.tts245_pick_archive), com.iris.localai.ui.icons.IrisIcons.Archive) { importMenu = false; archivePicker.launch(arrayOf("*/*")) }
-                    com.iris.localai.ui.components.IrisMenuItem(I18n.s(R.string.tts245_paste_url), com.iris.localai.ui.icons.IrisIcons.Download) { importMenu = false; askUrl = true }
-                }
-            }
+            SettingsRow(I18n.s(R.string.tts245_pick_folder), subtitle = I18n.s(R.string.tts245_pick_folder_sub), onClick = { vm.clearTtsImportMessage(); folderPicker.launch(null) })
+            Divider()
+            SettingsRow(I18n.s(R.string.tts245_pick_archive), onClick = { vm.clearTtsImportMessage(); archivePicker.launch(arrayOf("*/*")) })
+            Divider()
+            SettingsRow(I18n.s(R.string.tts245_paste_url), subtitle = I18n.s(R.string.tts245_paste_url_sub), onClick = { vm.clearTtsImportMessage(); askUrl = true })
         }
         state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }
         state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }

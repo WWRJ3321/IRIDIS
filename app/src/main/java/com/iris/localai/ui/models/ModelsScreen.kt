@@ -397,7 +397,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, onOpenDownload: () -> Unit = {}, onOpenNpu: () -> Unit = {}, vm: ModelsViewModel = viewModel()) {
+fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, onOpenDownload: () -> Unit = {}, vm: ModelsViewModel = viewModel()) {
     val c = Iris.colors
     val models by vm.models.collectAsStateWithLifecycle()
     val engine by vm.engine.collectAsStateWithLifecycle()
@@ -643,7 +643,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             }
             // 2.2.16: the former 设置 › 模型与加载 (加载、下载源、默认后端、NPU、加载选项) on the same page
             if (settingsVm != null) item(key = "load-settings", contentType = "loadSettings") {
-                Column { ModelLoadSettings(settingsVm, onOpenNpu) }
+                Column { ModelLoadSettings(settingsVm) }
             }
         }
     }

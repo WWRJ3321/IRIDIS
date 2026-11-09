@@ -1168,7 +1168,7 @@
     <string name="settings_e011af">Chat-Nutzung, Gemerktes und deine Dokumente</string>
     <string name="settings_8c4fa6">Alles bleibt auf diesem Handy, nichts wird hochgeladen</string>
     <string name="settings_949d51">Erweiterte Einstellungen unter Entwickleroptionen</string>
-    <string name="settings_f7ccc4">Index- und Komprimierungsdetails unter Einstellungen › Entwickler</string>
+    <string name="settings_f7ccc4">Details zu Index und Komprimierung unter Info › Entwickleroptionen</string>
     <string name="settings_7f2a54">Bei Sätzen wie „Ich bin …“ oder „Ab jetzt …“ erscheint unter der Antwort „Merken?“ – erst ein Tippen speichert es</string>
     <string name="settings_65e375">Wissensbasis in Antworten nutzen</string>
     <string name="settings_cca5e7">Bei passenden Fragen werden relevante Abschnitte automatisch ans Modell gegeben und unter der Antwort als Quelle angezeigt</string>

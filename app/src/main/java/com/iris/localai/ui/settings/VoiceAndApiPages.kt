@@ -94,173 +94,147 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
     val customList by vm.customTts.collectAsStateWithLifecycle()
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.stopPreview() } }
 
-    // 2.5.0 Beta3: no 「高级」 fold. Main page = 音色 (with 试听) · 语速 · 自动朗读 · 朗读设置 → · 语音识别 → · 翻译 →.
-    // The voice page's own 下载源 copy is gone (模型与加载 › 下载源 is the one setting).
-    var sub by rememberSaveable { mutableStateOf("") }
-    if (sub.isNotEmpty()) androidx.activity.compose.BackHandler { sub = "" }
-    val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
-    val customVoice = remember(s.ttsPack, customList) { vm.activeCustomTts() }
-    val sys = s.ttsEngine == com.iris.localai.voice.TTS_ENGINE_SYSTEM
-
-    @Composable
-    fun Packs(kind: VoiceKind, label: String) {
-        SectionTitle(label)
-        val active = remember(packs, s.asrPack, s.ttsPack) { vm.activePack(kind) }
-        // 2.4.5: an imported model chosen as the voice wins over the packs (CustomTtsSection).
-        val customOn = kind == VoiceKind.TTS && customVoice != null
-        SettingsGroup {
-            VoicePack.entries.filter { it.kind == kind }.forEachIndexed { i, pack ->
-                if (i > 0) Divider()
-                PackRow(
-                    pack, packs[pack] ?: PackState.NotInstalled, vm.packBytes(pack), selected = pack == active && !customOn,
-                    onUse = { vm.usePack(pack) },
-                    onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
-                )
-            }
-        }
-    }
-
-    when (sub) {
-        "tts" -> {
-            SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_tts), { sub = "" }) {
-                ScrollBody {
-                    SettingsGroup {
-                        // 2.2.10: 朗读引擎 — 本机模型（含克隆音色）or Android 系统 TTS.
-                        SegmentedRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cf7e7f), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78587c), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f3dc4b)), if (sys) 1 else 0,
-                            { i -> vm.stopPreview(); vm.update { it.copy(ttsEngine = if (i == 1) com.iris.localai.voice.TTS_ENGINE_SYSTEM else com.iris.localai.voice.TTS_ENGINE_LOCAL) } },
-                            subtitle = if (sys) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be76a6) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ae43),
-                        )
-                        if (sys) {
-                            Divider()
-                            val hasEngine = remember(s.ttsEngine) { vm.systemTtsAvailable() }
-                            SettingsRow(
-                                if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_486d41) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da54a4),
-                                subtitle = if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0e304e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6a57d5),
-                                titleColor = if (hasEngine) c.text else c.danger,
-                                onClick = vm::openSystemTtsSettings,
-                                trailing = { Chevron() },
-                            )
-                        }
-                        // 2.4.5: an imported multi-voice model (Kokoro, multi-speaker VITS) uses the same 音色编号 (clamped to its voices).
-                        if (!sys && ((customVoice == null && ttsActive?.singleSpeaker == false) || (customVoice != null && customVoice.model.spec.type != com.iris.localai.voice.CustomTtsType.MATCHA)) && s.cloneVoiceId.isEmpty()) {
-                            Divider()
-                            SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10), s.ttsSpeakerId.toFloat(), 0f..102f, "#${s.ttsSpeakerId}") { v -> vm.update { it.copy(ttsSpeakerId = v.toInt()) } }
-                        }
-                    }
-                    Packs(VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27eaa4))
-                    CustomTtsSection(vm)
-                    CloneVoiceSection(vm)
-                    GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a492f))
-                }
-            }
-            return
-        }
-        "asr" -> {
-            SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_asr), { sub = "" }) {
-                ScrollBody {
-                    SettingsGroup {
-                        SegmentedRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e57f3c),
-                            options = ASR_LANGUAGES.map { it.second },
-                            selectedIndex = ASR_LANGUAGES.indexOfFirst { it.first == s.asrLanguage },
-                            onSelect = { i -> vm.update { it.copy(asrLanguage = ASR_LANGUAGES[i].first) } },
-                        )
-                    }
-                    Packs(VoiceKind.ASR, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a6541c))
-                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8d7696))
-                    SettingsGroup {
-                        SegmentedRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a1c52),
-                            options = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ac67), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aed1df), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4296d7)),
-                            selectedIndex = s.bargeInSensitivity,
-                            onSelect = { i -> vm.update { it.copy(bargeInSensitivity = i) } },
-                            subtitle = when (s.bargeInSensitivity) {
-                                0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f51084)
-                                2 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_372984)
-                                else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d68e5f)
-                            } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_906f6a),
-                        )
-                        Divider()
-                        SwitchRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_959016), s.bargeInVoiceComm,
-                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_02fac3),
-                        ) { on -> vm.update { it.copy(bargeInVoiceComm = on) } }
-                    }
-                }
-            }
-            return
-        }
-        "tr" -> {
-            SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607), { sub = "" }) {
-                ScrollBody { TranslateSection(vm, s) }
-            }
-            return
-        }
-    }
-
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9a753), onBack) {
         ScrollBody {
             PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e3b3ef))
+            // 2.0.x: everyday settings first (朗读, 识别), then the model packs; the rarely touched
+            // ones (音色编号, 打断, 下载源) fold away.
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f))
             SettingsGroup {
-                val preview by vm.preview.collectAsStateWithLifecycle()
-                // Beta3: 试听 sits at the right of the 音色 row (a row of its own when there is no 音色 choice).
-                val previewIcon: @Composable () -> Unit = {
-                    PressableIcon(
-                        if (preview == SettingsViewModel.Preview.Playing) Icons.Outlined.StopCircle else Icons.Outlined.PlayArrow,
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352), iconSize = IrisDimens.iconLarge, tint = c.text,
-                    ) { vm.previewVoice() }
+                // 2.2.10: 朗读引擎 — 本机模型（含克隆音色）or Android 系统 TTS.
+                val sys = s.ttsEngine == com.iris.localai.voice.TTS_ENGINE_SYSTEM
+                SegmentedRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cf7e7f), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_78587c), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f3dc4b)), if (sys) 1 else 0,
+                    { i -> vm.stopPreview(); vm.update { it.copy(ttsEngine = if (i == 1) com.iris.localai.voice.TTS_ENGINE_SYSTEM else com.iris.localai.voice.TTS_ENGINE_LOCAL) } },
+                    subtitle = if (sys) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be76a6) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ae43),
+                )
+                Divider()
+                if (sys) {
+                    val hasEngine = remember(s.ttsEngine) { vm.systemTtsAvailable() }
+                    SettingsRow(
+                        if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_486d41) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da54a4),
+                        subtitle = if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0e304e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6a57d5),
+                        titleColor = if (hasEngine) c.text else c.danger,
+                        onClick = vm::openSystemTtsSettings,
+                        trailing = { Chevron() },
+                    )
+                    Divider()
                 }
-                val showVoice = !sys && customVoice == null && ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()
-                if (showVoice) {
+                val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
+                val customVoice = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                if (!sys && customVoice == null && ttsActive?.singleSpeaker == false && s.cloneVoiceId.isEmpty()) {
                     val female = s.ttsSpeakerId in 3..57
                     val male = s.ttsSpeakerId >= 58
                     SettingsRow(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d09e4a),
                         subtitle = when {
-                            preview == SettingsViewModel.Preview.Loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_661b77)
-                            preview is SettingsViewModel.Preview.Failed -> (preview as SettingsViewModel.Preview.Failed).message
                             s.ttsSpeakerId < 3 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_09f9a7, s.ttsSpeakerId)
                             female -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_77bca1, s.ttsSpeakerId - 2)
                             else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aaac47, s.ttsSpeakerId - 57)
                         },
                         trailing = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                SegmentedControl(
-                                    listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c0e77), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ed7a11)),
-                                    selectedIndex = when { female -> 0; male -> 1; else -> -1 },
-                                    onSelect = { i -> vm.update { it.copy(ttsSpeakerId = if (i == 0) 3 else 58) } },
-                                    modifier = Modifier.width(128.dp),
-                                )
-                                previewIcon()
-                            }
+                            SegmentedControl(
+                                listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c0e77), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ed7a11)),
+                                selectedIndex = when { female -> 0; male -> 1; else -> -1 },
+                                onSelect = { i -> vm.update { it.copy(ttsSpeakerId = if (i == 0) 3 else 58) } },
+                                modifier = Modifier.width(128.dp),
+                            )
                         },
                     )
-                } else {
-                    SettingsRow(
-                        when (preview) {
-                            SettingsViewModel.Preview.Loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_661b77)
-                            SettingsViewModel.Preview.Playing -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_498987)
-                            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352)
-                        },
-                        subtitle = (preview as? SettingsViewModel.Preview.Failed)?.message,
-                        onClick = vm::previewVoice,
-                        trailing = previewIcon,
-                    )
+                    Divider()
                 }
-                Divider()
                 SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_595d51), s.ttsSpeed, 0.6f..1.6f, String.format(Locale.US, "%.1fx", s.ttsSpeed)) { v -> vm.update { it.copy(ttsSpeed = (v * 10).toInt() / 10f) } }
+                Divider()
+                val preview by vm.preview.collectAsStateWithLifecycle()
+                SettingsRow(
+                    when (preview) {
+                        SettingsViewModel.Preview.Loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_661b77)
+                        SettingsViewModel.Preview.Playing -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_498987)
+                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352)
+                    },
+                    subtitle = (preview as? SettingsViewModel.Preview.Failed)?.message,
+                    onClick = vm::previewVoice,
+                    trailing = {
+                        when (preview) {
+                            SettingsViewModel.Preview.Loading -> com.iris.localai.ui.components.TypingDots()
+                            SettingsViewModel.Preview.Playing -> Icon(Icons.Outlined.StopCircle, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d22e11), tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
+                            else -> Icon(Icons.Outlined.PlayArrow, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4a352), tint = c.text, modifier = Modifier.size(IrisDimens.iconLarge))
+                        }
+                    },
+                )
                 Divider()
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_84b7cb), s.autoSpeak, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ccdd00)) { on -> vm.update { it.copy(autoSpeak = on) } }
             }
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_tool_settings))
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_72eff8))
             SettingsGroup {
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_tts), icon = IrisIcons.Voice, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_tts_sub), onClick = { sub = "tts" }, trailing = { Chevron() })
-                Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_asr), icon = IrisIcons.Chat, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_asr_sub), onClick = { sub = "asr" }, trailing = { Chevron() })
-                Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607), icon = IrisIcons.Translate, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_voice_tr_sub), onClick = { sub = "tr" }, trailing = { Chevron() })
+                SegmentedRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e57f3c),
+                    options = ASR_LANGUAGES.map { it.second },
+                    selectedIndex = ASR_LANGUAGES.indexOfFirst { it.first == s.asrLanguage },
+                    onSelect = { i -> vm.update { it.copy(asrLanguage = ASR_LANGUAGES[i].first) } },
+                )
+            }
+
+            for ((kind, label) in listOf(VoiceKind.ASR to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a6541c), VoiceKind.TTS to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27eaa4))) {
+                SectionTitle(label)
+                val active = remember(packs, s.asrPack, s.ttsPack) { vm.activePack(kind) }
+                // 2.4.5: an imported model chosen as the voice wins over the packs (CustomTtsSection).
+                val customSel = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                val customOn = kind == VoiceKind.TTS && customSel != null
+                SettingsGroup {
+                    VoicePack.entries.filter { it.kind == kind }.forEachIndexed { i, pack ->
+                        if (i > 0) Divider()
+                        PackRow(
+                            pack, packs[pack] ?: PackState.NotInstalled, vm.packBytes(pack), selected = pack == active && !customOn,
+                            onUse = { vm.usePack(pack) },
+                            onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
+                        )
+                    }
+                }
+            }
+            CustomTtsSection(vm)
+            CloneVoiceSection(vm)
+            TranslateSection(vm, s)
+
+            com.iris.localai.ui.components.SectionFold("voice-adv", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9efdd4)) {
+                val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
+                val customAdv = remember(s.ttsPack, customList) { vm.activeCustomTts() }
+                // 2.4.5: an imported multi-voice model (Kokoro, multi-speaker VITS) uses the same 音色编号 (clamped to its voices).
+                if (((customAdv == null && ttsActive?.singleSpeaker == false) || (customAdv != null && customAdv.model.spec.type != com.iris.localai.voice.CustomTtsType.MATCHA)) && s.cloneVoiceId.isEmpty()) {
+                    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10))
+                    SettingsGroup {
+                        SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_966b10), s.ttsSpeakerId.toFloat(), 0f..102f, "#${s.ttsSpeakerId}") { v -> vm.update { it.copy(ttsSpeakerId = v.toInt()) } }
+                    }
+                }
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8d7696))
+                SettingsGroup {
+                    SegmentedRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3a1c52),
+                        options = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ac67), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aed1df), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4296d7)),
+                        selectedIndex = s.bargeInSensitivity,
+                        onSelect = { i -> vm.update { it.copy(bargeInSensitivity = i) } },
+                        subtitle = when (s.bargeInSensitivity) {
+                            0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f51084)
+                            2 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_372984)
+                            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d68e5f)
+                        } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_906f6a),
+                    )
+                    Divider()
+                    SwitchRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_959016), s.bargeInVoiceComm,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_02fac3),
+                    ) { on -> vm.update { it.copy(bargeInVoiceComm = on) } }
+                }
+
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
+                SettingsGroup {
+                    DownloadSource.entries.forEachIndexed { i, src ->
+                        if (i > 0) Divider()
+                        CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
+                    }
+                }
+
+                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a492f))
             }
         }
     }
@@ -467,15 +441,15 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, bottom = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                     IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5fa42d), { vm.regenerateKey(); keyVisible = true }, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Reload)
-                    // 2.5.0 Beta3: 「清除 API Key」 is a button on the Key row (was a separate red row).
-                    if (s.apiKey.isNotBlank() && !s.apiAllowLan) {
-                        IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_api_clear), vm::clearKey, style = IrisButtonStyle.Text, compact = true, destructive = true)
-                    }
                     Spacer(Modifier.weight(1f))
                     IrisButton(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb), ::applyKey, style = IrisButtonStyle.Text, compact = true,
                         enabled = keyDirty && (keyText.isNotBlank() || !s.apiAllowLan),
                     )
+                }
+                if (s.apiKey.isNotBlank() && !s.apiAllowLan) {
+                    Divider()
+                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_22355d), titleColor = c.danger, onClick = vm::clearKey)
                 }
             }
             GroupFootnote(

@@ -243,7 +243,6 @@ fun SegmentedControl(
     modifier: Modifier = Modifier,
 ) {
     val c = Iris.colors
-    val soft = softStyle()
     val n = options.size.coerceAtLeast(1)
     val reduce = LocalReduceMotion.current
     val scope = rememberCoroutineScope()
@@ -312,9 +311,7 @@ fun SegmentedControl(
         Row(Modifier.fillMaxWidth().fillMaxHeight()) {
             options.forEachIndexed { i, label ->
                 val selected = i == selectedIndex
-                // 2.5.0 Beta2 柔光: neutral track + white (light) / one-step-lighter grey (dark) thumb, the
-                // selected label in the primary text colour (iOS); 经典 keeps the accent label.
-                val color by animateColorAsState(if (selected) (if (soft) c.text else c.accent) else c.textSecondary, motionSpec(IrisMotion.Color), label = "segText")
+                val color by animateColorAsState(if (selected) c.accent else c.textSecondary, motionSpec(IrisMotion.Color), label = "segText")
                 Box(
                     Modifier
                         .weight(1f)
