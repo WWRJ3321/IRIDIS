@@ -17,6 +17,7 @@ object DeviceProbe {
 
     /** Snapdragon SoC model → Hexagon HTP architecture version. */
     val HTP_ARCH: Map<String, Int> = linkedMapOf(
+        "SM8850" to 81, // 8 Elite Gen 5 (2.5.0-beta8: was missing → 「不支持 NPU 生图」 on 8E5)
         "SM8750" to 79, // 8 Elite
         "SM8650" to 75, // 8 Gen 3
         "SM8550" to 73, // 8 Gen 2

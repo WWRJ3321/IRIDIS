@@ -2,6 +2,13 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.5.0 Beta8（2026-11-10，测试版，未在真机测试）
+- 修复骁龙 8 Elite Gen 5（SM8850，Hexagon HTP v81）生图被判「此芯片不支持 NPU 生图，已跳过 QNN 探测」：生图芯片表补上 SM8850→v81。8 Elite Gen 5 上 NPU 生图模型（sdq：FLUX.2 Klein / Z-Image NPU）恢复显示并使用 v81 库；QNN 运行库按 v81 安装（QNN 2.50 含 libQnnHtpV81Stub/Skel）。
+- 8 Elite Gen 5 的 Stable Diffusion 1.5（NPU）与 Anything V5 文本编码器改用高通 AI Hub 的 8 Elite Gen 5 专用包（snapdragon_8_elite_gen5_for_galaxy，v0.64.0）；其他芯片不变。Anything V5 的 UNet/VAE 仍为 Local Dream 的通用包。此前在 8 Elite Gen 5 上下载过的 SD1.5（NPU，8 Elite 包）文件大小不符，需重新下载。均需真机确认。
+- GGUF 引擎新增无 i8mm 兼容版（libiris_llama_compat.so，armv8.2-a+dotprod+fp16，不含 KleidiAI）：CPU 无 i8mm 但有 dotprod+fp16 的设备（骁龙 855/865/870/888 等）自动加载兼容版，有 i8mm 仍用原版；两者都缺时提示「需骁龙 855/865 及以上」（7 种语言）。stable-diffusion.cpp（CPU/NPU）与 Hexagon 版 llama.cpp 仍要求 i8mm，判断不变。兼容版在本地用 Debian clang 19 + NDK r27c sysroot 交叉编译（正式版为 NDK r27c 的 clang 18），速度低于原版，需真机确认。
+- 修复大模型下载到 30–50% 前台失败：此前每个下载源只试 2 次，不论已下载多少，20 秒没有数据即算一次失败，手机网络卡两次整个下载就失败。现在某次失败前 .part 文件有增长就重置该源的尝试计数、同源断点续传；连续 2 次无进展才换源（与原来一致），每源最多 20 次失败；重试等待 1.5 秒起递增，最长 30 秒。文件大小不符 / 404 仍立即换源。
+- 以上均未在真机测试。
+
 ## 2.5.0 Beta7（2026-11-10，测试版，未在真机测试）
 - 智能体「手机操作」工具（phone）新增：手电筒（flashlight：on/off/toggle，后置闪光灯，无需相机权限）；音量（volume：查询/设置媒体、铃声、闹钟音量，百分比）与响铃模式（ringer：静音/震动/响铃，没有勿扰权限时说明原因并打开「勿扰权限」页，不崩溃）；屏幕亮度（brightness：查询/设置，没有「修改系统设置」权限时说明并打开该授权页）；打开系统设置页（settings：Wi-Fi、蓝牙、定位、飞行模式、显示、电池、应用详情；Android 10+ 应用不能直接开关 Wi-Fi/蓝牙，由用户在页面上点）；电池电量与是否充电（battery）。清单新增 WRITE_SETTINGS（需用户手动授权）、ACCESS_NOTIFICATION_POLICY。
 - 设置 › 存储空间 › 备份与日志 新增「导出完整日志」（同组一行，设置结构不变）：导出 zip，包含运行日志 + 全部对话（或仅最近一次对话）的全文：用户消息、助手回复、思考内容、每次工具调用的名称/参数/结果/输出、时间戳、模型名与生成统计，以及导出时已加载模型的后端。每条消息的后端、每次工具调用的单独时间未被保存，无法导出（文件头已注明）；不写入 API Key，文本中疑似密钥的字符串会被打码。

@@ -167,8 +167,8 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 245"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta7\""))
+        assertTrue(g.contains("versionCode = 246"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta8\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
@@ -176,6 +176,7 @@ class V250Test {
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta5（2026-11-09，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta6（2026-11-10，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta7（2026-11-10，测试版，未在真机测试）"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta8（2026-11-10，测试版，未在真机测试）"))
     }
 
     @Test fun newStringsInEveryLanguage() {
@@ -417,5 +418,83 @@ class V250Test {
         val names = mutableListOf<String>()
         java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(zip.toByteArray())).use { z -> while (true) { names += (z.nextEntry ?: break).name } }
         assertEquals(listOf("README.txt", "app-log.txt", "conversations/001-t.txt"), names)
+    }
+
+    // ---- Beta8 ----
+    @Test fun elite5IsHtpV81() {
+        val d = com.iris.localai.imagegen.DeviceProbe
+        assertEquals(81, d.htpArch("SM8850"))
+        assertEquals(81, d.htpArch("sm8850-ac"))
+        assertEquals(79, d.htpArch("SM8750"))
+        assertEquals(75, d.htpArch("SM8650P"))
+        assertEquals(73, d.htpArch("SM8550"))
+        assertNull(d.htpArch("SM8450"))
+        assertTrue(com.iris.localai.imagegen.ImageRules.sdqListed(81))
+        val c = com.iris.localai.imagegen.ImageCatalog
+        val te81 = c.anythingV5(81).files.first { it.isZipSlice && it.path.endsWith("text_encoder.slice") }
+        assertTrue(te81.url.endsWith("snapdragon_8_elite_gen5_for_galaxy.zip"))
+        assertEquals(124_443_624L, te81.size)
+        assertTrue(c.anythingV5(79).files.first { it.isZipSlice && it.path.endsWith("text_encoder.slice") }.url.endsWith("snapdragon_8_elite_for_galaxy.zip"))
+        val sd81 = c.sd15Qnn(81).files.last(); val sd79 = c.sd15Qnn(79).files.last()
+        assertTrue(sd81.url.endsWith("snapdragon_8_elite_gen5_for_galaxy.zip")); assertEquals(710_771_252L, sd81.size)
+        assertTrue(sd79.url.endsWith("snapdragon_8_elite_for_galaxy.zip")); assertEquals(709_785_222L, sd79.size)
+        assertEquals(c.sd15Qnn(null).files, c.sd15Qnn(79).files)
+        assertTrue(src("app/src/main/java/com/iris/localai/imagegen/DeviceProbe.kt").contains("\"SM8850\" to 81"))
+    }
+
+    @Test fun llamaCompatLibraryChoice() {
+        val f = com.iris.localai.engine.llama.CpuFeatures
+        assertEquals("iris_llama", f.llamaLibraryFor(setOf("fp", "asimd", "asimddp", "asimdhp", "i8mm")))
+        assertEquals("iris_llama_compat", f.llamaLibraryFor(setOf("fp", "asimd", "asimddp", "asimdhp")))
+        assertNull(f.llamaLibraryFor(setOf("fp", "asimd", "asimdhp")))
+        assertNull(f.llamaLibraryFor(setOf("fp", "asimd", "asimddp")))
+        assertEquals("iris_llama", f.llamaLibraryFor(emptySet()))
+        val ln = src("app/src/main/java/com/iris/localai/engine/llama/LlamaNative.kt")
+        assertTrue(ln.contains("System.loadLibrary(lib)"))
+        assertFalse(ln.substringAfter("fun missingForLlama()").substringBefore("fun missingForI8mm()").contains("\"i8mm\""))
+        // the other i8mm builds keep the old check
+        for (p in listOf("imagegen/SdNative.kt", "imagegen/SdqNative.kt", "engine/llama/LlamaHtp.kt")) {
+            val t = src("app/src/main/java/com/iris/localai/$p")
+            assertTrue(p, t.contains("CpuFeatures.missingForI8mm()")); assertFalse(p, t.contains("missingForLlama()"))
+        }
+        val cm = src("app/src/main/cpp/CMakeLists.txt")
+        assertTrue(cm.contains("set(IRIS_CPU_ARM_ARCH \"armv8.2-a+dotprod+i8mm+fp16\" CACHE STRING"))
+        assertTrue(cm.contains("set(GGML_CPU_ARM_ARCH \"\${IRIS_CPU_ARM_ARCH}\" CACHE STRING \"\" FORCE)"))
+        // prebuilt-native/ is git-ignored: check only where the prebuilt libraries are present (local release build)
+        if (File(root(), "prebuilt-native/arm64-v8a/libiris_llama.so").isFile)
+            assertTrue(File(root(), "prebuilt-native/arm64-v8a/libiris_llama_compat.so").length() > 1_000_000L)
+    }
+
+    @Test fun downloadResumesWhileProgressing() = kotlinx.coroutines.runBlocking<Unit> {
+        val ds = com.iris.localai.data.DownloadSources
+        val dir = kotlin.io.path.createTempDirectory("v250b8").toFile(); val target = File(dir, "big.gguf")
+        val a = com.iris.localai.data.SourceUrl(com.iris.localai.data.DownloadSource.MODELSCOPE, "https://modelscope.cn/x")
+        val b = com.iris.localai.data.SourceUrl(com.iris.localai.data.DownloadSource.HF_MIRROR, "https://hf-mirror.com/x")
+        var callsA = 0; var callsB = 0
+        // every try writes 3 bytes then stalls: 10 tries on the same source finish 30 bytes
+        ds.fetchAny(listOf(a, b), target, 30, {}, fetch = { u, t, _, _ ->
+            val part = com.iris.localai.util.HttpDownload.partFile(t)
+            if ("modelscope" in u) callsA++ else callsB++
+            part.appendBytes(ByteArray(3))
+            if (part.length() >= 30) part.renameTo(t) else throw java.net.SocketTimeoutException("Read timed out")
+        }, retryDelayMs = 0)
+        assertEquals(30L, target.length()); assertEquals(10, callsA); assertEquals(0, callsB)
+        // no progress: two tries, then the next source (as before)
+        target.delete(); callsA = 0; callsB = 0
+        ds.fetchAny(listOf(a, b), target, 5, {}, fetch = { u, t, _, _ ->
+            if ("modelscope" in u) { callsA++; throw java.net.SocketTimeoutException("Read timed out") }
+            callsB++; t.writeBytes(ByteArray(5))
+        }, retryDelayMs = 0)
+        assertEquals(2, callsA); assertEquals(1, callsB)
+        // progress every time but never done: the per-source cap stops it
+        target.delete(); com.iris.localai.util.HttpDownload.partFile(target).delete(); callsA = 0
+        try {
+            ds.fetchAny(listOf(a), target, 1_000, {}, fetch = { _, t, _, _ ->
+                callsA++; com.iris.localai.util.HttpDownload.partFile(t).appendBytes(ByteArray(1)); throw java.io.IOException("reset")
+            }, retryDelayMs = 0)
+            org.junit.Assert.fail()
+        } catch (e: java.io.IOException) { assertEquals(ds.MAX_ATTEMPTS_PER_SOURCE, callsA) }
+        assertEquals(1500L, ds.retryDelay(1500, 1)); assertEquals(30_000L, ds.retryDelay(1500, 25))
+        dir.deleteRecursively()
     }
 }

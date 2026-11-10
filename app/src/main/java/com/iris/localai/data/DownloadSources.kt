@@ -193,9 +193,14 @@ object DownloadSources {
     }
 
     /**
-     * Fetches one file trying [cands] in order (2 attempts each). The `.part` file is kept between sources,
+     * Fetches one file trying [cands] in order. The `.part` file is kept between sources,
      * so the next one resumes (HTTP Range) — every source serves the same bytes; the expected size guards
      * that. [onSwitch] gets a Chinese line when moving on. Throws with every source's failure.
+     * 2.5.0-beta8: a failed try that still grew `.part` ([HttpDownload.partFile]) resets that source's count,
+     * so a big model on a flaky phone network keeps resuming on the same source instead of failing at 30–50 %
+     * after two stalls. [attemptsPerSource] tries in a row without progress move on to the next source (as
+     * before); [maxAttemptsPerSource] failed tries in total on one source stop it either way (no endless loop).
+     * Back-off [retryDelayMs] × n, at most [MAX_RETRY_DELAY_MS]. SizeMismatch / NotFound skip the source at once.
      */
     suspend fun fetchAny(
         cands: List<SourceUrl>,
@@ -207,13 +212,18 @@ object DownloadSources {
         onSwitch: (String) -> Unit = {},
         retryDelayMs: Long = 1500,
         attemptsPerSource: Int = 2,
+        maxAttemptsPerSource: Int = MAX_ATTEMPTS_PER_SOURCE,
     ) {
         if (cands.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_cde279))
         val errors = ArrayList<String>()
+        val part = HttpDownload.partFile(target)
         for ((i, c) in cands.withIndex()) {
             onSource(c)
             var last: Throwable? = null
-            for (attempt in 0 until attemptsPerSource) {
+            var stuck = 0 // failed tries in a row without progress
+            var total = 0 // failed tries on this source
+            while (true) {
+                val before = part.length()
                 try {
                     fetch(c.url, target, expected, onBytes)
                     c.source?.let { if (lastGood != it) { lastGood = it; onLastGood(it) } }
@@ -223,7 +233,10 @@ object DownloadSources {
                 } catch (e: IOException) {
                     last = e
                     if (e is SizeMismatch || e is NotFound) break // another try on this source cannot help
-                    if (attempt < attemptsPerSource - 1) delay(retryDelayMs * (attempt + 1))
+                    total++
+                    stuck = if (part.length() > before) 0 else stuck + 1
+                    if (stuck >= attemptsPerSource || total >= maxAttemptsPerSource) break
+                    delay(retryDelay(retryDelayMs, total))
                 }
             }
             val why = describe(last ?: IOException())
@@ -232,6 +245,13 @@ object DownloadSources {
         }
         throw IOException(if (cands.size == 1) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ce1a3a, errors.single()) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_300628) + errors.joinToString("\n"))
     }
+
+    /** 2.5.0-beta8: failed tries in total on one source before giving it up, progress or not. */
+    const val MAX_ATTEMPTS_PER_SOURCE = 20
+    const val MAX_RETRY_DELAY_MS = 30_000L
+
+    /** Back-off before try n+1 after [failures] failures: base × failures, capped at [MAX_RETRY_DELAY_MS]. */
+    fun retryDelay(baseMs: Long, failures: Int): Long = (baseMs * failures).coerceIn(0L, MAX_RETRY_DELAY_MS)
 
     /** Thrown when a source serves a different-sized file (another version): skip it, keep nothing from it. */
     class SizeMismatch(msg: String) : IOException(msg)

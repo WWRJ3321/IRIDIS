@@ -2066,4 +2066,5 @@
     <string name="v250_fulllog_all_sub">关闭则只导出最近一次对话</string>
     <string name="v250_fulllog_desc">包含运行日志与对话全文：消息、回复、思考内容、工具调用的名称、参数与结果、时间和模型。内容可能涉及隐私，请只发给信任的人。</string>
     <string name="v250_fulllog_done">完整日志已导出（%1$d 个对话）</string>
+    <string name="v250_cpu_missing">此设备 CPU 缺少 %1$s 指令集，无法运行 GGUF 引擎（需骁龙 855/865 及以上）</string>
 </resources>

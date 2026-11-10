@@ -2065,4 +2065,5 @@
     <string name="v250_fulllog_all_sub">Off: only the most recent chat</string>
     <string name="v250_fulllog_desc">Contains the run log and the full chats: messages, replies, reasoning, tool call names, arguments and results, times and models. It may be private; share it only with people you trust.</string>
     <string name="v250_fulllog_done">Full logs exported (%1$d chats)</string>
+    <string name="v250_cpu_missing">This device\'s CPU lacks the %1$s instructions, so the GGUF engine cannot run (requires Snapdragon 855/865 or newer)</string>
 </resources>

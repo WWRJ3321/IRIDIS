@@ -19,7 +19,7 @@ object SdqNative {
     @Synchronized
     fun ensureLoaded(context: Context, imagegenRoot: File?): String? {
         if (loaded) return null
-        com.iris.localai.engine.llama.CpuFeatures.missingForLlama()?.let { return it }
+        com.iris.localai.engine.llama.CpuFeatures.missingForI8mm()?.let { return it }
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
         if (!ImageRules.sdqListed(arch)) return SDQ_NO_ARCH
         val noLib = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)

@@ -76,22 +76,38 @@ object ImageCatalog {
         RemoteFile(mnnUrl("merges.txt"), 524_619L, "$modelId/${sub}merges.txt"),
     )
 
-    val SD15_QNN = ImageModel(
-        id = "sd15-qnn", tier = Tier.LOW, name = "Stable Diffusion 1.5 (NPU)", backend = Backend.QNN,
-        files = tokenizerFiles("sd15-qnn", "tokenizer/") + RemoteFile(
-            url = "https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/stable_diffusion_v1_5/releases/v0.64.0/stable_diffusion_v1_5-qnn_context_binary-w8a16-qualcomm_snapdragon_8_elite_for_galaxy.zip",
-            size = 709_785_222L,
-            path = "sd15-qnn/.part/stable_diffusion_v1_5-qnn_context_binary-w8a16.zip",
-            // zip central directory read 2026-10-22 (one top-level folder, flattened away)
-            unpacked = listOf(
-                UnpackedFile("text_encoder.bin", 163_058_576L),
-                UnpackedFile("unet.bin", 880_144_176L),
-                UnpackedFile("vae.bin", 60_452_704L),
-                UnpackedFile("metadata.json", 4_134L),
+    /**
+     * AI Hub SD1.5 w8a16 for this chip. 2.5.0-beta8: 8 Elite Gen 5 (HTP v81) takes AI Hub's own
+     * snapdragon_8_elite_gen5_for_galaxy zip (central directory read 2026-11-10); every other chip keeps the
+     * 8 Elite one. Not yet checked on a real 8 Elite Gen 5.
+     */
+    fun sd15Qnn(htpArch: Int?): ImageModel {
+        val gen5 = htpArch == 81
+        return ImageModel(
+            id = "sd15-qnn", tier = Tier.LOW, name = "Stable Diffusion 1.5 (NPU)", backend = Backend.QNN,
+            files = tokenizerFiles("sd15-qnn", "tokenizer/") + RemoteFile(
+                url = if (gen5) "${AIHUB_SD15}snapdragon_8_elite_gen5_for_galaxy.zip" else "${AIHUB_SD15}snapdragon_8_elite_for_galaxy.zip",
+                size = if (gen5) 710_771_252L else 709_785_222L,
+                path = "sd15-qnn/.part/stable_diffusion_v1_5-qnn_context_binary-w8a16.zip",
+                // zip central directory read 2026-10-22 / 2026-11-10 (one top-level folder, flattened away)
+                unpacked = if (gen5) listOf(
+                    UnpackedFile("text_encoder.bin", 163_087_248L),
+                    UnpackedFile("unet.bin", 882_544_432L),
+                    UnpackedFile("vae.bin", 60_837_728L),
+                    UnpackedFile("metadata.json", 4_149L),
+                ) else listOf(
+                    UnpackedFile("text_encoder.bin", 163_058_576L),
+                    UnpackedFile("unet.bin", 880_144_176L),
+                    UnpackedFile("vae.bin", 60_452_704L),
+                    UnpackedFile("metadata.json", 4_134L),
+                ),
             ),
-        ),
-        fixedSize = 512, defaultSteps = 20, defaultCfg = 7.5f,
-    )
+            fixedSize = 512, defaultSteps = 20, defaultCfg = 7.5f,
+        )
+    }
+
+    /** For this phone's chip (unknown chip → the 8 Elite zip). */
+    val SD15_QNN: ImageModel by lazy { sd15Qnn(runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()) }
 
     /** Repo listing (api/models/…/tree/main) checked 2026-10-22; .gitattributes / README.md left out. */
     val SD15_MNN = ImageModel(
@@ -127,7 +143,7 @@ object ImageCatalog {
      * (AnythingV5_qnn2.28_8gen2.zip: Local Dream uses this one zip for 8 Gen 2 … 8 Elite Gen 5). Only UNet and
      * VAE decoder are taken from it (Range-sliced; its CLIP is an MNN CPU graph that libiris_imagegen cannot run).
      * The text encoder is AI Hub's SD1.5 QNN one (CLIP ViT-L/14; Anything V5's text encoder is the SD1.5 one
-     * to ~1e-3, checked 2026-11-01), from the zip matching the chip: 8 Gen 3 (v75) or 8 Elite (v79+).
+     * to ~1e-3, checked 2026-11-01), from the zip matching the chip: 8 Gen 3 (v75), 8 Elite Gen 5 (v81) or 8 Elite (v79 / unknown).
      * Zip central directories / local headers read 2026-11-01.
      */
     fun anythingV5(htpArch: Int?): ImageModel {
@@ -136,6 +152,9 @@ object ImageCatalog {
         val te = if (htpArch == 75)
             RemoteFile("${AIHUB_SD15}snapdragon_8gen3.zip", 124_431_624L, "$id/.part/text_encoder.slice",
                 listOf(UnpackedFile("text_encoder.bin", 163_029_904L)), zipEntryAt = 585_291_399L, crc = 0x0ec6f127L)
+        else if (htpArch == 81) // 2.5.0-beta8: 8 Elite Gen 5 (v81), local header read 2026-11-10
+            RemoteFile("${AIHUB_SD15}snapdragon_8_elite_gen5_for_galaxy.zip", 124_443_624L, "$id/.part/text_encoder.slice",
+                listOf(UnpackedFile("text_encoder.bin", 163_087_248L)), zipEntryAt = 586_326_016L, crc = 0x38d41ee9L)
         else
             RemoteFile("${AIHUB_SD15}snapdragon_8_elite_for_galaxy.zip", 124_432_784L, "$id/.part/text_encoder.slice",
                 listOf(UnpackedFile("text_encoder.bin", 163_058_576L)), zipEntryAt = 585_350_860L, crc = 0x5fd1471dL)

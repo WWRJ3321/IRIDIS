@@ -19,7 +19,7 @@ object SdNative {
     @Synchronized
     fun ensureLoaded(context: Context, downloaded: File?): String? {
         if (loaded) return null
-        com.iris.localai.engine.llama.CpuFeatures.missingForLlama()?.let { return it }
+        com.iris.localai.engine.llama.CpuFeatures.missingForI8mm()?.let { return it }
         val noLib = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)
         val src = downloaded?.takeIf { it.isFile && it.length() == ImageCatalog.SD_LIB.size } ?: return noLib
         return try {

@@ -2065,4 +2065,5 @@
     <string name="v250_fulllog_all_sub">Desactivado: solo el chat más reciente</string>
     <string name="v250_fulllog_desc">Contiene el registro de ejecución y los chats completos: mensajes, respuestas, razonamiento, nombres, argumentos y resultados de las llamadas a herramientas, horas y modelos. Puede ser privado; compártelo solo con personas de confianza.</string>
     <string name="v250_fulllog_done">Registros completos exportados (%1$d chats)</string>
+    <string name="v250_cpu_missing">La CPU de este dispositivo no tiene las instrucciones %1$s, por lo que el motor GGUF no puede ejecutarse (requiere Snapdragon 855/865 o superior)</string>
 </resources>

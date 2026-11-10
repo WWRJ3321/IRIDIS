@@ -125,7 +125,7 @@ object LlamaHtpRuntime {
     /** Cheap check (no extraction): this build ships the runtime and this chip has a supported HTP. */
     fun available(context: Context): Boolean {
         val a = arch ?: return false
-        if (CpuFeatures.missingForLlama() != null) return false
+        if (CpuFeatures.missingForI8mm() != null) return false
         return runCatching {
             val names = context.assets.list(LlamaHtpRules.ASSET_DIR)?.toSet().orEmpty()
             LlamaHtpRules.files(a).all { it in names }

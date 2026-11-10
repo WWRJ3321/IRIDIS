@@ -23,7 +23,10 @@ set(GGML_LLAMAFILE ON CACHE BOOL "" FORCE)
 # dotprod + i8mm + fp16 are present on every Snapdragon 8 Gen 1 and newer (incl. SM8750).
 # The app checks /proc/cpuinfo before loading this library, so unsupported CPUs get a clear
 # message instead of SIGILL.
-set(GGML_CPU_ARM_ARCH "armv8.2-a+dotprod+i8mm+fp16" CACHE STRING "" FORCE)
+# 2.5.0-beta8: -DIRIS_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 builds the no-i8mm libiris_llama_compat.so
+# (with -DIRIS_KLEIDIAI=OFF); the default is unchanged.
+set(IRIS_CPU_ARM_ARCH "armv8.2-a+dotprod+i8mm+fp16" CACHE STRING "GGML_CPU_ARM_ARCH for this build")
+set(GGML_CPU_ARM_ARCH "${IRIS_CPU_ARM_ARCH}" CACHE STRING "" FORCE)
 option(IRIS_KLEIDIAI "Use Arm KleidiAI micro-kernels (downloads at configure time)" ON)
 set(GGML_CPU_KLEIDIAI ${IRIS_KLEIDIAI} CACHE BOOL "" FORCE)
 

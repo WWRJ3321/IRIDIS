@@ -23,10 +23,17 @@ object LlamaNative {
     /** null when the library is usable, otherwise a user-facing reason. */
     val unavailableReason: String? by lazy { tryLoad() }
 
+    /** 2.5.0-beta8: which build was loaded ("iris_llama" or the no-i8mm "iris_llama_compat"), null before / on failure. */
+    @Volatile var loadedLibrary: String? = null
+        private set
+
     private fun tryLoad(): String? {
         CpuFeatures.missingForLlama()?.let { return it }
+        val lib = CpuFeatures.llamaLibrary() ?: return CpuFeatures.missingForLlama()
         return try {
-            System.loadLibrary("iris_llama")
+            System.loadLibrary(lib)
+            loadedLibrary = lib
+            android.util.Log.i("IrisLlama", "loaded lib$lib.so")
             null
         } catch (t: Throwable) {
             "无法加载 llama.cpp 原生库：${t.message ?: t.javaClass.simpleName}"
@@ -70,7 +77,11 @@ object LlamaNative {
     ): String
 }
 
-/** The native library is compiled for armv8.2-a+dotprod+i8mm+fp16; refuse to load it elsewhere. */
+/**
+ * CPU features from /proc/cpuinfo. 2.5.0-beta8: libiris_llama.so is built for armv8.2-a+dotprod+i8mm+fp16,
+ * libiris_llama_compat.so for armv8.2-a+dotprod+fp16 (no i8mm, KleidiAI off; Snapdragon 855/865/870/888 …).
+ * The other i8mm builds (libiris_sd / libiris_sdq / libiris_lhtp) keep the i8mm check ([missingForI8mm]).
+ */
 object CpuFeatures {
     private val features: Set<String> by lazy {
         runCatching {
@@ -82,8 +93,31 @@ object CpuFeatures {
         }.getOrDefault(emptySet())
     }
 
+    const val LIB_FULL = "iris_llama"
+    const val LIB_COMPAT = "iris_llama_compat"
+
+    /** Library for [f] (empty = cannot tell → the full build, let System.loadLibrary decide); null = neither runs. */
+    fun llamaLibraryFor(f: Set<String>): String? = when {
+        f.isEmpty() -> LIB_FULL
+        "asimddp" !in f || "asimdhp" !in f -> null
+        "i8mm" in f -> LIB_FULL
+        else -> LIB_COMPAT
+    }
+
+    fun llamaLibrary(): String? = llamaLibraryFor(features)
+
+    /** GGUF engine: dotprod + fp16 are required (i8mm only picks the faster build). */
     fun missingForLlama(): String? {
         if (features.isEmpty()) return null // cannot tell; let System.loadLibrary decide
+        val required = mapOf("asimddp" to "dotprod", "asimdhp" to "fp16")
+        val missing = required.filterKeys { it !in features }.values
+        return if (missing.isEmpty()) null
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_cpu_missing, missing.joinToString(" / "))
+    }
+
+    /** The i8mm native builds (stable-diffusion.cpp CPU/NPU, llama.cpp Hexagon): the pre-beta8 check, unchanged. */
+    fun missingForI8mm(): String? {
+        if (features.isEmpty()) return null
         val required = mapOf("asimddp" to "dotprod", "i8mm" to "i8mm", "asimdhp" to "fp16")
         val missing = required.filterKeys { it !in features }.values
         return if (missing.isEmpty()) null

@@ -16,6 +16,7 @@ import java.nio.file.Files
 
 class DeviceProbeTest {
     @Test fun socToHtpArch() {
+        assertEquals(81, DeviceProbe.htpArch("SM8850")) // 2.5.0-beta8: 8 Elite Gen 5
         assertEquals(79, DeviceProbe.htpArch("SM8750"))
         assertEquals(75, DeviceProbe.htpArch("SM8650"))
         assertEquals(73, DeviceProbe.htpArch("SM8550"))

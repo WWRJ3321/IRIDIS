@@ -2065,4 +2065,5 @@
     <string name="v250_fulllog_all_sub">बंद: केवल सबसे हाल की चैट</string>
     <string name="v250_fulllog_desc">इसमें रन लॉग और पूरी चैट होती हैं: संदेश, जवाब, सोच, टूल कॉल के नाम, आर्ग्युमेंट और नतीजे, समय और मॉडल। यह निजी हो सकता है; केवल भरोसेमंद लोगों से साझा करें।</string>
     <string name="v250_fulllog_done">पूरे लॉग एक्सपोर्ट हुए (%1$d चैट)</string>
+    <string name="v250_cpu_missing">इस डिवाइस के CPU में %1$s निर्देश नहीं हैं, इसलिए GGUF इंजन नहीं चल सकता (Snapdragon 855/865 या नया आवश्यक)</string>
 </resources>
