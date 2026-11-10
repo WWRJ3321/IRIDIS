@@ -2,6 +2,17 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.5.0 Beta9（2026-11-11，测试版，未在真机测试）
+- GGUF（llama.cpp）新增 MTP 投机解码（实验）：模型自带 MTP / NextN 层（GGUF 头 `<arch>.nextn_predict_layers` > 0，如 Qwen3-Next MTP、GLM-4.5 MoE、DeepSeek 系列 MTP 版）时，模型设置 › 性能 出现开关「MTP 加速（实验）」，默认关；打开并重新加载后，每步用模型自己的 MTP 层草拟最多 3 个 token，再由主模型一次校验，只保留与主模型采样一致的部分，输出与普通解码同分布。仅 CPU 后端（GPU/NPU 或崩溃后的安全模式自动不用）。不改 llama.cpp 版本（仍为 bee2332），JNI 链接 llama.cpp common（speculative / draft-mtp）。
+- MTP 初始化任一步失败（模型无 MTP 层、内存不能回退被拒草稿、MTP 上下文创建失败等）都自动回退普通解码，不中断加载与对话，原因写入日志（IrisResource「MTP fallback: …」）。识图回复、上下文平移后本轮会话改用普通解码，直到缓存清空。
+- 模型列表与「推荐」卡片在检测到 MTP 层时显示「MTP」标签（读取已下载文件的 GGUF 头，后台线程）。
+- 统计：生成速度仍为「输出 token 数 / 生成耗时」，MTP 时只计实际输出的 token（被接受的草稿 + 校验产生的 token，被拒草稿不计）；每次回复的草稿数、接受数与接受率写入日志，消息页速度显示不变。
+- 外挂草稿模型（Gemma 4 `-assistant`）本版未做。
+- 修复：设置 › 存储空间 把已下载的生图模型（models/imagegen）列为「未完成的导入与其他文件 › imagegen · 无法识别」并提供「删除」，误点会删掉全部生图模型。现在 imagegen 文件夹（应用内与 Download/IRIDIS 两处）不再算未完成文件，模型分类下单独显示一行「生图模型」（大小），点进「生图」页管理和删除，存储页不提供整目录删除。
+- Android 16 实况通知 / 超级岛（≤Android 15 不变）：标题改为状态「思考中」/「生成中」；正文「模型名 · N 字」（有速度时「模型名 · X tok/s」，取不到模型名就省略）；使用 Android 16 Notification.ProgressStyle 不确定进度，失败时退回 BigText（内容同正文）；大图标改为中性深灰圆底上的单色 IRIDIS 标志（不再显示启动器图标）；状态栏胶囊缩短为「思考」/「N字」；保留「停止」按钮，不着色、无自定义视图、渠道重要性不变。
+- 两个 GGUF 原生库（libiris_llama.so 正式版、libiris_llama_compat.so 兼容版）均用本地 Debian clang 19 + NDK r27c sysroot 重新编译（正式版此前由 CI 的 NDK clang 18 编译，编译器不同，需真机确认）。
+- 以上均未在真机测试。
+
 ## 2.5.0 Beta8（2026-11-10，测试版，未在真机测试）
 - 修复骁龙 8 Elite Gen 5（SM8850，Hexagon HTP v81）生图被判「此芯片不支持 NPU 生图，已跳过 QNN 探测」：生图芯片表补上 SM8850→v81。8 Elite Gen 5 上 NPU 生图模型（sdq：FLUX.2 Klein / Z-Image NPU）恢复显示并使用 v81 库；QNN 运行库按 v81 安装（QNN 2.50 含 libQnnHtpV81Stub/Skel）。
 - 8 Elite Gen 5 的 Stable Diffusion 1.5（NPU）与 Anything V5 文本编码器改用高通 AI Hub 的 8 Elite Gen 5 专用包（snapdragon_8_elite_gen5_for_galaxy，v0.64.0）；其他芯片不变。Anything V5 的 UNet/VAE 仍为 Local Dream 的通用包。此前在 8 Elite Gen 5 上下载过的 SD1.5（NPU，8 Elite 包）文件大小不符，需重新下载。均需真机确认。

@@ -146,8 +146,9 @@ class V250Test {
     @Test fun liveUpdateTexts() {
         assertEquals("正在思考…", GenerationText.liveText(0))
         assertEquals("生成中 · 12 字", GenerationText.liveText(12))
-        assertEquals("思考中", GenerationText.liveChip(0))
-        assertEquals("5 字", GenerationText.liveChip(5))
+        // 2.5.0-beta9: shorter chip
+        assertEquals("思考", GenerationText.liveChip(0))
+        assertEquals("5字", GenerationText.liveChip(5))
     }
 
     @Test fun liveUpdateNotificationFollowsPromotionRules() {
@@ -167,8 +168,8 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 246"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta8\""))
+        assertTrue(g.contains("versionCode = 247"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta9\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
@@ -177,6 +178,7 @@ class V250Test {
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta6（2026-11-10，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta7（2026-11-10，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta8（2026-11-10，测试版，未在真机测试）"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta9（2026-11-11，测试版，未在真机测试）"))
     }
 
     @Test fun newStringsInEveryLanguage() {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2.5.0-beta9: Live Update large icon — the IRIDIS mark (same paths as ic_stat_iris), monochrome on a neutral dark-grey disc. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp" android:height="64dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FF3A3A3C" android:pathData="M24,0 A24,24 0 1,1 23.99,0 Z" />
+    <group android:pivotX="24" android:pivotY="24.4" android:scaleX="0.56" android:scaleY="0.56">
+        <path android:fillColor="#FFF2F2F2" android:pathData="M23.252,4.656 A0.864,0.864 0 0,1 24.748,4.656 L33.165,19.234 A0.864,0.864 0 0,1 33.165,20.098 L24.748,34.675 A0.864,0.864 0 0,1 23.252,34.675 L14.835,20.098 A0.864,0.864 0 0,1 14.835,19.234 Z M12.519,23.244 A0.864,0.864 0 0,1 14.015,23.244 L22.296,37.584 A0.864,0.864 0 0,1 21.771,38.851 L2.181,44.100 A0.864,0.864 0 0,1 1.209,42.834 Z M46.791,42.834 A0.864,0.864 0 0,1 45.819,44.100 L26.229,38.851 A0.864,0.864 0 0,1 25.704,37.584 L33.985,23.244 A0.864,0.864 0 0,1 35.481,23.244 Z" />
+    </group>
+</vector>

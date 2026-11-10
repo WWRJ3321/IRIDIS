@@ -32,6 +32,8 @@ data class LoadConfig(
     val mmprojPath: String? = null,
     /** 2.4.5 设置「识图用 GPU」: allow the projector on an Adreno GPU (off = 2.4.4 rule, CPU there). */
     val mmprojGpu: Boolean = false,
+    /** 2.5.0-beta9, GGUF (llama.cpp): MTP draft tokens per step, 0 = normal decoding. */
+    val mtpDraft: Int = 0,
 )
 
 data class SamplingConfig(

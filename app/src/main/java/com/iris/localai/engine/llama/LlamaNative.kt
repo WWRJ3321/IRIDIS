@@ -53,6 +53,10 @@ object LlamaNative {
         handle: Long, pathUtf8: ByteArray, nCtx: Int, nThreads: Int, nBatch: Int,
         flashAttn: Boolean, nGpuLayers: Int, kvType: Int, useMmap: Boolean, listener: LoadProgressListener?,
     ): String?
+    /** 2.5.0-beta9: MTP draft tokens per step for the next [nativeLoad] (0 = off). */
+    @JvmStatic external fun nativeSetMtp(handle: Long, nDraft: Int)
+    /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>". */
+    @JvmStatic external fun nativeMtpStatus(handle: Long): String
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
     /** Forgets a pending cancel; called right before a request whose own cancel flag is clear. */

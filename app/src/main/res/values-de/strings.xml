@@ -2066,4 +2066,13 @@
     <string name="v250_fulllog_desc">Enthält das Laufprotokoll und die vollständigen Chats: Nachrichten, Antworten, Denkinhalte, Namen, Argumente und Ergebnisse der Tool-Aufrufe, Zeiten und Modelle. Kann private Inhalte enthalten; nur mit vertrauenswürdigen Personen teilen.</string>
     <string name="v250_fulllog_done">Vollständige Protokolle exportiert (%1$d Chats)</string>
     <string name="v250_cpu_missing">Der CPU dieses Geräts fehlen die %1$s-Befehle, daher kann die GGUF-Engine nicht laufen (Snapdragon 855/865 oder neuer erforderlich)</string>
+    <string name="v259_mtp">MTP-Beschleunigung (experimentell)</string>
+    <string name="v259_mtp_sub">Das Modell hat Multi-Token-Prediction-Schichten: erst entwerfen, dann prüfen. Gleiche Ausgabe, evtl. schneller. Nur CPU; gilt nach Neuladen</string>
+    <string name="v259_imagegen_models">Bildmodelle</string>
+    <string name="v259_imagegen_manage">In der Bildgenerierung verwalten und löschen</string>
+    <string name="v259_live_title_thinking">Denkt nach</string>
+    <string name="v259_live_title_generating">Generiert</string>
+    <string name="v259_live_chars">%1$d Zeichen</string>
+    <string name="v259_live_chip_thinking">Denkt</string>
+    <string name="v259_live_chip">%1$d Z.</string>
 </resources>

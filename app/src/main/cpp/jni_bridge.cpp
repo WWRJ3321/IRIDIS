@@ -141,6 +141,7 @@ IRIS_JNI(nativeLoad)(
     lp.kv_type = std::clamp<jint>(kv_type, 0, 2);
     lp.kv_q8 = lp.kv_type == 1;
     lp.use_mmap = use_mmap == JNI_TRUE;
+    lp.spec_draft = e->spec_draft_cfg();  // 2.5.0-beta9 (nativeSetMtp)
 
     jmethodID on_progress = nullptr;
     if (listener) {
@@ -164,6 +165,19 @@ IRIS_JNI(nativeLoad)(
         return utf8_to_jstring(env, err.empty() ? "unknown error" : err);
     }
     return nullptr;
+}
+
+/** 2.5.0-beta9: MTP draft tokens per step for the next nativeLoad (0 = off). */
+JNIEXPORT void JNICALL
+IRIS_JNI(nativeSetMtp)(JNIEnv *, jobject, jlong h, jint n_draft) {
+    if (auto *e = engine(h)) e->set_spec_draft(n_draft);
+}
+
+/** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>" for the loaded model. */
+JNIEXPORT jstring JNICALL
+IRIS_JNI(nativeMtpStatus)(JNIEnv *env, jobject, jlong h) {
+    auto *e = engine(h);
+    return env->NewStringUTF(e ? e->spec_status().c_str() : "off");
 }
 
 JNIEXPORT void JNICALL
@@ -318,6 +332,8 @@ static jstring run_generate(JNIEnv *env, jlong h, jobjectArray roles, jobjectArr
     j += "\"shiftedTokens\":" + std::to_string(st.shifted_tokens) + ",";
     j += "\"kvUsed\":" + std::to_string(st.kv_used) + ",";
     j += "\"liveSwitches\":" + std::to_string(st.live_switches) + ",";
+    j += "\"draftedTokens\":" + std::to_string(st.drafted_tokens) + ",";
+    j += "\"acceptedTokens\":" + std::to_string(st.accepted_tokens) + ",";
     j += "\"stop\":" + std::to_string((int) st.stop) + ",";
     j += "\"error\":\"" + json_escape(st.error) + "\"";
     j += "}";

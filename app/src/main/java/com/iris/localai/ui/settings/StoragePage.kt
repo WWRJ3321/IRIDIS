@@ -323,6 +323,8 @@ fun StoragePage(
     onOpen: (SettingsPage) -> Unit,
     onModels: () -> Unit,
     onOpenFiles: () -> Unit,
+    /** 2.5.0-beta9: 生图 screen, where image models are downloaded and deleted. */
+    onImageModels: (() -> Unit)? = null,
 ) {
     val storage: StorageViewModel = viewModel()
     val modelsVm: ModelsViewModel = viewModel()
@@ -361,7 +363,16 @@ fun StoragePage(
             CategorySection(Category.MODELS, r) { g ->
                 g.entries.forEachIndexed { i, e ->
                     if (i > 0) Divider()
-                    if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
+                    if (e.id == Ids.IMAGEGEN) {
+                        // 2.5.0-beta9: never deleted from here (it would remove every image model at once).
+                        SettingsRow(
+                            e.label,
+                            subtitle = listOfNotNull(Format.bytes(e.bytes), com.iris.localai.I18n.s(com.iris.localai.R.string.v259_imagegen_manage),
+                                if (e.external) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b044a5, com.iris.localai.data.ModelDirs.SHARED_LABEL) else null).joinToString(" · "),
+                            subtitleMaxLines = 2,
+                            onClick = onImageModels, trailing = { if (onImageModels != null) Chevron() },
+                        )
+                    } else if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
                         SettingsRow(
                             e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d07d97, sizeLine(e)),
                             onClick = { leftoverSheet = e.id == Ids.MODEL_LEFTOVER_SHARED }, trailing = { Chevron() },

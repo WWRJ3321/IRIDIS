@@ -2066,4 +2066,13 @@
     <string name="v250_fulllog_desc">Contains the run log and the full chats: messages, replies, reasoning, tool call names, arguments and results, times and models. It may be private; share it only with people you trust.</string>
     <string name="v250_fulllog_done">Full logs exported (%1$d chats)</string>
     <string name="v250_cpu_missing">This device\'s CPU lacks the %1$s instructions, so the GGUF engine cannot run (requires Snapdragon 855/865 or newer)</string>
+    <string name="v259_mtp">MTP acceleration (experimental)</string>
+    <string name="v259_mtp_sub">The model has multi-token prediction layers: draft, then verify. Same output, possibly faster. CPU only; applies after reload</string>
+    <string name="v259_imagegen_models">Image models</string>
+    <string name="v259_imagegen_manage">Manage and delete in Image generation</string>
+    <string name="v259_live_title_thinking">Thinking</string>
+    <string name="v259_live_title_generating">Generating</string>
+    <string name="v259_live_chars">%1$d chars</string>
+    <string name="v259_live_chip_thinking">Think</string>
+    <string name="v259_live_chip">%1$d ch</string>
 </resources>

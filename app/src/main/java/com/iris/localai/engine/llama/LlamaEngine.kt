@@ -42,6 +42,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     @Volatile private var loaded = false
     /** 2.2.17: a projector is loaded for the current model. */
     @Volatile private var visionLoaded = false
+    /** 2.5.0-beta9: MTP speculative decoding is on for the loaded model (native status "active …"). */
+    @Volatile private var mtpActive = false
     @Volatile private var active: Request? = null
 
     // ---- 1.7.2: mid-reply resource-tier switch (CPU backend only) ----
@@ -82,6 +84,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             val gpu = config.backend == com.iris.localai.engine.Backend.GPU || npu
             val path = model.path.toByteArray(Charsets.UTF_8)
             val listener = LoadProgressListener { p -> onProgress(p); true }
+            // 2.5.0-beta9: MTP is set up inside the load; any failure there falls back to normal decoding.
+            jni.setMtp(h, if (npu) 0 else config.mtpDraft.coerceIn(0, 8))
             val err = jni.load(
                 h, path, config.contextLength, config.threads, config.batchSize.coerceIn(32, 2048),
                 config.flashAttention, if (gpu) GPU_ALL_LAYERS else 0,
@@ -89,6 +93,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             )
             if (err != null) throw EngineException(err)
             loaded = true
+            val mtp = if (config.mtpDraft > 0 && !npu) jni.mtpStatus(h) else "off"
+            mtpActive = MtpStats.active(mtp)
+            if (config.mtpDraft > 0) android.util.Log.i(LOG_TAG, "MTP ${model.fileName}: $mtp")
             val accel = if (npu) com.iris.localai.engine.Backend.NPU else com.iris.localai.engine.Backend.GPU
             activeBackend = if (gpu) accel else com.iris.localai.engine.Backend.CPU
             val m = runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }
@@ -130,7 +137,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                     m.gpu.isBlank() -> "CPU · llama.cpp"
                     npu -> "NPU · ${m.gpu} · llama.cpp Hexagon"
                     else -> "GPU · ${m.gpu} · OpenCL"
-                } + if (vision && vm.vision) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fba350) + (if (vm.visionGpu) "GPU" else "CPU") else "",
+                } + (if (mtpActive) " · MTP" else "") + if (vision && vm.vision) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fba350) + (if (vm.visionGpu) "GPU" else "CPU") else "",
                 activeBackend = if (m.gpu.isNotBlank()) accel else com.iris.localai.engine.Backend.CPU,
             )
         }
@@ -223,6 +230,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             shiftedTokens = s.shiftedTokens,
             kvUsed = s.kvUsed,
         )
+        MtpStats.logLine(s.draftedTokens, s.acceptedTokens, s.generatedTokens, s.generateUs)?.let { android.util.Log.i(LOG_TAG, it) }
         if (s.liveSwitches > 0) android.util.Log.i(LOG_TAG, "reply finished with ${s.liveSwitches} live switch(es) applied by the decoder")
         val error = s.error.ifBlank { null } ?: when (reason) {
             StopReason.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c95271)
@@ -326,6 +334,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         val shiftedTokens: Int = 0,
         val kvUsed: Int = 0,
         val liveSwitches: Int = 0,
+        /** 2.5.0-beta9: MTP draft tokens verified / accepted in this reply (0 without MTP). */
+        val draftedTokens: Int = 0,
+        val acceptedTokens: Int = 0,
         val stop: Int = 4,
         val error: String = "",
     )

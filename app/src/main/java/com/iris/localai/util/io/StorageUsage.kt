@@ -31,6 +31,8 @@ object StorageUsage {
         const val MODEL_PREFIX = "model:"
         const val MODEL_LEFTOVER = "model:leftover"
         const val MODEL_LEFTOVER_SHARED = "model:leftover-shared"
+        /** 2.5.0-beta9: downloaded image-generation models (models/imagegen), never a leftover. */
+        const val IMAGEGEN = "model:imagegen"
         const val CACHE_PREFIX = "cache:"
         const val CACHE_ORPHAN = "cache:orphan"
         const val CACHE_OPENCL = "cache:opencl"
@@ -99,6 +101,9 @@ object StorageUsage {
         val name: String get() = file.name
     }
 
+    /** 2.5.0-beta9: image-generation models folder inside the models dirs (= last part of ImageGenFiles.MODELS_SUB). */
+    const val IMAGEGEN_DIR = "imagegen"
+
     private val PARTIAL_SUFFIXES = listOf(".part", ".tmp", ".temp", ".download", ".crdownload", ".partial")
 
     /** Interrupted download / import: `.part` (ModelRepository / MnnHub / HttpDownload) or another temp name. */
@@ -136,7 +141,8 @@ object StorageUsage {
         if (dir == null) return emptyList()
         val owned = pairedIn(dir, models).values.flatten().map { canon(it) }.toSet()
         return dir.listFiles().orEmpty()
-            .filter { f -> canon(f) !in owned && models.none { isUnder(it.path, f) || isUnder(f, it.path) } && f.name != ".nomedia" }
+            .filter { f -> canon(f) !in owned && models.none { isUnder(it.path, f) || isUnder(f, it.path) } && f.name != ".nomedia" &&
+                !(f.name == IMAGEGEN_DIR && f.isDirectory) }  // 2.5.0-beta9: 生图模型 have their own entry
             .map { f ->
                 val kind = when {
                     isPartialName(f.name) -> LeftoverKind.PARTIAL
@@ -288,10 +294,16 @@ object StorageUsage {
             val own = leftovers(p.modelsDir, models, protectedParts, shared = false)
             val shr = leftovers(sharedDir, models, protectedParts, shared = true)
             leftoverList += own; leftoverList += shr
+            // 2.5.0-beta9: image models (models/imagegen, private and shared) as one entry; managed in 生图.
+            val imgDirs = listOfNotNull(File(p.modelsDir, IMAGEGEN_DIR), sharedDir?.let { File(it, IMAGEGEN_DIR) }).filter { it.isDirectory }
+            val img = imgDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }
+            val imgCount = imgDirs.sumOf { d -> d.listFiles().orEmpty().count { it.isDirectory } }
             val leftover = own.sumOf { it.bytes }
             val sharedLeftover = shr.sumOf { it.bytes }
             groups += Group(Category.MODELS, list.sortedByDescending { it.bytes } +
                 listOfNotNull(
+                    Entry(Ids.IMAGEGEN, com.iris.localai.I18n.s(com.iris.localai.R.string.v259_imagegen_models), img.bytes, img.files, count = imgCount,
+                        external = imgDirs.isNotEmpty() && imgDirs.all { outside(it) }).takeIf { img.files > 0 },
                     Entry(Ids.MODEL_LEFTOVER, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f70b9), leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
                     Entry(Ids.MODEL_LEFTOVER_SHARED, com.iris.localai.I18n.s(com.iris.localai.R.string.util_45d2eb), sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
                 ))

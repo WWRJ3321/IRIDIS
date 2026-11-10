@@ -33,6 +33,8 @@ object GenerationMonitor {
         val stopped: Boolean = false,
         /** 2.5.0: when the reply started — the Live Update shows a running timer from here. */
         val startedAt: Long = System.currentTimeMillis(),
+        /** 2.5.0-beta9: decode speed when an engine reports one mid-reply (0 = unknown → 「N 字」). */
+        val tokensPerSecond: Float = 0f,
     )
 
     private val _job = MutableStateFlow<Job?>(null)
@@ -157,10 +159,16 @@ class GenerationService : LifecycleService() {
                 .build()
         }
         // 2.5.0 Android 16 Live Update (super island / status-bar chip on HyperOS 3 and Pixel):
-        // ongoing + contentTitle + standard BigText style + chronometer, not colorized, no custom
-        // views, and the promotion request flag. The system decides whether it is promoted.
-        val text = GenerationText.liveText(chars)
-        val n = b.setContentTitle(LiveUpdate.title(j?.title))
+        // ongoing + contentTitle + standard style + chronometer, not colorized, no custom views, and
+        // the promotion request flag. The system decides whether it is promoted.
+        // 2.5.0-beta9: title = state (思考中 / 生成中), body = model · N 字 (or tok/s), clean grey large icon,
+        // indeterminate Notification.ProgressStyle (BigText with the same body when that fails).
+        val modelName = runCatching {
+            ((applicationContext as com.iris.localai.IrisApp).container.engine.state.value as? com.iris.localai.engine.EngineState.Ready)?.model?.displayName
+        }.getOrNull()
+        val text = GenerationText.liveBody(modelName, chars, j?.tokensPerSecond ?: 0f)
+        runCatching { liveLargeIcon() }.getOrNull()?.let { b.setLargeIcon(it) }
+        val n = b.setContentTitle(GenerationText.liveTitle(chars))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setColorized(false)
@@ -170,7 +178,21 @@ class GenerationService : LifecycleService() {
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .addExtras(android.os.Bundle().apply { putBoolean(LiveUpdate.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
             .build()
-        return runCatching { LiveUpdate.withChip(this, n, GenerationText.liveChip(chars)) }.getOrDefault(n)
+        return runCatching { LiveUpdate.promote(this, n, GenerationText.liveChip(chars)) }.getOrNull()
+            ?: runCatching { LiveUpdate.withChip(this, n, GenerationText.liveChip(chars)) }.getOrDefault(n)
+    }
+
+    /** 2.5.0-beta9: monochrome IRIDIS mark on a neutral dark-grey disc (drawable/ic_live_large), rendered once. */
+    private var largeIcon: android.graphics.Bitmap? = null
+    private fun liveLargeIcon(): android.graphics.Bitmap? {
+        largeIcon?.let { return it }
+        val d = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_live_large) ?: return null
+        val px = (64 * resources.displayMetrics.density).toInt().coerceIn(96, 256)
+        return androidx.core.graphics.drawable.DrawableCompat.wrap(d).let { w ->
+            android.graphics.Bitmap.createBitmap(px, px, android.graphics.Bitmap.Config.ARGB_8888).also { bmp ->
+                w.setBounds(0, 0, px, px); w.draw(android.graphics.Canvas(bmp))
+            }
+        }.also { largeIcon = it }
     }
 
     private fun done(j: GenerationMonitor.Job): Notification =
@@ -223,13 +245,25 @@ object LiveUpdate {
 
     fun supported(sdk: Int): Boolean = sdk >= MIN_SDK
 
-    /** contentTitle = the conversation name (promotion requires a title); fallback app name. */
+    /** 2.4.x/2.5.0: conversation name (promotion requires a title); fallback app name. 2.5.0-beta9: the title is the state (GenerationText.liveTitle); kept for callers/tests. */
     fun title(conversation: String?): String = conversation?.trim()?.takeIf { it.isNotEmpty() }?.take(40) ?: "IRIDIS"
 
     /** Short status-bar chip text (Notification.Builder#setShortCriticalText, API 36). */
     @androidx.annotation.RequiresApi(36)
     fun withChip(context: Context, n: Notification, chip: String): Notification =
         Notification.Builder.recoverBuilder(context, n).setShortCriticalText(chip).build()
+
+    /**
+     * 2.5.0-beta9: platform builder (NotificationCompat has no ProgressStyle): short chip + Android 16
+     * indeterminate [Notification.ProgressStyle] in place of BigText. Throws on any failure; the caller
+     * then keeps [withChip] (BigText) or the plain notification.
+     */
+    @androidx.annotation.RequiresApi(36)
+    fun promote(context: Context, n: Notification, chip: String): Notification =
+        Notification.Builder.recoverBuilder(context, n)
+            .setShortCriticalText(chip)
+            .setStyle(Notification.ProgressStyle().setProgressIndeterminate(true))
+            .build()
 }
 
 /** Notification wording (unit-tested). */
@@ -239,9 +273,29 @@ object GenerationText {
         if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_thinking)
         else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_generating, chars)
 
+    /** Status-bar chip, kept short: 「思考」 / 「N字」 (2.5.0-beta9). */
     fun liveChip(chars: Int): String =
-        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_chip_thinking)
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_chip, chars)
+        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chip_thinking)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chip, chars)
+
+    /** 2.5.0-beta9 Live Update title = state: 「思考中」 before the first character, then 「生成中」. */
+    fun liveTitle(chars: Int): String =
+        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_title_thinking)
+        else com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_title_generating)
+
+    /**
+     * 2.5.0-beta9 Live Update body: 「模型名 · N 字」, or 「模型名 · X tok/s」 when a speed is known; the model
+     * name is left out when unknown. Nothing to say yet (no model, no characters) → 「正在思考…」.
+     */
+    fun liveBody(model: String?, chars: Int, tokensPerSecond: Float = 0f): String {
+        val name = model?.trim()?.takeIf { it.isNotEmpty() }?.take(32)
+        val tail = when {
+            tokensPerSecond > 0f -> String.format(java.util.Locale.US, "%.1f tok/s", tokensPerSecond)
+            chars > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chars, chars)
+            else -> null
+        }
+        return listOfNotNull(name, tail).joinToString(" · ").ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_thinking) }
+    }
 
     fun progress(title: String?, chars: Int): String {
         val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""

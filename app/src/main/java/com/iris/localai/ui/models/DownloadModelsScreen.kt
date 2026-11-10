@@ -183,6 +183,9 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
 
     val loadedPath = (engine as? EngineState.Ready)?.model?.path
     fun local(item: RecommendedCatalog.Item): LocalModel? = vm.localFor(item, models)
+    /** 2.5.0-beta9: the installed GGUF behind a card (its header decides the 「MTP」 badge). */
+    fun ggufPath(item: RecommendedCatalog.Item): String? =
+        if (item.kind is RecommendedCatalog.Kind.Gguf) local(item)?.takeIf { it.format == com.iris.localai.data.ModelFormat.GGUF }?.path else null
     fun status(item: RecommendedCatalog.Item): RecStatus = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Hub, is RecommendedCatalog.Kind.Gguf -> {
             val l = local(item)
@@ -312,7 +315,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 forDevice?.let { rec ->
                     item(key = "for-device-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_title)) }
                     item(key = "for-device", contentType = "rec") {
-                        RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id })
+                        RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id }, mtpPath = ggufPath(rec))
                     }
                     item(key = "for-device-why", contentType = "hint") {
                         val dr = com.iris.localai.data.DeviceRecommend
@@ -338,7 +341,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     item(key = "sec-" + sec.name, contentType = "title") { SectionTitle(sec.title) }
                     items(shown, key = { it.id }, contentType = { "rec" }) { item ->
                         val s = status(item)
-                        RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id })
+                        RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item))
                     }
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
                         item(key = "more-" + sec.name, contentType = "more") {
@@ -385,7 +388,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     detailId?.let(RecommendedCatalog::byId)?.let { item ->
         val l = local(item)
         RecDetailSheet(
-            item, status(item), size(item), ramHint(item), actions,
+            item, status(item), size(item), ramHint(item), actions, mtpPath = ggufPath(item),
             onTry = item.demoPrompt?.takeIf { l != null }?.let { p -> {
                 if (l != null && l.path != loadedPath) vm.load(l)
                 detailId = null
@@ -434,10 +437,17 @@ private fun Badge(text: String, tone: Color? = null) {
 private fun ramTone(hint: String): Color = if (hint == com.iris.localai.I18n.s(com.iris.localai.R.string.models_60a35c)) Iris.colors.success else Iris.colors.warning
 
 @Composable
-private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?) {
+private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, mtpPath: String? = null) {
+    // 2.5.0-beta9: 「MTP」 only when the downloaded GGUF's header has MTP layers (read on IO).
+    val mtp by androidx.compose.runtime.produceState(false, mtpPath) {
+        value = mtpPath != null && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.iris.localai.engine.GgufQuant.of(java.io.File(mtpPath))?.mtp == true
+        }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
         if (size > 0) Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(size))
         Badge(item.engine.label)
+        if (mtp) Badge(com.iris.localai.engine.MtpTag.LABEL)
         ramHint?.let { Badge(it, ramTone(it)) }
     }
 }
@@ -455,7 +465,7 @@ private fun PrimaryButton(item: RecommendedCatalog.Item, s: RecStatus, actions: 
 }
 
 @Composable
-private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ramHint: String?, actions: RecActions, onOpen: () -> Unit) {
+private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ramHint: String?, actions: RecActions, onOpen: () -> Unit, mtpPath: String? = null) {
     val c = Iris.colors
     CardShell(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -463,7 +473,7 @@ private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ram
                 Text(item.name, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(item.purpose, style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.height(IrisDimens.space4))
-                Badges(item, size, ramHint)
+                Badges(item, size, ramHint, mtpPath)
             }
             if (s !is RecStatus.Failed) {
                 Spacer(Modifier.width(IrisDimens.space12))
@@ -531,7 +541,7 @@ private fun OnlineCard(h: GgufSearch.RepoHit, ram: Long, onOpen: () -> Unit) {
 @Composable
 private fun RecDetailSheet(
     item: RecommendedCatalog.Item, s: RecStatus, size: Long, ramHint: String?, actions: RecActions,
-    onTry: (() -> Unit)?, onDismiss: () -> Unit,
+    onTry: (() -> Unit)?, onDismiss: () -> Unit, mtpPath: String? = null,
 ) {
     val c = Iris.colors
     var withVision by rememberSaveable(item.id) { mutableStateOf(false) }
@@ -539,7 +549,7 @@ private fun RecDetailSheet(
         SheetHeader(item.name)
         Column(Modifier.padding(horizontal = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
             Text(item.purpose, style = IrisType.body, color = c.textSecondary)
-            Badges(item, size, ramHint)
+            Badges(item, size, ramHint, mtpPath)
         }
         Spacer(Modifier.height(IrisDimens.space8))
         ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47), DownloadText.filesLine(item))

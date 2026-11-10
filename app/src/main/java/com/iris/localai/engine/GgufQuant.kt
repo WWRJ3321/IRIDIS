@@ -22,7 +22,12 @@ object GgufQuant {
     /** GGML_TYPE_COUNT of the bundled llama.cpp (785322d). */
     const val TYPE_COUNT = 44
 
-    data class Info(val types: Set<Int>) {
+    /**
+     * 2.5.0-beta9: [arch] = general.architecture, [nextn] = `<arch>.nextn_predict_layers` (MTP / NextN
+     * heads; 0 when absent). A model with nextn > 0 can use MTP speculative decoding.
+     */
+    data class Info(val types: Set<Int>, val arch: String = "", val nextn: Int = 0) {
+        val mtp: Boolean get() = nextn > 0
         val lowBit: Boolean get() = Q1_0 in types || Q2_0 in types
         val unknown: Set<Int> get() = types.filterTo(HashSet()) { it >= TYPE_COUNT || it < 0 }
         val prism: Boolean get() = PQ2_0 in types || PTQ1_0 in types
@@ -58,7 +63,31 @@ object GgufQuant {
         if (u32() < 2) return null
         val tensors = u64()
         val kvs = u64()
-        for (i in 0 until kvs) { skipN(u64()); skip(u32()) }
+        var arch = ""
+        val nextnByArch = HashMap<String, Int>()
+        for (i in 0 until kvs) {
+            val keyLen = u64()
+            if (keyLen !in 1..256) { skipN(keyLen); skip(u32()); continue }
+            val key = ByteArray(keyLen.toInt()).also { inp.readFully(it) }.toString(Charsets.UTF_8)
+            val type = u32()
+            when {
+                key == "general.architecture" && type == 8L -> {
+                    val n = u64()
+                    if (n in 0..256) arch = ByteArray(n.toInt()).also { inp.readFully(it) }.toString(Charsets.UTF_8) else skipN(n)
+                }
+                key.endsWith(".nextn_predict_layers") && type in 0L..12L && type != 8L && type != 9L -> {
+                    val v = when (type.toInt()) {
+                        0, 1, 7 -> inp.readUnsignedByte().toLong()
+                        2, 3 -> (java.lang.Short.reverseBytes(inp.readShort()).toInt() and 0xffff).toLong()
+                        4, 5 -> u32()
+                        10, 11 -> u64()
+                        else -> { skip(type); 0L }
+                    }
+                    nextnByArch[key.removeSuffix(".nextn_predict_layers")] = v.coerceIn(0, 64).toInt()
+                }
+                else -> skip(type)
+            }
+        }
         val types = HashSet<Int>()
         for (i in 0 until tensors) {
             skipN(u64())               // name
@@ -67,8 +96,13 @@ object GgufQuant {
             types += u32().toInt()     // ggml type
             skipN(8)                   // offset
         }
-        Info(types)
+        Info(types, arch, nextnByArch[arch] ?: 0)
     }
+
+    /** 2.5.0-beta9: MTP draft tokens per step when MTP 加速 is on and the model has MTP layers (else 0). */
+    const val MTP_DRAFT = 3
+    fun mtpDraft(enabled: Boolean, info: Info?, backend: Backend): Int =
+        if (enabled && info?.mtp == true && backend == Backend.CPU) MTP_DRAFT else 0
 
     /** The backend chain for a model with [info]: low-bit types never try the NPU (CPU is kept as the floor). */
     fun chainFor(chain: List<Backend>, info: Info?): List<Backend> {

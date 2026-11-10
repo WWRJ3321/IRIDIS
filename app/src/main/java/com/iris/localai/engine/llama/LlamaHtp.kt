@@ -28,6 +28,10 @@ interface LlamaJni {
     fun loadMmproj(h: Long, path: ByteArray, preferGpu: Boolean): String? = "内置 NPU 运行库不支持 mmproj 识图"
     fun generateVision(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray,
                        images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?): String = generate(h, roles, contents, floats, ints, sink)
+    /** 2.5.0-beta9: MTP draft tokens for the next [load] (0 = off). Only libiris_llama has it. */
+    fun setMtp(h: Long, nDraft: Int) {}
+    /** 2.5.0-beta9: "off" | "active n=…" | "fallback: …" for the loaded model. */
+    fun mtpStatus(h: Long): String = "off"
 }
 
 object LlamaJnis {
@@ -49,6 +53,9 @@ object LlamaJnis {
         override fun generateVision(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray,
                                     images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?) =
             LlamaNative.nativeGenerateVision(h, roles, contents, floats, ints, images, imageMsg, sink)
+        // An older library without these symbols simply keeps normal decoding.
+        override fun setMtp(h: Long, nDraft: Int) { runCatching { LlamaNative.nativeSetMtp(h, nDraft) } }
+        override fun mtpStatus(h: Long): String = runCatching { LlamaNative.nativeMtpStatus(h) }.getOrDefault("off")
     }
     val htp: LlamaJni = object : LlamaJni {
         override fun create() = LlamaHtpNative.nativeCreate()

@@ -47,6 +47,8 @@ data class ModelOverrides(
     val engine: String? = null,
     /** 2.2.17, GGUF: vision projector file name in the model's folder; "" = 不使用; null = 自动配对. */
     val mmproj: String? = null,
+    /** 2.5.0-beta9, GGUF with MTP layers: MTP 加速（实验）. null = off (default). */
+    val mtp: Boolean? = null,
 ) {
     val isEmpty: Boolean get() = this == ModelOverrides()
 
@@ -70,7 +72,7 @@ data class ModelOverrides(
     )
 
     /** Keys whose change only takes effect after reloading the model. */
-    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj)
+    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj, mtp)
 }
 
 /** Global defaults + one model's overrides, fully resolved. */
@@ -100,6 +102,8 @@ data class EffectiveModelConfig(
     val engine: String = com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
     /** 2.2.17: [ModelOverrides.mmproj] as is (null = 自动). */
     val mmproj: String? = null,
+    /** 2.5.0-beta9: MTP speculative decoding requested (only used when the GGUF has MTP layers). */
+    val mtp: Boolean = false,
 ) {
     companion object {
         fun resolve(s: AppSettings, format: ModelFormat?, o: ModelOverrides?): EffectiveModelConfig {
@@ -130,6 +134,7 @@ data class EffectiveModelConfig(
                     ?: com.iris.localai.engine.geniex.GenieX.parseEngine(s.ggufEngine)
                     ?: com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
                 mmproj = m.mmproj,
+                mtp = m.mtp ?: false,
             )
         }
     }

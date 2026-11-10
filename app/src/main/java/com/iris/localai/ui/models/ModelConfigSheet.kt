@@ -107,6 +107,12 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     }
     val mmprojChoices = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.candidates(java.io.File(model.path).name, mmprojSiblings) }
     val mmprojAuto = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, mmprojSiblings) }
+    // 2.5.0-beta9: MTP layers read from the GGUF header on IO; the switch only appears when present.
+    val hasMtp by androidx.compose.runtime.produceState(false, model.path) {
+        value = model.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.mtp == true
+        }
+    }
     val c = Iris.colors
 
     IrisSheet(onDismiss = onDismiss) {
@@ -310,6 +316,11 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                             } + com.iris.localai.I18n.s(com.iris.localai.R.string.models_875dd5),
                             onClick = { pickMmproj = true },
                         )
+                    }
+                    if (hasMtp) {
+                        Divider()
+                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp_sub),
+                            onChange = { on -> set { it.copy(mtp = on) } }, onReset = { set { it.copy(mtp = null) } })
                     }
                     Divider()
                     OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), eff.warmup, o.warmup == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27),

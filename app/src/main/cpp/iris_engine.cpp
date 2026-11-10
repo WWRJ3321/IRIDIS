@@ -21,6 +21,11 @@
 #include <sys/system_properties.h>
 #endif
 #include "llama.h"
+#ifdef IRIS_SPEC
+// 2.5.0-beta9: MTP self-speculative decoding through llama.cpp common/speculative (draft-mtp).
+#include "common.h"
+#include "speculative.h"
+#endif
 #ifdef IRIS_MTMD
 #include "mtmd.h"
 #include "mtmd-helper.h"
@@ -341,7 +346,25 @@ void Engine::free_mmproj() {
     mtmd_gpu_ = false;
 }
 
+void Engine::free_spec() {
+#ifdef IRIS_SPEC
+    if (spec_) common_speculative_free(spec_);
+#endif
+    spec_ = nullptr;
+    if (ctx_dft_) llama_free(ctx_dft_);
+    ctx_dft_ = nullptr;
+    spec_n_ = 0;
+    spec_sync_ = false;
+}
+
+std::string Engine::spec_status() const {
+    std::lock_guard<std::mutex> lk(mu_);
+    return spec_status_;
+}
+
 void Engine::free_all() {
+    free_spec();
+    spec_status_ = "off";
     free_mmproj();
     mmproj_path_.clear();
     if (ctx_) llama_free(ctx_);
@@ -391,6 +414,12 @@ bool Engine::load(const std::string &path, const LoadParams &params,
     mp.load_mode = params.use_mmap ? LLAMA_LOAD_MODE_MMAP : LLAMA_LOAD_MODE_NONE;
     mp.progress_callback = progress_trampoline;
     mp.progress_callback_user_data = &pctx;
+#ifdef IRIS_SPEC
+    // 2.5.0-beta9: the NextN / MTP tensors are skipped unless asked for; only then can a draft
+    // context be built on this model. Off (the default) loads exactly as before.
+    spec_req_ = params.spec_draft;
+    mp.load_mtp = params.spec_draft > 0;
+#endif
 
     model_ = llama_model_load_from_file(path.c_str(), mp);
     if (!model_) {
@@ -423,6 +452,7 @@ bool Engine::load(const std::string &path, const LoadParams &params,
         return false;
     }
     n_ctx_ = (int32_t) llama_n_ctx(ctx_);
+    init_spec(params);
 
     const char *tmpl = llama_model_chat_template(model_, nullptr);
     template_ = tmpl ? tmpl : "";
@@ -459,8 +489,112 @@ bool Engine::create_context(const LoadParams &params, int32_t n_ctx, int32_t thr
     cp.abort_callback = &Engine::abort_cb;
     cp.abort_callback_data = this;
     cp.no_perf = true;
+#ifdef IRIS_SPEC
+    // 2.5.0-beta9: recurrent / hybrid models (e.g. Qwen3-Next) can only roll back rejected draft
+    // tokens through recurrent-state snapshots, one per draft position.
+    if (spec_req_ > 0 && (llama_model_is_recurrent(model_) || llama_model_is_hybrid(model_)))
+        cp.n_rs_seq = (uint32_t) spec_req_;
+#endif
     ctx_ = llama_init_from_model(model_, cp);
     return ctx_ != nullptr;
+}
+
+// 2.5.0-beta9: MTP self-speculative decoding. Every step on failure records the reason and leaves
+// the engine on normal decoding; nothing here can fail the load.
+void Engine::init_spec(const LoadParams &params) {
+    free_spec();
+    spec_status_ = "off";
+    if (params.spec_draft <= 0) return;
+#ifndef IRIS_SPEC
+    spec_status_ = "fallback: speculative decoding not built in";
+#else
+    const int32_t n_draft = std::clamp(params.spec_draft, 1, 8);
+    auto fail = [&](const char *why) {
+        free_spec();
+        llama_memory_clear(llama_get_memory(ctx_), true);
+        spec_status_ = std::string("fallback: ") + why;
+        resource_log("MTP %s", spec_status_.c_str());
+    };
+    if (llama_model_n_layer_nextn(model_) <= 0) { fail("model has no MTP layers"); return; }
+    // Rejected drafts are removed from the target memory: needs partial removal (attention) or
+    // recurrent snapshots for at least n_draft tokens.
+    const auto rm_tgt = common_context_can_seq_rm(ctx_);
+    if (rm_tgt == COMMON_CONTEXT_SEQ_RM_TYPE_RS) {
+        if ((int32_t) llama_n_rs_seq(ctx_) < n_draft) { fail("not enough recurrent snapshots"); return; }
+    } else if (rm_tgt != COMMON_CONTEXT_SEQ_RM_TYPE_PART) {
+        fail("target memory cannot drop rejected drafts"); return;
+    }
+    llama_context_params cp = llama_context_default_params();
+    cp.ctx_type = LLAMA_CONTEXT_TYPE_MTP;
+    cp.n_ctx = llama_n_ctx(ctx_);
+    cp.n_batch = (uint32_t) n_batch_;
+    cp.n_ubatch = (uint32_t) std::min(n_batch_, 512);
+    cp.n_seq_max = 1;
+    cp.n_rs_seq = 0;
+    cp.n_threads = threads_;
+    cp.n_threads_batch = threads_;
+    cp.flash_attn_type = params.flash_attn ? LLAMA_FLASH_ATTN_TYPE_AUTO : LLAMA_FLASH_ATTN_TYPE_DISABLED;
+    cp.abort_callback = &Engine::abort_cb;
+    cp.abort_callback_data = this;
+    cp.no_perf = true;
+    cp.ctx_other = ctx_;
+    ctx_dft_ = llama_init_from_model(model_, cp);
+    if (!ctx_dft_) { fail("cannot create the MTP context"); return; }
+    if (llama_model_n_embd_out(llama_get_model(ctx_dft_)) != llama_model_n_embd_out(model_)) { fail("MTP width mismatch"); return; }
+    if (common_context_can_seq_rm(ctx_dft_) != COMMON_CONTEXT_SEQ_RM_TYPE_PART) { fail("MTP memory cannot drop drafts"); return; }
+    common_params_speculative sp;
+    sp.types = {COMMON_SPECULATIVE_TYPE_DRAFT_MTP};
+    sp.draft.n_max = n_draft;
+    sp.draft.n_min = 0;
+    sp.draft.backend_sampling = false;
+    sp.draft.ctx_tgt = ctx_;
+    sp.draft.ctx_dft = ctx_dft_;
+    try {
+        spec_ = common_speculative_init(sp, 1);
+    } catch (...) {
+        spec_ = nullptr;
+    }
+    if (!spec_) { fail("speculative init failed"); return; }
+    spec_n_ = std::max(1, (int32_t) common_speculative_n_max(spec_));
+    llama_memory_clear(llama_get_memory(ctx_), true);
+    llama_memory_clear(llama_get_memory(ctx_dft_), true);
+    kv_tokens_.clear();
+    spec_sync_ = true;
+    spec_status_ = "active n=" + std::to_string(spec_n_);
+    resource_log("MTP %s (nextn layers=%d, rs_seq=%u)", spec_status_.c_str(),
+                 (int) llama_model_n_layer_nextn(model_), (unsigned) llama_n_rs_seq(ctx_));
+#endif
+}
+
+// Drops draft-context memory from position `from` on (whole memory when from <= 0).
+void Engine::spec_mem_rm(int32_t from) {
+    if (!ctx_dft_) return;
+    llama_memory_t m = llama_get_memory(ctx_dft_);
+    if (!m) return;
+    if (from <= 0 || !llama_memory_seq_rm(m, 0, from, -1)) {
+        llama_memory_clear(m, true);
+        if (from > 0) spec_sync_ = false;
+    }
+}
+
+// Decodes tokens[from, from+n) on the target at positions kv_tokens_.size()... and feeds the same
+// batch to the speculative state. Output (logits) only for the last entry when `last_out`.
+int32_t Engine::spec_decode(const std::vector<int32_t> &tokens, size_t from, size_t n, bool last_out) {
+#ifdef IRIS_SPEC
+    common_batch b(ctx_);
+    const llama_pos p0 = (llama_pos) kv_tokens_.size();
+    for (size_t k = 0; k < n; ++k) b.add(tokens[from + k], p0 + (llama_pos) k, 0, last_out && k + 1 == n);
+    const int32_t rc = llama_process(ctx_, LLAMA_PROCESS_TYPE_DECODE, b.get());
+    if (rc != 0) return rc;
+    if (!common_speculative_process(spec_, b)) {
+        spec_sync_ = false;
+        resource_log("MTP process failed: back to normal decoding");
+    }
+    return 0;
+#else
+    (void) tokens; (void) from; (void) n; (void) last_out;
+    return -1;
+#endif
 }
 
 void Engine::unload() {
@@ -480,6 +614,7 @@ void Engine::set_threads(int32_t n_threads) {
 void Engine::apply_pending_threads() {
     const int32_t n = pending_threads_.exchange(0, std::memory_order_acq_rel);
     if (n > 0 && ctx_) llama_set_n_threads(ctx_, n, n);
+    if (n > 0 && ctx_dft_) llama_set_n_threads(ctx_dft_, n, n);
 }
 
 void Engine::request_live_policy(int32_t n_threads, const std::vector<int32_t> &cpus, int32_t nice) {
@@ -508,6 +643,7 @@ bool Engine::apply_pending_policy(int32_t token_index) {
     if (!ctx_ || p.threads <= 0) return false;
     pending_threads_.store(0, std::memory_order_release);  // superseded by this request
     llama_set_n_threads(ctx_, p.threads, p.threads);
+    if (ctx_dft_) llama_set_n_threads(ctx_dft_, p.threads, p.threads);
     const int32_t n_now = llama_n_threads(ctx_);
 #if defined(__linux__)
     cpu_set_t set;
@@ -578,6 +714,7 @@ void Engine::reset() {
     std::lock_guard<std::mutex> lk(mu_);
     if (ctx_) llama_memory_clear(llama_get_memory(ctx_), true);
     kv_tokens_.clear();
+    if (spec_) { spec_mem_rm(0); spec_sync_ = true; }
 }
 
 ModelMeta Engine::meta() const {
@@ -664,6 +801,10 @@ void Engine::resync_after_failure() {
         llama_memory_clear(mem, true);
         kv_tokens_.clear();
     }
+    if (spec_) {
+        spec_mem_rm((int32_t) kv_tokens_.size());
+        if (kv_tokens_.empty()) spec_sync_ = true;
+    }
 }
 
 bool Engine::decode_tokens(const std::vector<int32_t> &tokens, size_t from, GenerateStats &st) {
@@ -674,8 +815,14 @@ bool Engine::decode_tokens(const std::vector<int32_t> &tokens, size_t from, Gene
         }
         if (apply_pending_policy(-1)) st.live_switches++;
         const int32_t n = (int32_t) std::min<size_t>((size_t) n_batch_, tokens.size() - i);
-        llama_batch batch = llama_batch_get_one(const_cast<llama_token *>(tokens.data() + i), n);
-        const int32_t rc = llama_decode(ctx_, batch);
+        int32_t rc;
+        if (spec_ && spec_sync_) {
+            // 2.5.0-beta9: the MTP head sees every prompt chunk the target decodes.
+            rc = spec_decode(tokens, i, (size_t) n, i + (size_t) n == tokens.size());
+        } else {
+            llama_batch batch = llama_batch_get_one(const_cast<llama_token *>(tokens.data() + i), n);
+            rc = llama_decode(ctx_, batch);
+        }
         if (rc != 0) {
             if (rc == 2 || cancelled_.load()) {
                 st.stop = StopReason::Cancelled;
@@ -708,6 +855,7 @@ bool Engine::shift_context(int32_t n_keep, GenerateStats &st) {
     llama_memory_seq_add(mem, 0, n_keep + n_discard, n_past, -n_discard);
     kv_tokens_.erase(kv_tokens_.begin() + n_keep, kv_tokens_.begin() + n_keep + n_discard);
     st.shifted_tokens += n_discard;
+    if (spec_) spec_sync_ = false;  // the MTP context is not shifted: normal decoding until the next clear
     return true;
 }
 
@@ -735,6 +883,13 @@ bool Engine::reuse_prefix(std::vector<int32_t> &tokens, bool need_tail, Generate
             n_common = 0;
         }
         kv_tokens_.resize(n_common);
+        if (spec_) {
+            spec_mem_rm((int32_t) n_common);
+            if (n_common == 0) spec_sync_ = true;  // both memories empty: in step again
+        }
+    } else if (spec_ && n_common == 0) {
+        spec_mem_rm(0);
+        spec_sync_ = true;
     }
     st.reused_tokens = (int32_t) n_common;
 
@@ -919,6 +1074,8 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
     // ---- 2+3. KV-cache prefix reuse + prefill (2.2.17: pictures through mtmd) ----
     const auto t_prefill = Clock::now();
     if (vision) {
+        // 2.5.0-beta9: picture prefill bypasses the MTP head → normal decoding until the next clear.
+        if (spec_) spec_sync_ = false;
         if (!prefill_media(prompt, *images, st)) return st;
     } else {
         if (!reuse_prefix(tokens, true, st)) return st;
@@ -972,10 +1129,25 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
 
     const auto t_gen = Clock::now();
     st.stop = StopReason::MaxTokens;
+#ifdef IRIS_SPEC
+    if (spec_ && spec_sync_) common_speculative_begin(spec_, 0, kv_tokens_);
+#endif
+    // 2.5.0-beta9 MTP: tokens produced by the last verification step. The first `queue_kv` are
+    // accepted drafts already in the KV cache; the one after them was sampled from the target and
+    // still has to be decoded (it plays the role of the usual per-token sample).
+    std::vector<llama_token> queue;
+    size_t queue_pos = 0, queue_kv = 0;
     for (int32_t i = 0; i < max_new; ++i) {
         if (cancelled_.load(std::memory_order_acquire)) { st.stop = StopReason::Cancelled; break; }
 
-        llama_token tok = llama_sampler_sample(smpl, ctx_, -1);
+        bool in_kv = false;
+        llama_token tok;
+        if (queue_pos < queue.size()) {
+            in_kv = queue_pos < queue_kv;
+            tok = queue[queue_pos++];
+        } else {
+            tok = llama_sampler_sample(smpl, ctx_, -1);
+        }
         if (llama_vocab_is_eog(vocab_, tok)) { st.stop = StopReason::EndOfGeneration; break; }
         st.generated_tokens++;
 
@@ -1000,12 +1172,80 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
         size_t safe = utf8_complete_prefix(pending);
         if (!stops.empty()) safe -= stop_holdback(std::string_view(pending).substr(0, safe), stops);
         if (!emit(safe)) { st.stop = StopReason::Cancelled; break; }
+        if (in_kv) continue;  // accepted draft: decoded during verification
 
         if ((int32_t) kv_tokens_.size() >= n_ctx_ - 1) {
             if (!sp.context_shift || !shift_context(sp.n_keep, st)) { st.stop = StopReason::ContextFull; break; }
         }
         apply_pending_threads();
         if (apply_pending_policy(i + 1)) st.live_switches++;
+#ifdef IRIS_SPEC
+        if (spec_ && spec_sync_) {
+            // ---- MTP step: draft → decode [tok, drafts…] on the target → keep the agreeing prefix ----
+            const int32_t n_past = (int32_t) kv_tokens_.size();
+            int32_t n_max = std::min({spec_n_, n_ctx_ - n_past - 2, max_new - (i + 1) - 1});
+            n_max = std::max(n_max, 0);
+            llama_tokens draft;
+            if (n_max > 0) {
+                auto &dp = common_speculative_get_draft_params(spec_, 0);
+                dp.drafting = true;
+                dp.n_max = n_max;
+                dp.pos0 = n_past;
+                dp.id_last = tok;
+                dp.prompt = &kv_tokens_;
+                dp.result = &draft;
+                dp.result_q = nullptr;
+                common_speculative_draft(spec_);
+                if ((int32_t) draft.size() > n_max) draft.resize((size_t) n_max);
+                spec_mem_rm(n_past);  // the head's own draft positions; verification re-feeds them
+            }
+            std::vector<int32_t> vb;
+            vb.reserve(draft.size() + 1);
+            vb.push_back(tok);
+            vb.insert(vb.end(), draft.begin(), draft.end());
+            common_batch b(ctx_);
+            for (size_t k = 0; k < vb.size(); ++k) b.add(vb[k], n_past + (llama_pos) k, 0, true);
+            const int32_t rc = llama_process(ctx_, LLAMA_PROCESS_TYPE_DECODE, b.get());
+            if (rc != 0) {
+                if (rc == 2 || cancelled_.load()) st.stop = StopReason::Cancelled;
+                else { st.stop = StopReason::Error; st.error = "llama_decode 失败 (" + std::to_string(rc) + ")"; }
+                resync_after_failure();
+                break;
+            }
+            if (!common_speculative_process(spec_, b)) {
+                spec_sync_ = false;
+                resource_log("MTP process failed: back to normal decoding");
+            }
+            queue.clear();
+            queue_pos = 0;
+            for (size_t j = 0; j <= draft.size(); ++j) {
+                const llama_token t = llama_sampler_sample(smpl, ctx_, (int32_t) j);
+                queue.push_back(t);
+                if (j == draft.size()) break;
+                if (t != draft[j] || (llama_vocab_is_eog(vocab_, t) && j + 1 < draft.size())) break;
+            }
+            queue_kv = queue.size() - 1;
+            if (spec_) common_speculative_accept(spec_, 0, (uint16_t) queue_kv);
+            st.drafted_tokens += (int32_t) draft.size();
+            st.accepted_tokens += (int32_t) queue_kv;
+            kv_tokens_.push_back(tok);
+            kv_tokens_.insert(kv_tokens_.end(), queue.begin(), queue.begin() + (long) queue_kv);
+            llama_memory_t mem = llama_get_memory(ctx_);
+            if (!llama_memory_seq_rm(mem, 0, (llama_pos) kv_tokens_.size(), -1)) {
+                // Should not happen (checked at load): rebuild the cache from the token list.
+                resource_log("MTP rollback failed: re-prefill %zu tokens, normal decoding", kv_tokens_.size());
+                std::vector<int32_t> keep = kv_tokens_;
+                llama_memory_clear(mem, true);
+                kv_tokens_.clear();
+                spec_mem_rm(0);
+                spec_sync_ = false;
+                if (!decode_tokens(keep, 0, st)) break;
+            } else {
+                spec_mem_rm((int32_t) kv_tokens_.size());
+            }
+            continue;
+        }
+#endif
         llama_batch batch = llama_batch_get_one(&tok, 1);
         const int32_t rc = llama_decode(ctx_, batch);
         if (rc != 0) {
@@ -1020,6 +1260,11 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
     emit(utf8_complete_prefix(pending));
     st.generate_us = us_since(t_gen);
     st.kv_used = (int32_t) kv_tokens_.size();
+    if (st.drafted_tokens > 0) {
+        resource_log("MTP reply: drafted=%d accepted=%d (%.1f%%) tokens=%d in %.2fs",
+                     st.drafted_tokens, st.accepted_tokens, 100.0 * st.accepted_tokens / st.drafted_tokens,
+                     st.generated_tokens, st.generate_us / 1e6);
+    }
 
     llama_sampler_free(smpl);
     return st;

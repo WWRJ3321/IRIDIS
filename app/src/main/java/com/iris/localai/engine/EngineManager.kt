@@ -476,6 +476,8 @@ class EngineManager(
                                 resources = plan,
                                 mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
                                 mmprojGpu = settings.current.visionGpu,
+                                // 2.5.0-beta9: never after a crash (safe mode) and CPU only.
+                                mtpDraft = if (safeMode || model.format != ModelFormat.GGUF) 0 else GgufQuant.mtpDraft(cfg.mtp, quant, backend),
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

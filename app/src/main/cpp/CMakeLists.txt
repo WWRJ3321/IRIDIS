@@ -9,7 +9,10 @@ endif ()
 
 # ---- llama.cpp configuration: static, CPU only, tuned for Snapdragon 8 Elite (Oryon, ARMv8.7) ----
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+# 2.5.0-beta9: llama.cpp common (speculative decoding / draft-mtp) is linked into libiris_llama only.
+option(IRIS_SPEC "MTP speculative decoding via llama.cpp common (libiris_llama)" ON)
+set(LLAMA_BUILD_COMMON ${IRIS_SPEC} CACHE BOOL "" FORCE)
+set(LLAMA_OPENSSL OFF CACHE BOOL "" FORCE)        # common's downloader is never used on device
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
@@ -98,6 +101,10 @@ endif ()
 target_compile_features(iris_llama PRIVATE cxx_std_17)
 target_compile_options(iris_llama PRIVATE -Wall -Wextra -O3 -fvisibility=hidden)
 target_link_libraries(iris_llama PRIVATE llama ggml android log)
+if (IRIS_SPEC)
+    target_compile_definitions(iris_llama PRIVATE IRIS_SPEC=1)
+    target_link_libraries(iris_llama PRIVATE llama-common)
+endif ()
 if (IRIS_VULKAN)
     target_compile_definitions(iris_llama PRIVATE IRIS_VULKAN=1)
 endif ()

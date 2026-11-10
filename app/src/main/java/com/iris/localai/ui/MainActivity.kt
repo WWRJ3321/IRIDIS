@@ -311,6 +311,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpen = { p -> push(routeOf(p)) },
             onModels = { push(Route.MODELS) },
             onOpenFiles = { push(Route.FILES) },
+            onImageModels = { push(Route.IMAGEGEN) },
         )
     }
 }

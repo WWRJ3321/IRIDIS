@@ -606,9 +606,16 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             .background(c.surfaceElevated),
                     ) {
                         if (!first) Divider()
+                        // 2.5.0-beta9: 「MTP」 only when the GGUF header has MTP layers (read on IO).
+                        val mtpTag by androidx.compose.runtime.produceState(false, m.path) {
+                            value = m.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                com.iris.localai.engine.GgufQuant.of(java.io.File(m.path))?.mtp == true
+                            }
+                        }
+                        val engineTag = remember(m.id, modelConfigs, appSettings.ggufEngine, appSettings.defaultBackends) { vm.engineTag(m) }
                         ModelRow(
                             m,
-                            tag = remember(m.id, modelConfigs, appSettings.ggufEngine, appSettings.defaultBackends) { vm.engineTag(m) },
+                            tag = com.iris.localai.engine.MtpTag.join(engineTag, m.format.label, mtpTag),
                             state = engine,
                             busy = busy != null,
                             onLoad = { vm.load(m) },

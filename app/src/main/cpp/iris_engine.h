@@ -17,6 +17,7 @@ struct llama_model;
 struct llama_context;
 struct llama_vocab;
 struct mtmd_context;
+struct common_speculative;
 
 namespace iris {
 
@@ -34,6 +35,10 @@ struct LoadParams {
     int32_t n_gpu_layers = 0;   // >0 offloads that many layers to the GPU backend (OpenCL), if present
     bool kv_q8 = false;         // Q8_0 K/V cache (requires flash attention; falls back to F16)
     int32_t kv_type = -1;       // 1.7.1: 0 = F16, 1 = Q8_0, 2 = Q4_0 (-1 = follow kv_q8). Quantised needs FA.
+    /// 2.5.0-beta9: >0 = MTP self-speculative decoding with up to this many draft tokens per step
+    /// (models with nextn_predict_layers > 0; builds with IRIS_SPEC only). Any failure while setting
+    /// it up leaves the model on normal decoding (see Engine::spec_status()).
+    int32_t spec_draft = 0;
 };
 
 struct SamplingParams {
@@ -76,6 +81,8 @@ struct GenerateStats {
     int32_t shifted_tokens = 0;    // tokens discarded by context shift during this generation
     int32_t kv_used = 0;           // tokens materialised in the KV cache when generation ended
     int32_t live_switches = 0;     // 1.7.2: resource-tier switches applied during this generation
+    int32_t drafted_tokens = 0;    // 2.5.0-beta9: MTP draft tokens sent for verification
+    int32_t accepted_tokens = 0;   // 2.5.0-beta9: of those, accepted by the target model
     StopReason stop = StopReason::EndOfGeneration;
     std::string error;
 };
@@ -146,6 +153,13 @@ public:
                                   const PieceCallback &on_piece, const std::vector<std::string> &images,
                                   int32_t image_msg);
 
+    /// 2.5.0-beta9: "active n=<draft>" when MTP speculative decoding is on for the loaded model,
+    /// "off" when not requested, otherwise "fallback: <reason>" (normal decoding is used).
+    std::string spec_status() const;
+    /// 2.5.0-beta9: MTP draft count the JNI layer passes to the next load() (0 = off).
+    void set_spec_draft(int32_t n) { spec_cfg_.store(n < 0 ? 0 : n); }
+    int32_t spec_draft_cfg() const { return spec_cfg_.load(); }
+
     /// Thread-safe; may be called from any thread while generate() runs.
     void cancel() { cancelled_.store(true, std::memory_order_release); }
     /// Forgets a pending cancel() (see SamplingParams::honor_prior_cancel).
@@ -188,6 +202,10 @@ private:
     bool shift_context(int32_t n_keep, GenerateStats &st);
     bool create_context(const LoadParams &params, int32_t n_ctx, int32_t threads, int32_t kv_type);
     static bool abort_cb(void *data);
+    void init_spec(const LoadParams &params);
+    void free_spec();
+    void spec_mem_rm(int32_t from);
+    int32_t spec_decode(const std::vector<int32_t> &tokens, size_t from, size_t n, bool last_out);
 
     llama_model *model_ = nullptr;
     llama_context *ctx_ = nullptr;
@@ -208,6 +226,14 @@ private:
     std::atomic<bool> policy_pending_{false};  // fast check on the decode path
     std::mutex policy_mu_;                     // guards pending_policy_ only (never held across decode)
     LivePolicy pending_policy_;
+    // 2.5.0-beta9 MTP (IRIS_SPEC builds): draft context on the same model + common_speculative.
+    llama_context *ctx_dft_ = nullptr;
+    common_speculative *spec_ = nullptr;
+    int32_t spec_n_ = 0;             // max draft tokens per step
+    [[maybe_unused]] int32_t spec_req_ = 0; // LoadParams::spec_draft of the current load
+    std::atomic<int32_t> spec_cfg_{0};
+    bool spec_sync_ = false;         // draft context has seen every target decode since the last clear
+    std::string spec_status_ = "off";
     mutable std::mutex mu_;          // serialises load/unload/generate/reset
 };
 
