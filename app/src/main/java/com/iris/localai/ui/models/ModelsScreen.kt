@@ -149,7 +149,16 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     // 2.3.0: init moved to end of class (crash: refreshImageModels touched _imageDownloaded before it was initialised)
 
     fun refresh() = viewModelScope.launch { refreshFolder(); c.models.refresh() }
-    fun load(m: LocalModel) = viewModelScope.launch { c.engine.load(m) }
+    fun load(m: LocalModel) = viewModelScope.launch {
+        // 2.5.0 Beta6: memory short → ask 「仍要加载 / 取消」 first (never blocks).
+        val v = c.engine.preflight(m)
+        if (v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) _memWarn.value = m to v.message
+        else c.engine.load(m)
+    }
+    private val _memWarn = MutableStateFlow<Pair<LocalModel, String>?>(null)
+    val memWarn = _memWarn.asStateFlow()
+    fun confirmMemLoad() { val p = _memWarn.value ?: return; _memWarn.value = null; viewModelScope.launch { c.engine.load(p.first) } }
+    fun dismissMemWarn() { _memWarn.value = null }
     fun cancelLoad() { c.engine.cancelLoad() }
     fun unload() = viewModelScope.launch { c.engine.unload() }
 
@@ -651,6 +660,27 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
     confirmDelete?.let { m ->
         ModelDeleteDialog(m, onConfirm = { vm.delete(m) }, onDismiss = { confirmDelete = null })
     }
+    MemoryWarnHost(vm)
+}
+
+/** 2.5.0 Beta6: shows the 「内存可能不足」 question [ModelsViewModel.load] raised. */
+@Composable
+internal fun MemoryWarnHost(vm: ModelsViewModel) {
+    val w by vm.memWarn.collectAsStateWithLifecycle()
+    w?.let { (m, msg) -> MemoryLoadDialog(m, msg, onConfirm = vm::confirmMemLoad, onDismiss = vm::dismissMemWarn) }
+}
+
+/** 2.5.0 Beta6: 加载前内存预检 — free RAM looks short; the user may load anyway or cancel (never a hard block). */
+@Composable
+internal fun MemoryLoadDialog(m: LocalModel, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    ConfirmDialog(
+        title = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_mem_title),
+        message = m.displayName + "\n\n" + message,
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_mem_load),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        destructive = false,
+    )
 }
 
 /** 1.14.3: the one 「删除模型？」 confirmation (模型管理 and 设置 › 存储空间). */

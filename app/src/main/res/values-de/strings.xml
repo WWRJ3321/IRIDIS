@@ -808,11 +808,11 @@
     <string name="agent_bc270f">Wissensbasis nutzen</string>
     <string name="agent_db3b61">Bezieht beim Antworten automatisch das passendste Material ein</string>
     <string name="agent_be0ade">Index neu aufbauen</string>
-    <string name="agent_2a6c4d">Dateien hinzufügen (txt / md / csv / html…)</string>
+    <string name="agent_2a6c4d">Dateien hinzufügen (txt / md / csv / html / epub…)</string>
     <string name="agent_32c65d">Titel</string>
     <string name="agent_8b3889">Eingefügter Text</string>
     <string name="agent_ce81e3">Noch keine Dateien. Danach werden passende Inhalte im Chat automatisch zitiert.</string>
-    <string name="agent_16ca25">Unterstützt Textdateien wie txt, md, csv, json und html. Einfach in den Ordner legen; der Index entsteht auf dem Gerät.</string>
+    <string name="agent_16ca25">Unterstützt Textdateien wie txt, md, csv, json, html, epub und epub. Einfach in den Ordner legen; der Index entsteht auf dem Gerät.</string>
     <string name="agent_e93a44">Noch keine Dateien</string>
     <string name="agent_6b7690">%1$s Dateien · %2$s Abschnitte</string>
     <string name="agent_f07c0e">\u0020· %1$s nicht unterstützt</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">Index &amp; Budget</string>
     <string name="v250_tool_files">Dateien lesen, schreiben &amp; suchen</string>
     <string name="v250_tool_files_sub">Arbeitsbereich-Dateien lesen und schreiben und im Arbeitsbereich suchen; ein Schalter für alles. „Fragen“ = vor dem Schreiben fragen, Lesen und Suchen erlaubt</string>
+    <string name="v250_mem_title">Speicher könnte knapp sein</string>
+    <string name="v250_mem_load">Trotzdem laden</string>
+    <string name="v250_rec_title">Empfohlen für dieses Gerät</string>
+    <string name="v250_rec_why">Gewählt für %1$d GB RAM · %2$s; weitere Modelle unten.</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">Dimensity</string>
+    <string name="v250_chip_flagship">Flaggschiff-Chip</string>
+    <string name="v250_chip_mid">Mittelklasse-Chip</string>
+    <string name="v250_chip_entry">Einsteiger-Chip</string>
 </resources>

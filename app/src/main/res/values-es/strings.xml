@@ -808,11 +808,11 @@
     <string name="agent_bc270f">Usar base de conocimiento</string>
     <string name="agent_db3b61">Consulta automáticamente el material más relevante al responder</string>
     <string name="agent_be0ade">Reconstruir índice</string>
-    <string name="agent_2a6c4d">Añadir archivos (txt / md / csv / html…)</string>
+    <string name="agent_2a6c4d">Añadir archivos (txt / md / csv / html / epub…)</string>
     <string name="agent_32c65d">Título</string>
     <string name="agent_8b3889">Texto pegado</string>
     <string name="agent_ce81e3">Aún no hay archivos. Al añadirlos, el contenido relacionado se citará solo en el chat.</string>
-    <string name="agent_16ca25">Admite archivos de texto como txt, md, csv, json y html. Basta con ponerlos en la carpeta; se indexan en el dispositivo.</string>
+    <string name="agent_16ca25">Admite archivos de texto como txt, md, csv, json, html, epub y epub. Basta con ponerlos en la carpeta; se indexan en el dispositivo.</string>
     <string name="agent_e93a44">Aún no hay archivos</string>
     <string name="agent_6b7690">%1$s archivos · %2$s fragmentos</string>
     <string name="agent_f07c0e">\u0020· %1$s no compatibles</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">Índice y presupuesto</string>
     <string name="v250_tool_files">Leer, escribir y buscar archivos</string>
     <string name="v250_tool_files_sub">Lee y escribe archivos del espacio de trabajo y busca en él; un solo interruptor. «Preguntar» = pregunta antes de escribir; leer y buscar están permitidos</string>
+    <string name="v250_mem_title">Puede faltar memoria</string>
+    <string name="v250_mem_load">Cargar igualmente</string>
+    <string name="v250_rec_title">Recomendado para este teléfono</string>
+    <string name="v250_rec_why">Elegido para %1$d GB de RAM · %2$s; otros modelos abajo.</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">Dimensity</string>
+    <string name="v250_chip_flagship">chip de gama alta</string>
+    <string name="v250_chip_mid">chip de gama media</string>
+    <string name="v250_chip_entry">chip de gama de entrada</string>
 </resources>

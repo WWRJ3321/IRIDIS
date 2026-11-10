@@ -79,15 +79,16 @@ fun McpPage(onBack: () -> Unit) {
     }
 
     SubpageScaffold(McpText.TITLE, onBack) {
+        // 2.5.0 Beta6: free elements inset to the card edge (groupGutter) / row text (groupGutter + rowPadding) like the other subpages.
         ScrollBody {
             Spacer(Modifier.height(IrisDimens.space8))
-            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bd700b), { adding = true }, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16))
+            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bd700b), { adding = true }, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter))
             val total = servers.filter { it.enabled }.sumOf { s -> s.tools.count { it.name !in s.disabledTools } }
             if (total > McpCap.DEFAULT) {
-                Text(McpText.over(total, McpCap.DEFAULT), style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(IrisDimens.space16))
+                Text(McpText.over(total, McpCap.DEFAULT), style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
             }
             if (servers.isEmpty()) {
-                Text(McpText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
+                Text(McpText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
             }
             servers.forEach { s ->
                 SectionTitle(s.name)

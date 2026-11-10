@@ -196,6 +196,27 @@ class EngineManager(
         forTier: ResourceTier = tier,
     ): Backend = BackendCapabilities.preferred(cfg.backend, model.format, model.fileName, backendOptions(model))
 
+    /** 2.2.14 / 2.5.0 Beta6: free RAM (ActivityManager.availMem) vs. model file + mmproj + context. Blocking (file sizes). */
+    private fun memoryVerdict(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): MemoryPreflight.Verdict {
+        val mi = android.app.ActivityManager.MemoryInfo()
+        appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
+        // 2.4.4: the vision projector (mmproj) is loaded too — count it.
+        val proj = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj)?.let { java.io.File(it).length() } ?: 0L else 0L
+        return MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, gpu)
+    }
+
+    /**
+     * 2.5.0 Beta6: the check a user-started load asks first (off the main thread). A SHORT verdict makes the
+     * UI ask 「仍要加载 / 取消」 — it never blocks. Errors count as OK.
+     */
+    suspend fun preflight(model: LocalModel): MemoryPreflight.Verdict = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+            if (ReloadRules.alreadyLoaded(state.value, model.path)) return@runCatching MemoryPreflight.Verdict(MemoryPreflight.Level.OK, 0, 0, null)
+            val cfg = effective(model)
+            memoryVerdict(model, cfg, preferredBackend(model, cfg) == Backend.GPU)
+        }.getOrDefault(MemoryPreflight.Verdict(MemoryPreflight.Level.OK, 0, 0, null))
+    }
+
     /** Set after a successful non-CPU load: the first generation is still crash-guarded. */
     @Volatile private var guardFirstGeneration: Pair<String, Backend>? = null
 
@@ -396,18 +417,15 @@ class EngineManager(
             val preferred = if (cpuOnly || safeMode) Backend.CPU
                 else preferredBackend(model, cfg, useTier).let { if (clHung && it == Backend.GPU) Backend.CPU else it }
             // 2.2.14: free RAM vs. model + context; warn (never block) before a likely OOM crash.
+            // 2.5.0 Beta6: file reads (mmproj lookup, GGUF header) run on IO, never on the main thread.
             runCatching {
-                val mi = android.app.ActivityManager.MemoryInfo()
-                appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
-                // 2.4.4: the vision projector (mmproj) is loaded too — count it.
-                val proj = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj)?.let { java.io.File(it).length() } ?: 0L else 0L
-                val v = MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, preferred == Backend.GPU)
+                val v = withContext(kotlinx.coroutines.Dispatchers.IO) { memoryVerdict(model, cfg, preferred == Backend.GPU) }
                 Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)}")
                 v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
             // 2.3.2 Bonsai: Q1_0 / Q2_0 GGUF never go to the NPU; unknown types (PrismML PQ2_0 / PTQ1_0) are refused below.
-            val quant = if (model.format == ModelFormat.GGUF) GgufQuant.of(java.io.File(model.path)) else null
+            val quant = if (model.format == ModelFormat.GGUF) withContext(kotlinx.coroutines.Dispatchers.IO) { GgufQuant.of(java.io.File(model.path)) } else null
             val chain = GgufQuant.chainFor(if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed), quant)
             val errors = StringBuilder()
             options.firstOrNull { it.backend == preferred && !it.available }?.let {

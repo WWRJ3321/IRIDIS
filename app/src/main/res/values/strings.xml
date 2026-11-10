@@ -809,11 +809,11 @@
     <string name="agent_bc270f">引用知识库</string>
     <string name="agent_db3b61">回答时自动参考最相关的资料</string>
     <string name="agent_be0ade">重建索引</string>
-    <string name="agent_2a6c4d">添加文件（txt / md / csv / html…）</string>
+    <string name="agent_2a6c4d">添加文件（txt / md / csv / html / epub…）</string>
     <string name="agent_32c65d">标题</string>
     <string name="agent_8b3889">粘贴的文字</string>
     <string name="agent_ce81e3">还没有文件。添加后，聊天里提到相关内容会自动引用。</string>
-    <string name="agent_16ca25">支持 txt、md、csv、json、html 等文本文件。放进文件夹即可，自动在本机建索引。</string>
+    <string name="agent_16ca25">支持 txt、md、csv、json、html、epub 等文本文件。放进文件夹即可，自动在本机建索引。</string>
     <string name="agent_e93a44">还没有文件</string>
     <string name="agent_6b7690">%1$s 个文件 · %2$s 段</string>
     <string name="agent_f07c0e">\u0020· %1$s 个不支持</string>
@@ -2051,4 +2051,13 @@
     <string name="v250_mem_info">索引与预算</string>
     <string name="v250_tool_files">读写文件与本地搜索</string>
     <string name="v250_tool_files_sub">读取、写入工作区文件，并在工作区里搜索；一个开关同时控制。「询问」= 写入前询问，读取与搜索直接允许</string>
+    <string name="v250_mem_title">内存可能不足</string>
+    <string name="v250_mem_load">仍要加载</string>
+    <string name="v250_rec_title">为本机推荐</string>
+    <string name="v250_rec_why">按本机 %1$d GB 内存 · %2$s 推荐；其它型号见下方。</string>
+    <string name="v250_soc_qcom">骁龙</string>
+    <string name="v250_soc_mtk">天玑</string>
+    <string name="v250_chip_flagship">旗舰芯片</string>
+    <string name="v250_chip_mid">中端芯片</string>
+    <string name="v250_chip_entry">入门芯片</string>
 </resources>

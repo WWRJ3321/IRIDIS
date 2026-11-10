@@ -808,11 +808,11 @@
     <string name="agent_bc270f">Use knowledge base</string>
     <string name="agent_db3b61">Automatically draws on the most relevant material when answering</string>
     <string name="agent_be0ade">Rebuild index</string>
-    <string name="agent_2a6c4d">Add files (txt / md / csv / html…)</string>
+    <string name="agent_2a6c4d">Add files (txt / md / csv / html / epub…)</string>
     <string name="agent_32c65d">Title</string>
     <string name="agent_8b3889">Pasted text</string>
     <string name="agent_ce81e3">No files yet. Once added, related content mentioned in chat is cited automatically.</string>
-    <string name="agent_16ca25">Supports text files such as txt, md, csv, json and html. Just put them in the folder; they are indexed on this device.</string>
+    <string name="agent_16ca25">Supports text files such as txt, md, csv, json, html, epub and epub. Just put them in the folder; they are indexed on this device.</string>
     <string name="agent_e93a44">No files yet</string>
     <string name="agent_6b7690">%1$s files · %2$s chunks</string>
     <string name="agent_f07c0e">\u0020· %1$s unsupported</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">Index &amp; budget</string>
     <string name="v250_tool_files">Read, write &amp; search files</string>
     <string name="v250_tool_files_sub">Read and write workspace files and search the workspace; one switch for all three. \"Ask\" = ask before writing, reading and searching are allowed</string>
+    <string name="v250_mem_title">Memory may be short</string>
+    <string name="v250_mem_load">Load anyway</string>
+    <string name="v250_rec_title">Recommended for this phone</string>
+    <string name="v250_rec_why">Picked for %1$d GB RAM · %2$s; other models below.</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">Dimensity</string>
+    <string name="v250_chip_flagship">flagship chip</string>
+    <string name="v250_chip_mid">mid-range chip</string>
+    <string name="v250_chip_entry">entry-level chip</string>
 </resources>

@@ -449,8 +449,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     fun loadModel(model: LocalModel): Job = viewModelScope.launch {
         if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7a0481); return@launch }
         warmJob?.cancel() // 2.4.0: a pending warm-up of the old model never delays the switch
+        // 2.5.0 Beta6: memory short → ask first (仍要加载 / 取消), never a hard block.
+        val v = c.engine.preflight(model)
+        if (v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) { memWarn.value = model to v.message; return@launch }
         c.engine.load(model)
     }.also { loadJob = it }
+    internal val memWarn = MutableStateFlow<Pair<LocalModel, String>?>(null)
+    fun confirmMemLoad(): Job? { val p = memWarn.value ?: return null; memWarn.value = null; return viewModelScope.launch { c.engine.load(p.first) }.also { loadJob = it } }
+    fun dismissMemWarn() { memWarn.value = null }
     /** 2.4.0: a tap on another model while a reply / background run goes used to do nothing at all. */
     fun noteSwitchBlocked() {
         notice.value = if (viewing.value != null) "另一个对话正在后台生成，结束或停止后才能切换模型"

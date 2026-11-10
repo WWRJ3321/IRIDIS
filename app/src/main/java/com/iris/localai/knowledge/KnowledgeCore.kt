@@ -365,14 +365,110 @@ object KbPrompt {
 object KbFormats {
     val TEXT = setOf("txt", "md", "markdown", "csv", "json", "log", "srt")
     val HTML = setOf("html", "htm")
+    /** 2.5.0 Beta6: e-books; the chapters become plain text and go through the same chunker + BM25. */
+    val EPUB = setOf("epub")
     fun ext(name: String) = name.substringAfterLast('.', "").lowercase()
-    fun supported(name: String) = !name.startsWith(".") && ext(name).let { it in TEXT || it in HTML }
+    fun supported(name: String) = !name.startsWith(".") && ext(name).let { it in TEXT || it in HTML || it in EPUB }
+    /** Size cap per file: an .epub carries images and zip overhead, so it may be larger than a text file. */
+    fun maxBytes(name: String, textMax: Long): Long = if (ext(name) in EPUB) EpubText.MAX_FILE_BYTES else textMax
 
     fun text(name: String, bytes: ByteArray): String? {
+        if (ext(name) in EPUB) return EpubText.toText(bytes)
         if (bytes.take(4096).any { it == 0.toByte() }) return null
         val s = bytes.toString(Charsets.UTF_8).removePrefix("\uFEFF")
         if (s.isNotEmpty() && s.count { it == '\uFFFD' } > s.length / 20) return null
         return if (ext(name) in HTML) com.iris.localai.agent.HtmlText.toText(s) else s
+    }
+}
+
+/**
+ * 2.5.0 Beta6: .epub → plain text. Unzips in memory, follows META-INF/container.xml to the OPF, reads the
+ * chapters in spine order and strips their markup with HtmlText. Falls back to every (x)html entry in name
+ * order when there is no usable spine. Never throws; null when nothing readable is inside. Pure.
+ */
+object EpubText {
+    const val MAX_FILE_BYTES = 32_000_000L
+    /** Uncompressed (x)html/opf read in total, and the text kept: a zip bomb or a huge book stops here. */
+    const val MAX_UNZIPPED = 48_000_000L
+    const val MAX_CHARS = 3_000_000
+
+    private val ROOTFILE = Regex("(?is)<(?:\\w+:)?rootfile\\b[^>]*>")
+    private val ITEM = Regex("(?is)<(?:\\w+:)?item\\b[^>]*>")
+    private val ITEMREF = Regex("(?is)<(?:\\w+:)?itemref\\b[^>]*>")
+
+    fun attr(tag: String, name: String): String? =
+        Regex("(?is)[\\s<]$name\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)')").find(tag)?.let { m ->
+            m.groupValues[1].ifEmpty { m.groupValues[2] }
+        }
+
+    private fun isMarkup(n: String) = n.substringAfterLast('.', "").lowercase().let { it == "xhtml" || it == "html" || it == "htm" || it == "opf" || it == "xml" }
+
+    fun unzip(bytes: ByteArray): Map<String, ByteArray> {
+        val out = LinkedHashMap<String, ByteArray>()
+        var total = 0L
+        runCatching {
+            java.util.zip.ZipInputStream(bytes.inputStream()).use { z ->
+                while (true) {
+                    val e = z.nextEntry ?: break
+                    if (e.isDirectory || !isMarkup(e.name)) continue
+                    val buf = java.io.ByteArrayOutputStream()
+                    val chunk = ByteArray(16 * 1024)
+                    while (true) {
+                        val n = z.read(chunk)
+                        if (n < 0) break
+                        total += n
+                        if (total > MAX_UNZIPPED) return out
+                        buf.write(chunk, 0, n)
+                    }
+                    out[e.name.trimStart('/')] = buf.toByteArray()
+                }
+            }
+        }
+        return out
+    }
+
+    /** Joins [href] (relative, maybe %-encoded, maybe with #fragment) onto the OPF's folder. */
+    fun resolve(base: String, href: String): String {
+        val h = runCatching { java.net.URLDecoder.decode(href.substringBefore('#').replace("+", "%2B"), "UTF-8") }.getOrDefault(href.substringBefore('#'))
+        val parts = (if (base.isEmpty()) emptyList() else base.split('/')).toMutableList()
+        for (seg in h.split('/')) when (seg) {
+            "", "." -> {}
+            ".." -> if (parts.isNotEmpty()) parts.removeAt(parts.size - 1)
+            else -> parts.add(seg)
+        }
+        return parts.joinToString("/")
+    }
+
+    /** Chapter paths in reading order (spine), from the OPF text and its path. Pure. */
+    fun spine(opfPath: String, opf: String): List<String> {
+        val base = opfPath.substringBeforeLast('/', "")
+        val manifest = ITEM.findAll(opf).mapNotNull { m ->
+            val id = attr(m.value, "id") ?: return@mapNotNull null
+            val href = attr(m.value, "href") ?: return@mapNotNull null
+            id to href
+        }.toMap()
+        return ITEMREF.findAll(opf).mapNotNull { m -> attr(m.value, "idref")?.let { manifest[it] } }
+            .map { resolve(base, it) }.distinct().toList()
+    }
+
+    fun toText(bytes: ByteArray): String? {
+        val files = unzip(bytes)
+        if (files.isEmpty()) return null
+        fun str(b: ByteArray) = b.toString(Charsets.UTF_8).removePrefix("\uFEFF")
+        val opfPath = files["META-INF/container.xml"]?.let { ROOTFILE.find(str(it))?.value?.let { t -> attr(t, "full-path") } }
+            ?.trimStart('/')?.takeIf { it in files }
+            ?: files.keys.firstOrNull { it.endsWith(".opf", ignoreCase = true) }
+        val order = opfPath?.let { p -> spine(p, str(files.getValue(p))).filter { it in files } }.orEmpty()
+            .ifEmpty { files.keys.filter { it.substringAfterLast('.').lowercase() in setOf("xhtml", "html", "htm") }.sorted() }
+        val sb = StringBuilder()
+        for (p in order) {
+            val t = com.iris.localai.agent.HtmlText.toText(str(files.getValue(p))).trim()
+            if (t.isEmpty()) continue
+            if (sb.isNotEmpty()) sb.append("\n\n")
+            sb.append(t)
+            if (sb.length >= MAX_CHARS) break
+        }
+        return sb.toString().take(MAX_CHARS).ifBlank { null }
     }
 }
 

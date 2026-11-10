@@ -70,7 +70,7 @@ class V250Test {
         assertTrue(home.contains("NavItem(")); assertTrue(home.contains("SettingsPage.STORAGE"))
         // 开发者 is reached from 关于 again
         assertTrue(screens.substringAfter("fun AboutPage(").substringBefore("internal val ABOUT_PRIVACY").contains("onDeveloper"))
-        assertTrue(src("app/src/main/java/com/iris/localai/ui/MainActivity.kt").contains("AboutPage(onBack = pop, onDeveloper = { push(Route.DEVELOPER) })"))
+        assertTrue(src("app/src/main/java/com/iris/localai/ui/MainActivity.kt").contains("AboutPage(onBack = pop, onDeveloper = { push(Route.DEVELOPER) }"))
         // 「高级」 folds are back where 2.4.6 had them
         assertTrue(screens.contains("AdvancedFold("))
         assertTrue(src("app/src/main/java/com/iris/localai/ui/agent/AgentSettingsPage.kt").contains("AdvancedFold("))
@@ -167,13 +167,14 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 243"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta5\""))
+        assertTrue(g.contains("versionCode = 244"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta6\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta4"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta5（2026-11-09，测试版，未在真机测试）"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta6（2026-11-10，测试版，未在真机测试）"))
     }
 
     @Test fun newStringsInEveryLanguage() {
@@ -241,7 +242,7 @@ class V250Test {
     @Test fun memoryAndKnowledgeAreRoutes() {
         val main = src("app/src/main/java/com/iris/localai/ui/MainActivity.kt")
         assertTrue(main.contains("Route.MEMORY_LIST -> com.iris.localai.ui.agent.MemoryListPage(onBack = pop)"))
-        assertTrue(main.contains("Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop)"))
+        assertTrue(main.contains("Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop"))
         assertTrue(main.contains("onOpenList = { push(Route.MEMORY_LIST) }, onOpenKnowledge = { push(Route.KNOWLEDGE) }"))
         val list = src("app/src/main/java/com/iris/localai/ui/agent/MemoryListPage.kt")
         assertTrue(list.contains("padding(horizontal = IrisDimens.groupGutter)"))
@@ -264,5 +265,98 @@ class V250Test {
         val java = File(root(), "app/src/main/java")
         assertFalse(File(java, "com/iris/localai/agent/shell").exists())
         assertFalse(java.walkTopDown().any { it.name == "RunCommand.kt" })
+    }
+
+    // ---- Beta6 ----
+    @Test fun mcpAndKbEditorAreRoutes() {
+        // KbEditorNav / Route 是 main 内对象，测试按源码检查
+        val main = src("app/src/main/java/com/iris/localai/ui/MainActivity.kt")
+        assertTrue(main.contains("MCP, KB_EDITOR,"))
+        assertTrue(main.contains("onOpenMcp = { push(Route.MCP) }"))
+        assertTrue(main.contains("Route.MCP -> com.iris.localai.ui.agent.McpPage(onBack = pop)"))
+        assertTrue(main.contains("onOpenEditor = { push(Route.KB_EDITOR) }"))
+        assertTrue(main.contains("Route.KB_EDITOR -> com.iris.localai.ui.agent.KbEditorRoute(onBack = pop)"))
+        val kb = src("app/src/main/java/com/iris/localai/ui/agent/KnowledgePage.kt")
+        assertTrue(kb.contains("object KbEditorNav"))
+        assertTrue(kb.contains("BackHandler(enabled = handleBack, onBack = onClose)"))
+        val mcp = src("app/src/main/java/com/iris/localai/ui/agent/McpPage.kt")
+        assertTrue(mcp.contains("padding(horizontal = IrisDimens.groupGutter)"))
+    }
+
+    @Test fun licensesAreRoutes() {
+        val main = src("app/src/main/java/com/iris/localai/ui/MainActivity.kt")
+        assertTrue(main.contains("LICENSES, LICENSE_TEXT }"))
+        assertTrue(main.contains("onOpenLicenses = { push(Route.LICENSES) }"))
+        assertTrue(main.contains("LicensesPage(onBack = pop, onOpenFile = { push(Route.LICENSE_TEXT) })"))
+        assertTrue(main.contains("LicenseTextRoute(onBack = pop)"))
+        val lic = src("app/src/main/java/com/iris/localai/ui/settings/LicensesPage.kt")
+        assertTrue(lic.contains("object LicenseNav"))
+        assertTrue(lic.contains("if (onOpenFile == null) BackHandler(onBack = onBack)"))
+        val about = src("app/src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
+        assertTrue(about.contains("if (showLicenses && onOpenLicenses == null)"))
+    }
+
+    private fun epub(entries: List<Pair<String, String>>): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(out).use { z ->
+            for ((n, t) in entries) { z.putNextEntry(java.util.zip.ZipEntry(n)); z.write(t.toByteArray()); z.closeEntry() }
+        }
+        return out.toByteArray()
+    }
+
+    @Test fun epubFollowsSpine() {
+        val k = com.iris.localai.knowledge.KbFormats
+        assertTrue(k.supported("书.epub"))
+        assertTrue(k.maxBytes("a.epub", 4_000_000L) > 4_000_000L)
+        assertEquals(4_000_000L, k.maxBytes("a.txt", 4_000_000L))
+        val book = epub(listOf(
+            "mimetype" to "application/epub+zip",
+            "META-INF/container.xml" to "<container><rootfiles><rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/></rootfiles></container>",
+            "OEBPS/content.opf" to "<package><manifest><item id=\"c2\" href=\"Text/ch%202.xhtml\" media-type=\"application/xhtml+xml\"/><item href=\"Text/ch1.xhtml\" id=\"c1\"/></manifest><spine><itemref idref=\"c1\"/><itemref idref=\"c2\"/></spine></package>",
+            "OEBPS/Text/ch 2.xhtml" to "<html><body><p>第二章 乙</p></body></html>",
+            "OEBPS/Text/ch1.xhtml" to "<?xml version=\"1.0\"?><html><head><style>p{}</style></head><body><h1>第一章</h1><p>甲</p></body></html>",
+        ))
+        val t = k.text("书.epub", book)!!
+        assertTrue(t, t.contains("第一章") && t.contains("第二章"))
+        assertTrue(t.indexOf("第一章") < t.indexOf("第二章"))
+        assertFalse(t.contains("<p>"))
+        assertEquals(null, k.text("坏.epub", "not a zip".toByteArray()))
+        assertEquals(listOf("OEBPS/Text/a.xhtml"), com.iris.localai.knowledge.EpubText.spine("OEBPS/content.opf", "<item id='a' href='Text/a.xhtml'/><itemref idref='a'/>"))
+        assertEquals("OEBPS/b.xhtml", com.iris.localai.knowledge.EpubText.resolve("OEBPS/Text", "../b.xhtml#x"))
+    }
+
+    @Test fun memoryPreflightAsksBeforeLoad() {
+        val em = src("app/src/main/java/com/iris/localai/engine/EngineManager.kt")
+        assertTrue(em.contains("suspend fun preflight(model: LocalModel): MemoryPreflight.Verdict = withContext(kotlinx.coroutines.Dispatchers.IO)"))
+        assertTrue(em.contains("withContext(kotlinx.coroutines.Dispatchers.IO) { GgufQuant.of("))
+        val ms = src("app/src/main/java/com/iris/localai/ui/models/ModelsScreen.kt")
+        assertTrue(ms.contains("fun MemoryLoadDialog("))
+        assertTrue(ms.contains("MemoryWarnHost(vm)"))
+        val chat = src("app/src/main/java/com/iris/localai/ui/chat/ChatViewModel.kt")
+        assertTrue(chat.contains("c.engine.preflight(model)"))
+        assertTrue(src("app/src/main/java/com/iris/localai/ui/chat/ChatScreen.kt").contains("MemoryLoadDialog("))
+        assertTrue(src("app/src/main/res/values/strings.xml").contains("name=\"v250_mem_load\""))
+    }
+
+    @Test fun deviceRecommendation() {
+        val d = com.iris.localai.data.DeviceRecommend
+        val gib = 1024L * 1024 * 1024
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP, d.chip("QTI", "SM8750"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.MID, d.chip("QTI", "SM7675"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.ENTRY, d.chip("QTI", "SM6450"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP, d.chip("Mediatek", "MT6991"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.MID, d.chip("Mediatek", "MT6897"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Chip.ENTRY, d.chip("Mediatek", "MT6789"))
+        assertEquals(com.iris.localai.data.DeviceRecommend.Vendor.MEDIATEK, d.vendor("Mediatek", "MT6991"))
+        assertEquals(12, d.ramGb(11L * gib + gib / 5))
+        assertEquals("taobao-mnn/Qwen3.5-9B-MNN", d.pickId(15L * gib, com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP))
+        assertEquals("taobao-mnn/Qwen3.5-4B-MNN", d.pickId(11L * gib, com.iris.localai.data.DeviceRecommend.Chip.MID))
+        assertEquals("taobao-mnn/Qwen3.5-2B-MNN", d.pickId(7L * gib + gib / 2, com.iris.localai.data.DeviceRecommend.Chip.MID))
+        assertEquals("taobao-mnn/Qwen3.5-0.8B-MNN", d.pickId(4L * gib, com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP))
+        assertEquals(null, d.pickId(0, com.iris.localai.data.DeviceRecommend.Chip.UNKNOWN))
+        val dl = src("app/src/main/java/com/iris/localai/ui/models/DownloadModelsScreen.kt")
+        assertTrue(dl.contains("item(key = \"for-device\""))
+        val cat = src("app/src/main/java/com/iris/localai/data/RecommendedCatalog.kt")
+        listOf("Qwen3.5-9B-MNN", "Qwen3.5-4B-MNN", "Qwen3.5-2B-MNN", "Qwen3.5-0.8B-MNN").forEach { assertTrue(it, cat.contains("\"$it\"")) }
     }
 }

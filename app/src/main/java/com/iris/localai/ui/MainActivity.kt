@@ -70,7 +70,11 @@ import kotlinx.coroutines.flow.Flow
 /** Top-level destinations. A tiny back stack is enough for this app's shallow navigation. */
 private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERATION, VOICE, API, ABOUT, DIAGNOSTICS, CONTEXT, PERFORMANCE, TIER_PROFILES, AGENT, MEMORY, BROWSER, FILES, STORAGE, DEVELOPER, IMAGEGEN, APP_FILES, DEV_CONTEXT, DOWNLOAD_MODELS, CHARACTERS,
     /** 2.5.0 Beta5: 上下文、记忆和知识库 › 记忆列表 / 知识库 as real routes (push / pop animation like every subpage). */
-    MEMORY_LIST, KNOWLEDGE }
+    MEMORY_LIST, KNOWLEDGE,
+    /** 2.5.0 Beta6: 智能体 › MCP 服务 and 知识库 › 新建/编辑文字 as real routes (the file to edit rides in KbEditorNav). */
+    MCP, KB_EDITOR,
+    /** 2.5.0 Beta6: 关于 › 许可证 and 单个许可证全文 as real routes (the file rides in LicenseNav). */
+    LICENSES, LICENSE_TEXT }
 
 class MainActivity : ComponentActivity() {
 
@@ -281,7 +285,8 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             )
         }
         Route.MEMORY_LIST -> com.iris.localai.ui.agent.MemoryListPage(onBack = pop)
-        Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop)
+        Route.KNOWLEDGE -> com.iris.localai.ui.agent.KnowledgePage(onBack = pop, onOpenEditor = { push(Route.KB_EDITOR) })
+        Route.KB_EDITOR -> com.iris.localai.ui.agent.KbEditorRoute(onBack = pop)
         Route.DEV_CONTEXT -> com.iris.localai.ui.settings.DevContextMemoryPage(
             settingsVm, onBack = pop, onOpenList = { push(Route.MEMORY_LIST) }, onOpenKnowledge = { push(Route.KNOWLEDGE) },
         )
@@ -289,10 +294,15 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.TIER_PROFILES -> com.iris.localai.ui.settings.TierProfilesPage(settingsVm, onBack = pop)
         Route.VOICE -> VoicePage(settingsVm, onBack = pop)
         Route.API -> ApiPage(settingsVm, onBack = pop)
-        Route.ABOUT -> AboutPage(onBack = pop, onDeveloper = { push(Route.DEVELOPER) })
+        Route.ABOUT -> AboutPage(onBack = pop, onDeveloper = { push(Route.DEVELOPER) }, onOpenLicenses = { push(Route.LICENSES) })
+        Route.LICENSES -> com.iris.localai.ui.settings.LicensesPage(onBack = pop, onOpenFile = { push(Route.LICENSE_TEXT) })
+        Route.LICENSE_TEXT -> com.iris.localai.ui.settings.LicenseTextRoute(onBack = pop)
         Route.DEVELOPER -> com.iris.localai.ui.settings.DeveloperPage(settingsVm, onBack = pop, onOpen = { p -> push(routeOf(p)) })
         Route.DIAGNOSTICS -> com.iris.localai.ui.settings.ResourceDiagnosticsPage(settingsVm, onBack = pop)
-        Route.AGENT -> com.iris.localai.ui.agent.AgentSettingsPage(onBack = pop, onOpenBrowser = { push(Route.BROWSER) }, onOpenFiles = { push(Route.FILES) })
+        Route.AGENT -> com.iris.localai.ui.agent.AgentSettingsPage(
+            onBack = pop, onOpenBrowser = { push(Route.BROWSER) }, onOpenFiles = { push(Route.FILES) }, onOpenMcp = { push(Route.MCP) },
+        )
+        Route.MCP -> com.iris.localai.ui.agent.McpPage(onBack = pop)
         Route.FILES -> com.iris.localai.ui.agent.FilesPage(onBack = pop)
         Route.BROWSER -> com.iris.localai.ui.agent.BrowserPage(onBack = pop)
         Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage(onBack = pop)

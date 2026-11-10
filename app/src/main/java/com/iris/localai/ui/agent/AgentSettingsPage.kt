@@ -127,7 +127,14 @@ object AgentText {
 private data class WsFile(val path: String, val file: File, val size: Long, val modified: Long)
 
 @Composable
-fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpenFiles: () -> Unit = {}) {
+fun AgentSettingsPage(
+    onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpenFiles: () -> Unit = {},
+    /**
+     * 2.5.0 Beta6: MCP 服务 opens as its own route in MainActivity's AnimatedContent (push / pop slide and
+     * predictive back like every other subpage). null = shown in place (old behaviour).
+     */
+    onOpenMcp: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val agent = remember { (context.applicationContext as IrisApp).container.agent }
     val s by agent.settings.settings.collectAsStateWithLifecycle()
@@ -224,7 +231,7 @@ fun AgentSettingsPage(onBack: () -> Unit, onOpenBrowser: () -> Unit = {}, onOpen
                 val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
                 SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
                     subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),
-                    onClick = { showMcp = true }, trailing = { com.iris.localai.ui.components.Chevron() })
+                    onClick = { onOpenMcp?.invoke() ?: run { showMcp = true } }, trailing = { com.iris.localai.ui.components.Chevron() })
             }
 
             // the agent's in-app browser.

@@ -146,6 +146,12 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     val voiceStates by vm.voiceStates.collectAsStateWithLifecycle()
     val translateStates by vm.translateStates.collectAsStateWithLifecycle()
     val ram = remember { vm.availRam() }
+    // 2.5.0 Beta6: 按机型推荐 — total RAM + chip class → one chat model, shown first on 推荐.
+    val total = remember { vm.totalRam() }
+    val socMan = remember { if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MANUFACTURER }.getOrNull() else null }
+    val socModel = remember { if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MODEL }.getOrNull() else android.os.Build.HARDWARE }
+    val chip = remember { com.iris.localai.data.DeviceRecommend.chip(socMan, socModel) }
+    val forDevice = remember { com.iris.localai.data.DeviceRecommend.pick(total, chip) }
     // 2.4.4: downloads show their progress in the notification shade; ask once (Android 13+).
     run {
         val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -303,6 +309,28 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 }
             }
             if (tab == 0) {
+                forDevice?.let { rec ->
+                    item(key = "for-device-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_title)) }
+                    item(key = "for-device", contentType = "rec") {
+                        RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id })
+                    }
+                    item(key = "for-device-why", contentType = "hint") {
+                        val dr = com.iris.localai.data.DeviceRecommend
+                        val brand = when (dr.vendor(socMan, socModel)) {
+                            com.iris.localai.data.DeviceRecommend.Vendor.QUALCOMM -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_soc_qcom)
+                            com.iris.localai.data.DeviceRecommend.Vendor.MEDIATEK -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_soc_mtk)
+                            else -> ""
+                        }
+                        val cls = when (chip) {
+                            com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_flagship)
+                            com.iris.localai.data.DeviceRecommend.Chip.MID -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_mid)
+                            com.iris.localai.data.DeviceRecommend.Chip.ENTRY -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_entry)
+                            com.iris.localai.data.DeviceRecommend.Chip.UNKNOWN -> ""
+                        }
+                        val chipText = listOf(brand, cls).filter { it.isNotEmpty() }.joinToString(" ")
+                        com.iris.localai.ui.components.GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_why, dr.ramGb(total), chipText.ifEmpty { "—" }))
+                    }
+                }
                 Section.entries.forEach { sec ->
                     val all = RecommendedCatalog.section(sec)
                     val open = sec in expanded

@@ -135,7 +135,14 @@ fun KnowledgeEntry(onOpen: () -> Unit) {
 
 /** 2.2.9 D1: 知识库 — files with chunk / cite counts and indexing state, add, delete, 重建索引. */
 @Composable
-fun KnowledgePage(onBack: () -> Unit) {
+fun KnowledgePage(
+    onBack: () -> Unit,
+    /**
+     * 2.5.0 Beta6: 新建文字 / 编辑文字 open as their own route (MainActivity Route.KB_EDITOR, push / pop slide and
+     * predictive back). The file to edit is handed over in [KbEditorNav]. null = editor shown in place (old behaviour).
+     */
+    onOpenEditor: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val container = remember { (context.applicationContext as IrisApp).container }
     val agent = container.agent
@@ -145,7 +152,8 @@ fun KnowledgePage(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<KbFileInfo?>(null) }
     // 2.3.2: current folder ("" = knowledge/), the editor (null = closed; path "" = new text), folder dialogs.
-    var folder by remember { mutableStateOf("") }
+    // 2.5.0 Beta6: saveable, so the folder survives a trip to the editor route (the page leaves composition).
+    var folder by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var editor by remember { mutableStateOf<KbEditorState?>(null) }
     var newFolder by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<String?>(null) }
@@ -178,7 +186,7 @@ fun KnowledgePage(onBack: () -> Unit) {
                     runCatching {
                         val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                             ?.use { cur -> if (cur.moveToFirst()) cur.getString(0) else null } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "file.txt"
-                        val bytes = context.contentResolver.openInputStream(uri)?.use { s -> s.readBytes().takeIf { it.size <= KnowledgeBase.MAX_BYTES } }
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { s -> s.readBytes().takeIf { it.size <= com.iris.localai.knowledge.KbFormats.maxBytes(name, KnowledgeBase.MAX_BYTES) } }
                         bytes != null && agent.knowledge.add(name, bytes, folder) != null
                     }.getOrDefault(false)
                 }
@@ -189,15 +197,15 @@ fun KnowledgePage(onBack: () -> Unit) {
         }
     }
 
+    // 2.5.0 Beta6: route mode hands the target to KbEditorNav and pushes; in-place mode keeps the old local state.
+    fun openEditor(ed: KbEditorState) {
+        if (onOpenEditor != null) { KbEditorNav.target = ed.copy(folder = folder); onOpenEditor() } else editor = ed
+    }
+
     editor?.let { ed ->
         KbEditorPage(ed, onClose = { editor = null }) { title, body ->
             scope.launch {
-                val ok = withContext(Dispatchers.IO) {
-                    runCatching {
-                        if (ed.path.isNotEmpty()) agent.knowledge.writeText(ed.path, body)
-                        else agent.knowledge.add(KnowledgeText.fileName(title.ifBlank { KnowledgeText.titleFrom(body) }), body.toByteArray(Charsets.UTF_8), folder)?.also { agent.knowledge.refresh() } != null
-                    }.getOrDefault(false)
-                }
+                val ok = saveKbText(agent, ed.copy(folder = folder), title, body)
                 tick++
                 if (ok) { editor = null; toast(com.iris.localai.R.string.kb232_saved) } else toast(com.iris.localai.R.string.kb232_failed)
             }
@@ -209,14 +217,14 @@ fun KnowledgePage(onBack: () -> Unit) {
         ScrollBody {
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(
-                KnowledgeText.ADD, { pick.launch(arrayOf("text/*", "application/json", "application/octet-stream")) },
+                KnowledgeText.ADD, { pick.launch(arrayOf("text/*", "application/json", "application/epub+zip", "application/octet-stream")) },
                 icon = Icons.Outlined.Add, enabled = !busy,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
             )
             Spacer(Modifier.height(IrisDimens.space8))
             // 2.2.17 D: paste text straight in (saved as a .md file and indexed like any import).
             IrisButton(
-                KnowledgeText.NEW_TEXT, { editor = KbEditorState("", "", "") }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
+                KnowledgeText.NEW_TEXT, { openEditor(KbEditorState("", "", "")) }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
                 icon = IrisIcons.Copy, enabled = !busy,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
             )
@@ -250,7 +258,7 @@ fun KnowledgePage(onBack: () -> Unit) {
                                 else scope.launch {
                                     val text = withContext(Dispatchers.IO) { runCatching { agent.knowledge.readText(f.path) }.getOrNull() }
                                     if (text == null) toast(com.iris.localai.R.string.kb232_failed)
-                                    else editor = KbEditorState(f.path, f.path.substringAfterLast('/').substringBeforeLast('.'), text)
+                                    else openEditor(KbEditorState(f.path, f.path.substringAfterLast('/').substringBeforeLast('.'), text))
                                 }
                             },
                         )
@@ -485,8 +493,54 @@ private fun KbCrumbs(folder: String, onOpen: (String) -> Unit) {
     }
 }
 
-/** 2.3.2: what the editor opens on. [path] "" = a new text (saved as 「title.md」 in the current folder). */
-data class KbEditorState(val path: String, val title: String, val text: String)
+/**
+ * 2.3.2: what the editor opens on. [path] "" = a new text (saved as 「title.md」 in [folder]).
+ * 2.5.0 Beta6: [folder] added (default "") so the editor route knows where a new text goes.
+ */
+data class KbEditorState(val path: String, val title: String, val text: String, val folder: String = "")
+
+/**
+ * 2.5.0 Beta6: hand-over for the 知识库 › 编辑 route. The enum back stack in MainActivity carries no
+ * arguments, so KnowledgePage puts the opened file (path, title, text already read, current folder) here
+ * right before push(Route.KB_EDITOR). Process-scoped and never cleared (it is simply overwritten on the next
+ * open), so the exiting page never sees null mid-animation; after process death it is null and the route pops.
+ */
+object KbEditorNav {
+    var target by mutableStateOf<KbEditorState?>(null)
+}
+
+/** 2.5.0 Beta6: shared by the in-place editor and the route — overwrite an existing file, or add a new .md. */
+private suspend fun saveKbText(agent: com.iris.localai.agent.AgentContainer, ed: KbEditorState, title: String, body: String): Boolean =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            if (ed.path.isNotEmpty()) agent.knowledge.writeText(ed.path, body)
+            else agent.knowledge.add(KnowledgeText.fileName(title.ifBlank { KnowledgeText.titleFrom(body) }), body.toByteArray(Charsets.UTF_8), ed.folder)?.also { agent.knowledge.refresh() } != null
+        }.getOrDefault(false)
+    }
+
+/** 2.5.0 Beta6: 知识库 › 新建文字 / 编辑文字 as a real page (MainActivity Route.KB_EDITOR). */
+@Composable
+fun KbEditorRoute(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val agent = remember { (context.applicationContext as IrisApp).container.agent }
+    val scope = rememberCoroutineScope()
+    // Read once: the target cannot change under an open editor.
+    val ed = remember { KbEditorNav.target }
+    if (ed == null) {
+        // Restored after process death with nothing to edit: go back to the list.
+        androidx.compose.runtime.LaunchedEffect(Unit) { onBack() }
+        return
+    }
+    KbEditorPage(ed, onClose = onBack, handleBack = false) { title, body ->
+        scope.launch {
+            val ok = saveKbText(agent, ed, title, body)
+            if (ok) {
+                Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_saved), Toast.LENGTH_SHORT).show()
+                onBack()
+            } else Toast.makeText(context, com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+}
 
 /**
  * 2.3.2 文字编辑页 (was the 2.2.17 「粘贴文字」 dialog): title + a multi-line box typed by hand. 「粘贴」 inserts
@@ -494,14 +548,19 @@ data class KbEditorState(val path: String, val title: String, val text: String)
  * keeps its name (title read-only) and is overwritten in place.
  */
 @Composable
-private fun KbEditorPage(state: KbEditorState, onClose: () -> Unit, onSave: (String, String) -> Unit) {
+private fun KbEditorPage(
+    state: KbEditorState, onClose: () -> Unit,
+    /** 2.5.0 Beta6: false on the route — MainActivity's PredictiveBackHandler pops it (a local BackHandler would shadow it). */
+    handleBack: Boolean = true,
+    onSave: (String, String) -> Unit,
+) {
     val c = Iris.colors
     val context = LocalContext.current
     val clip = androidx.compose.ui.platform.LocalClipboardManager.current
     val isNew = state.path.isEmpty()
     var title by remember { mutableStateOf(state.title) }
     var body by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(state.text)) }
-    androidx.activity.compose.BackHandler(onBack = onClose)
+    androidx.activity.compose.BackHandler(enabled = handleBack, onBack = onClose)
     SubpageScaffold(
         if (isNew) KnowledgeText.NEW_TEXT else KnowledgeText.EDIT_TEXT, onClose, scrollUnder = false,
         actions = {
@@ -512,7 +571,8 @@ private fun KbEditorPage(state: KbEditorState, onClose: () -> Unit, onSave: (Str
         },
     ) {
         Column(
-            Modifier.fillMaxSize().imePadding().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8),
+            // 2.5.0 Beta6: card-edge inset token (groupGutter) like the other subpages' free elements.
+            Modifier.fillMaxSize().imePadding().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8),
             verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
         ) {
             androidx.compose.material3.OutlinedTextField(

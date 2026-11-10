@@ -808,11 +808,11 @@
     <string name="agent_bc270f">नॉलेज बेस इस्तेमाल करें</string>
     <string name="agent_db3b61">जवाब देते समय सबसे संबंधित सामग्री अपने-आप देखता है</string>
     <string name="agent_be0ade">इंडेक्स दोबारा बनाएँ</string>
-    <string name="agent_2a6c4d">फ़ाइलें जोड़ें (txt / md / csv / html…)</string>
+    <string name="agent_2a6c4d">फ़ाइलें जोड़ें (txt / md / csv / html / epub…)</string>
     <string name="agent_32c65d">शीर्षक</string>
     <string name="agent_8b3889">पेस्ट किया टेक्स्ट</string>
     <string name="agent_ce81e3">अभी कोई फ़ाइल नहीं। जोड़ने पर चैट में संबंधित बात आने पर अपने-आप हवाला दिया जाएगा।</string>
-    <string name="agent_16ca25">txt, md, csv, json, html जैसी टेक्स्ट फ़ाइलें चलती हैं। बस फ़ोल्डर में रखें; डिवाइस पर ही इंडेक्स बनता है।</string>
+    <string name="agent_16ca25">txt, md, csv, json, html, epub जैसी टेक्स्ट फ़ाइलें चलती हैं। बस फ़ोल्डर में रखें; डिवाइस पर ही इंडेक्स बनता है।</string>
     <string name="agent_e93a44">अभी कोई फ़ाइल नहीं</string>
     <string name="agent_6b7690">%1$s फ़ाइलें · %2$s खंड</string>
     <string name="agent_f07c0e">\u0020· %1$s असमर्थित</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">इंडेक्स और बजट</string>
     <string name="v250_tool_files">फ़ाइलें पढ़ें, लिखें और खोजें</string>
     <string name="v250_tool_files_sub">वर्कस्पेस की फ़ाइलें पढ़ना-लिखना और वर्कस्पेस में खोजना; एक ही स्विच। “पूछें” = लिखने से पहले पूछें, पढ़ना और खोजना अनुमत</string>
+    <string name="v250_mem_title">मेमोरी कम पड़ सकती है</string>
+    <string name="v250_mem_load">फिर भी लोड करें</string>
+    <string name="v250_rec_title">इस फ़ोन के लिए सुझाव</string>
+    <string name="v250_rec_why">%1$d GB RAM · %2$s के लिए चुना गया; बाकी मॉडल नीचे।</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">Dimensity</string>
+    <string name="v250_chip_flagship">फ़्लैगशिप चिप</string>
+    <string name="v250_chip_mid">मिड-रेंज चिप</string>
+    <string name="v250_chip_entry">एंट्री-लेवल चिप</string>
 </resources>

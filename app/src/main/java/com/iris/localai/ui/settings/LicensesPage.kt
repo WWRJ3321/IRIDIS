@@ -71,7 +71,7 @@ object LicenseIndex {
 
 /** 设置 › 关于 › 许可证全文: bundled third-party licenses; tapping one shows its full text. */
 @Composable
-fun LicensesPage(onBack: () -> Unit) {
+fun LicensesPage(onBack: () -> Unit, onOpenFile: ((String) -> Unit)? = null) {
     val context = LocalContext.current
     var openFile by rememberSaveable { mutableStateOf<String?>(null) }
     val entries by produceState<List<LicenseEntry>?>(null) {
@@ -83,7 +83,8 @@ fun LicensesPage(onBack: () -> Unit) {
         LicenseTextPage(open, onBack = { openFile = null })
         return
     }
-    BackHandler(onBack = onBack)
+    // 2.5.0 Beta6: as a route (onOpenFile != null) the back gesture belongs to MainActivity's PredictiveBackHandler.
+    if (onOpenFile == null) BackHandler(onBack = onBack)
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4236d8), onBack) {
         ScrollBody {
             val list = entries
@@ -99,7 +100,7 @@ fun LicensesPage(onBack: () -> Unit) {
                                 e.name,
                                 subtitle = e.license.ifBlank { null },
                                 enabled = e.file.isNotBlank(),
-                                onClick = { openFile = e.file },
+                                onClick = { if (onOpenFile != null) { LicenseNav.file = e.file; onOpenFile(e.file) } else openFile = e.file },
                                 trailing = { Chevron() },
                             )
                         }
@@ -108,6 +109,32 @@ fun LicensesPage(onBack: () -> Unit) {
             }
         }
     }
+}
+
+/** 2.5.0 Beta6: the license file the LICENSE_TEXT route shows (process-level, like KbEditorNav). */
+object LicenseNav {
+    var file by mutableStateOf<String?>(null)
+}
+
+/** 2.5.0 Beta6: 许可证 › 单个许可证全文 as a real route. */
+@Composable
+fun LicenseTextRoute(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val f = androidx.compose.runtime.remember { LicenseNav.file }
+    val entries by produceState<List<LicenseEntry>?>(null) {
+        value = withContext(Dispatchers.IO) { LicenseIndex.load(context) }
+    }
+    if (f == null) {
+        androidx.compose.runtime.LaunchedEffect(Unit) { onBack() }
+        return
+    }
+    val list = entries ?: return
+    val e = list.firstOrNull { it.file == f }
+    if (e == null) {
+        androidx.compose.runtime.LaunchedEffect(Unit) { onBack() }
+        return
+    }
+    LicenseTextPage(e, onBack)
 }
 
 @Composable

@@ -790,6 +790,10 @@ fun ChatScreen(
     }
     }
 
+    // 2.5.0 Beta6: 加载前内存预检 (仍要加载 / 取消).
+    val memWarn by vm.memWarn.collectAsStateWithLifecycle()
+    memWarn?.let { (m, msg) -> com.iris.localai.ui.models.MemoryLoadDialog(m, msg, onConfirm = { vm.confirmMemLoad() }, onDismiss = vm::dismissMemWarn) }
+
     deletingMsg?.let { m ->
         com.iris.localai.ui.components.ConfirmDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.del244_title),

@@ -808,11 +808,11 @@
     <string name="agent_bc270f">引用知識庫</string>
     <string name="agent_db3b61">回答時自動參考最相關的資料</string>
     <string name="agent_be0ade">重建索引</string>
-    <string name="agent_2a6c4d">新增檔案（txt / md / csv / html…）</string>
+    <string name="agent_2a6c4d">新增檔案（txt / md / csv / html / epub…）</string>
     <string name="agent_32c65d">標題</string>
     <string name="agent_8b3889">貼上的文字</string>
     <string name="agent_ce81e3">還沒有檔案。新增後，聊天裡提到相關內容會自動引用。</string>
-    <string name="agent_16ca25">支援 txt、md、csv、json、html 等文字檔案。放進資料夾即可，自動在本機建索引。</string>
+    <string name="agent_16ca25">支援 txt、md、csv、json、html、epub 等文字檔案。放進資料夾即可，自動在本機建索引。</string>
     <string name="agent_e93a44">還沒有檔案</string>
     <string name="agent_6b7690">%1$s 個檔案 · %2$s 段</string>
     <string name="agent_f07c0e">\u0020· %1$s 個不支援</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">索引與預算</string>
     <string name="v250_tool_files">讀寫檔案與本機搜尋</string>
     <string name="v250_tool_files_sub">讀取、寫入工作區檔案，並在工作區裡搜尋；一個開關同時控制。「詢問」= 寫入前詢問，讀取與搜尋直接允許</string>
+    <string name="v250_mem_title">記憶體可能不足</string>
+    <string name="v250_mem_load">仍要載入</string>
+    <string name="v250_rec_title">為本機推薦</string>
+    <string name="v250_rec_why">依本機 %1$d GB 記憶體 · %2$s 推薦；其他型號見下方。</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">天璣</string>
+    <string name="v250_chip_flagship">旗艦晶片</string>
+    <string name="v250_chip_mid">中階晶片</string>
+    <string name="v250_chip_entry">入門晶片</string>
 </resources>

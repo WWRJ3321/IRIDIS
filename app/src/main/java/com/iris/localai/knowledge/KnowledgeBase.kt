@@ -100,7 +100,7 @@ class KnowledgeBase(
         // 2.3.3: hidden folders (the .trash recycle bin) are never indexed.
         d.walkTopDown().maxDepth(4).onEnter { it == d || !it.name.startsWith(".") }.filter { it.isFile }.forEach { f ->
             val rel = f.relativeTo(d).path.replace(File.separatorChar, '/')
-            if (KbFormats.supported(f.name) && f.length() <= MAX_BYTES) out[rel] = KbSourceFile(rel, f.length(), f.lastModified())
+            if (KbFormats.supported(f.name) && f.length() <= KbFormats.maxBytes(f.name, MAX_BYTES)) out[rel] = KbSourceFile(rel, f.length(), f.lastModified())
             else if (!f.name.startsWith(".")) unsupported++
         }
         external()?.let { ext ->
@@ -110,7 +110,7 @@ class KnowledgeBase(
                     val p = if (rel.isEmpty()) e.name else "$rel/${e.name}"
                     if (e.isDir) { if (depth < 4 && !e.name.startsWith(".")) walk(p, depth + 1) }
                     else if (p !in out) {
-                        if (KbFormats.supported(e.name) && e.size <= MAX_BYTES) out[p] = KbSourceFile(p, e.size, 0L)
+                        if (KbFormats.supported(e.name) && e.size <= KbFormats.maxBytes(e.name, MAX_BYTES)) out[p] = KbSourceFile(p, e.size, 0L)
                         else if (!e.name.startsWith(".")) unsupported++
                     }
                 }
@@ -125,7 +125,7 @@ class KnowledgeBase(
     private fun read(rel: String): ByteArray? {
         val f = File(dir(), rel)
         if (f.isFile && f.canRead()) return runCatching { f.readBytes() }.getOrNull()
-        return external()?.read("$FOLDER/$rel", MAX_BYTES)
+        return external()?.read("$FOLDER/$rel", KbFormats.maxBytes(rel, MAX_BYTES))
     }
 
     /** Brings the index up to date. [force] = 重建索引 (reads every file again). Returns the status. */

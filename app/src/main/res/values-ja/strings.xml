@@ -808,11 +808,11 @@
     <string name="agent_bc270f">ナレッジベースを参照</string>
     <string name="agent_db3b61">回答時に最も関連する資料を自動で参照します</string>
     <string name="agent_be0ade">インデックスを再構築</string>
-    <string name="agent_2a6c4d">ファイルを追加（txt / md / csv / html…）</string>
+    <string name="agent_2a6c4d">ファイルを追加（txt / md / csv / html / epub…）</string>
     <string name="agent_32c65d">タイトル</string>
     <string name="agent_8b3889">貼り付けたテキスト</string>
     <string name="agent_ce81e3">まだファイルはありません。追加すると、チャットで関連する話題が出たとき自動で引用します。</string>
-    <string name="agent_16ca25">txt・md・csv・json・html などのテキスト ファイルに対応。フォルダに入れるだけで端末内で自動的にインデックス化します。</string>
+    <string name="agent_16ca25">txt・md・csv・json・html・epub などのテキスト ファイルに対応。フォルダに入れるだけで端末内で自動的にインデックス化します。</string>
     <string name="agent_e93a44">まだファイルはありません</string>
     <string name="agent_6b7690">%1$s 個のファイル · %2$s 段落</string>
     <string name="agent_f07c0e">\u0020· 非対応 %1$s 個</string>
@@ -2050,4 +2050,13 @@
     <string name="v250_mem_info">インデックスと予算</string>
     <string name="v250_tool_files">ファイルの読み書きと検索</string>
     <string name="v250_tool_files_sub">ワークスペースのファイルを読み書きし、ワークスペース内を検索します。スイッチ1つでまとめて切り替え。「確認」= 書き込み前に確認、読み取りと検索は許可</string>
+    <string name="v250_mem_title">メモリが不足する可能性があります</string>
+    <string name="v250_mem_load">それでも読み込む</string>
+    <string name="v250_rec_title">この端末へのおすすめ</string>
+    <string name="v250_rec_why">%1$d GB メモリ · %2$s 向けに選択。ほかのモデルは下に。</string>
+    <string name="v250_soc_qcom">Snapdragon</string>
+    <string name="v250_soc_mtk">Dimensity</string>
+    <string name="v250_chip_flagship">フラッグシップ チップ</string>
+    <string name="v250_chip_mid">ミドルレンジ チップ</string>
+    <string name="v250_chip_entry">エントリー チップ</string>
 </resources>

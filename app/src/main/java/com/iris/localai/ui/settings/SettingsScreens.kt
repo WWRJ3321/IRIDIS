@@ -582,11 +582,12 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
 }
 
 @Composable
-fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
+fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}, onOpenLicenses: (() -> Unit)? = null) {
     val c = Iris.colors
-    // 1.14.7: 许可证全文 is routed inside the About page (no new top-level route).
+    // 1.14.7: 许可证全文 in place; 2.5.0 Beta6: MainActivity passes onOpenLicenses → Route.LICENSES (push/pop + back gesture).
     var showLicenses by rememberSaveable { mutableStateOf(false) }
-    if (showLicenses) {
+    if (showLicenses && onOpenLicenses == null) {
+        androidx.activity.compose.BackHandler { showLicenses = false }
         LicensesPage(onBack = { showLicenses = false })
         return
     }
@@ -620,7 +621,7 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}) {
                 Divider()
                 SettingsRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4236d8), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48b9fe),
-                    onClick = { showLicenses = true }, trailing = { Chevron() },
+                    onClick = { if (onOpenLicenses != null) onOpenLicenses() else showLicenses = true }, trailing = { Chevron() },
                 )
             }
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_843d86))
