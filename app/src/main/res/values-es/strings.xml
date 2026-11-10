@@ -2059,4 +2059,10 @@
     <string name="v250_chip_flagship">chip de gama alta</string>
     <string name="v250_chip_mid">chip de gama media</string>
     <string name="v250_chip_entry">chip de gama de entrada</string>
+    <string name="v250_fulllog_title">Exportar registros completos</string>
+    <string name="v250_fulllog_sub">Registro de ejecución + chats completos (razonamiento y llamadas a herramientas), zip, sin clave API</string>
+    <string name="v250_fulllog_all">Incluir todos los chats</string>
+    <string name="v250_fulllog_all_sub">Desactivado: solo el chat más reciente</string>
+    <string name="v250_fulllog_desc">Contiene el registro de ejecución y los chats completos: mensajes, respuestas, razonamiento, nombres, argumentos y resultados de las llamadas a herramientas, horas y modelos. Puede ser privado; compártelo solo con personas de confianza.</string>
+    <string name="v250_fulllog_done">Registros completos exportados (%1$d chats)</string>
 </resources>

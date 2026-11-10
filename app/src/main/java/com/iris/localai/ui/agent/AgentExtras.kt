@@ -118,6 +118,9 @@ fun BackupSection() {
     var confirmRestore by remember { mutableStateOf<Pair<android.net.Uri, Backup.Info>?>(null) }
     var askExport by remember { mutableStateOf(false) }
     var includeApiKey by remember { mutableStateOf(false) }
+    // 2.5.0-beta7: 「导出完整日志」 asks whether to take every chat or only the latest one.
+    var askFullLog by remember { mutableStateOf(false) }
+    var fullLogAll by remember { mutableStateOf(true) }
     val c = Iris.colors
     // ---- 备份与日志 ----
     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b56fbe))
@@ -151,6 +154,31 @@ fun BackupSection() {
             }
         }
     }
+    // 2.5.0-beta7: run log + full chats (messages, reasoning, tool calls) as one zip, no API key.
+    val exportFullLog = rememberLauncherForActivityResult(CreateDocumentInConfig("application/zip")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val all = fullLogAll
+        scope.launch {
+            message = withContext(Dispatchers.IO) {
+                runCatching {
+                    val container = (context.applicationContext as IrisApp).container
+                    val repo = container.conversations
+                    val ids = repo.summaries.value.let { list -> if (all) list.sortedByDescending { it.updatedAt } else listOfNotNull(list.maxByOrNull { it.updatedAt }) }
+                    val chats = ids.mapNotNull { repo.load(it.id) }
+                    val engineLine = when (val st = container.engine.state.value) {
+                        is com.iris.localai.engine.EngineState.Ready -> st.model.fileName + " · " + st.details.backend
+                        else -> "none"
+                    }
+                    val zone = java.time.ZoneId.systemDefault()
+                    val appLine = "IRIDIS ${com.iris.localai.BuildConfig.VERSION_NAME} (${com.iris.localai.BuildConfig.VERSION_CODE}) · Android ${android.os.Build.VERSION.RELEASE} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                    val header = com.iris.localai.util.FullLogExport.header(appLine, engineLine, zone, System.currentTimeMillis(), chats.size, if (all) "all" else "latest only")
+                    val log = runCatching { LogExport.collect() }.getOrElse { "(run log unavailable: ${it.message})" }
+                    context.contentResolver.openOutputStream(uri)!!.use { com.iris.localai.util.FullLogExport.writeZip(it, header, log, chats, zone) }
+                    chats.size
+                }.fold({ com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_done, it) }, { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e3fdcf, it.message) })
+            }
+        }
+    }
     SettingsGroup {
         SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9344b8), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3febe2), onClick = { includeApiKey = false; askExport = true })
         Divider()
@@ -159,6 +187,25 @@ fun BackupSection() {
         SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_609e15), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ad19c0), onClick = {
             exportLogs.launch("IRIS-log-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".txt")
         })
+        Divider()
+        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_title), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_sub), onClick = { fullLogAll = true; askFullLog = true })
+    }
+
+    if (askFullLog) {
+        IrisDialog(
+            onDismiss = { askFullLog = false }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_title),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b08bb8),
+            onConfirm = {
+                askFullLog = false
+                exportFullLog.launch("IRIDIS-full-log-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".zip")
+            },
+        ) {
+            Column {
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_desc), style = IrisType.secondary, color = c.textSecondary)
+                com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_all), checked = fullLogAll,
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v250_fulllog_all_sub)) { fullLogAll = it }
+            }
+        }
     }
 
     if (askExport) {

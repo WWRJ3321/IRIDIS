@@ -111,6 +111,12 @@ class V1120Test {
         override fun paste(): String? = "clip"
         override fun openUrl(url: String) = "url $url".also { log += it }
         override fun dial(number: String) = "dial $number".also { log += it }
+        override fun flashlight(mode: String) = "torch $mode".also { log += it }
+        override fun volume(stream: String?, percent: Int?) = "volume $stream $percent".also { log += it }
+        override fun ringerMode(mode: String?) = "ringer $mode".also { log += it }
+        override fun brightness(percent: Int?) = "brightness $percent".also { log += it }
+        override fun openSettings(page: String, pkg: String?) = "settings $page $pkg".also { log += it }
+        override fun battery() = "battery 80% charging".also { log += it }
     }
 
     @Test fun phoneTool() {

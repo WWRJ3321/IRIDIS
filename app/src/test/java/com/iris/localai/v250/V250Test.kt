@@ -167,14 +167,15 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 244"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta6\""))
+        assertTrue(g.contains("versionCode = 245"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta7\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta4"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta5（2026-11-09，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta6（2026-11-10，测试版，未在真机测试）"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta7（2026-11-10，测试版，未在真机测试）"))
     }
 
     @Test fun newStringsInEveryLanguage() {
@@ -358,5 +359,63 @@ class V250Test {
         assertTrue(dl.contains("item(key = \"for-device\""))
         val cat = src("app/src/main/java/com/iris/localai/data/RecommendedCatalog.kt")
         listOf("Qwen3.5-9B-MNN", "Qwen3.5-4B-MNN", "Qwen3.5-2B-MNN", "Qwen3.5-0.8B-MNN").forEach { assertTrue(it, cat.contains("\"$it\"")) }
+    }
+
+    // ---- Beta7 ----
+    @Test fun phoneToolDeviceActions() {
+        val p = src("app/src/main/java/com/iris/localai/agent/tools/Phone.kt")
+        for (m in listOf("fun flashlight(mode: String): String", "fun volume(stream: String?, percent: Int?): String", "fun ringerMode(mode: String?): String",
+            "fun brightness(percent: Int?): String", "fun openSettings(page: String, pkg: String?): String", "fun battery(): String")) assertTrue(m, p.contains(m))
+        assertTrue(p.contains("flashlight|volume|ringer|brightness|settings|battery"))
+        assertTrue(p.contains("cm.setTorchMode(id, target)"))
+        assertTrue(p.contains("CameraManager.TorchCallback()"))
+        assertTrue(p.contains("isNotificationPolicyAccessGranted"))
+        assertTrue(p.contains("Settings.System.canWrite(ctx)"))
+        assertTrue(p.contains("Settings.ACTION_MANAGE_WRITE_SETTINGS"))
+        for (a in listOf("ACTION_WIFI_SETTINGS", "ACTION_BLUETOOTH_SETTINGS", "ACTION_LOCATION_SOURCE_SETTINGS", "ACTION_AIRPLANE_MODE_SETTINGS",
+            "ACTION_DISPLAY_SETTINGS", "ACTION_POWER_USAGE_SUMMARY", "ACTION_APPLICATION_DETAILS_SETTINGS")) assertTrue(a, p.contains(a))
+        assertTrue(p.contains("BatteryManager.BATTERY_PROPERTY_CAPACITY"))
+        val manifest = src("app/src/main/AndroidManifest.xml")
+        assertTrue(manifest.contains("android.permission.WRITE_SETTINGS"))
+        assertTrue(manifest.contains("android.permission.ACCESS_NOTIFICATION_POLICY"))
+        assertFalse(manifest.contains("android.permission.CAMERA\""))
+        // 纯函数（PhoneTool 为 public）
+        assertEquals("on", com.iris.localai.agent.PhoneTool.torchMode("开"))
+        assertEquals("toggle", com.iris.localai.agent.PhoneTool.torchMode("toggle"))
+        assertEquals("ring", com.iris.localai.agent.PhoneTool.volumeStream("铃声"))
+        assertEquals("silent", com.iris.localai.agent.PhoneTool.ringerMode("静音"))
+        assertEquals("wifi", com.iris.localai.agent.PhoneTool.settingsPage("Wi-Fi"))
+        assertEquals("airplane", com.iris.localai.agent.PhoneTool.settingsPage("飞行模式"))
+        assertNull(com.iris.localai.agent.PhoneTool.settingsPage("nope"))
+    }
+
+    @Test fun fullLogExport() {
+        val ui = src("app/src/main/java/com/iris/localai/ui/agent/AgentExtras.kt")
+        assertTrue(ui.contains("R.string.v250_fulllog_title"))
+        assertTrue(ui.contains("FullLogExport.writeZip("))
+        assertTrue(ui.contains("withContext(Dispatchers.IO)"))
+        assertTrue(ui.contains("R.string.agent_609e15")) // 原「导出日志」行仍在
+        val ex = src("app/src/main/java/com/iris/localai/util/io/FullLogExport.kt")
+        assertFalse(ex.contains("apiKey"))
+        assertTrue(ex.contains("NOT_PERSISTED"))
+        for (lang in listOf("values", "values-en", "values-de", "values-es", "values-hi", "values-ja", "values-zh-rTW")) {
+            val x = src("app/src/main/res/$lang/strings.xml")
+            for (k in listOf("v250_fulllog_title", "v250_fulllog_sub", "v250_fulllog_all", "v250_fulllog_all_sub", "v250_fulllog_desc", "v250_fulllog_done"))
+                assertTrue("$lang/$k", x.contains("name=\"$k\""))
+        }
+        val e = com.iris.localai.util.FullLogExport
+        assertFalse(e.redact("key sk-abcdefghijklmnopqrstuvwxyz end").contains("abcdefghijklmnop"))
+        assertFalse(e.redact("Authorization: Bearer abcdefghijklmnopqrstuv").contains("abcdefghijklmnop"))
+        val conv = com.iris.localai.data.Conversation(title = "t", messages = listOf(
+            com.iris.localai.data.ChatMessage(role = com.iris.localai.data.Role.USER, content = "你好", createdAt = 1_000L),
+            com.iris.localai.data.ChatMessage(role = com.iris.localai.data.Role.ASSISTANT, content = "<think>想一想</think>答案", createdAt = 2_000L, modelName = "m.gguf",
+                agentSteps = listOf(com.iris.localai.agent.AgentStep(tool = "phone", args = "{\"action\":\"battery\"}", result = "80%", status = com.iris.localai.agent.StepStatus.OK)))))
+        val out = e.formatConversation(conv, java.time.ZoneOffset.UTC)
+        for (t in listOf("USER", "你好", "ASSISTANT", "model: m.gguf", "想一想", "答案", "tool call 1: phone", "battery", "80%", "1970-01-01 00:00:02")) assertTrue(t, out.contains(t))
+        val zip = java.io.ByteArrayOutputStream()
+        e.writeZip(zip, "h", "log", listOf(conv), java.time.ZoneOffset.UTC)
+        val names = mutableListOf<String>()
+        java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(zip.toByteArray())).use { z -> while (true) { names += (z.nextEntry ?: break).name } }
+        assertEquals(listOf("README.txt", "app-log.txt", "conversations/001-t.txt"), names)
     }
 }

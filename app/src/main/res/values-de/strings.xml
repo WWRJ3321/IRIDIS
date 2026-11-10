@@ -2059,4 +2059,10 @@
     <string name="v250_chip_flagship">Flaggschiff-Chip</string>
     <string name="v250_chip_mid">Mittelklasse-Chip</string>
     <string name="v250_chip_entry">Einsteiger-Chip</string>
+    <string name="v250_fulllog_title">Vollständige Protokolle exportieren</string>
+    <string name="v250_fulllog_sub">Laufprotokoll + vollständige Chats (Denken und Tool-Aufrufe), ZIP, ohne API-Schlüssel</string>
+    <string name="v250_fulllog_all">Alle Chats einschließen</string>
+    <string name="v250_fulllog_all_sub">Aus: nur der letzte Chat</string>
+    <string name="v250_fulllog_desc">Enthält das Laufprotokoll und die vollständigen Chats: Nachrichten, Antworten, Denkinhalte, Namen, Argumente und Ergebnisse der Tool-Aufrufe, Zeiten und Modelle. Kann private Inhalte enthalten; nur mit vertrauenswürdigen Personen teilen.</string>
+    <string name="v250_fulllog_done">Vollständige Protokolle exportiert (%1$d Chats)</string>
 </resources>

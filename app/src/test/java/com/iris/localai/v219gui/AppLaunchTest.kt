@@ -87,6 +87,12 @@ class AppLaunchTest {
         override fun paste(): String? = null
         override fun openUrl(url: String) = ""
         override fun dial(number: String) = ""
+        override fun flashlight(mode: String) = ""
+        override fun volume(stream: String?, percent: Int?) = ""
+        override fun ringerMode(mode: String?) = ""
+        override fun brightness(percent: Int?) = ""
+        override fun openSettings(page: String, pkg: String?) = ""
+        override fun battery() = ""
     }
 
     private class NoGui : GuiTaskBackend {

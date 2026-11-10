@@ -2059,4 +2059,10 @@
     <string name="v250_chip_flagship">फ़्लैगशिप चिप</string>
     <string name="v250_chip_mid">मिड-रेंज चिप</string>
     <string name="v250_chip_entry">एंट्री-लेवल चिप</string>
+    <string name="v250_fulllog_title">पूरे लॉग एक्सपोर्ट करें</string>
+    <string name="v250_fulllog_sub">रन लॉग + पूरी चैट (सोच और टूल कॉल), zip, API कुंजी नहीं</string>
+    <string name="v250_fulllog_all">सभी चैट शामिल करें</string>
+    <string name="v250_fulllog_all_sub">बंद: केवल सबसे हाल की चैट</string>
+    <string name="v250_fulllog_desc">इसमें रन लॉग और पूरी चैट होती हैं: संदेश, जवाब, सोच, टूल कॉल के नाम, आर्ग्युमेंट और नतीजे, समय और मॉडल। यह निजी हो सकता है; केवल भरोसेमंद लोगों से साझा करें।</string>
+    <string name="v250_fulllog_done">पूरे लॉग एक्सपोर्ट हुए (%1$d चैट)</string>
 </resources>

@@ -2060,4 +2060,10 @@
     <string name="v250_chip_flagship">旗舰芯片</string>
     <string name="v250_chip_mid">中端芯片</string>
     <string name="v250_chip_entry">入门芯片</string>
+    <string name="v250_fulllog_title">导出完整日志</string>
+    <string name="v250_fulllog_sub">运行日志 + 对话全文（含思考与工具调用），zip，不含 API Key</string>
+    <string name="v250_fulllog_all">包含全部对话</string>
+    <string name="v250_fulllog_all_sub">关闭则只导出最近一次对话</string>
+    <string name="v250_fulllog_desc">包含运行日志与对话全文：消息、回复、思考内容、工具调用的名称、参数与结果、时间和模型。内容可能涉及隐私，请只发给信任的人。</string>
+    <string name="v250_fulllog_done">完整日志已导出（%1$d 个对话）</string>
 </resources>

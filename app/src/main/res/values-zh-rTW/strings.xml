@@ -2059,4 +2059,10 @@
     <string name="v250_chip_flagship">旗艦晶片</string>
     <string name="v250_chip_mid">中階晶片</string>
     <string name="v250_chip_entry">入門晶片</string>
+    <string name="v250_fulllog_title">匯出完整日誌</string>
+    <string name="v250_fulllog_sub">執行日誌 + 對話全文（含思考與工具呼叫），zip，不含 API Key</string>
+    <string name="v250_fulllog_all">包含全部對話</string>
+    <string name="v250_fulllog_all_sub">關閉則只匯出最近一次對話</string>
+    <string name="v250_fulllog_desc">包含執行日誌與對話全文：訊息、回覆、思考內容、工具呼叫的名稱、參數與結果、時間和模型。內容可能涉及隱私，請只傳給信任的人。</string>
+    <string name="v250_fulllog_done">完整日誌已匯出（%1$d 個對話）</string>
 </resources>
