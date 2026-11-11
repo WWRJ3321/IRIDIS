@@ -80,7 +80,8 @@ class V1103Test {
         assertEquals("首次加载需编译，可能要几分钟", BackendCapabilities.LITERT_GPU_WARNING)
         assertEquals("Adreno · OpenCL（Q4_0 / Q8_0 最快）", BackendCapabilities.options(ModelFormat.GGUF, "a.gguf", env).first { it.backend == Backend.GPU }.detail)
         assertEquals("OpenCL", BackendCapabilities.options(ModelFormat.MNN, "m", env).first { it.backend == Backend.GPU }.detail)
-        assertTrue(source("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt").contains("BackendCapabilities.LITERT_GPU_WARNING"))
+        // 2.5.0-beta10: the 默认后端 rows no longer carry standing notes; the warning stays on the GPU option.
+        assertFalse(source("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt").contains("R.string.settings_b329a5"))
     }
 
     // ================================================================ 2. GPU compile cache

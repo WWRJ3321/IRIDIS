@@ -357,6 +357,15 @@ void Engine::free_spec() {
     spec_sync_ = false;
 }
 
+// 2.5.0-beta10: a draft / verify / rollback step failed while generating (MTP is experimental on
+// the GPU backends): drop MTP for the rest of this load and keep decoding normally. Callers hold mu_.
+void Engine::spec_disable(const std::string &why) {
+    if (!spec_ && !ctx_dft_) return;
+    free_spec();
+    spec_status_ = "fallback: " + why;
+    resource_log("MTP off for this session (%s): normal decoding", why.c_str());
+}
+
 std::string Engine::spec_status() const {
     std::lock_guard<std::mutex> lk(mu_);
     return spec_status_;
@@ -586,10 +595,9 @@ int32_t Engine::spec_decode(const std::vector<int32_t> &tokens, size_t from, siz
     for (size_t k = 0; k < n; ++k) b.add(tokens[from + k], p0 + (llama_pos) k, 0, last_out && k + 1 == n);
     const int32_t rc = llama_process(ctx_, LLAMA_PROCESS_TYPE_DECODE, b.get());
     if (rc != 0) return rc;
-    if (!common_speculative_process(spec_, b)) {
-        spec_sync_ = false;
-        resource_log("MTP process failed: back to normal decoding");
-    }
+    bool ok = false;
+    try { ok = common_speculative_process(spec_, b); } catch (...) { ok = false; }
+    if (!ok) spec_disable("prompt process failed");
     return 0;
 #else
     (void) tokens; (void) from; (void) n; (void) last_out;
@@ -819,6 +827,16 @@ bool Engine::decode_tokens(const std::vector<int32_t> &tokens, size_t from, Gene
         if (spec_ && spec_sync_) {
             // 2.5.0-beta9: the MTP head sees every prompt chunk the target decodes.
             rc = spec_decode(tokens, i, (size_t) n, i + (size_t) n == tokens.size());
+            if (rc != 0 && rc != 2 && !cancelled_.load()) {
+                // 2.5.0-beta10: retry this chunk without MTP when the target memory is intact.
+                const size_t had = kv_tokens_.size();
+                spec_disable("prompt decode failed (" + std::to_string(rc) + ")");
+                resync_after_failure();
+                if (kv_tokens_.size() == had) {
+                    llama_batch batch = llama_batch_get_one(const_cast<llama_token *>(tokens.data() + i), n);
+                    rc = llama_decode(ctx_, batch);
+                }
+            }
         } else {
             llama_batch batch = llama_batch_get_one(const_cast<llama_token *>(tokens.data() + i), n);
             rc = llama_decode(ctx_, batch);
@@ -1130,7 +1148,9 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
     const auto t_gen = Clock::now();
     st.stop = StopReason::MaxTokens;
 #ifdef IRIS_SPEC
-    if (spec_ && spec_sync_) common_speculative_begin(spec_, 0, kv_tokens_);
+    if (spec_ && spec_sync_) {
+        try { common_speculative_begin(spec_, 0, kv_tokens_); } catch (...) { spec_disable("begin failed"); }
+    }
 #endif
     // 2.5.0-beta9 MTP: tokens produced by the last verification step. The first `queue_kv` are
     // accepted drafts already in the KV cache; the one after them was sampled from the target and
@@ -1195,10 +1215,18 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
                 dp.prompt = &kv_tokens_;
                 dp.result = &draft;
                 dp.result_q = nullptr;
-                common_speculative_draft(spec_);
-                if ((int32_t) draft.size() > n_max) draft.resize((size_t) n_max);
-                spec_mem_rm(n_past);  // the head's own draft positions; verification re-feeds them
+                bool drafted = true;
+                try { common_speculative_draft(spec_); } catch (...) { drafted = false; }
+                if (!drafted) {
+                    // 2.5.0-beta10: drafting failed → this token goes through normal decoding below.
+                    spec_disable("draft failed");
+                    draft.clear();
+                } else {
+                    if ((int32_t) draft.size() > n_max) draft.resize((size_t) n_max);
+                    spec_mem_rm(n_past);  // the head's own draft positions; verification re-feeds them
+                }
             }
+          if (spec_) {
             std::vector<int32_t> vb;
             vb.reserve(draft.size() + 1);
             vb.push_back(tok);
@@ -1207,14 +1235,29 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
             for (size_t k = 0; k < vb.size(); ++k) b.add(vb[k], n_past + (llama_pos) k, 0, true);
             const int32_t rc = llama_process(ctx_, LLAMA_PROCESS_TYPE_DECODE, b.get());
             if (rc != 0) {
-                if (rc == 2 || cancelled_.load()) st.stop = StopReason::Cancelled;
-                else { st.stop = StopReason::Error; st.error = "llama_decode 失败 (" + std::to_string(rc) + ")"; }
+                if (rc == 2 || cancelled_.load()) {
+                    st.stop = StopReason::Cancelled;
+                    resync_after_failure();
+                    break;
+                }
+                // 2.5.0-beta10: verification failed (e.g. the GPU backend) → drop MTP, restore the
+                // target memory to kv_tokens_ and decode `tok` alone through the normal path below.
+                spec_disable("verify decode failed (" + std::to_string(rc) + ")");
+                std::vector<int32_t> keep = kv_tokens_;
                 resync_after_failure();
-                break;
+                if (kv_tokens_.size() != keep.size()) {
+                    llama_memory_clear(llama_get_memory(ctx_), true);
+                    kv_tokens_.clear();
+                    if (!decode_tokens(keep, 0, st)) break;
+                }
+                queue.clear();
+                queue_pos = queue_kv = 0;
+                goto normal_decode;
             }
-            if (!common_speculative_process(spec_, b)) {
-                spec_sync_ = false;
-                resource_log("MTP process failed: back to normal decoding");
+            {
+                bool processed = false;
+                try { processed = common_speculative_process(spec_, b); } catch (...) { processed = false; }
+                if (!processed) spec_disable("verify process failed");  // target logits stay valid
             }
             queue.clear();
             queue_pos = 0;
@@ -1235,16 +1278,17 @@ GenerateStats Engine::generate_impl(const std::vector<ChatMessage> &input, const
                 // Should not happen (checked at load): rebuild the cache from the token list.
                 resource_log("MTP rollback failed: re-prefill %zu tokens, normal decoding", kv_tokens_.size());
                 std::vector<int32_t> keep = kv_tokens_;
+                spec_disable("rollback failed");
                 llama_memory_clear(mem, true);
                 kv_tokens_.clear();
-                spec_mem_rm(0);
-                spec_sync_ = false;
                 if (!decode_tokens(keep, 0, st)) break;
             } else {
                 spec_mem_rm((int32_t) kv_tokens_.size());
             }
             continue;
+          }
         }
+        normal_decode:
 #endif
         llama_batch batch = llama_batch_get_one(&tok, 1);
         const int32_t rc = llama_decode(ctx_, batch);

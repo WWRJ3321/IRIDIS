@@ -373,7 +373,7 @@
     <string name="models_adf29d">मॉडल फ़ाइल इंपोर्ट करें, या USB / adb से नीचे के फ़ोल्डर में कॉपी करें</string>
     <string name="models_5f4be2">ऐप अनइंस्टॉल करने पर ये मॉडल भी हट जाएँगे</string>
     <string name="models_0b5542">इसके बजाय डाउनलोड फ़ोल्डर में रखें</string>
-    <string name="models_85c491">“मॉडल डाउनलोड करें” से पाएँ, या मॉडल फ़ाइलें ऊपर के फ़ोल्डर में कॉपी करें।</string>
+    <string name="models_85c491">“मॉडल डाउनलोड” से लें या ऊपर के फ़ोल्डर में कॉपी करें</string>
     <string name="models_ce618f">मॉडल हटाएँ?</string>
     <string name="models_704d32">%1$s (%2$s) फ़ोन से हटा दिया जाएगा।</string>
     <string name="models_138a26">क्रम बदलने के लिए खींचें</string>
@@ -386,7 +386,7 @@
     <string name="models_d9a670">फ़ाइल से इंपोर्ट करें</string>
     <string name="models_aa27cc">मॉडल फ़ाइल पहले से है (क्लाउड या कंप्यूटर से)?</string>
     <string name="models_389994">कोई स्रोत विफल हो या 20 से. तक गति न मिले, तो अगले स्रोत पर अपने आप जाकर डाउनलोड जारी रहता है।</string>
-    <string name="models_c0f2d7">ऑटो: पहले गति जाँचता है, ModelScope (आधिकारिक कॉपी वाले मॉडल) को प्राथमिकता, फिर hf-mirror.com, अंत में आधिकारिक HuggingFace; विफल होने पर स्रोत बदलकर जारी रखता है। मुख्यभूमि चीन में “ऑटो” या “ModelScope” चुनें।</string>
+    <string name="models_c0f2d7">ऑटो गति जाँचता है, विफल होने पर स्रोत बदलता है</string>
     <string name="models_6acd72">गति जाँचकर सबसे तेज़ स्रोत चुनता है; मुख्यभूमि चीन में आमतौर पर ModelScope या hf-mirror</string>
     <string name="models_35fcd5">Alibaba ModelScope, मुख्यभूमि चीन में सबसे तेज़; बिना कॉपी वाले मॉडल hf-mirror से</string>
     <string name="models_5775bd">मुख्यभूमि चीन में HuggingFace मिरर</string>
@@ -437,7 +437,7 @@
     <string name="settings_c63448">सभी चैट हमेशा के लिए हट जाएँगी। इसे पूर्ववत नहीं किया जा सकता।</string>
     <string name="settings_7468f3">डिफ़ॉल्ट पर लौटाएँ</string>
     <string name="settings_1c8600">शुरू होते ही पिछला मॉडल लोड करें</string>
-    <string name="settings_b6c8f1">ऐप खुलते ही पिछला मॉडल बैकग्राउंड में लोड होता है ताकि चैट तुरंत तैयार रहे। बंद करने से थोड़ी बैटरी और मेमोरी बचती है</string>
+    <string name="settings_b6c8f1">ऐप खुलते ही पिछला मॉडल बैकग्राउंड में लोड करें</string>
     <string name="settings_41ba97">मॉडल अभी फिर से लोड करें</string>
     <string name="settings_1a7844">रीलोड से लागू होने वाले बदलाव तुरंत लागू करें</string>
     <string name="settings_494ef0">डिफ़ॉल्ट बैकएंड</string>
@@ -453,7 +453,7 @@
     <string name="settings_04e3d1">लोड विकल्प</string>
     <string name="settings_c67060">लंबे कॉन्टेक्स्ट में कम मेमोरी और बिजली (GGUF)</string>
     <string name="settings_1747d7">KV कैश क्वांटाइज़ेशन</string>
-    <string name="settings_b9637e">केवल GGUF। Q8_0 मेमोरी आधी करता है, गुणवत्ता लगभग वही; Q4_0 और बचाता है पर गुणवत्ता घट सकती है</string>
+    <string name="settings_b9637e">GGUF: Q8_0 आधी मेमोरी, Q4_0 और कम</string>
     <string name="settings_1cf9cd">Flash Attention चालू होना ज़रूरी</string>
     <string name="settings_b65a0d">बैच आकार</string>
     <string name="settings_eb0286">संसाधन स्तर के अनुसार (%1$s)</string>
@@ -1930,8 +1930,8 @@
     <string name="ask245_pill">आपकी पुष्टि बाकी: %1$s</string>
     <string name="ask245_reopen">पुष्टि खोलें</string>
     <string name="vg245_title">विज़न के लिए GPU</string>
-    <string name="vg245_off">बंद: Snapdragon (Adreno) पर विज़न प्रोजेक्टर (mmproj) CPU पर चलता है, जो ज़्यादा स्थिर है; दूसरे GPU पर असर नहीं। मॉडल दोबारा लोड करने पर लागू</string>
-    <string name="vg245_on">चालू: विज़न प्रोजेक्टर मॉडल के साथ GPU पर चलता है, तस्वीरें तेज़ी से पढ़ी जाती हैं; कुछ फ़ोन अटक सकते हैं — ऐसा हो तो बंद करें। मॉडल दोबारा लोड करने पर लागू</string>
+    <string name="vg245_off">Snapdragon पर mmproj CPU पर। दोबारा लोड पर लागू</string>
+    <string name="vg245_on">तेज़ छवि पहचान; कुछ फ़ोन पर अटक सकता है। दोबारा लोड पर लागू</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU बिल्ड, 4K संदर्भ, सिर्फ़ टेक्स्ट (बीटा)</string>
     <string name="tts245_section">आयात की गई आवाज़ें</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
@@ -2067,7 +2067,9 @@
     <string name="v250_fulllog_done">पूरे लॉग एक्सपोर्ट हुए (%1$d चैट)</string>
     <string name="v250_cpu_missing">इस डिवाइस के CPU में %1$s निर्देश नहीं हैं, इसलिए GGUF इंजन नहीं चल सकता (Snapdragon 855/865 या नया आवश्यक)</string>
     <string name="v259_mtp">MTP त्वरण (प्रायोगिक)</string>
-    <string name="v259_mtp_sub">मॉडल में मल्टी-टोकन प्रेडिक्शन परतें हैं: पहले ड्राफ्ट, फिर जाँच। आउटपुट वही, संभवतः तेज़। केवल CPU; दोबारा लोड करने पर लागू</string>
+    <string name="v259_mtp_sub">मॉडल में मल्टी-टोकन प्रेडिक्शन परतें हैं: पहले ड्राफ्ट, फिर जाँच। आउटपुट वही, संभवतः तेज़। दोबारा लोड करने पर लागू</string>
+    <string name="v2510_mtp_gpu">। GPU पर प्रायोगिक: धीमा हो सकता है या अपने-आप बंद हो सकता है</string>
+    <string name="v2510_litert_no_mtp">इस मॉडल फ़ाइल में MTP नहीं है; नया संस्करण फिर से डाउनलोड करें</string>
     <string name="v259_imagegen_models">इमेज मॉडल</string>
     <string name="v259_imagegen_manage">इमेज जनरेशन में प्रबंधित करें और हटाएँ</string>
     <string name="v259_live_title_thinking">सोच रहा है</string>

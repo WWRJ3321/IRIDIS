@@ -59,6 +59,8 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
     @Volatile private var live: Conversation? = null
     private var maxTokens = 4096
     private var backend = ""
+    /** 2.5.0-beta10: 「此模型文件不含 MTP…」 when MTP was asked for but only plain decoding initialised. */
+    private var mtpNote: String? = null
     private val isNpu: Boolean get() = backend.startsWith("NPU")
 
     private data class ConvKey(val params: SamplingConfig, val system: String)
@@ -137,6 +139,15 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
             // 1.10.12: multimodal .litertlm files (Gemma 3n / 4, VLMs) get a vision backend so attached
             // images can be read; a file without a vision section that refuses it loads text-only.
             val wantVision = com.iris.localai.util.VisionModels.litertMayHaveVision(model.fileName)
+            // 2.5.0-beta10: MTP (speculative decoding with the file's drafter) first when asked; an old
+            // file without a drafter or any init failure retries the whole chain with the flag off.
+            var mtpOn = false
+            var mtpFallback = false
+            spec@ for (spec in com.iris.localai.engine.LiteRtMtp.attempts(config.litertMtp)) {
+            if (!spec && config.litertMtp) {
+                mtpFallback = true
+                android.util.Log.w("IrisResource", "litert MTP: init with speculative decoding failed, plain decoding for ${model.fileName}: ${errors.toString().trim().take(400)}")
+            }
             outer@ for ((name, make) in candidates) {
                 val kvs: List<Int?> = if (name == "NPU") com.iris.localai.engine.NpuRetry.kvAttempts(npuKv) else listOf(maxTokens)
                 for ((kvIndex, kv) in kvs.withIndex()) {
@@ -144,6 +155,8 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 for (vision in if (wantVision && name != "NPU") listOf(true, false) else listOf(false)) {
                 var e: Engine? = null
                 try {
+                    // ExperimentalFlags is process-wide: set it explicitly before every Engine so it never leaks to another model.
+                    com.google.ai.edge.litertlm.ExperimentalFlags.enableSpeculativeDecoding = spec
                     e = Engine(
                         EngineConfig(
                             modelPath = model.path,
@@ -159,15 +172,19 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                     visionOn = vision
                     backend = if (name == "NPU") (if (com.iris.localai.engine.NpuIds.isMediatekTarget(npuModel)) "NPU · NeuroPilot · LiteRT-LM" else "NPU · Hexagon · LiteRT-LM") else "$name · LiteRT-LM"
                     if (name == "NPU" && kv != null) maxTokens = kv
-                    break@outer
+                    mtpOn = spec
+                    break@spec
                 } catch (t: Throwable) {
                     runCatching { e?.close() }
                     val kvTag = if (name == "NPU") " 上下文 ${kv ?: "默认"}" else ""
-                    errors.append("[$name${if (vision) "+视觉" else ""}$kvTag] ").append(rootMessage(t)).append('\n')
+                    errors.append("[$name${if (vision) "+视觉" else ""}$kvTag${if (spec) " MTP" else ""}] ").append(rootMessage(t)).append('\n')
                 }
                 }
                 }
             }
+            }
+            if (engine != null && config.litertMtp) android.util.Log.i("IrisResource", "litert MTP ${model.fileName}: " + if (mtpOn) "active" else "fallback (plain decoding)")
+            mtpNote = if (engine != null && mtpFallback && !mtpOn) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_litert_no_mtp) else null
             } finally {
                 ticker.interrupt()
             }
@@ -203,6 +220,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 activeBackend = config.backend,
                 // 1.7.9: LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() has no arguments).
                 gpuHint = if (config.backend == com.iris.localai.engine.Backend.GPU) "unsupported" else null,
+                fallbackNote = mtpNote,
                 cacheBefore = cacheBefore,
                 cacheAfter = snapshot(),
             )

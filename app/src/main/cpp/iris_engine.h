@@ -204,6 +204,7 @@ private:
     static bool abort_cb(void *data);
     void init_spec(const LoadParams &params);
     void free_spec();
+    void spec_disable(const std::string &why);  // 2.5.0-beta10
     void spec_mem_rm(int32_t from);
     int32_t spec_decode(const std::vector<int32_t> &tokens, size_t from, size_t n, bool last_out);
 

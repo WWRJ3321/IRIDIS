@@ -109,7 +109,9 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     val mmprojAuto = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, mmprojSiblings) }
     // 2.5.0-beta9: MTP layers read from the GGUF header on IO; the switch only appears when present.
     val hasMtp by androidx.compose.runtime.produceState(false, model.path) {
-        value = model.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // 2.5.0-beta10: every LiteRT-LM model gets the switch too (its drafter lives inside the file).
+        value = model.format == com.iris.localai.data.ModelFormat.LITERT ||
+            model.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.mtp == true
         }
     }
@@ -319,7 +321,8 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     }
                     if (hasMtp) {
                         Divider()
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp_sub),
+                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp_sub) +
+                            (if (com.iris.localai.engine.MtpTag.gpuNote(eff.backend, loaded?.details?.backend)) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_mtp_gpu) else ""),
                             onChange = { on -> set { it.copy(mtp = on) } }, onReset = { set { it.copy(mtp = null) } })
                     }
                     Divider()

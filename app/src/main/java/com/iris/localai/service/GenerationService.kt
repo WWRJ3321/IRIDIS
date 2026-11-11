@@ -161,13 +161,13 @@ class GenerationService : LifecycleService() {
         // 2.5.0 Android 16 Live Update (super island / status-bar chip on HyperOS 3 and Pixel):
         // ongoing + contentTitle + standard style + chronometer, not colorized, no custom views, and
         // the promotion request flag. The system decides whether it is promoted.
-        // 2.5.0-beta9: title = state (思考中 / 生成中), body = model · N 字 (or tok/s), clean grey large icon,
-        // indeterminate Notification.ProgressStyle (BigText with the same body when that fails).
+        // 2.5.0-beta9: title = state (思考中 / 生成中), body = model · N 字 (or tok/s).
+        // 2.5.0-beta10: no large icon (HyperOS already draws the app icon) and BigText again — the
+        // indeterminate ProgressStyle showed on HyperOS as a dot on an empty track (looked stuck at 0%).
         val modelName = runCatching {
             ((applicationContext as com.iris.localai.IrisApp).container.engine.state.value as? com.iris.localai.engine.EngineState.Ready)?.model?.displayName
         }.getOrNull()
         val text = GenerationText.liveBody(modelName, chars, j?.tokensPerSecond ?: 0f)
-        runCatching { liveLargeIcon() }.getOrNull()?.let { b.setLargeIcon(it) }
         val n = b.setContentTitle(GenerationText.liveTitle(chars))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -178,21 +178,7 @@ class GenerationService : LifecycleService() {
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .addExtras(android.os.Bundle().apply { putBoolean(LiveUpdate.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
             .build()
-        return runCatching { LiveUpdate.promote(this, n, GenerationText.liveChip(chars)) }.getOrNull()
-            ?: runCatching { LiveUpdate.withChip(this, n, GenerationText.liveChip(chars)) }.getOrDefault(n)
-    }
-
-    /** 2.5.0-beta9: monochrome IRIDIS mark on a neutral dark-grey disc (drawable/ic_live_large), rendered once. */
-    private var largeIcon: android.graphics.Bitmap? = null
-    private fun liveLargeIcon(): android.graphics.Bitmap? {
-        largeIcon?.let { return it }
-        val d = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_live_large) ?: return null
-        val px = (64 * resources.displayMetrics.density).toInt().coerceIn(96, 256)
-        return androidx.core.graphics.drawable.DrawableCompat.wrap(d).let { w ->
-            android.graphics.Bitmap.createBitmap(px, px, android.graphics.Bitmap.Config.ARGB_8888).also { bmp ->
-                w.setBounds(0, 0, px, px); w.draw(android.graphics.Canvas(bmp))
-            }
-        }.also { largeIcon = it }
+        return runCatching { LiveUpdate.withChip(this, n, GenerationText.liveChip(chars)) }.getOrDefault(n)
     }
 
     private fun done(j: GenerationMonitor.Job): Notification =
@@ -252,18 +238,6 @@ object LiveUpdate {
     @androidx.annotation.RequiresApi(36)
     fun withChip(context: Context, n: Notification, chip: String): Notification =
         Notification.Builder.recoverBuilder(context, n).setShortCriticalText(chip).build()
-
-    /**
-     * 2.5.0-beta9: platform builder (NotificationCompat has no ProgressStyle): short chip + Android 16
-     * indeterminate [Notification.ProgressStyle] in place of BigText. Throws on any failure; the caller
-     * then keeps [withChip] (BigText) or the plain notification.
-     */
-    @androidx.annotation.RequiresApi(36)
-    fun promote(context: Context, n: Notification, chip: String): Notification =
-        Notification.Builder.recoverBuilder(context, n)
-            .setShortCriticalText(chip)
-            .setStyle(Notification.ProgressStyle().setProgressIndeterminate(true))
-            .build()
 }
 
 /** Notification wording (unit-tested). */

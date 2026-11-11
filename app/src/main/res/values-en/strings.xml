@@ -373,7 +373,7 @@
     <string name="models_adf29d">Import a model file, or copy it into the folder below via USB / adb</string>
     <string name="models_5f4be2">These models are deleted when the app is uninstalled</string>
     <string name="models_0b5542">Store in Downloads instead</string>
-    <string name="models_85c491">Get one in “Download models”, or copy model files into the folder above.</string>
+    <string name="models_85c491">Get one in Download models, or copy it into the folder above</string>
     <string name="models_ce618f">Delete model?</string>
     <string name="models_704d32">%1$s (%2$s) will be deleted from your phone.</string>
     <string name="models_138a26">Drag to reorder</string>
@@ -386,7 +386,7 @@
     <string name="models_d9a670">Import from file</string>
     <string name="models_aa27cc">Already have the model file (cloud drive, copied from a computer)?</string>
     <string name="models_389994">If a source fails or has no speed for 20 s, it switches to the next source and keeps downloading.</string>
-    <string name="models_c0f2d7">Auto: tests speed first, prefers ModelScope (for models with an official copy), then hf-mirror.com, then the official HuggingFace; on failure it switches source and resumes. In mainland China, choose “Auto” or “ModelScope”.</string>
+    <string name="models_c0f2d7">Auto tests speed and switches on failure</string>
     <string name="models_6acd72">Tests speed and picks the fastest source; in mainland China this is usually ModelScope or hf-mirror</string>
     <string name="models_35fcd5">Alibaba ModelScope, fastest in mainland China; models without a copy use hf-mirror</string>
     <string name="models_5775bd">HuggingFace mirror in mainland China</string>
@@ -437,7 +437,7 @@
     <string name="settings_c63448">All chats will be permanently deleted. This can’t be undone.</string>
     <string name="settings_7468f3">Reset to default</string>
     <string name="settings_1c8600">Preload last model at startup</string>
-    <string name="settings_b6c8f1">Loads your last model in the background when the app opens, so chat is ready right away. Turn off to save a little battery and memory</string>
+    <string name="settings_b6c8f1">Load the last model in the background at launch</string>
     <string name="settings_41ba97">Reload model now</string>
     <string name="settings_1a7844">Apply changes that need a reload right away</string>
     <string name="settings_494ef0">Default backend</string>
@@ -453,7 +453,7 @@
     <string name="settings_04e3d1">Load options</string>
     <string name="settings_c67060">Lowers memory and power for long contexts (GGUF)</string>
     <string name="settings_1747d7">KV cache quantization</string>
-    <string name="settings_b9637e">GGUF only. Q8_0 halves memory with almost no quality loss; Q4_0 saves more but may be worse</string>
+    <string name="settings_b9637e">GGUF: Q8_0 halves memory, Q4_0 saves more</string>
     <string name="settings_1cf9cd">Requires Flash Attention</string>
     <string name="settings_b65a0d">Batch size</string>
     <string name="settings_eb0286">Follow resource tier (%1$s)</string>
@@ -1930,8 +1930,8 @@
     <string name="ask245_pill">Waiting for you: %1$s</string>
     <string name="ask245_reopen">Open the confirmation</string>
     <string name="vg245_title">Use GPU for vision</string>
-    <string name="vg245_off">Off: on Snapdragon (Adreno) the vision projector (mmproj) runs on the CPU, which is more stable; other GPUs are unaffected. Applies after reloading the model</string>
-    <string name="vg245_on">On: the vision projector runs on the GPU with the model, so pictures are read faster; a few phones may freeze — turn it off if that happens. Applies after reloading the model</string>
+    <string name="vg245_off">mmproj on CPU on Snapdragon. Applies after reload</string>
+    <string name="vg245_on">Faster vision; may hang on some phones. Applies after reload</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU build, 4K context, text only (beta)</string>
     <string name="tts245_section">Imported speech voices</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
@@ -2067,7 +2067,9 @@
     <string name="v250_fulllog_done">Full logs exported (%1$d chats)</string>
     <string name="v250_cpu_missing">This device\'s CPU lacks the %1$s instructions, so the GGUF engine cannot run (requires Snapdragon 855/865 or newer)</string>
     <string name="v259_mtp">MTP acceleration (experimental)</string>
-    <string name="v259_mtp_sub">The model has multi-token prediction layers: draft, then verify. Same output, possibly faster. CPU only; applies after reload</string>
+    <string name="v259_mtp_sub">The model has multi-token prediction layers: draft, then verify. Same output, possibly faster. Applies after reload</string>
+    <string name="v2510_mtp_gpu">. Experimental on GPU: may be slower or turn itself off</string>
+    <string name="v2510_litert_no_mtp">This model file has no MTP; download the new version again</string>
     <string name="v259_imagegen_models">Image models</string>
     <string name="v259_imagegen_manage">Manage and delete in Image generation</string>
     <string name="v259_live_title_thinking">Thinking</string>

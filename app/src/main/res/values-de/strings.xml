@@ -373,7 +373,7 @@
     <string name="models_adf29d">Importiere eine Modelldatei oder kopiere sie per USB / adb in den Ordner unten</string>
     <string name="models_5f4be2">Diese Modelle werden beim Deinstallieren der App mitgelöscht</string>
     <string name="models_0b5542">Stattdessen in Downloads speichern</string>
-    <string name="models_85c491">Hol dir eines unter „Modelle herunterladen“ oder kopiere Modelldateien in den Ordner oben.</string>
+    <string name="models_85c491">Unter „Modelle herunterladen“ oder in den Ordner oben kopieren</string>
     <string name="models_ce618f">Modell löschen?</string>
     <string name="models_704d32">%1$s (%2$s) wird vom Telefon gelöscht.</string>
     <string name="models_138a26">Zum Sortieren ziehen</string>
@@ -386,7 +386,7 @@
     <string name="models_d9a670">Aus Datei importieren</string>
     <string name="models_aa27cc">Hast du die Modelldatei schon (Cloud, vom Computer kopiert)?</string>
     <string name="models_389994">Scheitert eine Quelle oder liefert 20 s lang nichts, wird automatisch zur nächsten gewechselt und weitergeladen.</string>
-    <string name="models_c0f2d7">Auto: misst zuerst das Tempo, bevorzugt ModelScope (Modelle mit offizieller Kopie), dann hf-mirror.com, zuletzt das offizielle HuggingFace; bei Fehlern wird die Quelle gewechselt und fortgesetzt. In Festlandchina „Auto“ oder „ModelScope“ wählen.</string>
+    <string name="models_c0f2d7">Auto misst Tempo, wechselt bei Fehlern</string>
     <string name="models_6acd72">Misst das Tempo und wählt die schnellste Quelle; in Festlandchina meist ModelScope oder hf-mirror</string>
     <string name="models_35fcd5">Alibaba ModelScope, in Festlandchina am schnellsten; Modelle ohne Kopie nutzen hf-mirror</string>
     <string name="models_5775bd">HuggingFace-Spiegel in Festlandchina</string>
@@ -437,7 +437,7 @@
     <string name="settings_c63448">Alle Chats werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</string>
     <string name="settings_7468f3">Auf Standard zurücksetzen</string>
     <string name="settings_1c8600">Letztes Modell beim Start vorladen</string>
-    <string name="settings_b6c8f1">Lädt beim Öffnen der App dein letztes Modell im Hintergrund, damit der Chat sofort bereit ist. Ausschalten spart etwas Akku und Speicher</string>
+    <string name="settings_b6c8f1">Lädt beim Start das letzte Modell im Hintergrund</string>
     <string name="settings_41ba97">Modell jetzt neu laden</string>
     <string name="settings_1a7844">Änderungen, die ein Neuladen brauchen, sofort anwenden</string>
     <string name="settings_494ef0">Standard-Backend</string>
@@ -453,7 +453,7 @@
     <string name="settings_04e3d1">Ladeoptionen</string>
     <string name="settings_c67060">Weniger Speicher und Energie bei langem Kontext (GGUF)</string>
     <string name="settings_1747d7">KV-Cache-Quantisierung</string>
-    <string name="settings_b9637e">Nur GGUF. Q8_0 halbiert den Speicher bei fast gleicher Qualität; Q4_0 spart mehr, kann aber schlechter sein</string>
+    <string name="settings_b9637e">GGUF: Q8_0 halbiert Speicher, Q4_0 spart mehr</string>
     <string name="settings_1cf9cd">Erfordert Flash Attention</string>
     <string name="settings_b65a0d">Batchgröße</string>
     <string name="settings_eb0286">Wie Ressourcenstufe (%1$s)</string>
@@ -1930,8 +1930,8 @@
     <string name="ask245_pill">Wartet auf dich: %1$s</string>
     <string name="ask245_reopen">Bestätigung öffnen</string>
     <string name="vg245_title">GPU für Bilderkennung</string>
-    <string name="vg245_off">Aus: Auf Snapdragon (Adreno) läuft der Vision-Projektor (mmproj) auf der CPU, das ist stabiler; andere GPUs sind nicht betroffen. Gilt nach dem Neuladen des Modells</string>
-    <string name="vg245_on">An: Der Vision-Projektor läuft mit dem Modell auf der GPU, Bilder werden schneller gelesen; einzelne Geräte können einfrieren – dann bitte ausschalten. Gilt nach dem Neuladen des Modells</string>
+    <string name="vg245_off">mmproj auf Snapdragon per CPU. Nach Neuladen</string>
+    <string name="vg245_on">Schnellere Bilderkennung; kann auf manchen Geräten hängen. Nach Neuladen</string>
     <string name="mtk245_qwen_purpose">Dimensity-9500-NPU-Build, 4K Kontext, nur Text (Beta)</string>
     <string name="tts245_section">Importierte Sprachmodelle</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
@@ -2067,7 +2067,9 @@
     <string name="v250_fulllog_done">Vollständige Protokolle exportiert (%1$d Chats)</string>
     <string name="v250_cpu_missing">Der CPU dieses Geräts fehlen die %1$s-Befehle, daher kann die GGUF-Engine nicht laufen (Snapdragon 855/865 oder neuer erforderlich)</string>
     <string name="v259_mtp">MTP-Beschleunigung (experimentell)</string>
-    <string name="v259_mtp_sub">Das Modell hat Multi-Token-Prediction-Schichten: erst entwerfen, dann prüfen. Gleiche Ausgabe, evtl. schneller. Nur CPU; gilt nach Neuladen</string>
+    <string name="v259_mtp_sub">Das Modell hat Multi-Token-Prediction-Schichten: erst entwerfen, dann prüfen. Gleiche Ausgabe, evtl. schneller. Gilt nach Neuladen</string>
+    <string name="v2510_mtp_gpu">. Auf der GPU experimentell: evtl. langsamer oder schaltet sich selbst ab</string>
+    <string name="v2510_litert_no_mtp">Diese Modelldatei enthält kein MTP – bitte die neue Version erneut herunterladen</string>
     <string name="v259_imagegen_models">Bildmodelle</string>
     <string name="v259_imagegen_manage">In der Bildgenerierung verwalten und löschen</string>
     <string name="v259_live_title_thinking">Denkt nach</string>

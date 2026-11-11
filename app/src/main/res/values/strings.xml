@@ -374,7 +374,7 @@
     <string name="models_adf29d">导入模型文件，或用数据线 / adb 直接放到下方目录</string>
     <string name="models_5f4be2">卸载 App 时这些模型会一起被删除</string>
     <string name="models_0b5542">改存到下载目录</string>
-    <string name="models_85c491">可在「下载模型」里获取，或把模型文件拷进上面的文件夹。</string>
+    <string name="models_85c491">可在「下载模型」获取，或拷进上方文件夹</string>
     <string name="models_ce618f">删除模型？</string>
     <string name="models_704d32">将从手机中删除 %1$s（%2$s）。</string>
     <string name="models_138a26">拖动排序</string>
@@ -387,7 +387,7 @@
     <string name="models_d9a670">从文件导入</string>
     <string name="models_aa27cc">已经有模型文件（网盘、电脑拷来的）？</string>
     <string name="models_389994">某个源失败或 20 秒没有速度时，会自动换下一个源并接着下载。</string>
-    <string name="models_c0f2d7">自动：先测速，优先魔搭 ModelScope（有官方副本的模型），其次 hf-mirror.com，最后 HuggingFace 官方；失败会自动换源续传。国内网络建议选「自动」或「魔搭」。</string>
+    <string name="models_c0f2d7">自动会测速并失败换源</string>
     <string name="models_6acd72">自动测速选最快的源，国内一般会用魔搭或 hf-mirror</string>
     <string name="models_35fcd5">阿里魔搭，国内最快；没有副本的模型会改用 hf-mirror</string>
     <string name="models_5775bd">HuggingFace 的国内镜像</string>
@@ -438,7 +438,7 @@
     <string name="settings_c63448">所有历史对话将被永久删除，无法恢复。</string>
     <string name="settings_7468f3">恢复默认</string>
     <string name="settings_1c8600">启动时预加载上次的模型</string>
-    <string name="settings_b6c8f1">打开 App 时就在后台加载上次用的模型，进入对话即可使用；关闭可省一点电和内存</string>
+    <string name="settings_b6c8f1">打开 App 时后台加载上次的模型</string>
     <string name="settings_41ba97">立即重新加载模型</string>
     <string name="settings_1a7844">让需要重新加载才生效的修改马上生效</string>
     <string name="settings_494ef0">默认后端</string>
@@ -454,7 +454,7 @@
     <string name="settings_04e3d1">加载选项</string>
     <string name="settings_c67060">降低长上下文的内存与功耗（GGUF）</string>
     <string name="settings_1747d7">KV 缓存量化</string>
-    <string name="settings_b9637e">GGUF 专用。Q8_0 内存减半、质量几乎不变；Q4_0 更省但可能变差</string>
+    <string name="settings_b9637e">GGUF：Q8_0 省一半内存，Q4_0 更省</string>
     <string name="settings_1cf9cd">需开启 Flash Attention</string>
     <string name="settings_b65a0d">批大小</string>
     <string name="settings_eb0286">跟随资源档（%1$s）</string>
@@ -1931,8 +1931,8 @@
     <string name="ask245_pill">待确认：%1$s</string>
     <string name="ask245_reopen">展开确认</string>
     <string name="vg245_title">识图用 GPU</string>
-    <string name="vg245_off">关：骁龙（Adreno）上视觉投影 mmproj 在 CPU 上运行，更稳定；其他 GPU 不受影响。重新加载模型后生效</string>
-    <string name="vg245_on">开：视觉投影与模型一起在 GPU 上运行，识图更快；个别机型可能卡死，遇到请关闭。重新加载模型后生效</string>
+    <string name="vg245_off">骁龙上 mmproj 用 CPU，重新加载生效</string>
+    <string name="vg245_on">识图更快；个别机型可能卡死，重新加载生效</string>
     <string name="mtk245_qwen_purpose">天玑 9500 NPU 专用版，4K 上下文，纯文字（实验）</string>
     <string name="tts245_section">导入的语音合成模型</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
@@ -2068,7 +2068,9 @@
     <string name="v250_fulllog_done">完整日志已导出（%1$d 个对话）</string>
     <string name="v250_cpu_missing">此设备 CPU 缺少 %1$s 指令集，无法运行 GGUF 引擎（需骁龙 855/865 及以上）</string>
     <string name="v259_mtp">MTP 加速（实验）</string>
-    <string name="v259_mtp_sub">模型自带多 token 预测层：先草拟后校验，输出不变，可能更快。仅 CPU，重新加载后生效</string>
+    <string name="v259_mtp_sub">模型自带多 token 预测层：先草拟后校验，输出不变，可能更快。重新加载后生效</string>
+    <string name="v2510_mtp_gpu">。GPU 上为实验，可能更慢或自动关闭</string>
+    <string name="v2510_litert_no_mtp">此模型文件不含 MTP，需重新下载新版</string>
     <string name="v259_imagegen_models">生图模型</string>
     <string name="v259_imagegen_manage">在「生图」中管理和删除</string>
     <string name="v259_live_title_thinking">思考中</string>

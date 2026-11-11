@@ -101,8 +101,10 @@ object GgufQuant {
 
     /** 2.5.0-beta9: MTP draft tokens per step when MTP 加速 is on and the model has MTP layers (else 0). */
     const val MTP_DRAFT = 3
+    /** 2.5.0-beta10: llama.cpp backends only — CPU, and GPU (OpenCL / Vulkan, experimental). Never the NPU. */
+    fun mtpBackend(backend: Backend): Boolean = backend == Backend.CPU || backend == Backend.GPU
     fun mtpDraft(enabled: Boolean, info: Info?, backend: Backend): Int =
-        if (enabled && info?.mtp == true && backend == Backend.CPU) MTP_DRAFT else 0
+        if (enabled && info?.mtp == true && mtpBackend(backend)) MTP_DRAFT else 0
 
     /** The backend chain for a model with [info]: low-bit types never try the NPU (CPU is kept as the floor). */
     fun chainFor(chain: List<Backend>, info: Info?): List<Backend> {

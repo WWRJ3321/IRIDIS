@@ -296,16 +296,10 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
                         f.label, if (withNpu) listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), "CPU", "GPU", "NPU") else listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), "CPU", "GPU"),
                         when (cur) { "CPU" -> 1; "GPU" -> 2; "NPU" -> if (withNpu) 3 else 0; else -> 0 },
                         { idx -> vm.setDefaultBackend(f, when (idx) { 1 -> "CPU"; 2 -> "GPU"; 3 -> "NPU"; else -> null }) },
-                        subtitle = when (f) {
-                            com.iris.localai.data.ModelFormat.GGUF -> if (withNpu) (if (gxReady) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c3e012) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_681358)) else if (vm.geniex != null) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_92b631, com.iris.localai.engine.geniex.GgufEngineRule.NEED_GENIEX) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3d65ab)
-                            com.iris.localai.data.ModelFormat.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b329a5, com.iris.localai.engine.BackendCapabilities.LITERT_GPU_WARNING)
-                            com.iris.localai.data.ModelFormat.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a3e9ec)
-                            com.iris.localai.data.ModelFormat.QAIRT -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bf960)
-                        },
+                        // 2.5.0-beta10: no standing per-format notes (the model sheet shows backend details).
                     )
                 }
             }
-            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7dcdd9))
 
             vm.npu?.let { npu ->
                 SectionTitle("NPU")

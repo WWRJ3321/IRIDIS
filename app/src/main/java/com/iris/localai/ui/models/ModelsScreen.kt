@@ -608,7 +608,8 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                         if (!first) Divider()
                         // 2.5.0-beta9: 「MTP」 only when the GGUF header has MTP layers (read on IO).
                         val mtpTag by androidx.compose.runtime.produceState(false, m.path) {
-                            value = m.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            value = if (m.format == com.iris.localai.data.ModelFormat.LITERT) com.iris.localai.engine.LiteRtMtp.tag(m.fileName)
+                            else m.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                                 com.iris.localai.engine.GgufQuant.of(java.io.File(m.path))?.mtp == true
                             }
                         }

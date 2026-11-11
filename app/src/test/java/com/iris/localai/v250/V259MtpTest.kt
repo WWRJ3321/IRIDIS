@@ -86,7 +86,7 @@ class V259MtpTest {
         assertEquals(0, GgufQuant.mtpDraft(false, mtp, Backend.CPU))
         assertEquals(0, GgufQuant.mtpDraft(true, plain, Backend.CPU))
         assertEquals(0, GgufQuant.mtpDraft(true, null, Backend.CPU))
-        assertEquals(0, GgufQuant.mtpDraft(true, mtp, Backend.GPU))
+        assertEquals(GgufQuant.MTP_DRAFT, GgufQuant.mtpDraft(true, mtp, Backend.GPU)) // 2.5.0-beta10: GPU allowed (experimental)
         assertEquals(0, GgufQuant.mtpDraft(true, mtp, Backend.NPU))
         // safe mode (after a crash) never asks for MTP
         assertTrue(src("app/src/main/java/com/iris/localai/engine/EngineManager.kt").contains("mtpDraft = if (safeMode || model.format != ModelFormat.GGUF) 0"))
@@ -179,13 +179,14 @@ class V259MtpTest {
         val s = src("app/src/main/java/com/iris/localai/service/GenerationService.kt")
         val live = s.substringAfter("val modelName = runCatching").substringBefore("private fun done(")
         assertTrue(live.contains("GenerationText.liveTitle(chars)"))
-        assertTrue(live.contains("setLargeIcon"))
-        assertTrue(s.contains("Notification.ProgressStyle().setProgressIndeterminate(true)"))
-        assertTrue(live.contains("BigTextStyle().bigText(text)"))       // fallback keeps BigText = body
+        // 2.5.0-beta10 (HyperOS): no large icon, no ProgressStyle; BigText = body
+        assertFalse(s.contains("setLargeIcon")); assertFalse(s.contains("ic_live_large"))
+        assertFalse(s.contains("ProgressStyle()"))
+        assertTrue(live.contains("BigTextStyle().bigText(text)"))
+        assertTrue(live.contains("setUsesChronometer(true)") && live.contains("LiveUpdate.withChip(this, n, GenerationText.liveChip(chars))"))
         assertTrue(s.contains("service_095e93), stop)"))                 // 停止 kept
         // ≤ Android 15 branch untouched
         assertTrue(s.substringAfter("if (!live) {").substringBefore("}").contains("GenerationText.progress(j?.title, chars)"))
-        val icon = src("app/src/main/res/drawable/ic_live_large.xml")
-        assertFalse(icon.contains("gradient")); assertTrue(icon.contains("#FF3A3A3C"))
+        assertFalse(File(root(), "app/src/main/res/drawable/ic_live_large.xml").exists())
     }
 }

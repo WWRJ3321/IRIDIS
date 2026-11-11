@@ -168,8 +168,8 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 247"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta9\""))
+        assertTrue(g.contains("versionCode = 248"))
+        assertTrue(g.contains("versionName = \"2.5.0-beta10\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))

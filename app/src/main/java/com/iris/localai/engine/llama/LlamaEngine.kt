@@ -231,6 +231,15 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             kvUsed = s.kvUsed,
         )
         MtpStats.logLine(s.draftedTokens, s.acceptedTokens, s.generatedTokens, s.generateUs)?.let { android.util.Log.i(LOG_TAG, it) }
+        // 2.5.0-beta10: a draft / verify / rollback error turns MTP off natively for this session (GPU is experimental).
+        if (mtpActive) {
+            val h = handle
+            val now = if (h != 0L) jni.mtpStatus(h) else "off"
+            if (!MtpStats.active(now)) {
+                mtpActive = false
+                android.util.Log.w(LOG_TAG, "MTP turned off for this session: $now")
+            }
+        }
         if (s.liveSwitches > 0) android.util.Log.i(LOG_TAG, "reply finished with ${s.liveSwitches} live switch(es) applied by the decoder")
         val error = s.error.ifBlank { null } ?: when (reason) {
             StopReason.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c95271)

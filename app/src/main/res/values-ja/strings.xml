@@ -373,7 +373,7 @@
     <string name="models_adf29d">モデルファイルを読み込むか、USB / adb で下のフォルダに直接置いてください</string>
     <string name="models_5f4be2">アプリをアンインストールするとこれらのモデルも削除されます</string>
     <string name="models_0b5542">ダウンロードフォルダに保存</string>
-    <string name="models_85c491">「モデルをダウンロード」で入手するか、上のフォルダにモデルファイルをコピーしてください。</string>
+    <string name="models_85c491">「モデルをダウンロード」か上のフォルダへコピー</string>
     <string name="models_ce618f">モデルを削除しますか？</string>
     <string name="models_704d32">%1$s（%2$s）をスマートフォンから削除します。</string>
     <string name="models_138a26">ドラッグで並べ替え</string>
@@ -386,7 +386,7 @@
     <string name="models_d9a670">ファイルから読み込む</string>
     <string name="models_aa27cc">モデルファイルをすでにお持ちですか（クラウドやパソコンから）？</string>
     <string name="models_389994">ダウンロード元が失敗するか 20 秒間速度が出ない場合、次の元に自動で切り替えて続けます。</string>
-    <string name="models_c0f2d7">自動：まず速度を測り、ModelScope（公式コピーがあるモデル）、次に hf-mirror.com、最後に HuggingFace 公式を優先します。失敗時は自動で切り替えて再開します。中国本土では「自動」か「ModelScope」がおすすめです。</string>
+    <string name="models_c0f2d7">自動は速度測定し失敗時に切替</string>
     <string name="models_6acd72">速度を測って最速の元を自動選択（中国本土では通常 ModelScope か hf-mirror）</string>
     <string name="models_35fcd5">Alibaba ModelScope。中国本土で最速。コピーのないモデルは hf-mirror を使用</string>
     <string name="models_5775bd">HuggingFace の中国本土ミラー</string>
@@ -437,7 +437,7 @@
     <string name="settings_c63448">すべての会話が完全に削除され、元に戻せません。</string>
     <string name="settings_7468f3">既定に戻す</string>
     <string name="settings_1c8600">起動時に前回のモデルを先読み</string>
-    <string name="settings_b6c8f1">アプリを開くとすぐに前回のモデルをバックグラウンドで読み込み、会話をすぐ使えます。オフにすると電池とメモリを少し節約</string>
+    <string name="settings_b6c8f1">起動時に前回のモデルを裏で読み込む</string>
     <string name="settings_41ba97">今すぐモデルを再読み込み</string>
     <string name="settings_1a7844">再読み込みが必要な変更をすぐ反映</string>
     <string name="settings_494ef0">既定のバックエンド</string>
@@ -453,7 +453,7 @@
     <string name="settings_04e3d1">読み込みオプション</string>
     <string name="settings_c67060">長いコンテキストのメモリと消費電力を削減（GGUF）</string>
     <string name="settings_1747d7">KV キャッシュ量子化</string>
-    <string name="settings_b9637e">GGUF のみ。Q8_0 はメモリ半減で品質はほぼ同じ。Q4_0 はさらに節約できますが品質が落ちることがあります</string>
+    <string name="settings_b9637e">GGUF：Q8_0 でメモリ半分、Q4_0 はさらに節約</string>
     <string name="settings_1cf9cd">Flash Attention をオンにする必要があります</string>
     <string name="settings_b65a0d">バッチサイズ</string>
     <string name="settings_eb0286">リソース段階に従う（%1$s）</string>
@@ -1930,8 +1930,8 @@
     <string name="ask245_pill">確認待ち：%1$s</string>
     <string name="ask245_reopen">確認を開く</string>
     <string name="vg245_title">画像認識に GPU を使う</string>
-    <string name="vg245_off">オフ：Snapdragon（Adreno）ではビジョンプロジェクタ（mmproj）を CPU で実行します（より安定）。他の GPU には影響しません。モデルの再読み込み後に反映</string>
-    <string name="vg245_on">オン：ビジョンプロジェクタをモデルと一緒に GPU で実行し、画像認識が速くなります。一部の機種でフリーズすることがあり、その場合はオフにしてください。モデルの再読み込み後に反映</string>
+    <string name="vg245_off">Snapdragon では mmproj を CPU で実行。再読み込みで有効</string>
+    <string name="vg245_on">画像認識が高速に。一部機種で固まる場合あり。再読み込みで有効</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU 専用版、4K コンテキスト、テキストのみ（ベータ）</string>
     <string name="tts245_section">インポートした音声合成モデル</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
@@ -2067,7 +2067,9 @@
     <string name="v250_fulllog_done">完全なログを書き出しました（%1$d 件の会話）</string>
     <string name="v250_cpu_missing">この端末の CPU には %1$s 命令がないため、GGUF エンジンを実行できません（Snapdragon 855/865 以降が必要）</string>
     <string name="v259_mtp">MTP 高速化（実験的）</string>
-    <string name="v259_mtp_sub">モデルにマルチトークン予測層があります：下書きして検証。出力は同じで、速くなる場合があります。CPU のみ、再読み込み後に有効</string>
+    <string name="v259_mtp_sub">モデルにマルチトークン予測層があります：下書きして検証。出力は同じで、速くなる場合があります。再読み込み後に有効</string>
+    <string name="v2510_mtp_gpu">。GPU では実験的：遅くなったり自動でオフになる場合があります</string>
+    <string name="v2510_litert_no_mtp">このモデルファイルには MTP がありません。新しい版を再ダウンロードしてください</string>
     <string name="v259_imagegen_models">画像生成モデル</string>
     <string name="v259_imagegen_manage">「画像生成」で管理・削除</string>
     <string name="v259_live_title_thinking">思考中</string>

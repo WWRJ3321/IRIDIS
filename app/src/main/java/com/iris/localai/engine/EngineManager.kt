@@ -476,8 +476,10 @@ class EngineManager(
                                 resources = plan,
                                 mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
                                 mmprojGpu = settings.current.visionGpu,
-                                // 2.5.0-beta9: never after a crash (safe mode) and CPU only.
+                                // 2.5.0-beta9: never after a crash (safe mode). 2.5.0-beta10: CPU and GPU (experimental), not NPU.
                                 mtpDraft = if (safeMode || model.format != ModelFormat.GGUF) 0 else GgufQuant.mtpDraft(cfg.mtp, quant, backend),
+                                // 2.5.0-beta10: LiteRT-LM speculative decoding (built-in drafter), same switch.
+                                litertMtp = LiteRtMtp.enabled(cfg.mtp, safeMode, model.format == ModelFormat.LITERT, backend),
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

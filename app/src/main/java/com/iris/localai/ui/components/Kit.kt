@@ -165,7 +165,9 @@ fun IrisTopBar(
         // 2.2.13: light top fade (page background → transparent, status bar + ~56 dp) so content that
         // scrolls under the back button and title pill reads as fading out instead of colliding with them.
         // 2.2.14 纯色背景: a plain bar in the page colour instead of the fade.
-        if (com.iris.localai.ui.theme.LocalSolidBackground.current) Box(Modifier.matchParentSize().background(c.background))
+        // 2.5.0-beta10: 柔光 has no blur, so the fade let scrolled text show through the title — solid
+        // opaque bar there too (as 2.4.6 looked, where the glass blur hid it).
+        if (com.iris.localai.ui.theme.LocalSolidBackground.current || softStyle()) Box(Modifier.matchParentSize().background(c.background))
         else Box(
             Modifier.matchParentSize().background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(

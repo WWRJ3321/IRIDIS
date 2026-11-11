@@ -34,6 +34,8 @@ data class LoadConfig(
     val mmprojGpu: Boolean = false,
     /** 2.5.0-beta9, GGUF (llama.cpp): MTP draft tokens per step, 0 = normal decoding. */
     val mtpDraft: Int = 0,
+    /** 2.5.0-beta10, LiteRT-LM: ExperimentalFlags.enableSpeculativeDecoding for this load (set before every Engine). */
+    val litertMtp: Boolean = false,
 )
 
 data class SamplingConfig(
