@@ -36,7 +36,12 @@ object LlamaNative {
             android.util.Log.i("IrisLlama", "loaded lib$lib.so")
             null
         } catch (t: Throwable) {
-            "无法加载 llama.cpp 原生库：${t.message ?: t.javaClass.simpleName}"
+            // 2.5.0: the regular APK ships without libiris_llama_compat.so; a no-i8mm CPU needs the legacy build.
+            if (lib == CpuFeatures.LIB_COMPAT) {
+                android.util.Log.w("IrisLlama", "lib$lib.so missing: ${t.message}")
+                runCatching { com.iris.localai.I18n.s(com.iris.localai.R.string.v250_compat_needed) }
+                    .getOrDefault("本机需安装老芯片兼容版")
+            } else "无法加载 llama.cpp 原生库：${t.message ?: t.javaClass.simpleName}"
         }
     }
 

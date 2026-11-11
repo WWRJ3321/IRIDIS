@@ -2066,6 +2066,7 @@
     <string name="v250_fulllog_desc">Contiene el registro de ejecución y los chats completos: mensajes, respuestas, razonamiento, nombres, argumentos y resultados de las llamadas a herramientas, horas y modelos. Puede ser privado; compártelo solo con personas de confianza.</string>
     <string name="v250_fulllog_done">Registros completos exportados (%1$d chats)</string>
     <string name="v250_cpu_missing">La CPU de este dispositivo no tiene las instrucciones %1$s, por lo que el motor GGUF no puede ejecutarse (requiere Snapdragon 855/865 o superior)</string>
+    <string name="v250_compat_needed">Este dispositivo necesita la versión para chips antiguos</string>
     <string name="v259_mtp">Aceleración MTP (experimental)</string>
     <string name="v259_mtp_sub">El modelo tiene capas de predicción multitoken: borrador y verificación. Misma salida, posiblemente más rápido. Se aplica al recargar</string>
     <string name="v2510_mtp_gpu">. Experimental en GPU: puede ser más lento o desactivarse solo</string>

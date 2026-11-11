@@ -2066,6 +2066,7 @@
     <string name="v250_fulllog_desc">包含執行日誌與對話全文：訊息、回覆、思考內容、工具呼叫的名稱、參數與結果、時間和模型。內容可能涉及隱私，請只傳給信任的人。</string>
     <string name="v250_fulllog_done">完整日誌已匯出（%1$d 個對話）</string>
     <string name="v250_cpu_missing">此裝置 CPU 缺少 %1$s 指令集，無法執行 GGUF 引擎（需驍龍 855/865 以上）</string>
+    <string name="v250_compat_needed">本機需安裝老晶片相容版</string>
     <string name="v259_mtp">MTP 加速（實驗）</string>
     <string name="v259_mtp_sub">模型內建多 token 預測層：先草擬後校驗，輸出不變，可能更快。重新載入後生效</string>
     <string name="v2510_mtp_gpu">。GPU 上為實驗，可能更慢或自動關閉</string>

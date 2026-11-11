@@ -168,8 +168,8 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 248"))
-        assertTrue(g.contains("versionName = \"2.5.0-beta10\""))
+        assertTrue(g.contains("versionCode = 249"))
+        assertTrue(g.contains("versionName = \"2.5.0\""))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))
@@ -179,6 +179,16 @@ class V250Test {
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta7（2026-11-10，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta8（2026-11-10，测试版，未在真机测试）"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta9（2026-11-11，测试版，未在真机测试）"))
+        assertTrue(src("CHANGELOG.md").contains("## 2.5.0（2026-11-12）"))
+        assertTrue(src("CHANGELOG.md").indexOf("## 2.5.0（2026-11-12）") < src("CHANGELOG.md").indexOf("## 2.5.0 Beta10"))
+    }
+
+    // ---- 2.5.0 ----
+    @Test fun missingCompatLibraryIsAMessageNotACrash() {
+        val s = src("app/src/main/java/com/iris/localai/engine/llama/LlamaNative.kt")
+        assertTrue(s.contains("lib == CpuFeatures.LIB_COMPAT"))
+        assertTrue(s.contains("R.string.v250_compat_needed"))
+        assertTrue(src("app/src/main/res/values/strings.xml").contains("name=\"v250_compat_needed\">本机需安装老芯片兼容版<"))
     }
 
     @Test fun newStringsInEveryLanguage() {

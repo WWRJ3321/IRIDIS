@@ -2066,6 +2066,7 @@
     <string name="v250_fulllog_desc">Contains the run log and the full chats: messages, replies, reasoning, tool call names, arguments and results, times and models. It may be private; share it only with people you trust.</string>
     <string name="v250_fulllog_done">Full logs exported (%1$d chats)</string>
     <string name="v250_cpu_missing">This device\'s CPU lacks the %1$s instructions, so the GGUF engine cannot run (requires Snapdragon 855/865 or newer)</string>
+    <string name="v250_compat_needed">This device needs the legacy-chip build</string>
     <string name="v259_mtp">MTP acceleration (experimental)</string>
     <string name="v259_mtp_sub">The model has multi-token prediction layers: draft, then verify. Same output, possibly faster. Applies after reload</string>
     <string name="v2510_mtp_gpu">. Experimental on GPU: may be slower or turn itself off</string>

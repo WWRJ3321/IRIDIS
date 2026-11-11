@@ -2066,6 +2066,7 @@
     <string name="v250_fulllog_desc">実行ログと会話全文を含みます：メッセージ、返信、思考内容、ツール呼び出しの名前・引数・結果、時刻とモデル。個人的な内容を含む場合があるため、信頼できる相手にだけ共有してください。</string>
     <string name="v250_fulllog_done">完全なログを書き出しました（%1$d 件の会話）</string>
     <string name="v250_cpu_missing">この端末の CPU には %1$s 命令がないため、GGUF エンジンを実行できません（Snapdragon 855/865 以降が必要）</string>
+    <string name="v250_compat_needed">この端末には旧チップ互換版が必要です</string>
     <string name="v259_mtp">MTP 高速化（実験的）</string>
     <string name="v259_mtp_sub">モデルにマルチトークン予測層があります：下書きして検証。出力は同じで、速くなる場合があります。再読み込み後に有効</string>
     <string name="v2510_mtp_gpu">。GPU では実験的：遅くなったり自動でオフになる場合があります</string>
