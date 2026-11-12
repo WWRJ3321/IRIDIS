@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">No longer offered; can be deleted</string>
     <string name="v251_sd15_mnn_delete_title">Delete this image model?</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) has been retired. Deleting it frees the space.</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">Quick tour</string>
+    <string name="ob252_skip">Skip</string>
+    <string name="ob252_next">Next</string>
+    <string name="ob252_prev">Back</string>
+    <string name="ob252_done">Get started</string>
+    <string name="ob252_model_title">Download and load a local model</string>
+    <string name="ob252_model_body">Sidebar › Models › Download models and pick one that fits your phone memory. When it is done, tap the model name in the chat top bar to load it. Chats run on this device.</string>
+    <string name="ob252_model_hint">You can also import a GGUF file you already have</string>
+    <string name="ob252_agent_title">Chat and Agent</string>
+    <string name="ob252_agent_body">Tap Agent at the top left of the input box to switch modes: the model can read and write workspace files, search the web and use tools. Risky actions ask you first.</string>
+    <string name="ob252_agent_hint">Tools and permissions: Settings › Agent</string>
+    <string name="ob252_kb_title">Knowledge base</string>
+    <string name="ob252_kb_body">Put documents in Settings › Context, memory and knowledge base › Knowledge base. Replies quote the relevant parts; files stay on this device.</string>
+    <string name="ob252_kb_hint">txt, md, pdf, epub and more</string>
+    <string name="ob252_image_title">Images</string>
+    <string name="ob252_image_body">Sidebar › Images: download an image model, write a prompt and generate. Add a reference image if you like; results are saved in the workspace images folder.</string>
+    <string name="ob252_image_hint">A blank seed is random every time</string>
+    <string name="ob252_settings_title">Where settings are</string>
+    <string name="ob252_settings_body">Settings at the bottom of the sidebar: appearance, language, voice, local API and storage location.</string>
+    <string name="ob252_settings_hint">Replay: Settings › About &amp; debugging › Quick tour</string>
+    <string name="ob252_replay">Quick tour</string>
+    <string name="ob252_replay_sub">See the first-run tour again</string>
+    <string name="ig252_seed_hint">Blank = random every time</string>
+    <string name="ig252_random">Random</string>
+    <string name="ig252_last_seed">Seed used: %1$s</string>
+    <string name="ig252_fix_seed">Keep this seed</string>
 </resources>

@@ -29,12 +29,8 @@ class ModelRepository(private val context: Context) {
     }
 
     /** Re-evaluated on every call (cheap), so granting 全部文件访问 later switches to the shared folder. */
-    fun location(): ModelDirs.Location = ModelDirs.resolve(
-        allFilesAccess = runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false),
-        storageState = runCatching { android.os.Environment.getExternalStorageState() }.getOrNull(),
-        downloadsDir = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull(),
-        privateDir = privateDir,
-    )
+    // 2.5.2: one resolver for downloads and imports (follows the configured storage location, see ModelStorage).
+    fun location(): ModelDirs.Location = ModelStorage.location(privateDir)
 
     /** Where new models are written right now (shared when available). */
     val modelsDir: File get() = location().dir.apply { mkdirs() }
@@ -189,7 +185,11 @@ class ModelRepository(private val context: Context) {
         refresh()
     }
 
-    /** Copies a user-picked document into the models directory, reporting progress in [0,1]. */
+    /**
+     * Copies a user-picked document into the models directory, reporting progress in [0,1]. 2.5.2: the
+     * directory is [modelsDir] — the same [ModelStorage] resolution as MnnHub downloads, so it follows
+     * the storage location (Download/IRIDIS/models) instead of falling back to Android/data.
+     */
     suspend fun import(uri: Uri, onProgress: (Float) -> Unit): LocalModel = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         var name: String? = null

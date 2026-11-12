@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">已不再提供，可刪除</string>
     <string name="v251_sd15_mnn_delete_title">刪除此生圖模型？</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) 已停用，刪除後釋放空間。</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">新手導覽</string>
+    <string name="ob252_skip">略過</string>
+    <string name="ob252_next">下一步</string>
+    <string name="ob252_prev">上一步</string>
+    <string name="ob252_done">開始使用</string>
+    <string name="ob252_model_title">下載並載入本機模型</string>
+    <string name="ob252_model_body">側邊欄 › 模型 › 下載模型，選一個適合手機記憶體的模型；下載完成後點對話頂欄的模型名稱載入，對話全程在本機執行。</string>
+    <string name="ob252_model_hint">也可以匯入手機裡已有的 GGUF 檔案</string>
+    <string name="ob252_agent_title">對話與智慧代理</string>
+    <string name="ob252_agent_body">點輸入框左上角的「智慧代理」切換模式：模型可以讀寫工作區檔案、連網搜尋、呼叫工具；有風險的操作會先詢問你。</string>
+    <string name="ob252_agent_hint">工具與權限在 設定 › 智慧代理</string>
+    <string name="ob252_kb_title">知識庫</string>
+    <string name="ob252_kb_body">把文件放進 設定 › 上下文、記憶和知識庫 › 知識庫，回答時會自動引用相關片段，檔案只留在本機。</string>
+    <string name="ob252_kb_hint">支援 txt、md、pdf、epub 等</string>
+    <string name="ob252_image_title">生圖</string>
+    <string name="ob252_image_body">側邊欄 › 生圖：下載影像模型，寫提示詞即可生成；可加參考圖，結果儲存在工作區 images。</string>
+    <string name="ob252_image_hint">種子留空時每次都隨機</string>
+    <string name="ob252_settings_title">設定在哪裡</string>
+    <string name="ob252_settings_body">側邊欄底部的「設定」裡可以改外觀、語言、語音、本機 API 和儲存位置。</string>
+    <string name="ob252_settings_hint">設定 › 關於與除錯 › 新手導覽 可再看一遍</string>
+    <string name="ob252_replay">新手導覽</string>
+    <string name="ob252_replay_sub">重新查看首次使用導覽</string>
+    <string name="ig252_seed_hint">留空則每次隨機</string>
+    <string name="ig252_random">隨機</string>
+    <string name="ig252_last_seed">本次種子：%1$s</string>
+    <string name="ig252_fix_seed">固定此種子</string>
 </resources>

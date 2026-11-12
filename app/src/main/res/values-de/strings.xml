@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">Nicht mehr angeboten, kann gelöscht werden</string>
     <string name="v251_sd15_mnn_delete_title">Dieses Bildmodell löschen?</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) wurde eingestellt. Löschen gibt den Speicher frei.</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">Kurze Einführung</string>
+    <string name="ob252_skip">Überspringen</string>
+    <string name="ob252_next">Weiter</string>
+    <string name="ob252_prev">Zurück</string>
+    <string name="ob252_done">Los geht’s</string>
+    <string name="ob252_model_title">Lokales Modell laden</string>
+    <string name="ob252_model_body">Seitenleiste › Modelle › Modelle herunterladen: Wähle ein Modell, das zum Speicher deines Telefons passt. Danach tippe oben im Chat auf den Modellnamen, um es zu laden. Chats laufen auf dem Gerät.</string>
+    <string name="ob252_model_hint">Eine vorhandene GGUF-Datei kannst du auch importieren</string>
+    <string name="ob252_agent_title">Chat und Agent</string>
+    <string name="ob252_agent_body">Tippe links oben im Eingabefeld auf Agent, um den Modus zu wechseln: Das Modell kann Dateien im Arbeitsbereich lesen und schreiben, im Web suchen und Werkzeuge nutzen. Riskante Aktionen fragen zuerst.</string>
+    <string name="ob252_agent_hint">Werkzeuge und Rechte: Einstellungen › Agent</string>
+    <string name="ob252_kb_title">Wissensbasis</string>
+    <string name="ob252_kb_body">Lege Dokumente unter Einstellungen › Kontext, Gedächtnis und Wissensbasis › Wissensbasis ab. Antworten zitieren passende Stellen; die Dateien bleiben auf dem Gerät.</string>
+    <string name="ob252_kb_hint">txt, md, pdf, epub und mehr</string>
+    <string name="ob252_image_title">Bilder</string>
+    <string name="ob252_image_body">Seitenleiste › Bilder: Bildmodell herunterladen, Prompt schreiben und erzeugen. Ein Referenzbild ist möglich; Ergebnisse landen im Ordner images des Arbeitsbereichs.</string>
+    <string name="ob252_image_hint">Leerer Seed ist jedes Mal zufällig</string>
+    <string name="ob252_settings_title">Wo die Einstellungen sind</string>
+    <string name="ob252_settings_body">Einstellungen unten in der Seitenleiste: Aussehen, Sprache, Stimme, lokale API und Speicherort.</string>
+    <string name="ob252_settings_hint">Erneut: Einstellungen › Info &amp; Debugging › Kurze Einführung</string>
+    <string name="ob252_replay">Kurze Einführung</string>
+    <string name="ob252_replay_sub">Die Einführung erneut ansehen</string>
+    <string name="ig252_seed_hint">Leer = jedes Mal zufällig</string>
+    <string name="ig252_random">Zufällig</string>
+    <string name="ig252_last_seed">Verwendeter Seed: %1$s</string>
+    <string name="ig252_fix_seed">Diesen Seed behalten</string>
 </resources>

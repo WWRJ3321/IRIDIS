@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">अब उपलब्ध नहीं; हटाया जा सकता है</string>
     <string name="v251_sd15_mnn_delete_title">यह इमेज मॉडल हटाएँ?</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) बंद कर दिया गया है। हटाने से जगह खाली होगी।</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">शुरुआती गाइड</string>
+    <string name="ob252_skip">छोड़ें</string>
+    <string name="ob252_next">आगे</string>
+    <string name="ob252_prev">पीछे</string>
+    <string name="ob252_done">शुरू करें</string>
+    <string name="ob252_model_title">लोकल मॉडल डाउनलोड करें और लोड करें</string>
+    <string name="ob252_model_body">साइडबार › मॉडल › मॉडल डाउनलोड करें में फ़ोन की मेमोरी के हिसाब से मॉडल चुनें। पूरा होने पर चैट के ऊपर मॉडल के नाम पर टैप करके लोड करें। चैट इसी डिवाइस पर चलती है।</string>
+    <string name="ob252_model_hint">फ़ोन में मौजूद GGUF फ़ाइल भी इम्पोर्ट कर सकते हैं</string>
+    <string name="ob252_agent_title">चैट और एजेंट</string>
+    <string name="ob252_agent_body">इनपुट बॉक्स के ऊपर बाईं ओर एजेंट पर टैप करके मोड बदलें: मॉडल वर्कस्पेस फ़ाइलें पढ़-लिख सकता है, वेब खोज सकता है और टूल चला सकता है। जोखिम वाले काम पहले आपसे पूछते हैं।</string>
+    <string name="ob252_agent_hint">टूल और अनुमतियाँ: सेटिंग › एजेंट</string>
+    <string name="ob252_kb_title">नॉलेज बेस</string>
+    <string name="ob252_kb_body">दस्तावेज़ सेटिंग › संदर्भ, मेमोरी और ज्ञानकोश › नॉलेज बेस में रखें। जवाब संबंधित हिस्सों का हवाला देते हैं; फ़ाइलें इसी डिवाइस पर रहती हैं।</string>
+    <string name="ob252_kb_hint">txt, md, pdf, epub आदि</string>
+    <string name="ob252_image_title">इमेज</string>
+    <string name="ob252_image_body">साइडबार › इमेज: इमेज मॉडल डाउनलोड करें, प्रॉम्प्ट लिखें और बनाएँ। रेफ़रेंस इमेज भी जोड़ सकते हैं; नतीजे वर्कस्पेस के images फ़ोल्डर में सेव होते हैं।</string>
+    <string name="ob252_image_hint">सीड खाली हो तो हर बार रैंडम</string>
+    <string name="ob252_settings_title">सेटिंग कहाँ हैं</string>
+    <string name="ob252_settings_body">साइडबार के नीचे सेटिंग में रूप, भाषा, आवाज़, लोकल API और स्टोरेज स्थान बदलें।</string>
+    <string name="ob252_settings_hint">दोबारा: सेटिंग › जानकारी और डीबग › शुरुआती गाइड</string>
+    <string name="ob252_replay">शुरुआती गाइड</string>
+    <string name="ob252_replay_sub">पहली बार वाली गाइड फिर देखें</string>
+    <string name="ig252_seed_hint">खाली = हर बार रैंडम</string>
+    <string name="ig252_random">रैंडम</string>
+    <string name="ig252_last_seed">इस बार का सीड: %1$s</string>
+    <string name="ig252_fix_seed">यह सीड रखें</string>
 </resources>

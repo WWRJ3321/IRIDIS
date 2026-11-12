@@ -4,7 +4,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.net.URLDecoder
 import java.net.URLEncoder
 
 /**
@@ -160,17 +159,14 @@ object SearchText {
             val href = decode(m.groupValues[1].ifEmpty { m.groupValues[3] })
             val title = clean(m.groupValues[2].ifEmpty { m.groupValues[4] })
             val url = ddgRealUrl(href)
-            if (title.isEmpty() || !url.startsWith("http")) null
-            else SearchHit(title, url, snippets.getOrNull(i).orEmpty().take(SNIPPET_CHARS))
+            // 2.5.2: ads (duckduckgo.com/y.js) and links that did not unwrap are not results
+            if (title.isEmpty() || !url.startsWith("http") || WebText.isEngineLink(url)) null
+            else SearchHit(title, url, WebText.clip(snippets.getOrNull(i).orEmpty(), SNIPPET_CHARS))
         }.distinctBy { it.url }
     }
 
-    /** `//duckduckgo.com/l/?uddg=<encoded>&rut=…` → the real url. */
-    fun ddgRealUrl(href: String): String {
-        val h = if (href.startsWith("//")) "https:$href" else href
-        if (h.contains("duckduckgo.com/l/")) param(h, "uddg")?.let { return URLDecoder.decode(it, "UTF-8") }
-        return h
-    }
+    /** `//duckduckgo.com/l/?uddg=<encoded>&rut=…` (also relative `/l/?uddg=`) → the real url. 2.5.2: [WebText.unwrapRedirect]. */
+    fun ddgRealUrl(href: String): String = WebText.unwrapRedirect(href)
 
     fun parseSearx(json: String): List<SearchHit> = runCatching {
         val root = kotlinx.serialization.json.Json.parseToJsonElement(json) as kotlinx.serialization.json.JsonObject
@@ -179,7 +175,7 @@ object SearchText {
             val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
             fun str(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
             val url = str("url"); val title = clean(str("title"))
-            if (url.isEmpty() || title.isEmpty()) null else SearchHit(title, url, clean(str("content")).take(SNIPPET_CHARS), str("engine"))
+            if (url.isEmpty() || title.isEmpty()) null else SearchHit(title, url, WebText.clip(clean(str("content")), SNIPPET_CHARS), str("engine"))
         }.distinctBy { it.url }
     }.getOrDefault(emptyList())
 
@@ -192,8 +188,8 @@ object SearchText {
         val it = m.groupValues[1]
         val title = clean(tag(it, "title"))
         val url = realUrl(decode(tag(it, "link")))
-        if (title.isEmpty() || url.isEmpty()) return@mapNotNull null
-        SearchHit(title, url, clean(tag(it, "description")).take(SNIPPET_CHARS), clean(tag(it, "News:Source")), shortDate(tag(it, "pubDate")))
+        if (title.isEmpty() || url.isEmpty() || WebText.isEngineLink(url)) return@mapNotNull null
+        SearchHit(title, url, WebText.clip(clean(tag(it, "description")), SNIPPET_CHARS), clean(tag(it, "News:Source")), shortDate(tag(it, "pubDate")))
     }.distinctBy { it.url }.toList()
 
     private val ALGO = Regex("(?s)<li class=\"b_algo\"(.*?)</li>")
@@ -205,41 +201,17 @@ object SearchText {
         val a = H2A.find(b) ?: return@mapNotNull null
         val url = realUrl(decode(a.groupValues[1]))
         val title = clean(a.groupValues[2])
-        if (title.isEmpty() || !url.startsWith("http")) return@mapNotNull null
-        SearchHit(title, url, clean(PARA.find(b)?.groupValues?.get(1).orEmpty()).take(SNIPPET_CHARS))
+        if (title.isEmpty() || !url.startsWith("http") || WebText.isEngineLink(url)) return@mapNotNull null
+        SearchHit(title, url, WebText.clip(clean(PARA.find(b)?.groupValues?.get(1).orEmpty()), SNIPPET_CHARS))
     }.distinctBy { it.url }.toList()
 
     /** Unwraps Bing's click-tracking links (`/ck/a?…&u=a1<base64url>`, `apiclick.aspx?…&url=`). */
-    fun realUrl(u: String): String {
-        val url = u.trim()
-        if (!url.contains("bing.com/")) return url
-        param(url, "url")?.let { return URLDecoder.decode(it, "UTF-8") }
-        param(url, "u")?.let { p ->
-            if (p.startsWith("a1")) runCatching {
-                val raw = p.substring(2).replace('-', '+').replace('_', '/')
-                val pad = raw + "=".repeat((4 - raw.length % 4) % 4)
-                return String(java.util.Base64.getDecoder().decode(pad), Charsets.UTF_8)
-            }
-        }
-        return url
-    }
-
-    private fun param(url: String, name: String): String? =
-        url.substringAfter('?', "").split('&').firstOrNull { it.startsWith("$name=") }?.substringAfter('=')?.takeIf { it.isNotEmpty() }
+    fun realUrl(u: String): String = WebText.unwrapRedirect(u) // 2.5.2: one unwrapper (checks the decoded target is http/https)
 
     private fun decode(s: String) = s.replace("&amp;", "&")
 
-    private val NUM_ENTITY = Regex("&#(x[0-9a-fA-F]+|\\d+);")
-
-    fun clean(s: String): String {
-        val t = HtmlText.toText(cdata(s)).replace('\n', ' ')
-        val n = NUM_ENTITY.replace(t) { m ->
-            val v = m.groupValues[1]
-            val cp = if (v.startsWith("x")) v.substring(1).toIntOrNull(16) else v.toIntOrNull()
-            cp?.takeIf { Character.isValidCodePoint(it) }?.let { String(Character.toChars(it)) } ?: " "
-        }
-        return n.replace(Regex("\\s+"), " ").trim()
-    }
+    /** 2.5.2: entities are decoded once inside [HtmlText.toText] (a second pass turned "&amp;#39;" into "'"). */
+    fun clean(s: String): String = HtmlText.toText(cdata(s)).replace('\n', ' ').replace(Regex("\\s+"), " ").trim()
 
     /** "Fri, 16 Oct 2026 00:51:55 GMT" → "16 Oct 2026". */
     fun shortDate(s: String): String = Regex("\\d{1,2} \\w{3} \\d{4}").find(s)?.value.orEmpty()

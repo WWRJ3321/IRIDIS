@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">Ya no se ofrece; se puede eliminar</string>
     <string name="v251_sd15_mnn_delete_title">¿Eliminar este modelo de imagen?</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) se ha retirado. Al eliminarlo se libera el espacio.</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">Guía rápida</string>
+    <string name="ob252_skip">Omitir</string>
+    <string name="ob252_next">Siguiente</string>
+    <string name="ob252_prev">Atrás</string>
+    <string name="ob252_done">Empezar</string>
+    <string name="ob252_model_title">Descargar y cargar un modelo local</string>
+    <string name="ob252_model_body">Barra lateral › Modelos › Descargar modelos: elige uno que quepa en la memoria del teléfono. Al terminar, toca el nombre del modelo arriba en el chat para cargarlo. El chat se ejecuta en el dispositivo.</string>
+    <string name="ob252_model_hint">También puedes importar un archivo GGUF que ya tengas</string>
+    <string name="ob252_agent_title">Chat y Agente</string>
+    <string name="ob252_agent_body">Toca Agente arriba a la izquierda del cuadro de texto para cambiar de modo: el modelo puede leer y escribir archivos del espacio de trabajo, buscar en la web y usar herramientas. Las acciones arriesgadas piden permiso.</string>
+    <string name="ob252_agent_hint">Herramientas y permisos: Ajustes › Agente</string>
+    <string name="ob252_kb_title">Base de conocimiento</string>
+    <string name="ob252_kb_body">Pon documentos en Ajustes › Contexto, memoria y base de conocimiento › Base de conocimiento. Las respuestas citan las partes relevantes; los archivos no salen del dispositivo.</string>
+    <string name="ob252_kb_hint">txt, md, pdf, epub y más</string>
+    <string name="ob252_image_title">Imágenes</string>
+    <string name="ob252_image_body">Barra lateral › Imágenes: descarga un modelo de imagen, escribe un prompt y genera. Puedes añadir una imagen de referencia; los resultados se guardan en la carpeta images del espacio de trabajo.</string>
+    <string name="ob252_image_hint">Con la semilla vacía es aleatoria cada vez</string>
+    <string name="ob252_settings_title">Dónde están los ajustes</string>
+    <string name="ob252_settings_body">Ajustes al final de la barra lateral: apariencia, idioma, voz, API local y ubicación de almacenamiento.</string>
+    <string name="ob252_settings_hint">Repetir: Ajustes › Información y depuración › Guía rápida</string>
+    <string name="ob252_replay">Guía rápida</string>
+    <string name="ob252_replay_sub">Ver de nuevo la guía inicial</string>
+    <string name="ig252_seed_hint">Vacío = aleatoria cada vez</string>
+    <string name="ig252_random">Aleatoria</string>
+    <string name="ig252_last_seed">Semilla usada: %1$s</string>
+    <string name="ig252_fix_seed">Fijar esta semilla</string>
 </resources>

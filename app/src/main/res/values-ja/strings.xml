@@ -2103,4 +2103,31 @@
     <string name="v251_sd15_mnn_hidden">提供終了、削除できます</string>
     <string name="v251_sd15_mnn_delete_title">この画像生成モデルを削除しますか？</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) は提供を終了しました。削除すると容量が空きます。</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">はじめてガイド</string>
+    <string name="ob252_skip">スキップ</string>
+    <string name="ob252_next">次へ</string>
+    <string name="ob252_prev">戻る</string>
+    <string name="ob252_done">はじめる</string>
+    <string name="ob252_model_title">ローカルモデルのダウンロードと読み込み</string>
+    <string name="ob252_model_body">サイドバー › モデル › モデルをダウンロード で、端末のメモリに合うモデルを選びます。完了したらチャット上部のモデル名をタップして読み込みます。会話はすべて端末内で動きます。</string>
+    <string name="ob252_model_hint">手元の GGUF ファイルも取り込めます</string>
+    <string name="ob252_agent_title">チャットとエージェント</string>
+    <string name="ob252_agent_body">入力欄の左上の「エージェント」でモードを切り替えます。ワークスペースのファイル読み書き、ウェブ検索、ツールが使えます。危険な操作は先に確認します。</string>
+    <string name="ob252_agent_hint">ツールと権限は 設定 › エージェント</string>
+    <string name="ob252_kb_title">ナレッジベース</string>
+    <string name="ob252_kb_body">設定 › コンテキスト・記憶・ナレッジベース › ナレッジベース に文書を入れると、回答で関連部分を引用します。ファイルは端末内だけに残ります。</string>
+    <string name="ob252_kb_hint">txt、md、pdf、epub などに対応</string>
+    <string name="ob252_image_title">画像生成</string>
+    <string name="ob252_image_body">サイドバー › 画像生成：画像モデルをダウンロードし、プロンプトを書いて生成します。参照画像も使え、結果はワークスペースの images に保存されます。</string>
+    <string name="ob252_image_hint">シードが空欄なら毎回ランダム</string>
+    <string name="ob252_settings_title">設定の場所</string>
+    <string name="ob252_settings_body">サイドバー下部の「設定」で、外観、言語、音声、ローカル API、保存場所を変更できます。</string>
+    <string name="ob252_settings_hint">設定 › 情報とデバッグ › はじめてガイド で再表示</string>
+    <string name="ob252_replay">はじめてガイド</string>
+    <string name="ob252_replay_sub">初回ガイドをもう一度見る</string>
+    <string name="ig252_seed_hint">空欄で毎回ランダム</string>
+    <string name="ig252_random">ランダム</string>
+    <string name="ig252_last_seed">今回のシード：%1$s</string>
+    <string name="ig252_fix_seed">このシードに固定</string>
 </resources>

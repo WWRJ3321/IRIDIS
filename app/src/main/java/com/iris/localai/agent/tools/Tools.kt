@@ -146,6 +146,8 @@ fun capTokens(text: String, tokens: Int): String {
         val mid = (lo + hi + 1) / 2
         if (TokenEstimator.estimate(text.substring(0, mid)) <= tokens) lo = mid else hi = mid - 1
     }
+    // 2.5.2: never between a surrogate pair; at a line / sentence / word end when one is near.
+    lo = WebText.cutIndex(text, lo)
     return text.substring(0, lo) + "\n[TRUNCATED by the tool: showing $lo of ${text.length} characters. This note is not part of the content.]"
 }
 
@@ -305,7 +307,8 @@ object WebFetchTool : AgentTool {
         val r = fetcher.fetch(url.trim())
         if (r.status !in 200..299) return ToolResult(false, "Error: HTTP ${r.status} for ${r.finalUrl}", "HTTP ${r.status}")
         val html = r.contentType?.contains("html", ignoreCase = true) != false && r.body.contains('<')
-        val text = if (html) HtmlText.toText(r.body) else r.body
+        // 2.5.2: the main text (article / main, boilerplate and repeats removed), headed by the page title.
+        val text = if (html) WebText.title(r.body).let { t -> (if (t.isNotEmpty()) "# $t\n" else "") + HtmlText.readable(r.body) } else r.body
         // 2.2: a few page images (og:image, <img> with alt) the reply can show as ![alt](url).
         val images = if (html) HtmlText.images(r.body, r.finalUrl) else emptyList()
         val tail = if (images.isEmpty()) "" else "\nImages (show with ![alt](url)):\n" + images.joinToString("\n") { it.markdown() }
@@ -505,20 +508,46 @@ object HtmlText {
         return out.entries.take(max).map { com.iris.localai.data.ChatImage(it.key, it.value) }
     }
 
-    private val DROP = Regex("(?is)<(script|style|noscript|svg|head)\\b.*?</\\1>")
-    private val BREAK = Regex("(?i)<(br|/p|/div|/li|/h[1-6]|/tr|/section|/article)\\b[^>]*>")
+    /** 2.5.2: + template / iframe / object / canvas / math / select (their text is code, options or fallback, not content). */
+    private val DROP = Regex("(?is)<(script|style|noscript|svg|head|template|iframe|object|canvas|math|select)\\b.*?</\\1\\s*>")
+    private val SELF_CLOSED = Regex("(?is)<(script|style|iframe|svg|template)\\b[^>]*/>")
+    private val BREAK = Regex("(?i)</?(br|p|div|li|ul|ol|dl|dt|dd|h[1-6]|tr|table|thead|tbody|section|article|header|footer|nav|aside|main|blockquote|pre|figure|figcaption|form|fieldset|hr|address|details|summary|caption)\\b[^>]*>")
+    private val CELL = Regex("(?i)</(td|th)\\s*>")
+    /** Inline tags vanish without a space ("<b>北京</b>天气" → "北京天气", not "北京 天气"); links keep a space (menus of adjacent links). */
+    private val INLINE = Regex("(?i)</?(b|i|em|strong|span|u|s|small|big|code|sup|sub|mark|abbr|font|time|label|cite|q|del|ins|kbd|var|bdi|bdo|wbr|tt|data)\\b[^>]*>")
     private val TAG = Regex("(?s)<[^>]+>")
     private val COMMENT = Regex("(?s)<!--.*?-->")
+    private val SPACES = Regex("[ \\t\\u00A0\\u2000-\\u200A\\u202F\\u205F]+")
+    private val INVISIBLE = Regex("[\\u200B-\\u200D\\u2060\\uFEFF\\u00AD]")
+    private val UNCLOSED = listOf("<script", "<style", "<noscript", "<template")
+
+    /**
+     * 2.5.2: comments, scripts, styles and other non-content elements removed; an element of that kind
+     * left open (a page cut at the 512 KB cap) is removed to the end, so its code never shows as text.
+     */
+    fun stripNonContent(html: String): String {
+        var s = COMMENT.replace(html, " ")
+        s = SELF_CLOSED.replace(s, " ")
+        s = DROP.replace(s, " ")
+        val lower = s.lowercase()
+        val cut = UNCLOSED.mapNotNull { t -> var i = lower.indexOf(t); while (i >= 0 && i + t.length < lower.length && (lower[i + t.length].isLetterOrDigit() || lower[i + t.length] == '-')) i = lower.indexOf(t, i + 1); i.takeIf { it >= 0 } }.minOrNull()
+        return if (cut != null) s.substring(0, cut) else s
+    }
 
     fun toText(html: String): String {
-        var s = COMMENT.replace(html, " ")
-        s = DROP.replace(s, " ")
+        var s = stripNonContent(html)
         s = BREAK.replace(s, "\n")
+        s = CELL.replace(s, " ")
+        s = INLINE.replace(s, "")
         s = TAG.replace(s, " ")
-        s = s.replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
-            .replace("&#39;", "'").replace("&apos;", "'").replace("&amp;", "&")
-        return s.lines().map { it.replace(Regex("[ \\t\\u00A0]+"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+        // 2.5.2: every numeric and the common named entities, in one pass (&#8217; &mdash; &hellip; were left as written).
+        s = WebText.decodeEntities(s)
+        s = INVISIBLE.replace(s, "")
+        return s.lines().map { SPACES.replace(it, " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
     }
+
+    /** 2.5.2 web_fetch: the page's main text ([WebText.readable]): no navigation, footers, cookie banners or repeats. */
+    fun readable(html: String): String = WebText.readable(html)
 }
 
 data class FetchResult(val status: Int, val contentType: String?, val body: String, val finalUrl: String)
@@ -550,9 +579,8 @@ class HttpWebFetcher(
         )
         val r = SafeHttpClient(resolve = resolve).get(url, headers, maxBytes, maxRedirects = 3)
         val type = r.header("content-type")
-        val charset = type?.substringAfter("charset=", "")?.substringBefore(';')?.trim()?.trim('"', '\'')
-            ?.takeIf { it.isNotEmpty() }?.let { runCatching { charset(it) }.getOrNull() } ?: Charsets.UTF_8
-        return FetchResult(r.code, type, String(r.body, charset), r.url)
+        // 2.5.2: BOM, Content-Type charset (any case), <meta charset> / XML encoding, else UTF-8 (GBK pages were garbled).
+        return FetchResult(r.code, type, WebText.decode(r.body, type), r.url)
     }
 
     companion object {

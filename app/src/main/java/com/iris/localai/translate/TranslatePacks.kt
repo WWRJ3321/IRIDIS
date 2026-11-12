@@ -76,13 +76,7 @@ object BergamotConfig {
 class TranslatePackStore(private val context: Context) {
     private val privateRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, SUB).apply { mkdirs() }
 
-    private fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelDirs.resolve(
-        allFilesAccess = runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false),
-        storageState = runCatching { android.os.Environment.getExternalStorageState() }.getOrNull(),
-        downloadsDir = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull(),
-        privateDir = privateRoot,
-        sub = com.iris.localai.agent.StorageLayout.VOICE + "/" + SUB,
-    )
+    private fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateRoot, com.iris.localai.agent.StorageLayout.VOICE + "/" + SUB)
 
     fun dir(pack: TranslatePack): File = location().let { VoiceDirs.packDir(it.listDirs, it.dir, pack.id, MARKER) }
     fun isInstalled(pack: TranslatePack) = File(dir(pack), MARKER).exists()

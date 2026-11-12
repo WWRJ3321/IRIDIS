@@ -167,7 +167,7 @@ object BrowserSearch {
         var date = body.lastOrNull { DATE_LINE.matches(it) }.orEmpty()
         var text = body.filter { it != date || date.isEmpty() }.joinToString(" ")
         DATE_HEAD.find(text)?.let { m -> if (date.isEmpty()) date = m.groupValues[1]; text = text.substring(m.range.last + 1) }
-        return Triple(source, date, SearchText.clean(text).take(SearchText.SNIPPET_CHARS))
+        return Triple(source, date, WebText.clip(SearchText.clean(text), SearchText.SNIPPET_CHARS))
     }
 
     /** The page's results as hits: real urls, no Google/Bing-internal links or ads, deduped, ≤ [MAX_HITS]. */
@@ -185,7 +185,7 @@ object BrowserSearch {
         }
         var hits = out.distinctBy { it.url }
         page.answer?.let { a ->
-            val text = SearchText.clean(a.text).take(SearchText.SNIPPET_CHARS * 2)
+            val text = WebText.clip(SearchText.clean(a.text), SearchText.SNIPPET_CHARS * 2)
             val url = a.href.takeIf { it.isNotBlank() }?.let { real(it) }?.takeIf { !internal(it) }
             val same = url?.let { u -> hits.firstOrNull { it.url == u } }
             hits = if (same != null) listOf(same.copy(snippet = text)) + (hits - same)

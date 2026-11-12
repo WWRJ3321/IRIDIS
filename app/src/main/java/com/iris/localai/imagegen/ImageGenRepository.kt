@@ -116,13 +116,7 @@ class ImageGenRepository(internal val context: Context) {
     }
 
     /** `Download/IRIDIS/models/imagegen` with 全部文件访问, else the app-specific folder. */
-    fun modelsLocation(): ModelDirs.Location = ModelDirs.resolve(
-        allFilesAccess = runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false),
-        storageState = runCatching { android.os.Environment.getExternalStorageState() }.getOrNull(),
-        downloadsDir = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull(),
-        privateDir = privateModels,
-        sub = ImageGenFiles.MODELS_SUB,
-    )
+    fun modelsLocation(): ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateModels, ImageGenFiles.MODELS_SUB)
 
     /** Where a new download goes: the root that already holds a partial/complete copy, else the current write dir. */
     fun downloadRoot(model: ImageModel): File {

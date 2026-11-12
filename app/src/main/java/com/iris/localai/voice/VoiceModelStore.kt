@@ -103,13 +103,7 @@ class VoiceModelStore(private val context: Context) {
     val privateRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice").apply { mkdirs() }
 
     /** Re-evaluated on every call, so granting 全部文件访问 later switches new downloads to the shared folder. */
-    fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelDirs.resolve(
-        allFilesAccess = runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false),
-        storageState = runCatching { android.os.Environment.getExternalStorageState() }.getOrNull(),
-        downloadsDir = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull(),
-        privateDir = privateRoot,
-        sub = com.iris.localai.agent.StorageLayout.VOICE,
-    )
+    fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateRoot, com.iris.localai.agent.StorageLayout.VOICE)
 
     /** Where new packs are written right now. */
     val root: File get() = location().dir

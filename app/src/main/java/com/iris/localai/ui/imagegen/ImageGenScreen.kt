@@ -214,7 +214,12 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     }
                     SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
                     SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
-                    Field(s.seed, ImageGenText.SEED, number = true) { v -> vm.edit { it.copy(seed = v.filter(Char::isDigit).take(18)) } }
+                    // 2.5.2: empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
+                    Field(
+                        s.seed, ImageGenText.SEED, number = true, placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_seed_hint),
+                        trailingText = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_random),
+                        onTrailing = if (com.iris.localai.imagegen.ImageSeed.isRandom(s.seed)) null else ({ vm.edit { it.copy(seed = "") } }),
+                    ) { v -> vm.edit { it.copy(seed = com.iris.localai.imagegen.ImageSeed.sanitize(v)) } }
                 }
             }
 
@@ -301,6 +306,13 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onSendToChat(path) })
                         }
                         Text(ImageGenFiles.IMAGES_SUB + "/" + File(path).name, style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space6))
+                        // 2.5.2: the seed this image used (the seed field keeps what the user typed); 「固定此种子」 copies it in.
+                        s.lastSeed?.let { used ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_last_seed, used.toString()), style = IrisType.caption, color = Iris.colors.textTertiary, maxLines = 1, modifier = Modifier.weight(1f))
+                                if (s.seed != used.toString()) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_fix_seed), onClick = { vm.edit { it.copy(seed = used.toString()) } }, style = IrisButtonStyle.Text, compact = true)
+                            }
+                        }
                     }
                 }
             }
@@ -337,11 +349,16 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
 private fun LazyGridScope.full(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
 @Composable
-private fun Field(value: String, label: String, minLines: Int = 1, number: Boolean = false, onChange: (String) -> Unit) {
+private fun Field(
+    value: String, label: String, minLines: Int = 1, number: Boolean = false,
+    placeholder: String? = null, trailingText: String = "", onTrailing: (() -> Unit)? = null, onChange: (String) -> Unit,
+) {
     OutlinedTextField(
         value, onChange,
         modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space6),
         label = { Text(label) }, minLines = minLines, singleLine = minLines == 1,
+        placeholder = if (placeholder != null) { { Text(placeholder, maxLines = 1) } } else null,
+        trailingIcon = if (onTrailing != null) { { IrisButton(trailingText, onClick = onTrailing, style = IrisButtonStyle.Text, compact = true) } } else null,
         keyboardOptions = if (number) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
         shape = IrisRadius.mediumShape, colors = irisTextFieldColors(),
     )

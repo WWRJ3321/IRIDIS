@@ -230,6 +230,9 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
             SettingsGroup {
                 // 2.1.3: 资源诊断 (with 故障排查) moved to 关于 IRIDIS › 开发者选项.
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
+                Divider()
+                // 2.5.2 新手引导: replay the first-run guide (MainActivity shows it while onboardingDone is false).
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.ob252_replay), com.iris.localai.I18n.s(com.iris.localai.R.string.ob252_replay_sub), com.iris.localai.ui.icons.IrisIcons.Spark) { vm.update { it.copy(onboardingDone = false) } }
             }
             VersionFooter(SettingsText.versionLine(BuildConfig.VERSION_NAME), SettingsText.TAGLINE)
         }

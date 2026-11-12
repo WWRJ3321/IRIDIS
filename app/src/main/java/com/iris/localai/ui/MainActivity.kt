@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -141,8 +142,15 @@ class MainActivity : ComponentActivity() {
                     transitionSpec = { motion(reduceMotion) { IrisMotion.fadeThrough() } },
                     label = "welcome",
                 ) { accepted ->
-                    if (accepted) AppNavigation(chat)
-                    else com.iris.localai.ui.welcome.WelcomeScreen(
+                    if (accepted) androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                        AppNavigation(chat)
+                        // 2.5.2 新手引导: once after the welcome; replayable from 设置 › 关于与调试 › 新手引导.
+                        if (com.iris.localai.ui.welcome.Onboarding.shouldShow(settings.welcomeAccepted, settings.onboardingDone)) {
+                            com.iris.localai.ui.welcome.OnboardingScreen(
+                                onDone = { container.settings.update { it.copy(onboardingDone = true) } },
+                            )
+                        }
+                    } else com.iris.localai.ui.welcome.WelcomeScreen(
                         onStart = { container.settings.update { it.copy(welcomeAccepted = true) } },
                     )
                 }

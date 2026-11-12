@@ -2104,4 +2104,31 @@
     <string name="v251_sd15_mnn_hidden">已不再提供，可删除</string>
     <string name="v251_sd15_mnn_delete_title">删除该生图模型？</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) 已停用，删除后释放空间。</string>
+    <!-- 2.5.2 新手引导 / 生图种子 -->
+    <string name="ob252_title">新手引导</string>
+    <string name="ob252_skip">跳过</string>
+    <string name="ob252_next">下一步</string>
+    <string name="ob252_prev">上一步</string>
+    <string name="ob252_done">开始使用</string>
+    <string name="ob252_model_title">下载并加载本地模型</string>
+    <string name="ob252_model_body">侧边栏 › 模型 › 下载模型，选一个适合手机内存的模型；下载完成后点对话顶栏的模型名加载，对话全程在本机运行。</string>
+    <string name="ob252_model_hint">也可以导入手机里已有的 GGUF 文件</string>
+    <string name="ob252_agent_title">对话与智能体</string>
+    <string name="ob252_agent_body">点输入框左上角的「智能体」切换模式：模型可以读写工作区文件、联网搜索、调用工具；有风险的操作会先问你。</string>
+    <string name="ob252_agent_hint">工具与权限在 设置 › 智能体</string>
+    <string name="ob252_kb_title">知识库</string>
+    <string name="ob252_kb_body">把文档放进 设置 › 上下文、记忆和知识库 › 知识库，回答时会自动引用相关片段，文件只留在本机。</string>
+    <string name="ob252_kb_hint">支持 txt、md、pdf、epub 等</string>
+    <string name="ob252_image_title">生图</string>
+    <string name="ob252_image_body">侧边栏 › 生图：下载图像模型，写提示词即可生成；可加参考图，结果保存在工作区 images。</string>
+    <string name="ob252_image_hint">种子留空时每次都随机</string>
+    <string name="ob252_settings_title">设置在哪里</string>
+    <string name="ob252_settings_body">侧边栏底部的「设置」里可以改外观、语言、语音、本地 API 和存储位置。</string>
+    <string name="ob252_settings_hint">设置 › 关于与调试 › 新手引导 可再看一遍</string>
+    <string name="ob252_replay">新手引导</string>
+    <string name="ob252_replay_sub">重新查看首次使用引导</string>
+    <string name="ig252_seed_hint">留空则每次随机</string>
+    <string name="ig252_random">随机</string>
+    <string name="ig252_last_seed">本次种子：%1$s</string>
+    <string name="ig252_fix_seed">固定此种子</string>
 </resources>

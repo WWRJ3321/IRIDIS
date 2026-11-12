@@ -45,11 +45,27 @@ object ModelDirs {
         privateDir: File,
         usable: (File) -> Boolean = WorkspaceResolver::probe,
         sub: String = SUB,
+        /**
+         * 2.5.2: the configured storage location (设置 › 智能体 › 工作区位置) is `Download/IRIDIS` ([followsStorage]):
+         * the shared folder is used when it is writable even without 全部文件访问, so downloads *and*
+         * imports land next to the workspace instead of in Android/data. Default false (2.1.0 rule).
+         */
+        followStorage: Boolean = false,
     ): Location {
         val shared = downloadsDir?.let { sharedDir(it, sub) }
-        val ok = allFilesAccess && storageState == WorkspaceResolver.MOUNTED && shared != null && usable(shared)
+        val ok = (allFilesAccess || followStorage) && storageState == WorkspaceResolver.MOUNTED && shared != null && usable(shared)
         if (ok) ensureNoMedia(shared!!)
         return Location(if (ok) shared!! else privateDir, ok, shared, privateDir)
+    }
+
+    /**
+     * 2.5.2: true when the app's storage root (AgentContainer.appRoot: `Download/IRIDIS` for 工作区位置 下载 /
+     * 自定义, `filesDir/iridis` for 应用私有目录) is `Download/IRIDIS`. Pure (paths only).
+     */
+    fun followsStorage(storageRoot: File?, downloadsDir: File?): Boolean {
+        if (storageRoot == null || downloadsDir == null) return false
+        fun norm(f: File) = f.absoluteFile.normalize().path.trimEnd('/')
+        return norm(storageRoot) == norm(File(downloadsDir, WorkspaceResolver.FOLDER))
     }
 
     /** Keeps gallery / music apps from scanning multi-GB weights. */

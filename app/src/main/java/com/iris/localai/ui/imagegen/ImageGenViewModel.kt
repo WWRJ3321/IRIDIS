@@ -72,6 +72,8 @@ data class ImageGenUi(
     val steps: Int = ImageCatalog.SD15_QNN.defaultSteps,
     val cfg: Float = ImageCatalog.SD15_QNN.defaultCfg,
     val seed: String = "",
+    /** 2.5.2: the seed the last image actually used (shown with the result; the field is never overwritten). */
+    val lastSeed: Long? = null,
     val running: Boolean = false,
     val step: Int = 0,
     val total: Int = 0,
@@ -102,7 +104,8 @@ data class ImageGenUi(
 
     fun request(): ImageRequest = ImageRequest(
         prompt = prompt, negative = negative, width = width, height = height, steps = steps, cfg = cfg,
-        seed = seed.trim().toLongOrNull() ?: -1L,
+        // 2.5.2: empty field = a new random seed on every call (one call per generation); a typed seed stays fixed.
+        seed = com.iris.localai.imagegen.ImageSeed.pick(seed),
         initImagePath = initImage?.takeIf { img2imgSupported }, strength = strength,
     ).normalize(model)
 }
@@ -218,7 +221,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
         val req = s.request()
         val model = s.model
-        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, lowMem = false, seed = req.seed.toString(),
+        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, lowMem = false, lastSeed = null,
             progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
@@ -229,7 +232,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
-            saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
+            saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, lastSeed = req.seed, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
                 .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName, lowMem = e is com.iris.localai.imagegen.SdRules.LowMemory) } }
             if (model.backend == com.iris.localai.imagegen.Backend.SDCPP) refresh()
         }
@@ -251,7 +254,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     /** 2.4.2: recent sd.cpp log lines for a bug report (copied by the page). */
     suspend fun sdLog(): String = withContext(Dispatchers.IO) { com.iris.localai.imagegen.SdLog.recent() }
 
-    fun showResult(path: String) = _ui.update { it.copy(result = path) }
+    /** 2.5.2: a history image shown as the result: its seed is in its own parameters, not [ImageGenUi.lastSeed]. */
+    fun showResult(path: String) = _ui.update { it.copy(result = path, lastSeed = if (path == it.result) it.lastSeed else null) }
 
     /** 2.4.3: parameters embedded in a history image (prompt, seed, size …), null when it has none. */
     suspend fun params(path: String): com.iris.localai.imagegen.ImageGenFiles.Params? = withContext(Dispatchers.IO) { repo.params(path) }
