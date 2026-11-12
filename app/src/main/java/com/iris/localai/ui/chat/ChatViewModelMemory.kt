@@ -84,8 +84,10 @@ internal suspend fun ChatViewModel.prepareKnowledge(requester: Requester, replyI
     val nCtx = contextTokensFor((c.engine.state.value as? EngineState.Ready))
     val (room, exclude) = synchronized(kbBlocks) { com.iris.localai.knowledge.KbBudget.plan(ids, HashMap(kbBlocks), user.id, nCtx) }
     val maxChars = minOf(base, com.iris.localai.knowledge.KbBudget.charsFor(room))
+    // 2.5.1: cite / label only the snippets that actually go into the block (KbPrompt.injected), not every hit.
     val hits = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        com.iris.localai.knowledge.KbChat.hits(kb, user.content, prevUser, prevFiles, maxChars, exclude).also { h -> if (h.isNotEmpty()) runCatching { kb.cite(h.map { it.file }) } }
+        com.iris.localai.knowledge.KbPrompt.injected(com.iris.localai.knowledge.KbChat.hits(kb, user.content, prevUser, prevFiles, maxChars, exclude), maxChars)
+            .also { h -> if (h.isNotEmpty()) runCatching { kb.cite(h.map { it.file }) } }
     }
     synchronized(kbBlocks) {
         if (hits.isEmpty()) kbBlocks.remove(user.id)

@@ -189,7 +189,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     fun status(item: RecommendedCatalog.Item): RecStatus = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Hub, is RecommendedCatalog.Kind.Gguf -> {
             val l = local(item)
-            RecStatus.forHub(item.repoId!!, hub, l != null, l != null && l.path == loadedPath)
+            RecStatus.forHub(item.repoId!!, hub, l != null || com.iris.localai.knowledge.KbEmbedModels.isDownloaded(item.repoId!!), l != null && l.path == loadedPath)
         }
         is RecommendedCatalog.Kind.Image -> when (val s = imageStates[k.modelId]) {
             is ImageDl.Downloading -> RecStatus.Downloading(s.done, s.total, s.source, pausable = false)
@@ -457,10 +457,10 @@ private fun PrimaryButton(item: RecommendedCatalog.Item, s: RecStatus, actions: 
     val label = RecStatus.primaryLabel(s, item.section)
     val style = when (s) {
         RecStatus.Idle, RecStatus.Blocked, is RecStatus.Paused -> IrisButtonStyle.Primary
-        is RecStatus.Installed -> if (s.loaded || item.section == Section.IMAGE) IrisButtonStyle.Text else IrisButtonStyle.Tonal
+        is RecStatus.Installed -> if (s.loaded || item.section == Section.IMAGE || item.section == Section.EMBED) IrisButtonStyle.Text else IrisButtonStyle.Tonal
         else -> IrisButtonStyle.Tonal
     }
-    val enabled = s != RecStatus.Blocked && !(s is RecStatus.Installed && (s.loaded || item.section == Section.IMAGE))
+    val enabled = s != RecStatus.Blocked && !(s is RecStatus.Installed && (s.loaded || item.section == Section.IMAGE || item.section == Section.EMBED))
     IrisButton(label, { actions.primary(item, s, withVision) }, modifier, style = style, compact = compact, enabled = enabled)
 }
 

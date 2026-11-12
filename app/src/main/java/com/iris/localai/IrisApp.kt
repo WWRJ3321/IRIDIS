@@ -32,6 +32,8 @@ class AppContainer(app: Application) {
     val engine = EngineManager(app, scope, settings, models, modelConfigs)
     /** 1.9.0: 智能体 settings, the app-private workspace (filesDir/workspace) and its undo history. */
     val agent = com.iris.localai.agent.AgentContainer(app)
+    /** 2.5.1 知识库向量检索: embedding models live in the model folders; vectors beside the index (filesDir/knowledge). */
+    init { com.iris.localai.knowledge.KbEmbedModels.dirs = { models.location().listDirs }; agent.knowledge.semantic = com.iris.localai.knowledge.KbSemantic(app, agent.knowledge, File(app.filesDir, "knowledge/" + com.iris.localai.knowledge.KbVecStore.FILE), scope) }
     /** 2.2: GUI 智能体（形态 A，无障碍）第一阶段的运行器。 */
     val gui by lazy { com.iris.localai.agent.gui.android.GuiAgentRunner(app, engine, scope) }
     /** 2.1.9: the chat's `screen` tool runs the GUI agent (created on first use). */

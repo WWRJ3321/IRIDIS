@@ -1,6 +1,7 @@
 # ---- JNI contract with libiris_llama.so ----
 # Native code calls these by name; they must survive shrinking/obfuscation.
 -keep class com.iris.localai.engine.llama.LlamaNative { native <methods>; *; }
+-keep class com.iris.localai.knowledge.KbEmbedNative { native <methods>; *; }
 -keep interface com.iris.localai.engine.llama.PieceSink { *; }
 -keep interface com.iris.localai.engine.llama.LoadProgressListener { *; }
 -keepclassmembers class * implements com.iris.localai.engine.llama.PieceSink { boolean onPiece(byte[]); }

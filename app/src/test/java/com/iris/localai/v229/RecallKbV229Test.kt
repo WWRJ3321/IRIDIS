@@ -126,7 +126,8 @@ class RecallKbV229Test {
 
     @Test fun adaptiveThreshold() {
         fun h(s: Double) = KbHit("f", "t", s, 0)
-        assertEquals(listOf(5.0, 1.9), KbChat.keep(listOf(h(5.0), h(1.9), h(1.6))).map { it.score })
+        // 2.5.1: REL_SCORE 0.35 → 0.6 (5.0 × 0.6 = 3.0)
+        assertEquals(listOf(5.0), KbChat.keep(listOf(h(5.0), h(1.9), h(1.6))).map { it.score })
         assertEquals(listOf(1.0, 0.7), KbChat.keep(listOf(h(1.0), h(0.7), h(0.5))).map { it.score })
     }
 
