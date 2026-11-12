@@ -6,7 +6,7 @@ import com.iris.localai.agent.WebText
 import com.iris.localai.agent.capTokens
 import com.iris.localai.data.ModelDirs
 import com.iris.localai.imagegen.ImageSeed
-import com.iris.localai.ui.welcome.Onboarding
+import com.iris.localai.ui.tour.TourLogic
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -148,13 +148,14 @@ class V252BehaviorTest {
     }
 
     // ---------------------------------------------------------------- 新手引导
+    // 2.5.3: the 2.5.2 five-page guide was replaced by the spotlight tour (TourLogic, see V253Test).
     @Test fun onboardingPaging() {
-        assertTrue(Onboarding.shouldShow(welcomeAccepted = true, onboardingDone = false))
-        assertFalse(Onboarding.shouldShow(welcomeAccepted = false, onboardingDone = false))
-        assertFalse(Onboarding.shouldShow(welcomeAccepted = true, onboardingDone = true))
-        assertEquals(1, Onboarding.next(0)); assertNull(Onboarding.next(Onboarding.PAGES - 1))
-        assertNull(Onboarding.prev(0)); assertEquals(0, Onboarding.prev(1))
-        assertTrue(Onboarding.isLast(4)); assertFalse(Onboarding.isLast(3))
+        assertTrue(TourLogic.shouldShow(welcomeAccepted = true, tourDone = false))
+        assertFalse(TourLogic.shouldShow(welcomeAccepted = false, tourDone = false))
+        assertFalse(TourLogic.shouldShow(welcomeAccepted = true, tourDone = true))
+        assertEquals(1, TourLogic.next(0, 5)); assertNull(TourLogic.next(4, 5))
+        assertNull(TourLogic.prev(0)); assertEquals(0, TourLogic.prev(1))
+        assertTrue(TourLogic.isLast(4, 5)); assertFalse(TourLogic.isLast(3, 5))
     }
 
     // ---------------------------------------------------------------- 模型存储位置

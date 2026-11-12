@@ -320,7 +320,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id }, mtpPath = ggufPath(rec))
                     }
                     items(forDeviceExtra, key = { "for-device-" + it.id }, contentType = { "rec" }) { x ->
-                        RecCard(x, status(x), size(x), ramHint(x), actions, onOpen = { detailId = x.id }, mtpPath = ggufPath(x))
+                        androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RecCard(x, status(x), size(x), ramHint(x), actions, onOpen = { detailId = x.id }, mtpPath = ggufPath(x)) }
                     }
                     item(key = "for-device-why", contentType = "hint") {
                         val dr = com.iris.localai.data.DeviceRecommend
@@ -346,7 +346,8 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     item(key = "sec-" + sec.name, contentType = "title") { SectionTitle(sec.title) }
                     items(shown, key = { it.id }, contentType = { "rec" }) { item ->
                         val s = status(item)
-                        RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item))
+                        // 2.5.3: switching category / filter fades cards in and out instead of swapping at once.
+                        androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item)) }
                     }
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
                         item(key = "more-" + sec.name, contentType = "more") {
@@ -378,7 +379,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         if (search.searched && !search.loading && search.hits.isEmpty()) Text(SearchText.EMPTY, style = IrisType.caption, color = c.textTertiary)
                     }
                 }
-                items(search.hits, key = { "hit-" + it.site.name + it.id }, contentType = { "hit" }) { h -> OnlineCard(h, ram) { vm.openRepo(h) } }
+                items(search.hits, key = { "hit-" + it.site.name + it.id }, contentType = { "hit" }) { h -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { OnlineCard(h, ram) { vm.openRepo(h) } } }
                 item(key = "more-online", contentType = "hint") {
                     Text(
                         when { search.loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_25878e); search.hasMore && search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_9248b2); search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fe900); else -> "" },

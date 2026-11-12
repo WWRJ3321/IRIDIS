@@ -1,5 +1,7 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
@@ -254,7 +256,7 @@ fun HistoryDrawer(
         )
         // 2.1: one row of icon buttons instead of five stacked rows — more room for the list.
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
+            Modifier.fillMaxWidth().tourTarget(TourId.DRAWER_NAV).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             DrawerNavButton(com.iris.localai.ui.icons.IrisIcons.Cube, DrawerNavText.MODELS, onClick = onModels)

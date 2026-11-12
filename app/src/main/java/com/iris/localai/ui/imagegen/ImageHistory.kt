@@ -1,5 +1,6 @@
 package com.iris.localai.ui.imagegen
 
+import com.iris.localai.ui.motion.enterOnce
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -138,7 +139,7 @@ internal fun HistoryViewer(
     val params by produceState<ImageGenFiles.Params?>(null, path) { value = vm.params(path) }
     val file = File(path)
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
+        Column(Modifier.fillMaxSize().enterOnce().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
                 RoundIcon(IrisIcons.Close, onClose)
                 Text(HistoryText.position(i, paths.size), style = IrisType.labelSmall, color = Color.White, modifier = Modifier.weight(1f).padding(start = IrisDimens.space8))

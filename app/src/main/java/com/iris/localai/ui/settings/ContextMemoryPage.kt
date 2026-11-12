@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -197,7 +199,7 @@ fun ContextMemoryPage(
             }
 
             SectionTitle(ContextMemoryText.SEC_KB)
-            SettingsGroup {
+            SettingsGroup(Modifier.tourTarget(TourId.KB)) {
                 StatusRow(
                     kb?.let { ContextMemoryText.kbTitle(it.first) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a),
                     kb?.let { ContextMemoryText.kbSub(it.first, it.second) } ?: "",

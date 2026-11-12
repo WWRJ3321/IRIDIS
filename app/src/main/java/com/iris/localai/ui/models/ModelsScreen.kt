@@ -1,5 +1,7 @@
 package com.iris.localai.ui.models
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import kotlinx.coroutines.flow.first
 import com.iris.localai.ui.settings.ModelLoadSettings
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -468,9 +470,9 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                     if (vm.mnnSupported) {
                         IrisButton(
                             DownloadText.TITLE, onClick = onOpenDownload,
-                            icon = Icons.Outlined.CloudDownload, modifier = Modifier.fillMaxWidth(),
+                            icon = Icons.Outlined.CloudDownload, modifier = Modifier.fillMaxWidth().tourTarget(TourId.DOWNLOAD),
                         )
-                        Row(Modifier.padding(top = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                        Row(Modifier.padding(top = IrisDimens.space8).tourTarget(TourId.IMPORT), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(
                                 com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
                                 enabled = !import.active, style = IrisButtonStyle.Tonal, icon = Icons.Outlined.Add,
@@ -486,7 +488,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                         IrisButton(
                             com.iris.localai.I18n.s(com.iris.localai.R.string.models_c60fdb), onClick = { picker.launch(arrayOf("*/*")) },
                             enabled = !import.active, icon = Icons.Outlined.Add,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().tourTarget(TourId.IMPORT),
                         )
                     }
                     if (vm.mnnSupported) {
@@ -559,7 +561,7 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
             }
 
             // 2.3.5: 「最近提示」 entry removed from this page (user request).
-            item(key = "local-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_c28cd6, models.size)) }
+            item(key = "local-title", contentType = "title") { Box(Modifier.tourTarget(TourId.MODEL_LIST)) { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_c28cd6, models.size)) } }
             if (models.isEmpty()) {
                 item(key = "empty", contentType = "empty") {
                     EmptyState(

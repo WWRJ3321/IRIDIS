@@ -1,5 +1,7 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -184,7 +186,7 @@ fun AgentSettingsPage(
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9), onBack) {
         ScrollBody {
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f0789e))
-            SettingsGroup {
+            SettingsGroup(Modifier.tourTarget(TourId.AGENT_MODE)) {
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c), s.agentMode, subtitle = AgentText.MODE, icon = com.iris.localai.ui.icons.IrisIcons.Agent) { on ->
                     agent.settings.update { it.copy(agentMode = on) }
                 }
@@ -227,7 +229,7 @@ fun AgentSettingsPage(
 
             // 2.3.0 ②: remote MCP servers (tools join the built-in ones).
             SectionTitle(McpText.TITLE)
-            SettingsGroup {
+            SettingsGroup(Modifier.tourTarget(TourId.MCP)) {
                 val mcpServers by agent.mcp.servers.collectAsStateWithLifecycle()
                 SettingsRow(McpText.TITLE, icon = com.iris.localai.ui.icons.IrisIcons.Globe,
                     subtitle = if (mcpServers.isEmpty()) McpText.NAV else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_392241, mcpServers.count { it.enabled }, mcpServers.size),

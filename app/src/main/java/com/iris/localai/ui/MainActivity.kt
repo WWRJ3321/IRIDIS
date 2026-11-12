@@ -143,13 +143,12 @@ class MainActivity : ComponentActivity() {
                     label = "welcome",
                 ) { accepted ->
                     if (accepted) androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-                        AppNavigation(chat)
-                        // 2.5.2 新手引导: once after the welcome; replayable from 设置 › 关于与调试 › 新手引导.
-                        if (com.iris.localai.ui.welcome.Onboarding.shouldShow(settings.welcomeAccepted, settings.onboardingDone)) {
-                            com.iris.localai.ui.welcome.OnboardingScreen(
-                                onDone = { container.settings.update { it.copy(onboardingDone = true) } },
-                            )
-                        }
+                        // 2.5.3 新手引导 (spotlight tour): once after the welcome; replayable from 设置 › 关于与调试 › 新手引导.
+                        AppNavigation(
+                            chat,
+                            showTour = com.iris.localai.ui.tour.TourLogic.shouldShow(settings.welcomeAccepted, settings.tour253Done),
+                            onTourDone = { container.settings.update { it.copy(tour253Done = true) } },
+                        )
                     } else com.iris.localai.ui.welcome.WelcomeScreen(
                         onStart = { container.settings.update { it.copy(welcomeAccepted = true) } },
                     )
@@ -192,7 +191,7 @@ private fun CrashDialog(report: String, onClose: () -> Unit) {
 }
 
 @Composable
-private fun AppNavigation(chat: ChatViewModel) {
+private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTourDone: () -> Unit = {}) {
     var stack by rememberSaveable { mutableStateOf(listOf(Route.CHAT.name)) }
     fun push(r: Route) { if (stack.last() != r.name) stack = stack + r.name }
     fun pop() { if (stack.size > 1) stack = stack.dropLast(1) }
@@ -227,7 +226,18 @@ private fun AppNavigation(chat: ChatViewModel) {
         if (backRoute != null) { delay(600); backProgress = 0f; backRoute = null }
     }
 
+    // 2.5.3 新手引导: the tour drives this stack (normal push / pop transitions) and overlays everything.
+    val tour = remember { com.iris.localai.ui.tour.TourController() }
+    tour.onFinish = { stack = listOf(Route.CHAT.name); onTourDone() }
+    LaunchedEffect(showTour) { if (showTour) { if (!tour.active) tour.start() } else { tour.active = false } }
+    fun tourNavigate(screen: com.iris.localai.ui.tour.TourScreen) {
+        val target = tourStack(screen).map { it.name }
+        if (stack != target) stack = target
+    }
+
     val density = androidx.compose.ui.platform.LocalDensity.current.density
+    androidx.compose.runtime.CompositionLocalProvider(com.iris.localai.ui.tour.LocalTour provides tour) {
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     AnimatedContent(
         targetState = stack,
         contentKey = { it.last() },
@@ -255,6 +265,21 @@ private fun AppNavigation(chat: ChatViewModel) {
             }
         }
     }
+    if (tour.active) com.iris.localai.ui.tour.TourOverlay(tour, navigate = ::tourNavigate)
+    }
+    }
+}
+
+/** 2.5.3 新手引导: the route stack that shows a tour step's screen (DRAWER = chat, its drawer opened by ChatScreen). */
+private fun tourStack(screen: com.iris.localai.ui.tour.TourScreen): List<Route> = when (screen) {
+    com.iris.localai.ui.tour.TourScreen.CHAT, com.iris.localai.ui.tour.TourScreen.DRAWER -> listOf(Route.CHAT)
+    com.iris.localai.ui.tour.TourScreen.MODELS -> listOf(Route.CHAT, Route.MODELS)
+    com.iris.localai.ui.tour.TourScreen.SETTINGS -> listOf(Route.CHAT, Route.SETTINGS)
+    com.iris.localai.ui.tour.TourScreen.GENERATION -> listOf(Route.CHAT, Route.SETTINGS, Route.GENERATION)
+    com.iris.localai.ui.tour.TourScreen.PERFORMANCE -> listOf(Route.CHAT, Route.SETTINGS, Route.PERFORMANCE)
+    com.iris.localai.ui.tour.TourScreen.VOICE -> listOf(Route.CHAT, Route.SETTINGS, Route.VOICE)
+    com.iris.localai.ui.tour.TourScreen.CONTEXT -> listOf(Route.CHAT, Route.SETTINGS, Route.MEMORY)
+    com.iris.localai.ui.tour.TourScreen.AGENT -> listOf(Route.CHAT, Route.SETTINGS, Route.AGENT)
 }
 
 @Composable

@@ -75,8 +75,9 @@ class V1147LicenseTest {
     @Test fun voicePacksCarryLicenseTags() {
         val voice = src("ui/settings/VoiceAndApiPages.kt")
         val tag = voice.substringAfter("val VoicePack.licenseTag").substringBefore("@Composable")
-        assertTrue(tag.contains("VoicePack.CLONE_ZIPVOICE") && tag.contains("VoicePack.TTS_MATCHA_BAKER") && tag.contains("\"仅限非商业\""))
-        assertTrue(tag.contains("VoicePack.TTS_PIPER_XIAOYA -> \"见模型许可\""))
-        assertTrue(voice.substringAfter("internal fun PackRow(").contains("pack.licenseTag"))
+        assertTrue(tag.contains("VoicePack.CLONE_ZIPVOICE") && tag.contains("VoicePack.TTS_MATCHA_BAKER") && tag.contains("R.string.settings_855f7b"))
+        assertTrue(tag.contains("VoicePack.TTS_PIPER_XIAOYA -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7e41cf)"))
+        // 2.5.3: the pack row subtitle is the blurb only (音色·特点); license tags are no longer appended.
+        assertFalse(voice.substringAfter("internal fun PackRow(").substringBefore("private fun TranslateSection(").contains("pack.licenseTag"))
     }
 }

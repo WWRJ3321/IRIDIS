@@ -60,7 +60,8 @@ class V1147WelcomeTest {
     @Test fun welcomeGatesTheMainUi() {
         val main = source("src/main/java/com/iris/localai/ui/MainActivity.kt")
         assertTrue(main.contains("targetState = settings.welcomeAccepted"))
-        assertTrue(main.contains("if (accepted) AppNavigation(chat)"))
+        // 2.5.2 / 2.5.3: the app sits in a Box with the guide (2.5.3: the tour overlay lives inside AppNavigation).
+        assertTrue(Regex("if \\(accepted\\) androidx\\.compose\\.foundation\\.layout\\.Box\\(Modifier\\.fillMaxSize\\(\\)\\) \\{\\s*(//[^\\n]*\\s*)*AppNavigation\\(").containsMatchIn(main))
         assertTrue(main.contains("it.copy(welcomeAccepted = true)"))
     }
 }

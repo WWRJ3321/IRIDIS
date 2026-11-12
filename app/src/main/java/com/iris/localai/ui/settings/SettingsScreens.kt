@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -231,8 +233,10 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
                 // 2.1.3: 资源诊断 (with 故障排查) moved to 关于 IRIDIS › 开发者选项.
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_699379), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), com.iris.localai.ui.icons.IrisIcons.Info) { onOpen(SettingsPage.ABOUT) }
                 Divider()
-                // 2.5.2 新手引导: replay the first-run guide (MainActivity shows it while onboardingDone is false).
-                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.ob252_replay), com.iris.localai.I18n.s(com.iris.localai.R.string.ob252_replay_sub), com.iris.localai.ui.icons.IrisIcons.Spark) { vm.update { it.copy(onboardingDone = false) } }
+                // 2.5.3 新手引导: replay the spotlight tour (MainActivity runs it while tour253Done is false).
+                Box(Modifier.tourTarget(TourId.REPLAY)) {
+                    NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.tour253_replay), com.iris.localai.I18n.s(com.iris.localai.R.string.tour253_replay_sub), com.iris.localai.ui.icons.IrisIcons.Spark) { vm.update { it.copy(tour253Done = false) } }
+                }
             }
             VersionFooter(SettingsText.versionLine(BuildConfig.VERSION_NAME), SettingsText.TAGLINE)
         }
@@ -377,7 +381,9 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
             SettingsGroup {
                 SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fa7b28), com.iris.localai.data.TokenLimit.toSlider(s.maxNewTokens, 8192, 256), 256f..8448f, com.iris.localai.data.TokenLimit.label(s.maxNewTokens, " tokens"), subtitle = SettingsText.MAX_NEW) { v -> vm.update { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 256)) } }
                 Divider()
+                Box(Modifier.tourTarget(TourId.TEMPERATURE)) {
                 SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c9bf0b), s.temperature, 0f..2f, f2(s.temperature), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_752316)) { v -> vm.update { it.copy(temperature = (v * 20).toInt() / 20f) } }
+                }
                 Divider()
                 AdvancedFold("sampling", SettingsText.ADVANCED) {
                     Divider()
@@ -481,7 +487,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     index = s.resourceTier.coerceIn(0, com.iris.localai.engine.ResourceTier.entries.lastIndex),
                     onChange = { m -> vm.update { it.copy(resourceTier = m) } },
                     status = com.iris.localai.engine.LiveResourcePolicy.statusText(tierApply),
-                    modifier = Modifier.padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space12, bottom = com.iris.localai.ui.theme.IrisSpace.S),
+                    modifier = Modifier.tourTarget(TourId.PERF_TIER).padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space12, bottom = com.iris.localai.ui.theme.IrisSpace.S),
                 )
                 // 2.1.3: 资源档配置 moved to 关于 IRIDIS › 开发者选项.
             }
@@ -502,7 +508,8 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_539f31),
                 ) { on -> vm.update { it.copy(backgroundGeneration = on) } }
                 // 1.10.13: HyperOS freezes IRIS in the background unless it may run there.
-                if (s.backgroundGeneration) {
+                // 2.5.3: the row folds in / out instead of popping.
+                com.iris.localai.ui.components.Fold(s.backgroundGeneration) { androidx.compose.foundation.layout.Column {
                     Divider()
                     var exempt by remember { mutableStateOf(com.iris.localai.util.BackgroundGuard.isExempt(context)) }
                     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
@@ -517,7 +524,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                         onClick = { com.iris.localai.util.BackgroundGuard.open(context) },
                         trailing = { com.iris.localai.ui.components.ValueText(if (exempt) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_70c3a1) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94754e)) },
                     )
-                }
+                } }
                 Divider()
                 val thermal by com.iris.localai.engine.ThermalGovernor.status.collectAsStateWithLifecycle()
                 val nowText = if (thermal.tempC.isNaN()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_80ef0f) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_137d5c, Math.round(thermal.tempC * 10) / 10.0)
@@ -527,7 +534,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     else if (thermal.throttling) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b8b90f, nowText, thermal.capTps)
                     else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f1bd75, nowText),
                 ) { on -> vm.update { it.copy(thermalLimitC = if (on) 42 else 0) } }
-                if (s.thermalLimitC > 0) {
+                com.iris.localai.ui.components.Fold(s.thermalLimitC > 0) {
                     SliderRow(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d31153), s.thermalLimitC.toFloat(), 35f..50f, "${s.thermalLimitC}°C",
                         subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d3af4c),
@@ -541,7 +548,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     subtitle = if (s.thermalCutoffC == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e5ffc0, nowText)
                     else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a5ae10, s.thermalCutoffC),
                 ) { on -> vm.update { it.copy(thermalCutoffC = if (on) com.iris.localai.engine.ThermalCutoff.DEFAULT_C else 0) } }
-                if (s.thermalCutoffC > 0) {
+                com.iris.localai.ui.components.Fold(s.thermalCutoffC > 0) {
                     SliderRow(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.settings_82a989), s.thermalCutoffC.toFloat(),
                         com.iris.localai.engine.ThermalCutoff.MIN_C.toFloat()..com.iris.localai.engine.ThermalCutoff.MAX_C.toFloat(),
@@ -943,7 +950,6 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     options = THEME_OPTIONS.map { it.second },
                     selectedIndex = THEME_OPTIONS.indexOfFirst { it.first == s.themeMode },
                     onSelect = { i -> vm.update { it.copy(themeMode = THEME_OPTIONS[i].first) } },
-                    subtitle = SettingsText.THEME,
                 )
                 Divider()
                 PaletteSwatches(s.themePalette) { p -> vm.update { it.copy(themePalette = p.id) } }
@@ -956,7 +962,7 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f24ad9)
                         2 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_94b767)
                         else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41d7e0)
-                    } + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2232ee),
+                    },
                 )
             }
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8e1b94))
@@ -988,7 +994,7 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     },
                     trailing = { Chevron() },
                 )
-                if (hasBg) {
+                com.iris.localai.ui.components.Fold(hasBg) { androidx.compose.foundation.layout.Column {
                     Divider()
                     SliderRow(
                         com.iris.localai.I18n.s(com.iris.localai.R.string.settings_613ee9), s.backgroundBlur.toFloat(), 0f..com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP.toFloat(),
@@ -1010,7 +1016,7 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                             scope.launch { com.iris.localai.ui.theme.BackgroundImage.clear(context) }
                         },
                     )
-                }
+                } }
             }
             // 2.1.3: 顶栏按钮底色 / 运行状态机架 / 性能浮窗 moved to 关于 IRIDIS › 开发者选项 (DeveloperPage).
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1d50fa))

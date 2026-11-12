@@ -329,6 +329,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     )
                 }
                 items(s.history, key = { it }) { p ->
+                    // 2.5.3: deleted tiles fade out, new ones fade in, the rest glide into place.
+                    androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) {
                     HistoryTile(
                         p, selecting = selecting, selected = p in selected,
                         onClick = {
@@ -337,6 +339,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         },
                         onLongClick = { selecting = true; selected = selected + p },
                     )
+                    }
                 }
             }
 

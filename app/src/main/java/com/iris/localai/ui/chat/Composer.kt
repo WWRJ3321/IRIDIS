@@ -1,5 +1,7 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -255,6 +257,7 @@ fun Composer(
                 onClick = onToggleAgent,
                 icon = com.iris.localai.ui.icons.IrisIcons.Agent,
                 compact = true,
+                modifier = Modifier.tourTarget(TourId.AGENT),
             )
             // 2.2 「技能」: pick an installed skill / agent tool for this message.
             var skillSheet by remember { mutableStateOf(false) }
@@ -267,6 +270,7 @@ fun Composer(
                 onClick = { catalog = refCatalog(); skillSheet = true },
                 icon = com.iris.localai.ui.icons.IrisIcons.Skill,
                 compact = true,
+                modifier = Modifier.tourTarget(TourId.SKILLS),
             )
             if (skillSheet) SkillPickerSheet(catalog, onPick = { onAddRef(it); skillSheet = false }, onDismiss = { skillSheet = false })
             Spacer(Modifier.weight(1f))
@@ -275,7 +279,7 @@ fun Composer(
             // 2.2: a 「+」 as tall as the chips, its right edge on the capsule's right edge.
             var attachMenu by remember { mutableStateOf(false) }
             Box {
-                PressableIcon(com.iris.localai.ui.icons.IrisIcons.Plus, ComposerText.ATTACH, size = ComposerPillStyle.COMPACT_HEIGHT_DP.dp, iconSize = 22.dp, tint = c.textSecondary, onClick = { attachMenu = true })
+                PressableIcon(com.iris.localai.ui.icons.IrisIcons.Plus, ComposerText.ATTACH, modifier = Modifier.tourTarget(TourId.ATTACH), size = ComposerPillStyle.COMPACT_HEIGHT_DP.dp, iconSize = 22.dp, tint = c.textSecondary, onClick = { attachMenu = true })
                 com.iris.localai.ui.components.IrisMenu(attachMenu, { attachMenu = false }) {
                     com.iris.localai.ui.components.IrisMenuItem(ComposerText.ATTACH_PHOTOS, com.iris.localai.ui.icons.IrisIcons.Image) { attachMenu = false; onPickPhotos() }
                     com.iris.localai.ui.components.IrisMenuItem(ComposerText.ATTACH_FILES, com.iris.localai.ui.icons.IrisIcons.Folder) { attachMenu = false; onPickFiles() }
@@ -309,7 +313,7 @@ fun Composer(
         val recording = state.listening || state.transcribing
         var cancelArmed by remember { mutableStateOf(false) }
         val fieldAlpha by animateFloatAsState(if (recording) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
-        Box {
+        Box(Modifier.tourTarget(TourId.INPUT)) {
                 BasicTextField(
                     value = state.text,
                     onValueChange = onTextChange,
@@ -361,6 +365,7 @@ fun Composer(
                     onClick = onToggleThinking,
                     onDisabledClick = onThinkingUnsupported,
                     icon = com.iris.localai.ui.icons.IrisIcons.Think,
+                    modifier = Modifier.tourTarget(TourId.THINK),
                 )
                 SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
                 Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
@@ -368,7 +373,7 @@ fun Composer(
             // 2.2: one long accent capsule (users: the voice button was too small). Tap = 语音通话,
             // long-press = 语音输入 (slide up to cancel); with text / attachments 发送, while generating 停止.
             val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty())
-            VoiceCapsuleButton(
+            Box(Modifier.tourTarget(TourId.VOICE)) { VoiceCapsuleButton(
                 action = action,
                 holding = state.listening,
                 micLevel = state.micLevel,
@@ -383,7 +388,7 @@ fun Composer(
                 onHoldEnd = onHoldToTalkEnd,
                 onHoldCancel = onHoldToTalkCancel,
                 onCancelArmed = { cancelArmed = it },
-            )
+            ) }
         }
     }
 }
@@ -441,7 +446,7 @@ private fun SpeedChip(tier: Int, note: String?, composerTop: () -> Int, onChange
     var open by remember { mutableStateOf(false) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val speed = SpeedLevel.ofTier(tier)
-    Box {
+    Box(Modifier.tourTarget(TourId.SPEED)) {
         ComposerPill(
             speed.label, selected = false, toggle = false, onClick = { open = true },
             icon = Icons.Rounded.Bolt, trailingIcon = Icons.Rounded.KeyboardArrowDown,

@@ -422,8 +422,8 @@
     <string name="settings_7c3347">डेटा उपयोग, बैकअप और रिस्टोर</string>
     <string name="settings_2f5693">गति, बिजली और समस्या निवारण</string>
     <string name="settings_cbe1b9">CPU और GPU के तीनों स्तरों के लिए थ्रेड, कोर और प्राथमिकता सेट करें</string>
-    <string name="settings_4e15bc">सोचने के लिए अधिकतम टोकन, जवाब की अधिकतम लंबाई से अलग; खत्म होने पर जवाब लिखता है</string>
-    <string name="settings_53a86d">जवाब के लिए अधिकतम टोकन; सोच अलग गिनी जाती है</string>
+    <string name="settings_4e15bc">ज़्यादा = ज़्यादा सोच, कम = जल्दी जवाब</string>
+    <string name="settings_53a86d">ज़्यादा = लंबा जवाब; सोच अलग</string>
     <string name="settings_5b702b">लोकल LLM — आपकी चैट फ़ोन से बाहर नहीं जाती</string>
     <string name="settings_3dc3df">मॉडल और इन्फ़रेंस</string>
     <string name="settings_4dfe70">जनरेशन</string>
@@ -480,30 +480,30 @@
     <string name="settings_2a309b">बदलाव के बाद मॉडल फिर से लोड करें।</string>
     <string name="settings_4579b7">निर्देश और सोच</string>
     <string name="settings_fba64a">कस्टम निर्देश (सिस्टम प्रॉम्प्ट)</string>
-    <string name="settings_55a43c">सेट नहीं; हर चैट की शुरुआत में मॉडल को भेजे जाने वाले निर्देश</string>
-    <string name="settings_18c5b3">सोचने वाले मॉडल जवाब से पहले तर्क करते हैं; इनपुट के ऊपर “गहन सोच” बटन वाला ही स्विच</string>
+    <string name="settings_55a43c">सेट नहीं; चैट की शुरुआत में मॉडल को</string>
+    <string name="settings_18c5b3">समर्थित मॉडल पहले सोचते हैं</string>
     <string name="settings_1727e1">सोच बजट</string>
     <string name="settings_7ce421">जवाब के साथ साझा</string>
-    <string name="settings_d852f9">। 0 = अधिकतम जवाब लंबाई जवाब के साथ साझा</string>
+    <string name="settings_d852f9">; 0 = जवाब की सीमा साझा</string>
     <string name="settings_74de60">लंबाई और सैंपलिंग</string>
     <string name="settings_fa7b28">अधिकतम जवाब लंबाई</string>
     <string name="settings_c9bf0b">तापमान</string>
-    <string name="settings_752316">ज़्यादा = अधिक रचनात्मक, कम = अधिक स्थिर; 0 = निश्चित आउटपुट</string>
-    <string name="settings_0f59ca">केवल संचयी संभावना P के भीतर के विकल्पों में से चुनें</string>
-    <string name="settings_b7795b">केवल सबसे संभावित K विकल्पों में से चुनें; 0 = बंद</string>
-    <string name="settings_a915d4">सबसे ऊँची संभावना के P गुना से कम वाले विकल्प हटाएँ</string>
+    <string name="settings_752316">ज़्यादा = विविध, कम = स्थिर</string>
+    <string name="settings_0f59ca">ज़्यादा = विविध, कम = सुरक्षित</string>
+    <string name="settings_b7795b">ज़्यादा = विविध, कम = सुरक्षित; 0 बंद</string>
+    <string name="settings_a915d4">ज़्यादा = सुरक्षित, कम = विविध</string>
     <string name="settings_43a45e">दोहराव दंड</string>
-    <string name="settings_09ea9f">दोहराए गए शब्द कम करता है; 1.00 = कोई दंड नहीं</string>
+    <string name="settings_09ea9f">ज़्यादा = कम दोहराव, बहुत ज़्यादा अटपटा; 1 बंद</string>
     <string name="settings_e4596e">दंड विंडो</string>
-    <string name="settings_818868">दोहराव, Presence और Frequency दंड कितने हाल के टोकन गिनते हैं (GGUF)</string>
+    <string name="settings_818868">ज़्यादा = दूर तक देखे; बहुत ज़्यादा = अति दंड</string>
     <string name="settings_8f9adc">Presence दंड</string>
-    <string name="settings_69e836">धनात्मक मान विषय बदलने को बढ़ावा देते हैं (GGUF)</string>
+    <string name="settings_69e836">ज़्यादा = विषय ज़्यादा बदले</string>
     <string name="settings_4de5f1">Frequency दंड</string>
-    <string name="settings_531e21">धनात्मक मान दोहराए शब्द घटाते हैं (GGUF)</string>
+    <string name="settings_531e21">ज़्यादा = शब्द कम दोहराए</string>
     <string name="settings_8d2639">स्थिर रैंडम सीड</string>
-    <string name="settings_bc4200">सीड %1$s: एक ही इनपुट पर एक ही आउटपुट (GGUF)</string>
+    <string name="settings_bc4200">सीड %1$s: एक इनपुट, एक आउटपुट</string>
     <string name="settings_2beef4">हर बार रैंडम</string>
-    <string name="settings_3b9f4b">ग्लोबल डिफ़ॉल्ट। हर मॉडल को “मॉडल और लोडिंग” में ⚙ से अलग सेट कर सकते हैं।</string>
+    <string name="settings_3b9f4b">ग्लोबल डिफ़ॉल्ट; हर मॉडल ⚙ से अलग</string>
     <string name="settings_4dde09">कस्टम निर्देश</string>
     <string name="settings_be5fbb">सहेजें</string>
     <string name="settings_efaae4">उदाहरण: आप एक संक्षिप्त, पेशेवर सहायक हैं। जहाँ हो सके बिंदुओं में जवाब दें।</string>
@@ -611,25 +611,25 @@
     <string name="settings_3a5cec">लोड हो रहा है %1$s%%</string>
     <string name="settings_9970ad">थीम</string>
     <string name="settings_917205">विज़ुअल इफ़ेक्ट</string>
-    <string name="settings_f24ad9">ब्लर नहीं, सजावटी एनिमेशन बंद; सबसे ज़्यादा बिजली बचत</string>
-    <string name="settings_94b767">पूरे रिज़ॉल्यूशन का फ़्रॉस्टेड ग्लास, डायलॉग के पीछे भी ब्लर</string>
-    <string name="settings_41d7e0">कम रिज़ॉल्यूशन का फ़्रॉस्टेड ग्लास; सुझाया गया</string>
+    <string name="settings_f24ad9">न धुंधलापन न एनिमेशन; सबसे कम बिजली</string>
+    <string name="settings_94b767">पूरा फ़्रॉस्टेड ग्लास; सबसे ज़्यादा बिजली</string>
+    <string name="settings_41d7e0">हल्का फ़्रॉस्टेड ग्लास; सुझाया गया</string>
     <string name="settings_2232ee">। बैटरी सेवर या गर्मी में अपने आप कम होता है</string>
     <string name="settings_8e1b94">बैकग्राउंड</string>
     <string name="settings_c847fe">एक रंग का बैकग्राउंड</string>
-    <string name="settings_1f71ce">सिर्फ़ एक रंग: ग्रेडिएंट, मिश्रण, फ़्रॉस्टेड ग्लास या बैकग्राउंड इमेज नहीं</string>
+    <string name="settings_1f71ce">न ग्रेडिएंट न बैकग्राउंड इमेज</string>
     <string name="settings_e2bc30">डायनेमिक मिश्रित बैकग्राउंड</string>
-    <string name="settings_d864cc">होम के ऊपर रंग धीरे-धीरे बहते हैं (कस्टम बैकग्राउंड पर छिपा)</string>
-    <string name="settings_01c110">होम के ऊपर थीम रंग के अनुसार रंग धीरे-धीरे बहते हैं; बैटरी सेवर में स्थिर</string>
+    <string name="settings_d864cc">कस्टम बैकग्राउंड पर छिपा</string>
+    <string name="settings_01c110">होम के ऊपर रंग धीरे बहते हैं</string>
     <string name="settings_ac429c">कस्टम बैकग्राउंड</string>
     <string name="settings_613ee9">ब्लर</string>
     <string name="settings_5f8050">ओवरले गहराई</string>
     <string name="settings_9a17b1">बैकग्राउंड हटाएँ</string>
     <string name="settings_1d50fa">फ़ीडबैक</string>
     <string name="settings_487676">हैप्टिक फ़ीडबैक</string>
-    <string name="settings_c5c770">भेजने, चरण पूरा होने, देर तक दबाने और खींचने पर हल्का कंपन</string>
+    <string name="settings_c5c770">भेजने, पूरा होने, लंबे दबाव पर कंपन</string>
     <string name="settings_95ffd3">ध्वनि संकेत</string>
-    <string name="settings_3666d0">भेजने और जवाब पूरा होने पर हल्की ध्वनि; म्यूट, परेशान न करें या वॉइस चैट में नहीं बजती</string>
+    <string name="settings_3666d0">भेजने और जवाब पूरा होने पर हल्की ध्वनि</string>
     <string name="settings_2e9be5">कॉन्टेक्स्ट लंबाई, ओवरफ़्लो रणनीति, मेमोरी जोड़ना, इतिहास इंडेक्स, नॉलेज इंडेक्स और मेमोरी साफ़ करना</string>
     <string name="settings_eee83a">संसाधन</string>
     <string name="settings_6eba78">स्तर प्रोफ़ाइल</string>
@@ -1140,27 +1140,27 @@
     <string name="models_82a38b">%1$s · डिफ़ॉल्ट</string>
     <string name="models_24eeac">डिफ़ॉल्ट पर लौटाएँ</string>
     <string name="models_99b61e">%1$s कॉपी हो रहा है</string>
-    <string name="settings_56fad7">कुल रंग योजना; लाइट और डार्क दोनों बदलेंगे</string>
-    <string name="settings_90a050">चैट के पीछे दिखाने के लिए छवि चुनें</string>
-    <string name="settings_74d7bb">सेट है, बदलने के लिए टैप करें</string>
-    <string name="settings_776483">यह छवि पढ़ी नहीं जा सकी, कोई और आज़माएँ</string>
-    <string name="settings_9e3cb6">बैकग्राउंड को हल्का करता है ताकि टेक्स्ट दबे नहीं</string>
-    <string name="settings_9ed865">जितना गहरा, टेक्स्ट उतना साफ़</string>
+    <string name="settings_56fad7">लाइट और डार्क दोनों पर</string>
+    <string name="settings_90a050">चैट के पीछे एक इमेज</string>
+    <string name="settings_74d7bb">सेट है, बदलने को टैप करें</string>
+    <string name="settings_776483">इमेज नहीं पढ़ी गई, दूसरी आज़माएँ</string>
+    <string name="settings_9e3cb6">ज़्यादा = टेक्स्ट के पीछे नरम</string>
+    <string name="settings_9ed865">गहरा = साफ़ टेक्स्ट</string>
     <string name="settings_621ba4">सादा रंग बैकग्राउंड वापस लाएँ</string>
     <string name="settings_9ad79a">रंग योजना</string>
     <string name="settings_2c548f">क्लोन आवाज़</string>
     <string name="settings_7bf998">क्लोन आवाज़ उपयोग न करें</string>
-    <string name="settings_41db47">ऊपर चुना गया रीडिंग मॉडल उपयोग करें</string>
+    <string name="settings_41db47">ऊपर चुना वॉइस मॉडल</string>
     <string name="settings_56de7d" formatted="false">%.1f सेकंड ·\u0020</string>
     <string name="settings_f4a352">सुनें</string>
     <string name="settings_fc271e">नई क्लोन आवाज़</string>
-    <string name="settings_4d9193">अपनी आवाज़ 5–15 सेकंड रिकॉर्ड करें या ऑडियो फ़ाइल चुनें</string>
+    <string name="settings_4d9193">5–15 से. रिकॉर्ड करें या ऑडियो चुनें</string>
     <string name="settings_3cc941">क्लोन आवाज़: तेज़ / सटीक</string>
     <string name="settings_ba3c48">जनरेशन मोड</string>
     <string name="settings_8fcedb">तेज़</string>
     <string name="settings_2774eb">सटीक</string>
-    <string name="settings_39508e">तेज़: कम चरण, जल्दी बोलना शुरू, आवाज़ थोड़ी कम मिलती-जुलती</string>
-    <string name="settings_184e71">सटीक: ज़्यादा चरण, संदर्भ आवाज़ के ज़्यादा करीब, पर हर वाक्य देर से शुरू (“तेज़” से लगभग 2–3 गुना)</string>
+    <string name="settings_39508e">तेज़: जल्दी शुरू, कम मिलती-जुलती</string>
+    <string name="settings_184e71">सटीक: ज़्यादा मिलती, 2–3 गुना धीमी</string>
     <string name="settings_64acf2">डिफ़ॉल्ट 4</string>
     <string name="settings_cd53ff">डिफ़ॉल्ट 12</string>
     <string name="settings_77062e">आवाज़ “%1$s” हटाएँ?</string>
@@ -1212,9 +1212,9 @@
     <string name="settings_9e910f">प्रोजेक्ट होमपेज</string>
     <string name="settings_204d38">चैट सामग्री</string>
     <string name="settings_322e4c">वेब कोड रेंडर करें</string>
-    <string name="settings_d28b3a">जवाबों में HTML / SVG कोड को प्रीव्यू कार्ड के रूप में दिखाएँ</string>
+    <string name="settings_d28b3a">HTML / SVG प्रीव्यू कार्ड के रूप में</string>
     <string name="settings_c0a0b2">वेब इमेज लोड करें</string>
-    <string name="settings_be4e07">जवाबों में वेब इमेज दिखाएँ; बंद करने पर केवल लोकल इमेज दिखेंगी</string>
+    <string name="settings_be4e07">बंद: सिर्फ़ लोकल इमेज</string>
     <string name="settings_b8daf9">करंट नहीं पढ़ा जा सका</string>
     <string name="settings_38fba7" formatted="false">%.0f mA (चार्ज हो रहा है, यह खपत नहीं)</string>
     <string name="settings_200006" formatted="false">%.0f mA (%d नमूने)</string>
@@ -1391,16 +1391,16 @@
     <string name="settings_2006be">मंदारिन</string>
     <string name="settings_319dbf">कैंटोनीज़</string>
     <string name="settings_4145d4">अंग्रेज़ी</string>
-    <string name="settings_e3b3ef">वाक् पहचान, संश्लेषण और अनुवाद सब डिवाइस पर चलते हैं। पहली बार मॉडल डाउनलोड करने होंगे।</string>
+    <string name="settings_e3b3ef">डिवाइस पर चलता है; पहली बार मॉडल डाउनलोड करें</string>
     <string name="settings_cf7e7f">वाचन इंजन</string>
     <string name="settings_78587c">डिवाइस पर मॉडल</string>
     <string name="settings_f3dc4b">सिस्टम TTS</string>
-    <string name="settings_be76a6">सिस्टम का डिफ़ॉल्ट वॉइस इंजन और आवाज़ इस्तेमाल करें, डाउनलोड ज़रूरी नहीं</string>
-    <string name="settings_19ae43">नीचे डाउनलोड किया गया वाक् संश्लेषण मॉडल या क्लोन की गई आवाज़ इस्तेमाल करें</string>
+    <string name="settings_be76a6">सिस्टम आवाज़, डाउनलोड नहीं</string>
+    <string name="settings_19ae43">नीचे का मॉडल या क्लोन आवाज़</string>
     <string name="settings_486d41">सिस्टम TTS सेटिंग्स</string>
     <string name="settings_da54a4">सिस्टम TTS इंजन नहीं मिला</string>
-    <string name="settings_0e304e">सिस्टम सेटिंग्स में इंजन, आवाज़ बदलें या चीनी वॉइस पैक डाउनलोड करें</string>
-    <string name="settings_6a57d5">सिस्टम सेटिंग्स में टेक्स्ट-टू-स्पीच इंजन इंस्टॉल या चालू करें (जैसे Google की वाक् सेवाएँ या निर्माता का इंजन)</string>
+    <string name="settings_0e304e">सिस्टम इंजन, आवाज़ या पैक बदलें</string>
+    <string name="settings_6a57d5">सिस्टम सेटिंग में TTS इंजन इंस्टॉल करें</string>
     <string name="settings_d09e4a">आवाज़</string>
     <string name="settings_09f9a7">अंग्रेज़ी आवाज़ #%1$s</string>
     <string name="settings_77bca1">चीनी महिला आवाज़ #%1$s</string>
@@ -1423,26 +1423,26 @@
     <string name="settings_19ac67">कम</string>
     <string name="settings_aed1df">मध्यम</string>
     <string name="settings_4296d7">उच्च</string>
-    <string name="settings_f51084">कम: रोकने के लिए ज़्यादा ज़ोर से और देर तक बोलना होगा, शोर वाली जगह के लिए</string>
-    <string name="settings_372984">उच्च: धीमी आवाज़ से भी रुकेगा, कभी-कभी जवाब की आवाज़ से गलती से रुक सकता है</string>
-    <string name="settings_d68e5f">मध्यम: सामान्य आवाज़ में बोलकर रोक सकते हैं</string>
-    <string name="settings_906f6a">। स्पीकर पर खुद-ब-खुद जवाब से बचने के लिए बोलने से नहीं रुकेगा, लाइट ऑर्ब टैप करें। हेडफ़ोन या ईयरपीस पर लागू होता है</string>
+    <string name="settings_f51084">कम: ज़ोर से बोलकर रोकें</string>
+    <string name="settings_372984">ज़्यादा: धीमी आवाज़ से भी रुके</string>
+    <string name="settings_d68e5f">मध्यम: सामान्य आवाज़ से रुके</string>
+    <string name="settings_906f6a">; स्पीकर पर ऑर्ब टैप करें</string>
     <string name="settings_959016">आसानी से रोकें (जवाब कॉल की तरह चलाएँ)</string>
-    <string name="settings_02fac3">रोकना ज़्यादा संवेदनशील, पर आवाज़ कॉल वॉल्यूम से नियंत्रित होगी और गुणवत्ता थोड़ी कम</string>
-    <string name="settings_4a492f">यह \"मॉडल और लोडिंग\" के डाउनलोड स्रोत वाली ही सेटिंग है। Matcha वोकोडर और ZipVoice GitHub से डाउनलोड होते हैं।</string>
+    <string name="settings_02fac3">ज़्यादा संवेदनशील; कॉल वॉल्यूम, कम गुणवत्ता</string>
+    <string name="settings_4a492f">“मॉडल और लोडिंग” जैसा ही</string>
     <string name="settings_855f7b">केवल गैर-व्यावसायिक</string>
     <string name="settings_7e41cf">मॉडल लाइसेंस देखें</string>
     <string name="settings_46ffe3">अनुवाद करें</string>
-    <string name="settings_009e7a">ऑटो: चीनी से अंग्रेज़ी, अन्य भाषाएँ चीनी में। मैसेज देर तक दबाएँ या इनपुट बॉक्स में \"+\" से अनुवाद करें</string>
+    <string name="settings_009e7a">ऑटो: चीनी→अंग्रेज़ी, बाकी→चीनी</string>
     <string name="settings_51fc23">अनुवाद इंजन</string>
-    <string name="settings_24f86e">केवल लोड किए मॉडल से अनुवाद (टूल, मेमोरी और संदर्भ के बिना, थिंकिंग बंद)</string>
-    <string name="settings_498e86">केवल नीचे के ऑफ़लाइन पैक इस्तेमाल करें, चैट मॉडल नहीं</string>
-    <string name="settings_be176d">मॉडल लोड हो तो मॉडल से, वरना ऑफ़लाइन पैक से अनुवाद</string>
+    <string name="settings_24f86e">सिर्फ़ लोड किया मॉडल अनुवाद करे</string>
+    <string name="settings_498e86">सिर्फ़ ऑफ़लाइन पैक</string>
+    <string name="settings_be176d">मॉडल हो तो मॉडल, वरना ऑफ़लाइन पैक</string>
     <string name="settings_113ce8">ऑफ़लाइन अनुवाद पैक</string>
-    <string name="settings_09d681">ऑफ़लाइन इंजन Mozilla Bergamot है (Firefox अनुवाद वाला), चीनी-अंग्रेज़ी की हर दिशा के लिए एक पैक, और बिना मॉडल लोड किए भी काम करता है।</string>
-    <string name="settings_4f9ab2">इस डिवाइस पर ऑफ़लाइन इंजन लोड नहीं हो सका; केवल लोड किया मॉडल अनुवाद कर सकता है।</string>
+    <string name="settings_09d681">ऑफ़लाइन इंजन: Bergamot (Firefox वाला)</string>
+    <string name="settings_4f9ab2">ऑफ़लाइन इंजन उपलब्ध नहीं; सिर्फ़ मॉडल</string>
     <string name="settings_50c32a">उपयोग में · %1$s</string>
-    <string name="settings_20ea42">इंस्टॉल है · बदलने के लिए टैप करें</string>
+    <string name="settings_20ea42">इंस्टॉल है</string>
     <string name="settings_90c647">डाउनलोड हो रहा है %1$s / %2$s</string>
     <string name="settings_c2ec7d">जाँच और एक्सट्रैक्ट हो रहा है…</string>
     <string name="settings_a9abfc">लगभग %1$s</string>
@@ -1615,24 +1615,24 @@
     <string name="imagegen_ca539c">इस मॉडल के लिए अभी कोई डाउनलोड योग्य फ़ाइल नहीं</string>
     <string name="imagegen_ac40fd">एक्सट्रैक्ट की गई फ़ाइलें अधूरी हैं: %1$s</string>
     <string name="imagegen_f724e7">QNN रनटाइम नहीं है: पहले सेटिंग › मॉडल और लोडिंग में NPU रनटाइम इंस्टॉल करें</string>
-    <string name="voice_80950b">चीनी/अंग्रेज़ी/कैंटोनीज़/जापानी/कोरियाई · सबसे तेज़, रोज़ाना के लिए अनुशंसित</string>
+    <string name="voice_80950b">Zh/En/Yue/Ja/Ko · सबसे तेज़</string>
     <string name="voice_66f8a9">Paraformer चीनी</string>
-    <string name="voice_d3afd9">DAMO Academy · मंदारिन और चीनी-अंग्रेज़ी मिश्रण के लिए बेहतर</string>
-    <string name="voice_618272">सबसे सटीक · बोलियाँ और कई भाषाएँ · धीमा, लगभग 1.2 GB मेमोरी</string>
+    <string name="voice_d3afd9">मैंडरिन · मिश्रित चीनी-अंग्रेज़ी में बेहतर</string>
+    <string name="voice_618272">बहुभाषी, बोलियाँ · सबसे सटीक, धीमा</string>
     <string name="voice_b091cf">Zipformer CTC चीनी</string>
-    <string name="voice_2e1e7e">k2 नई पीढ़ी · केवल मंदारिन, तेज़ और सटीक · आउटपुट में विराम चिह्न नहीं</string>
+    <string name="voice_2e1e7e">मैंडरिन · तेज़, सटीक, विराम चिह्न नहीं</string>
     <string name="voice_163e32">Kokoro चीनी-अंग्रेज़ी · स्टैंडर्ड</string>
-    <string name="voice_36f40b">103 आवाज़ें · सबसे तेज़ संश्लेषण</string>
+    <string name="voice_36f40b">103 आवाज़ें · सबसे तेज़</string>
     <string name="voice_15f869">Kokoro चीनी-अंग्रेज़ी · उच्च गुणवत्ता</string>
-    <string name="voice_4645e0">वही 103 आवाज़ें · पूर्ण प्रिसिज़न, ज़्यादा साफ़ और स्वाभाविक</string>
+    <string name="voice_4645e0">103 आवाज़ें · पूर्ण सटीकता, ज़्यादा स्वाभाविक</string>
     <string name="voice_03ace1">MeloTTS चीनी-अंग्रेज़ी मिश्रित</string>
-    <string name="voice_b0fd88">एक स्वाभाविक महिला आवाज़ · चीनी-अंग्रेज़ी मिश्रण में सबसे सहज</string>
+    <string name="voice_b0fd88">महिला · मिश्रित चीनी-अंग्रेज़ी में सबसे सहज</string>
     <string name="voice_c3ab69">Piper Xiaoya · बहुत तेज़</string>
-    <string name="voice_e027fa">चीनी महिला आवाज़ · सबसे तेज़ शुरुआत, सबसे कम बैटरी (केवल चीनी)</string>
+    <string name="voice_e027fa">चीनी महिला · जल्दी शुरू, कम बिजली</string>
     <string name="voice_522e83">Matcha Biaobei · बहुत तेज़</string>
-    <string name="voice_39a7d1">चीनी महिला आवाज़ · Piper जितनी तेज़, ज़्यादा स्वाभाविक लहजा (केवल चीनी)</string>
+    <string name="voice_39a7d1">चीनी महिला · तेज़, स्वाभाविक लहजा</string>
     <string name="voice_c767d0">ZipVoice आवाज़ क्लोनिंग</string>
-    <string name="voice_c92641">चीनी-अंग्रेज़ी · आपकी 5–15 सेकंड की रिकॉर्ड की गई आवाज़ में बोलता है</string>
+    <string name="voice_c92641">चीनी-अंग्रेज़ी · आपकी आवाज़ में बोलता है</string>
     <string name="voice_f59128">एक्सट्रैक्ट करने के बाद फ़ाइलें गायब हैं: %1$s</string>
     <string name="voice_077027">%1$s की जाँच विफल, कृपया फिर से डाउनलोड करें</string>
     <string name="agent_2b9315">मॉडल ने %1$s सेकंड तक आउटपुट शुरू नहीं किया (इमेज पढ़ना बहुत धीमा या अटका), रोक दिया गया। छोटा विज़न मॉडल आज़माएँ या लॉग एक्सपोर्ट करें</string>
@@ -1950,10 +1950,10 @@
     <string name="tts245_section">आयात की गई आवाज़ें</string>
     <string name="tts245_blurb">sherpa-onnx · %1$s</string>
     <string name="tts245_pick_folder">फ़ोल्डर से आयात करें…</string>
-    <string name="tts245_pick_folder_sub">sherpa-onnx फ़ॉर्मैट: Kokoro (voices.bin), Matcha (वोकोडर के साथ), VITS / Piper (lexicon + tokens या espeak-ng-data)</string>
+    <string name="tts245_pick_folder_sub">sherpa-onnx फ़ॉर्मैट</string>
     <string name="tts245_pick_archive">.tar.bz2 आर्काइव चुनें…</string>
     <string name="tts245_paste_url">डाउनलोड लिंक चिपकाएँ</string>
-    <string name="tts245_paste_url_sub">https से शुरू और .tar.bz2 पर खत्म, जैसे sherpa-onnx की tts-models रिलीज़ की फ़ाइल</string>
+    <string name="tts245_paste_url_sub">.tar.bz2 का https लिंक</string>
     <string name="tts245_download">डाउनलोड करके आयात करें</string>
     <string name="tts245_importing">आवाज़ आयात हो रही है</string>
     <string name="tts245_copying">%1$s / %2$s</string>
@@ -1961,7 +1961,7 @@
     <string name="tts245_extracting">अनपैक हो रहा है…</string>
     <string name="tts245_checking">मॉडल का प्रकार पहचाना जा रहा है…</string>
     <string name="tts245_added">“%1$s” आयात हुई। पढ़कर सुनाने के लिए इसे टैप करें</string>
-    <string name="tts245_footnote">sherpa-onnx फ़ॉर्मैट में Kokoro, Matcha और VITS (Piper, MeloTTS सहित) समर्थित हैं। GPT-SoVITS और RVC समर्थित नहीं; मूल Piper आवाज़ें (.onnx + .onnx.json) पहले sherpa-onnx फ़ॉर्मैट में बदलनी होंगी।</string>
+    <string name="tts245_footnote">Kokoro, Matcha, VITS (Piper सहित) समर्थित</string>
     <string name="tts245_delete_title">“%1$s” हटाएँ?</string>
     <string name="tts245_delete_body">मॉडल फ़ाइलें (%1$s) हटाई जाएँगी; ज़रूरत हो तो फिर से आयात करें।</string>
     <string name="tts245_no_model">कोई .onnx मॉडल फ़ाइल नहीं मिली — यह sherpa-onnx वॉइस मॉडल नहीं है</string>
@@ -1974,9 +1974,9 @@
     <string name="imagegen_proc_start_failed">इमेज जनरेशन प्रोसेस शुरू नहीं हो सकी। कृपया फिर से कोशिश करें</string>
     <string name="imagegen_proc_died">इमेज जनरेशन प्रोसेस अचानक बंद हो गई (संभवतः मेमोरी कम या ड्राइवर क्रैश)। चैट और बाकी सब चलता रहेगा। \"CPU इस्तेमाल करें\" या छोटा आकार आज़माएँ</string>
     <string name="v250_style">शैली</string>
-    <string name="v250_style_soft">सॉफ्ट</string>
+    <string name="v250_style_soft">मिनिमल</string>
     <string name="v250_style_classic">क्लासिक</string>
-    <string name="v250_style_sub">सॉफ्ट: ठोस न्यूट्रल कार्ड, एक ही एक्सेंट रंग, एकरंगी आइकन। क्लासिक: 2.4 का रूप</string>
+    <string name="v250_style_sub">मिनिमल: ठोस कार्ड; क्लासिक: 2.4 फ़्रॉस्टेड ग्लास</string>
     <string name="v250_hero_label">वर्तमान मॉडल</string>
     <string name="v250_hero_none">कोई मॉडल लोड नहीं</string>
     <string name="v250_hero_idle">चैट शुरू करने के लिए एक मॉडल चुनें और लोड करें</string>
@@ -2104,30 +2104,60 @@
     <string name="v251_sd15_mnn_delete_title">यह इमेज मॉडल हटाएँ?</string>
     <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) बंद कर दिया गया है। हटाने से जगह खाली होगी।</string>
     <!-- 2.5.2 新手引导 / 生图种子 -->
-    <string name="ob252_title">शुरुआती गाइड</string>
-    <string name="ob252_skip">छोड़ें</string>
-    <string name="ob252_next">आगे</string>
-    <string name="ob252_prev">पीछे</string>
-    <string name="ob252_done">शुरू करें</string>
-    <string name="ob252_model_title">लोकल मॉडल डाउनलोड करें और लोड करें</string>
-    <string name="ob252_model_body">साइडबार › मॉडल › मॉडल डाउनलोड करें में फ़ोन की मेमोरी के हिसाब से मॉडल चुनें। पूरा होने पर चैट के ऊपर मॉडल के नाम पर टैप करके लोड करें। चैट इसी डिवाइस पर चलती है।</string>
-    <string name="ob252_model_hint">फ़ोन में मौजूद GGUF फ़ाइल भी इम्पोर्ट कर सकते हैं</string>
-    <string name="ob252_agent_title">चैट और एजेंट</string>
-    <string name="ob252_agent_body">इनपुट बॉक्स के ऊपर बाईं ओर एजेंट पर टैप करके मोड बदलें: मॉडल वर्कस्पेस फ़ाइलें पढ़-लिख सकता है, वेब खोज सकता है और टूल चला सकता है। जोखिम वाले काम पहले आपसे पूछते हैं।</string>
-    <string name="ob252_agent_hint">टूल और अनुमतियाँ: सेटिंग › एजेंट</string>
-    <string name="ob252_kb_title">नॉलेज बेस</string>
-    <string name="ob252_kb_body">दस्तावेज़ सेटिंग › संदर्भ, मेमोरी और ज्ञानकोश › नॉलेज बेस में रखें। जवाब संबंधित हिस्सों का हवाला देते हैं; फ़ाइलें इसी डिवाइस पर रहती हैं।</string>
-    <string name="ob252_kb_hint">txt, md, pdf, epub आदि</string>
-    <string name="ob252_image_title">इमेज</string>
-    <string name="ob252_image_body">साइडबार › इमेज: इमेज मॉडल डाउनलोड करें, प्रॉम्प्ट लिखें और बनाएँ। रेफ़रेंस इमेज भी जोड़ सकते हैं; नतीजे वर्कस्पेस के images फ़ोल्डर में सेव होते हैं।</string>
-    <string name="ob252_image_hint">सीड खाली हो तो हर बार रैंडम</string>
-    <string name="ob252_settings_title">सेटिंग कहाँ हैं</string>
-    <string name="ob252_settings_body">साइडबार के नीचे सेटिंग में रूप, भाषा, आवाज़, लोकल API और स्टोरेज स्थान बदलें।</string>
-    <string name="ob252_settings_hint">दोबारा: सेटिंग › जानकारी और डीबग › शुरुआती गाइड</string>
-    <string name="ob252_replay">शुरुआती गाइड</string>
-    <string name="ob252_replay_sub">पहली बार वाली गाइड फिर देखें</string>
     <string name="ig252_seed_hint">खाली = हर बार रैंडम</string>
     <string name="ig252_random">रैंडम</string>
     <string name="ig252_last_seed">इस बार का सीड: %1$s</string>
     <string name="ig252_fix_seed">यह सीड रखें</string>
+    <!-- 2.5.3 新手引导 (spotlight tour) -->
+    <string name="tour253_skip">छोड़ें</string>
+    <string name="tour253_prev">पिछला</string>
+    <string name="tour253_next">अगला</string>
+    <string name="tour253_done">पूरा</string>
+    <string name="tour253_counter">%1$d/%2$d</string>
+    <string name="tour253_replay">शुरुआती गाइड</string>
+    <string name="tour253_replay_sub">इंटरफ़ेस टूर फिर से देखें</string>
+    <string name="tour253_menu_t">साइडबार</string>
+    <string name="tour253_menu_b">चैट इतिहास, खोज और ट्रैश; नीचे मॉडल, इमेज और फ़ाइलें।</string>
+    <string name="tour253_model_t">मॉडल</string>
+    <string name="tour253_model_b">लोकल मॉडल बदलें, लोड या अनलोड करें।</string>
+    <string name="tour253_character_t">कैरेक्टर</string>
+    <string name="tour253_character_b">कैरेक्टर कार्ड चुनें या कार्ड प्रबंधित करें।</string>
+    <string name="tour253_newchat_t">नई चैट</string>
+    <string name="tour253_newchat_b">नई बातचीत शुरू करें।</string>
+    <string name="tour253_input_t">संदेश बॉक्स</string>
+    <string name="tour253_input_b">यहाँ लिखें; पूरी चैट इसी फ़ोन पर चलती है।</string>
+    <string name="tour253_agent_t">एजेंट</string>
+    <string name="tour253_agent_b">चालू होने पर मॉडल फ़ाइलें, वेब खोज और टूल इस्तेमाल करता है।</string>
+    <string name="tour253_skills_t">स्किल</string>
+    <string name="tour253_skills_b">इस संदेश के लिए स्किल या टूल चुनें।</string>
+    <string name="tour253_attach_t">अटैच</string>
+    <string name="tour253_attach_b">फ़ोटो या फ़ाइलें जोड़ें; ड्राफ़्ट का अनुवाद भी।</string>
+    <string name="tour253_think_t">सोचें</string>
+    <string name="tour253_think_b">समर्थित मॉडल जवाब से पहले सोचते हैं।</string>
+    <string name="tour253_speed_t">स्पीड</string>
+    <string name="tour253_speed_b">इन्फ़रेंस फ़ोन की कितनी ताकत ले सकता है।</string>
+    <string name="tour253_voice_t">वॉइस बटन</string>
+    <string name="tour253_voice_b">टैप करें कॉल, दबाकर बोलें; टेक्स्ट हो तो भेजें।</string>
+    <string name="tour253_drawer_t">शॉर्टकट</string>
+    <string name="tour253_drawer_b">मॉडल, इमेज जनरेशन, फ़ाइलें, लोकल API और सेटिंग्स।</string>
+    <string name="tour253_download_t">मॉडल डाउनलोड</string>
+    <string name="tour253_download_b">अपनी RAM के हिसाब से मॉडल चुनें और डाउनलोड करें।</string>
+    <string name="tour253_import_t">मॉडल इम्पोर्ट</string>
+    <string name="tour253_import_b">फ़ोन में मौजूद मॉडल फ़ाइल या फ़ोल्डर इम्पोर्ट करें।</string>
+    <string name="tour253_models_t">लोकल मॉडल</string>
+    <string name="tour253_models_b">ट्यून बटन से बैकएंड CPU/GPU/NPU, थ्रेड, MTP और MoE लोडिंग सेट करें।</string>
+    <string name="tour253_temp_t">तापमान</string>
+    <string name="tour253_temp_b">ज़्यादा = रचनात्मक, कम = स्थिर; बाकी एडवांस्ड में।</string>
+    <string name="tour253_perf_t">स्पीड लेवल</string>
+    <string name="tour253_perf_b">ऊँचा = तेज़ पर ज़्यादा बैटरी; थ्रेड एडवांस्ड में।</string>
+    <string name="tour253_tts_t">वॉइस</string>
+    <string name="tour253_tts_b">पढ़कर सुनाने का इंजन और गति; नीचे वॉइस मॉडल।</string>
+    <string name="tour253_kb_t">नॉलेज बेस</string>
+    <string name="tour253_kb_b">दस्तावेज़ जोड़ें, जवाब में उद्धृत; फ़ाइलें फ़ोन पर ही।</string>
+    <string name="tour253_agentset_t">एजेंट सेटिंग्स</string>
+    <string name="tour253_agentset_b">अधिकतम स्टेप; नीचे हर टूल और उसकी अनुमति।</string>
+    <string name="tour253_mcp_t">MCP सर्वर</string>
+    <string name="tour253_mcp_b">रिमोट MCP सर्वर जोड़ें, ज़्यादा टूल पाएँ।</string>
+    <string name="tour253_replay_t">शुरुआती गाइड</string>
+    <string name="tour253_replay_b">यह टूर कभी भी यहाँ फिर देखें।</string>
 </resources>

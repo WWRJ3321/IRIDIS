@@ -1,5 +1,6 @@
 package com.iris.localai.ui.markdown
 
+import com.iris.localai.ui.motion.enterOnce
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -222,7 +223,7 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
         LaunchedEffect(cfg.screenWidthDp, cfg.screenHeightDp, cfg.orientation) {
             dialogWindow?.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        Column(Modifier.fillMaxSize().background(c.background).systemBarsPadding()) {
+        Column(Modifier.fillMaxSize().enterOnce().background(c.background).systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
                 Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.text, fontSize = com.iris.localai.ui.theme.IrisFontSize.M, modifier = Modifier.weight(1f))
@@ -428,7 +429,7 @@ internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int,
         }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).onSizeChanged { box = it }) {
+        Box(Modifier.fillMaxSize().enterOnce().background(androidx.compose.ui.graphics.Color.Black).onSizeChanged { box = it }) {
             bitmap?.let { b ->
                 val img = remember(b) { b.asImageBitmap() }
                 Image(

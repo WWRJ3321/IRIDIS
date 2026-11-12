@@ -1,5 +1,7 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Eject
@@ -304,6 +306,14 @@ fun ChatScreen(
         },
     ) {
         LaunchedEffect(drawer.targetValue) { if (drawer.targetValue == DrawerValue.Open) hideKeyboard() }
+        // 2.5.3 新手引导: the drawer step opens the drawer; every other step keeps it closed.
+        val tour = com.iris.localai.ui.tour.LocalTour.current
+        val tourActive = tour?.active == true
+        val tourDrawer = tourActive && tour?.currentStep?.screen == com.iris.localai.ui.tour.TourScreen.DRAWER
+        LaunchedEffect(tourActive, tourDrawer) {
+            if (!tourActive) return@LaunchedEffect
+            if (tourDrawer) drawer.open() else if (drawer.currentValue == DrawerValue.Open) drawer.close()
+        }
         // 2.5.0: shared page skeleton (柔光: faint accent tint at the top; 经典: plain colour). Layout unchanged.
         com.iris.localai.ui.theme.IrisPageSurface(com.iris.localai.ui.theme.PageKind.CHAT) {
             val messages = ui.conversation.messages
@@ -518,7 +528,7 @@ fun ChatScreen(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
                     contentAlignment = Alignment.Center,
                 ) {
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8dce1), Modifier.align(Alignment.CenterStart), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.Menu, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f8dce1), Modifier.align(Alignment.CenterStart).tourTarget(TourId.MENU), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
                     // 2.3.3: 模型 and 角色 pills side by side after the menu button; on a narrow row the
                     // 角色 pill shrinks to the card's avatar.
                     androidx.compose.foundation.layout.BoxWithConstraints(
@@ -532,6 +542,7 @@ fun ChatScreen(
                                 Modifier
                                     .weight(1f, fill = false)
                                     .onGloballyPositioned { pillBounds = it.boundsInRoot() }
+                                    .tourTarget(TourId.MODEL)
                                     // hidden while the morphing surface stands in for it
                                     .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
                             ) { hideKeyboard(); charMenu = false; modelMenu = true }
@@ -541,13 +552,14 @@ fun ChatScreen(
                                 Modifier
                                     .then(if (compactChar) Modifier else Modifier.weight(1f, fill = false))
                                     .onGloballyPositioned { charPillBounds = it.boundsInRoot() }
+                                    .tourTarget(TourId.CHARACTER)
                                     // 2.3.5: hidden while its panel (which morphs from it) is showing — same as 模型
                                     .graphicsLayer { alpha = if (charMenu || charMorph.value > 0f) 0f else 1f },
                                 expanded = { charMorph.value },
                             ) { hideKeyboard(); modelMenu = false; charMenu = !charMenu }
                         }
                     }
-                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
+                    com.iris.localai.ui.components.FloatingIconButton(Icons.Outlined.EditNote, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd).tourTarget(TourId.NEW_CHAT), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
                 }
                 // 2.1.3: the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.

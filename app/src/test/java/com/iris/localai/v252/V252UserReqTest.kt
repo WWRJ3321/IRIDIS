@@ -17,49 +17,50 @@ class V252UserReqTest {
     private val langs = listOf("values", "values-zh-rTW", "values-en", "values-ja", "values-de", "values-es", "values-hi")
 
     // ---- ① 新手引导 ----
+    // 2.5.3: the five-page guide (OnboardingScreen, onboarding_done, ob252_*) was replaced by the spotlight
+    // tour (ui/tour/Tour.kt, tour253_done, tour253_*); these assert the replacement keeps the 2.5.2 rules.
     @Test fun onboardingFlagAndGate() {
         val m = src("$main/data/Models.kt")
-        assertTrue(m.contains("@kotlinx.serialization.SerialName(\"onboarding_done\")"))
-        assertTrue(m.contains("val onboardingDone: Boolean = false,"))
+        assertTrue(m.contains("@kotlinx.serialization.SerialName(\"tour253_done\")"))
+        assertTrue(m.contains("val tour253Done: Boolean = false,"))
+        assertFalse(m.contains("onboardingDone"))
         val a = src("$main/ui/MainActivity.kt")
-        assertTrue(a.contains("Onboarding.shouldShow(settings.welcomeAccepted, settings.onboardingDone)"))
-        assertTrue(a.contains("it.copy(onboardingDone = true)"))
-        // 欢迎页（免责声明）仍在前
-        assertTrue(a.indexOf("WelcomeScreen(") > a.indexOf("OnboardingScreen("))
+        assertTrue(a.contains("TourLogic.shouldShow(settings.welcomeAccepted, settings.tour253Done)"))
+        assertTrue(a.contains("it.copy(tour253Done = true)"))
+        // 欢迎页（免责声明）仍在前：引导只在 accepted 分支里
+        assertTrue(a.indexOf("WelcomeScreen(") > a.indexOf("TourLogic.shouldShow("))
+        assertFalse(File(root(), "$main/ui/welcome/OnboardingScreen.kt").exists())
     }
 
     @Test fun onboardingReplayRowInAboutGroup() {
         val s = src("$main/ui/settings/SettingsScreens.kt")
         val about = s.indexOf("{ onOpen(SettingsPage.ABOUT) }")
-        val row = s.indexOf("R.string.ob252_replay)")
-        assertTrue(about > 0 && row > about && row - about < 600)
-        assertTrue(s.contains("vm.update { it.copy(onboardingDone = false) }"))
+        val row = s.indexOf("R.string.tour253_replay)")
+        assertTrue(about > 0 && row > about && row - about < 700)
+        assertTrue(s.contains("vm.update { it.copy(tour253Done = false) }"))
         // 不新增分段控件
         assertFalse(s.substring(about, row).contains("Segmented"))
     }
 
     @Test fun onboardingVisualRules() {
-        val o = src("$main/ui/welcome/OnboardingScreen.kt")
-        assertTrue(o.contains("const val PAGES = 5"))
-        for (bad in listOf("Brush", "Gradient", "blur(", "Segmented", "GlassSurface", "IrisCard(")) assertFalse(bad, o.contains(bad))
-        assertTrue(o.contains(".background(c.surface, IrisRadius.largeShape)"))
-        // 灰字（textSecondary）每页最多一行
-        val grey = Regex("color = c\\.textSecondary,\\s*maxLines = 1").findAll(o).count()
+        val o = src("$main/ui/tour/Tour.kt")
+        for (bad in listOf("Brush", "Gradient", "blur(", "Segmented", "GlassSurface", "IrisCard(", "glass(")) assertFalse(bad, o.contains(bad))
+        assertTrue(o.contains(".background(c.surface, IrisRadius.mediumShape)"))
+        // 灰字（textSecondary）只有一处：步骤计数，单行
         assertEquals(1, Regex("c\\.textSecondary").findAll(o).count())
-        assertEquals(1, grey)
+        assertTrue(Regex("color = c\\.textSecondary,\\s*maxLines = 1").containsMatchIn(o))
         assertFalse(o.contains("textTertiary"))
-        // 单一强调色：只用 c.accent（当前页圆点），按钮走 IrisButton
+        // 单一强调色：只有脉冲环用 c.accent，按钮走 IrisButton
         assertEquals(1, Regex("c\\.accent\\b").findAll(o).count())
-        assertTrue(o.contains("tint = c.text"))
     }
 
     @Test fun onboardingStringsSevenLanguages() {
-        val keys = listOf("ob252_title", "ob252_skip", "ob252_next", "ob252_prev", "ob252_done", "ob252_replay", "ob252_replay_sub") +
-            listOf("model", "agent", "kb", "image", "settings").flatMap { p -> listOf("title", "body", "hint").map { "ob252_${p}_$it" } } +
+        val keys = listOf("skip", "next", "prev", "done", "counter", "replay", "replay_sub").map { "tour253_$it" } +
             listOf("ig252_seed_hint", "ig252_random", "ig252_last_seed", "ig252_fix_seed")
         for (d in langs) {
             val x = src("app/src/main/res/$d/strings.xml")
             for (k in keys) assertTrue("$d/$k", x.contains("name=\"$k\""))
+            assertFalse("$d still has ob252_*", x.contains("name=\"ob252_"))
             assertTrue("$d/ig252_last_seed", Regex("name=\"ig252_last_seed\">[^<]*%1\\\$s").containsMatchIn(x))
         }
     }
@@ -118,7 +119,8 @@ class V252UserReqTest {
     // ---- 版本 / CHANGELOG ----
     @Test fun versionAndChangelog() {
         val g = src("app/build.gradle.kts")
-        assertTrue(g.contains("versionCode = 251") && g.contains("versionName = \"2.5.2\""))
+        // 2.5.3: exact version asserted by V253Test; 2.5.2 only requires not lower.
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 251)
         val c = src("CHANGELOG.md")
         val sec = c.substring(c.indexOf("## 2.5.2"), c.indexOf("## 2.5.1（"))
         assertEquals("**本版未在真机测试。**", sec.lines()[1])

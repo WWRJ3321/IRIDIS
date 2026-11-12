@@ -300,11 +300,12 @@ data class AppSettings(
      */
     val welcomeAccepted: Boolean = false,
     /**
-     * 2.5.2 新手引导: the first-run guide (after the welcome) was finished or skipped. Stored as
-     * `onboarding_done`; default false, so it shows once. 设置 › 关于与调试 › 新手引导 sets it back to false (replay).
+     * 2.5.3 新手引导 (spotlight tour): finished or skipped. A new key (`tour253_done`, default false), so
+     * users who saw the 2.5.2 five-page guide (`onboarding_done`, now ignored) also see the tour once.
+     * 设置 › 关于与调试 › 新手引导 sets it back to false (replay).
      */
-    @kotlinx.serialization.SerialName("onboarding_done")
-    val onboardingDone: Boolean = false,
+    @kotlinx.serialization.SerialName("tour253_done")
+    val tour253Done: Boolean = false,
     /** 2.0.1: 温度限速 — pace generation from this temperature (°C, 35–50); 0 = off. */
     val thermalLimitC: Int = 0,
     /** 2.1.0 引用知识库: 对话 replies quote up to 3 snippets from workspace/knowledge (only when it has files). */

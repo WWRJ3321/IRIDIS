@@ -406,10 +406,10 @@ internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, on
                 if (shown.skills.isEmpty()) item {
                     EmptyLine(if (catalog.skillToolOff) ComposerText.SKILL_TOOL_OFF else if (query.isBlank()) ComposerText.NO_SKILLS else ComposerText.NO_MATCH)
                 }
-                items(shown.skills, key = { "s:" + it.ref.name }) { RefRow(it) { onPick(it.ref) } }
+                items(shown.skills, key = { "s:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
                 item { SectionLabel(ComposerText.SECTION_TOOLS) }
                 if (shown.tools.isEmpty()) item { EmptyLine(if (query.isBlank()) ComposerText.NO_TOOLS else ComposerText.NO_MATCH) }
-                items(shown.tools, key = { "t:" + it.ref.name }) { RefRow(it) { onPick(it.ref) } }
+                items(shown.tools, key = { "t:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
             }
         }
     }

@@ -144,16 +144,25 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
         }
     }
 
-    val edit = editing
-    if (edit != null || creating) {
+    // 2.5.3: the editor pushes in / pops out with the app's page transition (it used to swap in place).
+    val editorKey: Any? = if (creating) EDITOR_NEW else editing
+    val reduceMotion = com.iris.localai.ui.theme.LocalReduceMotion.current
+    androidx.compose.animation.AnimatedContent(
+        targetState = editorKey,
+        contentKey = { k -> (k as? CharacterStore.Entry)?.id ?: k },
+        transitionSpec = {
+            if (reduceMotion) com.iris.localai.ui.motion.IrisMotion.none
+            else com.iris.localai.ui.motion.IrisMotion.push(forward = targetState != null)
+        },
+        label = "characterEditor",
+    ) { target ->
+    if (target != null) {
         CharacterEditor(
-            entry = edit,
+            entry = target as? CharacterStore.Entry,
             onClose = { editing = null; creating = false },
             onSaved = { editing = null; creating = false; tick++; toast(I18n.s(R.string.kb232_saved)) },
         )
-        return
-    }
-
+    } else
     SubpageScaffold(I18n.s(R.string.ch232_title), onBack) {
         ScrollBody {
             Spacer(Modifier.height(IrisDimens.space8))
@@ -187,6 +196,7 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
             GroupFootnote(I18n.s(R.string.ch232_note, store.dir().path))
         }
     }
+    }
 
     deleting?.let { e ->
         ConfirmDialog(
@@ -198,6 +208,9 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
         )
     }
 }
+
+/** 2.5.3: AnimatedContent key of 「新建角色」 (an existing card is keyed by its entry). */
+private const val EDITOR_NEW = "new"
 
 private fun fileBase(e: CharacterStore.Entry) = CharacterStore.slug(e.card.name).ifEmpty { e.id }
 

@@ -61,6 +61,8 @@ fun TrashSheet(
         } else {
             LazyColumn(Modifier.heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)) {
                 items(entries, key = { it.id }) { e ->
+                    // 2.5.3: restored / purged rows fade out and the rest slide up.
+                    androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space8),
                         verticalAlignment = Alignment.CenterVertically,
@@ -74,6 +76,7 @@ fun TrashSheet(
                             IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7db6d), { onRestore(e.id) }, style = IrisButtonStyle.Tonal, compact = true)
                             IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { onPurge(e.id) }, style = IrisButtonStyle.Text, compact = true, destructive = true)
                         }
+                    }
                     }
                 }
             }

@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.tour.TourId
+import com.iris.localai.ui.tour.tourTarget
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -103,7 +105,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
             // 2.0.x: everyday settings first (朗读, 识别), then the model packs; the rarely touched
             // ones (音色编号, 打断, 下载源) fold away.
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f))
-            SettingsGroup {
+            SettingsGroup(Modifier.tourTarget(TourId.VOICE_TTS)) {
                 // 2.2.10: 朗读引擎 — 本机模型（含克隆音色）or Android 系统 TTS.
                 val sys = s.ttsEngine == com.iris.localai.voice.TTS_ENGINE_SYSTEM
                 SegmentedRow(
@@ -112,7 +114,8 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     subtitle = if (sys) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be76a6) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_19ae43),
                 )
                 Divider()
-                if (sys) {
+                // 2.5.3: folds in / out with the engine choice instead of popping.
+                com.iris.localai.ui.components.Fold(sys) { androidx.compose.foundation.layout.Column {
                     val hasEngine = remember(s.ttsEngine) { vm.systemTtsAvailable() }
                     SettingsRow(
                         if (hasEngine) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_486d41) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da54a4),
@@ -122,10 +125,10 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         trailing = { Chevron() },
                     )
                     Divider()
-                }
+                } }
                 val ttsActive = remember(packs, s.ttsPack) { vm.activePack(VoiceKind.TTS) }
                 val customVoice = remember(s.ttsPack, customList) { vm.activeCustomTts() }
-                if (!sys && customVoice == null && ttsActive?.singleSpeaker == false && !cloneOn) {
+                com.iris.localai.ui.components.Fold(!sys && customVoice == null && ttsActive?.singleSpeaker == false && !cloneOn) { androidx.compose.foundation.layout.Column {
                     val female = s.ttsSpeakerId in 3..57
                     val male = s.ttsSpeakerId >= 58
                     SettingsRow(
@@ -145,7 +148,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         },
                     )
                     Divider()
-                }
+                } }
                 SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_595d51), s.ttsSpeed, 0.6f..1.6f, String.format(Locale.US, "%.1fx", s.ttsSpeed)) { v -> vm.update { it.copy(ttsSpeed = (v * 10).toInt() / 10f) } }
                 Divider()
                 val preview by vm.preview.collectAsStateWithLifecycle()
@@ -243,7 +246,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
     }
 }
 
-/** 1.14.7: model-license note shown in a voice pack's subtitle (null = permissive, no tag). */
+/** 1.14.7: model-license note for a voice pack (null = permissive). 2.5.3: no longer shown in the pack row subtitle. */
 internal val VoicePack.licenseTag: String?
     get() = when (this) {
         VoicePack.CLONE_ZIPVOICE, VoicePack.TTS_MATCHA_BAKER -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_855f7b)
@@ -255,7 +258,7 @@ internal val VoicePack.licenseTag: String?
 internal fun PackRow(
     pack: VoicePack, state: PackState, bytes: Long, selected: Boolean,
     onUse: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
-) = PackRow(pack.title, pack.licenseTag?.let { "${pack.blurb} · $it" } ?: pack.blurb, state, bytes, selected, onUse, onDownload, onCancel, onDelete)
+) = PackRow(pack.title, pack.blurb, state, bytes, selected, onUse, onDownload, onCancel, onDelete) // 2.5.3: subtitle = 音色·特点 only; no license tag (see 关于 › 开源许可)
 
 /** 2.3.0 ③: 翻译 — target language, engine, and the offline Bergamot packs (one per direction). */
 @Composable
@@ -287,7 +290,7 @@ private fun TranslateSection(vm: SettingsViewModel, s: com.iris.localai.data.App
             if (i > 0) Divider()
             val st = packs[pack] ?: PackState.NotInstalled
             PackRow(
-                pack.title, "${pack.blurb} · MPL-2.0", st, pack.totalBytes, selected = st == PackState.Installed,
+                pack.title, pack.blurb, st, pack.totalBytes, selected = st == PackState.Installed,
                 onUse = {}, onDownload = { vm.downloadTranslate(pack) }, onCancel = { vm.cancelTranslate(pack) }, onDelete = { vm.deleteTranslate(pack) },
             )
         }
