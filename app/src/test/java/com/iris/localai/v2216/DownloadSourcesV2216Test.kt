@@ -137,8 +137,11 @@ class DownloadSourcesV2216Test {
 
     @Test fun everyRecommendedChatModelHasModelScope() {
         val chat = com.iris.localai.data.RecommendedCatalog.section(com.iris.localai.data.RecommendedCatalog.Section.CHAT)
-        assertEquals(27, chat.size)
-        chat.forEach { assertTrue(it.id, DownloadSources.MODELSCOPE.containsKey(it.id)) }
+        assertEquals(29, chat.size) // 2.5.1: +2 Gemma 4 19B REAP
+        // 2.5.1: REAP（mradermacher）魔搭无副本（2026-11-12 查 API：record not found），只走 hf-mirror / HF
+        val noMs = setOf(com.iris.localai.data.RecommendedCatalog.REAP_IQ3, com.iris.localai.data.RecommendedCatalog.REAP_Q4)
+        chat.filter { it.id !in noMs }.forEach { assertTrue(it.id, DownloadSources.MODELSCOPE.containsKey(it.id)) }
+        noMs.forEach { assertNull(it, DownloadSources.modelScopeFor(com.iris.localai.data.RecommendedCatalog.REAP_REPO)) }
         // generic taobao-mnn → official MNN org; others none
         assertEquals("MNN/Foo-MNN", DownloadSources.modelScopeFor("taobao-mnn/Foo-MNN")!!.id)
         assertNull(DownloadSources.modelScopeFor("xororz/sd-qnn"))

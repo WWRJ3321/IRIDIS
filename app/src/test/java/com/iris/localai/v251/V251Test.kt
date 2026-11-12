@@ -26,7 +26,7 @@ class V251Test {
         assertTrue(c.contains("## 2.5.1"))
         val sec = c.substring(c.indexOf("## 2.5.1"), c.indexOf("## 2.5.0（"))
         assertTrue(sec.contains("专家按需加载") && sec.contains("激活专家数") && sec.contains("Gemma 4 19B REAP") && sec.contains("Stable Diffusion 1.5 (CPU)"))
-        assertFalse("B 条目不应出现在 2.5.1 节", sec.contains("知识库") || sec.contains("嵌入"))
+        assertTrue("2.5.1 节应含 B（知识库已合并）", sec.contains("知识库") && sec.contains("嵌入"))
     }
 
     @Test fun stringsInSevenLanguages() {
