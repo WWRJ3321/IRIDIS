@@ -122,6 +122,8 @@ object KbChanges {
 /** BM25 over the chunks of an index. Build once per index version; [search] is pure. */
 class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val b: Double = 0.75) {
     private val docs = chunks
+    /** 2.5.1: the chunks this ranker was built over (for the vector side, [KbSemantic]). */
+    val chunks: List<KbChunk> get() = docs
     private val tf: List<Map<String, Int>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/') + " " + c.text).groupingBy { it }.eachCount() }
     /** 2.4.1: tokens of each chunk's file name (a term found there makes a one-word query count). */
     private val nameTokens: List<Set<String>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/').substringBeforeLast('.')).toSet() }
@@ -314,13 +316,21 @@ object KbSource {
 
 /** What the model reads. Pure. */
 object KbPrompt {
-    const val INJECT_SNIPPETS = 3
+    /** 2.5.1: at most 2 snippets per turn (was 3). */
+    const val INJECT_SNIPPETS = 2
     const val INJECT_CHARS = 1200
     const val TOOL_SNIPPETS = 4
+    /** 2.5.1: a snippet gets at least this many characters; with less room fewer snippets go in. */
+    const val MIN_SNIPPET_CHARS = 120
+
+    /** 2.5.1: the hits [inject] actually writes into the block (the ones to cite / label). Pure. */
+    fun injected(hits: List<KbHit>, maxChars: Int = INJECT_CHARS): List<KbHit> =
+        if (maxChars <= 0 || hits.isEmpty()) emptyList()
+        else hits.take(minOf(INJECT_SNIPPETS, (maxChars / MIN_SNIPPET_CHARS).coerceAtLeast(1)))
 
     /** Block added to the user's turn in 对话 mode: at most [maxChars] characters of snippet text. */
-    fun inject(hits: List<KbHit>, maxChars: Int = INJECT_CHARS): String {
-        if (maxChars <= 0) return ""
+    fun inject(all: List<KbHit>, maxChars: Int = INJECT_CHARS): String {
+        val hits = injected(all, maxChars)
         if (hits.isEmpty()) return ""
         val per = maxChars / hits.size
         return buildString {
@@ -475,26 +485,26 @@ object EpubText {
 /** 2.1.0 引用知识库 in 对话 mode. */
 object KbChat {
     /**
-     * Snippets for [current] (2.3.2: no search when it has no effective term, e.g. 好的 / 继续); a follow-up
-     * borrows [previousUser]'s keywords, and a hit that only matches through them needs [CARRIED_MIN_SCORE].
-     * [exclude] = (file, chunk) already in a kept block: skipped, and not merged in as a neighbour.
+     * Snippets for [current] (2.3.2: no search when it has no effective term, e.g. 好的 / 继续).
+     * 2.5.1 收紧: at most [MAX_SNIPPETS], only hits ≥ the best × [REL_SCORE], no neighbour merge (KbMerge), and a
+     * follow-up no longer borrows [previousUser]'s keywords ([boostFiles] still favours the files cited last turn).
+     * With an embedding model and vectors ([KnowledgeBase.semantic]) the pick is hybrid (BM25 + cosine, RRF,
+     * cosine gate: [KbVectors.select]); otherwise the tightened BM25 alone.
+     * [exclude] = (file, chunk) already in a kept block: skipped.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun hits(
         kb: KnowledgeBase, current: String, previousUser: String? = null, boostFiles: List<String> = emptyList(),
         maxChars: Int = KbPrompt.INJECT_CHARS, exclude: Set<Pair<String, Int>> = emptySet(),
     ): List<KbHit> = runCatching {
         if (KbQuery.effective(current).isEmpty() || maxChars <= 0) return emptyList()
         if (!kb.hasFiles()) return emptyList()
-        val q = runCatching { KbQuery.build(current, previousUser, boostFiles, kb::idf) }.getOrDefault(current)
-        val pool = KbPrompt.INJECT_SNIPPETS + exclude.size.coerceAtMost(6)
-        var found = keep(kb.search(q, pool, boostFiles))
-        if (q != current) {
-            val direct = reach(kb.search(current, pool * 3)).flatMap { it.keys }.toSet()
-            found = gateCarried(found, direct)
-        }
-        found = dedupe(found, exclude).take(KbPrompt.INJECT_SNIPPETS)
-        KbMerge.expand(found, kb::chunksOf, maxChars / found.size.coerceAtLeast(1), exclude)
+        val hybrid = kb.semantic?.let { s -> runCatching { s.hits(current, boostFiles, exclude) }.getOrNull() }
+        (hybrid ?: dedupe(keep(kb.search(current, MAX_SNIPPETS + 2 + exclude.size.coerceAtMost(6), boostFiles)), exclude)).take(MAX_SNIPPETS)
     }.getOrDefault(emptyList())
+
+    /** 2.5.1: snippets per turn, hybrid or BM25. */
+    const val MAX_SNIPPETS = KbPrompt.INJECT_SNIPPETS
 
     /** 2.3.2: a hit the current words alone do not reach ([direct]) stays only with score ≥ [CARRIED_MIN_SCORE]. Pure. */
     fun gateCarried(hits: List<KbHit>, direct: Set<Pair<String, Int>>): List<KbHit> =
@@ -512,12 +522,12 @@ object KbChat {
      * without a [KbCover] (fakes / old callers); ranked hits use [relevant] + [MIN_NORM] instead.
      */
     const val MIN_SCORE = 0.6
-    /** 2.2.9 D5: a hit is kept when it scores at least this share of the best one. */
-    const val REL_SCORE = 0.35
+    /** 2.2.9 D5: a hit is kept when it scores at least this share of the best one. 2.5.1: 0.35 → 0.6. */
+    const val REL_SCORE = 0.6
     /** 2.4.1: at least this share of the query's idf must be matched (≥ 2 distinct terms). */
     const val MIN_SHARE = 0.35
-    /** 2.4.1: score / the query's BM25 upper bound must reach this. */
-    const val MIN_NORM = 0.15
+    /** 2.4.1: score / the query's BM25 upper bound must reach this. 2.5.1: 0.15 → 0.25. */
+    const val MIN_NORM = 0.25
 
     /**
      * 2.4.1 覆盖度门槛: ≥ 2 distinct terms matched covering ≥ [MIN_SHARE] of the query's idf — or, for a one-term

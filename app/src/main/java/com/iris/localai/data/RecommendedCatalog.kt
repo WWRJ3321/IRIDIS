@@ -7,7 +7,7 @@ package com.iris.localai.data
  * Chat repo ids checked on the HF API 2026-11-01; ccore/Qwen3.5-4B-3D-Coder files/sizes/licence on 2026-11-03.
  */
 object RecommendedCatalog {
-    enum class Section(val title: String) { CHAT(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)), FEATURED(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6284d9)), IMAGE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)), SPEECH(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)), TRANSLATE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)) }
+    enum class Section(val title: String) { CHAT(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)), FEATURED(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6284d9)), IMAGE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)), SPEECH(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)), TRANSLATE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)), EMBED(com.iris.localai.I18n.s(com.iris.localai.R.string.kb251_embed_section)) }
     enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot") }
 
     sealed interface Kind {
@@ -192,7 +192,7 @@ object RecommendedCatalog {
         // ---- 生图 ----
         Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
         Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", com.iris.localai.I18n.s(com.iris.localai.R.string.data_479b48), gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),
-    ) + voiceItems() + translateItems()
+    ) + voiceItems() + translateItems() + com.iris.localai.knowledge.KbEmbedModels.catalogItems() // 2.5.1 知识库嵌入模型
 
     /** 语音: every downloadable voice pack (识别 / 朗读 / 音色克隆), same order as the 语音 page. */
     private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.map { p ->
@@ -287,7 +287,7 @@ sealed interface RecStatus {
             is Installed -> when (section) {
                 RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea)
                 RecommendedCatalog.Section.SPEECH -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_ecff77)
-                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
+                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE, RecommendedCatalog.Section.EMBED -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
             }
         }
     }

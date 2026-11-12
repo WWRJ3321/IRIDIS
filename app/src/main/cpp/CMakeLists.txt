@@ -85,6 +85,7 @@ if (IRIS_HTP)
 endif ()
 
 add_library(iris_llama SHARED
+        iris_embed.cpp jni_embed.cpp
         iris_engine.cpp
         jni_bridge.cpp)
 

@@ -282,6 +282,7 @@ fun KnowledgePage(
                     },
                 )
             }
+            com.iris.localai.knowledge.KbEmbedRow(agent.knowledge) // 2.5.1 语义检索：嵌入模型
             GroupFootnote(KnowledgeText.NOTE)
             // 2.3.3: 回收站 — deleted files and folders, kept 30 days.
             SettingsGroup {

@@ -60,6 +60,7 @@ class ModelRepository(private val context: Context) {
                 .filterNot { isProjectorFile(it.fileName) }
                 // 2.2.16: split GGUF — only part 1 is a model (llama.cpp opens the rest next to it)
                 .filterNot { isSplitTail(it.fileName) }
+                .filterNot { com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(it.fileName) } // 2.5.1: 知识库嵌入模型 are not chat models
         }
         val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list

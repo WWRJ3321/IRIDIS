@@ -67,6 +67,9 @@ class KnowledgeBase(
 
     fun dir(): File = File(root(), FOLDER)
 
+    /** 2.5.1 向量检索 (wired at app start; null = BM25 only, e.g. in unit tests). */
+    @Volatile var semantic: KbSemantic? = null
+
     /** 2.3.3: 知识库回收站 (knowledge/.trash), purged after 30 days. */
     val trash = KbTrash { dir() }
     private var lastPurge = 0L
@@ -150,6 +153,7 @@ class KnowledgeBase(
             }
         }
         lastScan = System.currentTimeMillis()
+        if (plan.changed || force) semantic?.indexChanged() // 2.5.1: fill the new chunks' vectors in the background
         val d = load()
         nonEmpty = d.files.any { it.chunks.isNotEmpty() }
         Status(d.files.size, d.files.sumOf { it.chunks.size }, unsupported)
@@ -176,6 +180,9 @@ class KnowledgeBase(
 
     /** Top [limit] chunks for [query]; refreshes the index first (at most every few seconds). */
     fun search(query: String, limit: Int, boostFiles: Collection<String> = emptyList()): List<KbHit> = ranker().search(query, limit, boostFiles)
+
+    /** 2.5.1: every indexed chunk (refreshed like [search]); the same list until the index changes. */
+    fun allChunks(): List<KbChunk> = ranker().chunks
 
     /** 2.2.9: idf of a token over the current index (for KbQuery.build). */
     fun idf(token: String): Double = ranker().idf(token)

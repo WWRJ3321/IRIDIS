@@ -52,8 +52,9 @@ class V241KbTest {
         assertEquals("旅行.md", KbChat.hits(kb, "东京行程第二天去哪").first().file)
         assertEquals("IRIDIS 手册.md", KbChat.hits(kb, "知识库支持哪些文件格式").first().file)
         assertEquals("笔记.md", KbChat.hits(kb, "Rust 的借用规则").first().file)
-        // follow-up borrows the previous question's words (2.2.9 / 2.3.2 behaviour kept)
-        assertEquals("租房合同.md", KbChat.hits(kb, "那押金呢", previousUser = "月租金多少").first().file)
+        // 2.5.1: a follow-up no longer borrows the previous question's words
+        assertEquals(KbChat.hits(kb, "那押金呢").map { it.file }, KbChat.hits(kb, "那押金呢", previousUser = "月租金多少").map { it.file })
+        assertEquals("租房合同.md", KbChat.hits(kb, "押金什么时候退还").first().file)
         root.deleteRecursively()
     }
 

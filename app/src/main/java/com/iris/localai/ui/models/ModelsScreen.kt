@@ -291,7 +291,8 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
                     Triple(k.mmprojPath ?: it, k.mmprojSize, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it))
                 })
                 c.mnnHub.startGguf(c.scope, hit, files, c.settings.current.downloadSource) { m ->
-                    if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+                    if (com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(m.fileName)) c.agent.knowledge.semantic?.indexChanged() // 2.5.1
+                    else if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
                 }
             }
             is com.iris.localai.data.RecommendedCatalog.Kind.Image -> downloadImageModel(k.modelId)
@@ -305,7 +306,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 2.2.16 「换源重试」 for the failed model download. */
     fun retryOtherSource() = c.mnnHub.retryOtherSource(c.scope) { m ->
-        if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)
+        if (c.engine.state.value !is EngineState.Ready && !com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(m.fileName)) c.engine.load(m)
     }
     fun setDownloadSource(s: com.iris.localai.data.DownloadSource) = c.settings.update { it.copy(downloadSource = s) }
 

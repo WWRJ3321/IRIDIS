@@ -16,7 +16,7 @@ import java.io.File
 /** 2.2.17 C: 下载模型 page — catalog sections, card states, short reasons, tabs. */
 class DownloadPageV2217Test {
     @Test fun sectionsAndFeaturedCoder() {
-        assertEquals(listOf("对话", "特色模型", "生图", "语音", "翻译"), Section.entries.map { it.title })
+        assertEquals(listOf("对话", "特色模型", "生图", "语音", "翻译", "知识库嵌入模型"), Section.entries.map { it.title })
         assertEquals(29, RecommendedCatalog.section(Section.CHAT).size) // 2.5.1: +2 Gemma 4 19B REAP
         val coder = RecommendedCatalog.section(Section.FEATURED).first()
         assertEquals("ccore/Qwen3.5-4B-3D-Coder", coder.repoId)
