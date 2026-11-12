@@ -89,8 +89,11 @@ class McpV230Test {
         assertEquals(mapOf("X-Key" to "1"), McpHeaders.parse("X-Key: 1\nbad header: 2\nHost: h\nnocolon"))
         assertEquals("Bearer abc", McpHeaders.all("abc", emptyMap())["Authorization"])
         assertEquals("Token abc", McpHeaders.all("Token abc", emptyMap())["Authorization"])
+        // 2.5.2: no default cap — all enabled tools are injected; an explicit cap still trims
         val pick = McpCap.select((1..25).toList())
-        assertEquals(20, pick.injected.size); assertEquals(5, pick.dropped)
+        assertEquals(25, pick.injected.size); assertEquals(0, pick.dropped)
+        val capped = McpCap.select((1..25).toList(), 20)
+        assertEquals(20, capped.injected.size); assertEquals(5, capped.dropped)
     }
 
     // ---- transports against a local server ----

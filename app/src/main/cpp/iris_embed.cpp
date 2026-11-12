@@ -1,4 +1,4 @@
-// IRIS LocalAI — 2.5.1 知识库嵌入模型. See iris_embed.h.
+// IRIS LocalAI — 2.5.1 知识库嵌入模型 (2.5.2: EOS for LAST pooling, qwen3 forced to LAST). See iris_embed.h.
 #include "iris_embed.h"
 
 #include <android/log.h>
@@ -8,6 +8,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #ifdef IRIS_VULKAN
 #include <sys/system_properties.h>
@@ -52,6 +54,20 @@ void embed_backend_init() {
     });
 }
 
+// 2.5.2: GGUF "general.architecture" (empty when missing).
+std::string model_arch(const llama_model *model) {
+    char buf[64] = {0};
+    if (llama_model_meta_val_str(model, "general.architecture", buf, sizeof(buf)) < 0) return std::string();
+    return std::string(buf);
+}
+
+// 2.5.2: the token LAST pooling must end on: EOS, else SEP; LLAMA_TOKEN_NULL when the vocab has neither.
+llama_token end_token(const llama_vocab *vocab) {
+    llama_token t = llama_vocab_eos(vocab);
+    if (t == LLAMA_TOKEN_NULL) t = llama_vocab_sep(vocab);
+    return t;
+}
+
 void l2_normalize(const float *in, int n, std::vector<float> &out) {
     double sum = 0.0;
     for (int i = 0; i < n; i++) sum += (double) in[i] * in[i];
@@ -86,6 +102,18 @@ Embedder *embed_load(const std::string &path, int threads, std::string &error) {
     cp.no_perf = true;
     llama_context *ctx = llama_init_from_model(model, cp);
     if (!ctx) { llama_model_free(model); error = "embedding context init failed"; return nullptr; }
+    // 2.5.2: a qwen3 GGUF without a pooling type (UNSPECIFIED / NONE) would be mean-pooled; Qwen3-Embedding is
+    // trained on the last token, so rebuild the context with LAST.
+    {
+        const enum llama_pooling_type pt = llama_pooling_type(ctx);
+        if ((pt == LLAMA_POOLING_TYPE_UNSPECIFIED || pt == LLAMA_POOLING_TYPE_NONE) && model_arch(model) == "qwen3") {
+            llama_free(ctx);
+            cp.pooling_type = LLAMA_POOLING_TYPE_LAST;
+            ctx = llama_init_from_model(model, cp);
+            if (!ctx) { llama_model_free(model); error = "embedding context init failed"; return nullptr; }
+            __android_log_print(ANDROID_LOG_INFO, EMB_TAG, "qwen3 without pooling type: forced LAST");
+        }
+    }
     if (llama_pooling_type(ctx) == LLAMA_POOLING_TYPE_RANK) {
         llama_free(ctx); llama_model_free(model); error = "not an embedding model (rank pooling)"; return nullptr;
     }
@@ -110,12 +138,21 @@ bool embed_text(Embedder *e, const std::string &text, std::vector<float> &out, s
     std::vector<llama_token> toks((size_t) n);
     n = llama_tokenize(vocab, text.data(), len, toks.data(), (int32_t) toks.size(), true, false);
     if (n <= 0) { error = "tokenize failed"; return false; }
+    toks.resize((size_t) n);
+    // 2.5.2: LAST pooling reads the final token. Some third-party Qwen3 GGUFs set tokenizer.ggml.add_eos_token=false
+    // (the official one is true), so append the EOS (or SEP) ourselves when the tokenizer did not.
+    const bool last_pool = llama_pooling_type(e->ctx) == LLAMA_POOLING_TYPE_LAST;
+    const llama_token end = last_pool ? end_token(vocab) : LLAMA_TOKEN_NULL;
+    if (end != LLAMA_TOKEN_NULL && toks.back() != end) {
+        toks.push_back(end);
+        n++;
+    }
     if (n > e->n_batch) {
-        // Keep the head; LAST pooling reads the final token, so keep the EOS the tokenizer appended.
-        const bool eos = llama_vocab_get_add_eos(vocab);
+        // Keep the head; with LAST pooling keep the final EOS (ours or the tokenizer's) in the last slot.
+        const bool keep_last = end != LLAMA_TOKEN_NULL || llama_vocab_get_add_eos(vocab);
         const llama_token last = toks[(size_t) n - 1];
         n = e->n_batch;
-        if (eos) toks[(size_t) n - 1] = last;
+        if (keep_last) toks[(size_t) n - 1] = last;
     }
     toks.resize((size_t) n);
 

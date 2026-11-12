@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.iris.localai.IrisApp
-import com.iris.localai.agent.mcp.McpCap
 import com.iris.localai.agent.mcp.McpHeaders
 import com.iris.localai.agent.mcp.McpManager
 import com.iris.localai.agent.mcp.McpServer
@@ -53,7 +52,6 @@ object McpText {
     val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b7ad17)
     val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1462ba)
     val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e1ee4f)
-    fun over(total: Int, cap: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c91761, total, cap)
 }
 
 /** 2.3.0 ②: 设置 › 智能体 › MCP 服务 — add / test / enable / delete remote MCP servers and their tools. */
@@ -83,10 +81,7 @@ fun McpPage(onBack: () -> Unit) {
         ScrollBody {
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bd700b), { adding = true }, icon = Icons.Outlined.Add, modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter))
-            val total = servers.filter { it.enabled }.sumOf { s -> s.tools.count { it.name !in s.disabledTools } }
-            if (total > McpCap.DEFAULT) {
-                Text(McpText.over(total, McpCap.DEFAULT), style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
-            }
+            // 2.5.2: no MCP tool limit any more (every enabled tool is injected), so no over-limit warning.
             if (servers.isEmpty()) {
                 Text(McpText.EMPTY, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
             }

@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">Off</string>
     <string name="kb251_embed_stop">Stop building vectors</string>
     <string name="kb251_embed_not_downloaded">Not downloaded</string>
+    <string name="kb252_embed_qwen_q4">Semantic knowledge search, best for Chinese, Q4 uses less memory</string>
+    <string name="kb252_embed_gemma_q4">Semantic knowledge search, smallest, Q4 uses less memory</string>
     <string name="ws233_loc_downloads">Download/IRIDIS</string>
     <string name="ws233_loc_private">App-private</string>
     <string name="ws233_loc_custom">Custom</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">Connect remote MCP servers to extend the agent\'s tools</string>
     <string name="agent_1462ba">Remote servers only (Streamable HTTP, with automatic fallback to legacy SSE). Tokens and headers are stored encrypted on this device. Each service asks before its first tool call; you can choose \"Always allow\".</string>
     <string name="agent_e1ee4f">No MCP services yet. Tap \"Add service\" above and enter the server address (e.g. https://example.com/mcp).</string>
-    <string name="agent_c91761">%1$s MCP tools enabled; only the first %2$s are offered to the model. Turn off tools you rarely use.</string>
     <string name="agent_1a6c05">Connected: %1$s tools</string>
     <string name="agent_4d5cd5">Connection failed:\u0020</string>
     <string name="agent_bd700b">Add service</string>

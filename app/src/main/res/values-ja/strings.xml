@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">オフ</string>
     <string name="kb251_embed_stop">ベクトル生成を停止</string>
     <string name="kb251_embed_not_downloaded">未ダウンロード</string>
+    <string name="kb252_embed_qwen_q4">ナレッジの意味検索、中国語に強い、Q4 で省メモリ</string>
+    <string name="kb252_embed_gemma_q4">ナレッジの意味検索、最小、Q4 で省メモリ</string>
     <string name="ws233_loc_downloads">Download/IRIDIS</string>
     <string name="ws233_loc_private">アプリ専用</string>
     <string name="ws233_loc_custom">カスタム</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">リモート MCP サーバーに接続してエージェントのツールを拡張</string>
     <string name="agent_1462ba">リモート サーバーのみ対応（Streamable HTTP、旧 SSE にも自動対応）。トークンとヘッダーは端末内に暗号化して保存します。各サービスは初回のツール呼び出し前に確認し、「常に許可」も選べます。</string>
     <string name="agent_e1ee4f">MCP サービスはまだありません。上の「サービスを追加」をタップし、サーバー アドレス（例：https://example.com/mcp）を入力してください。</string>
-    <string name="agent_c91761">%1$s 個の MCP ツールが有効ですが、モデルには最初の %2$s 個だけを渡します。あまり使わないツールはオフにしてください。</string>
     <string name="agent_1a6c05">接続成功：ツール %1$s 個</string>
     <string name="agent_4d5cd5">接続に失敗：</string>
     <string name="agent_bd700b">サービスを追加</string>

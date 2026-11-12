@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">Aus</string>
     <string name="kb251_embed_stop">Vektoren stoppen</string>
     <string name="kb251_embed_not_downloaded">Nicht geladen</string>
+    <string name="kb252_embed_qwen_q4">Semantische Wissenssuche, am besten für Chinesisch, Q4 spart Speicher</string>
+    <string name="kb252_embed_gemma_q4">Semantische Wissenssuche, am kleinsten, Q4 spart Speicher</string>
     <string name="ws233_loc_downloads">Download/IRIDIS</string>
     <string name="ws233_loc_private">App-intern</string>
     <string name="ws233_loc_custom">Eigener</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">Remote-MCP-Server verbinden, um die Werkzeuge des Agenten zu erweitern</string>
     <string name="agent_1462ba">Nur Remote-Server (Streamable HTTP, automatischer Rückgriff auf altes SSE). Tokens und Header werden verschlüsselt auf dem Gerät gespeichert. Jeder Dienst fragt vor dem ersten Werkzeugaufruf; „Immer erlauben“ ist wählbar.</string>
     <string name="agent_e1ee4f">Noch keine MCP-Dienste. Oben auf „Dienst hinzufügen“ tippen und die Serveradresse eingeben (z. B. https://example.com/mcp).</string>
-    <string name="agent_c91761">%1$s MCP-Werkzeuge aktiv; nur die ersten %2$s gehen ans Modell. Selten genutzte Werkzeuge abschalten.</string>
     <string name="agent_1a6c05">Verbunden: %1$s Werkzeuge</string>
     <string name="agent_4d5cd5">Verbindung fehlgeschlagen:\u0020</string>
     <string name="agent_bd700b">Dienst hinzufügen</string>

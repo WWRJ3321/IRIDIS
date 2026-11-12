@@ -91,5 +91,8 @@ class KbV251Test {
         assertTrue(KbEmbedModels.QWEN3_MODEL.query("q").startsWith("Instruct: "))
         assertEquals("title: none | text: x", KbEmbedModels.GEMMA_MODEL.doc("x"))
         assertEquals("task: search result | query: q", KbEmbedModels.GEMMA_MODEL.query("q"))
+        // 2.5.2: + Q4 of each (4 entries), Qwen3 Q8_0 still first / default
+        assertEquals(4, KbEmbedModels.ALL.size)
+        assertEquals(KbEmbedModels.QWEN3, KbEmbedModels.ALL.first().id)
     }
 }

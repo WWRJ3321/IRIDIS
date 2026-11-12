@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">關閉</string>
     <string name="kb251_embed_stop">停止產生向量</string>
     <string name="kb251_embed_not_downloaded">未下載</string>
+    <string name="kb252_embed_qwen_q4">知識庫語意檢索，中文更準，Q4 更省記憶體</string>
+    <string name="kb252_embed_gemma_q4">知識庫語意檢索，體積最小，Q4 更省記憶體</string>
     <string name="ws233_loc_downloads">下載/IRIDIS</string>
     <string name="ws233_loc_private">應用程式私有</string>
     <string name="ws233_loc_custom">自訂</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">連線遠端 MCP 伺服器，擴充套件智慧代理工具</string>
     <string name="agent_1462ba">僅支援遠端伺服器（Streamable HTTP，自動相容舊版 SSE）。令牌與請求頭加密儲存在本機。每個服務首次呼叫工具前會詢問，可選「總是允許」。</string>
     <string name="agent_e1ee4f">還沒有 MCP 服務。點上方「新增服務」，填寫伺服器地址（如 https://example.com/mcp）。</string>
-    <string name="agent_c91761">已啟用 %1$s 個 MCP 工具，只向模型提供前 %2$s 個；請關掉不常用的工具。</string>
     <string name="agent_1a6c05">連線成功：%1$s 個工具</string>
     <string name="agent_4d5cd5">連線失敗：</string>
     <string name="agent_bd700b">新增服務</string>

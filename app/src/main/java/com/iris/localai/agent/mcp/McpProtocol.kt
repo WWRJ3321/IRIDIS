@@ -276,9 +276,13 @@ object McpResult {
     fun summary(t: Text): String = if (t.text.isBlank()) (if (t.ok) "完成" else "失败") else t.text.replace(Regex("\\s+"), " ").trim().take(60)
 }
 
-/** Which MCP tools reach the prompt: the first [cap] enabled ones, in server then tool order. */
+/**
+ * Which MCP tools reach the prompt, in server then tool order. 2.5.2: no limit by default — every enabled tool is
+ * injected (the 2.3.0 cap of 20 is gone); [select] keeps an optional [cap] for callers that want one.
+ */
 object McpCap {
-    const val DEFAULT = 20
+    const val UNLIMITED = Int.MAX_VALUE
+    const val DEFAULT = UNLIMITED
     data class Pick<T>(val injected: List<T>, val dropped: Int)
     fun <T> select(tools: List<T>, cap: Int = DEFAULT): Pick<T> = Pick(tools.take(cap), (tools.size - cap).coerceAtLeast(0))
 }

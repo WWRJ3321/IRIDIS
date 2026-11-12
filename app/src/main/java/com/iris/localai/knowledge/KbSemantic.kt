@@ -29,7 +29,7 @@ class KbSemantic(
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
-    /** The user's choice (null = automatic: Qwen3 when downloaded, else EmbeddingGemma; [KbEmbedModels.OFF] = none). */
+    /** The user's choice (null = automatic: first downloaded in [KbEmbedModels.ALL] order — Qwen3 Q8_0, Qwen3 Q4, Gemma Q8_0, Gemma Q4; [KbEmbedModels.OFF] = none). */
     var chosen: String?
         get() = prefs.getString(KEY, null)
         set(v) { prefs.edit().putString(KEY, v).apply(); cancel(); indexChanged() }

@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">Desactivado</string>
     <string name="kb251_embed_stop">Detener vectores</string>
     <string name="kb251_embed_not_downloaded">Sin descargar</string>
+    <string name="kb252_embed_qwen_q4">Búsqueda semántica, mejor para chino, Q4 usa menos memoria</string>
+    <string name="kb252_embed_gemma_q4">Búsqueda semántica, la más pequeña, Q4 usa menos memoria</string>
     <string name="ws233_loc_downloads">Download/IRIDIS</string>
     <string name="ws233_loc_private">Privado de la app</string>
     <string name="ws233_loc_custom">Personalizado</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">Conecta servidores MCP remotos para ampliar las herramientas del agente</string>
     <string name="agent_1462ba">Solo servidores remotos (Streamable HTTP, compatible con SSE antiguo). Los tokens y cabeceras se guardan cifrados en el dispositivo. Cada servicio pregunta antes de su primera llamada; puedes elegir «Permitir siempre».</string>
     <string name="agent_e1ee4f">Aún no hay servicios MCP. Toca «Añadir servicio» arriba e introduce la dirección (p. ej. https://example.com/mcp).</string>
-    <string name="agent_c91761">%1$s herramientas MCP activas; solo se ofrecen al modelo las primeras %2$s. Desactiva las que uses poco.</string>
     <string name="agent_1a6c05">Conectado: %1$s herramientas</string>
     <string name="agent_4d5cd5">Error de conexión:\u0020</string>
     <string name="agent_bd700b">Añadir servicio</string>

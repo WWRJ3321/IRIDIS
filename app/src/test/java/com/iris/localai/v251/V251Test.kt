@@ -17,8 +17,8 @@ class V251Test {
     // ---- D ----
     @Test fun version() {
         val g = src("app/build.gradle.kts")
-        assertTrue(g.contains("versionCode = 250"))
-        assertTrue(g.contains("versionName = \"2.5.1\""))
+        // 2.5.2: 版本号由 V252Test 断言；这里只要求不低于 2.5.1
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 250)
     }
 
     @Test fun changelogOnlyAc() {

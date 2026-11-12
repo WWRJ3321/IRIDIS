@@ -100,6 +100,8 @@
     <string name="kb251_embed_off_choice">बंद</string>
     <string name="kb251_embed_stop">वेक्टर बनाना रोकें</string>
     <string name="kb251_embed_not_downloaded">डाउनलोड नहीं</string>
+    <string name="kb252_embed_qwen_q4">ज्ञानकोष अर्थ-खोज, चीनी के लिए बेहतर, Q4 कम मेमोरी</string>
+    <string name="kb252_embed_gemma_q4">ज्ञानकोष अर्थ-खोज, सबसे छोटा, Q4 कम मेमोरी</string>
     <string name="ws233_loc_downloads">Download/IRIDIS</string>
     <string name="ws233_loc_private">ऐप-निजी</string>
     <string name="ws233_loc_custom">कस्टम</string>
@@ -842,7 +844,6 @@
     <string name="agent_b7ad17">एजेंट के टूल बढ़ाने के लिए रिमोट MCP सर्वर जोड़ें</string>
     <string name="agent_1462ba">केवल रिमोट सर्वर (Streamable HTTP, पुराने SSE से अपने-आप संगत)। टोकन और हेडर डिवाइस पर एन्क्रिप्ट होकर सहेजे जाते हैं। हर सेवा पहले टूल कॉल से पहले पूछती है; \"हमेशा अनुमति\" चुन सकते हैं।</string>
     <string name="agent_e1ee4f">अभी कोई MCP सेवा नहीं। ऊपर \"सेवा जोड़ें\" पर टैप करके सर्वर पता डालें (जैसे https://example.com/mcp)।</string>
-    <string name="agent_c91761">%1$s MCP टूल चालू हैं; मॉडल को केवल पहले %2$s दिए जाते हैं। कम इस्तेमाल वाले टूल बंद करें।</string>
     <string name="agent_1a6c05">कनेक्ट हुआ: %1$s टूल</string>
     <string name="agent_4d5cd5">कनेक्शन विफल:\u0020</string>
     <string name="agent_bd700b">सेवा जोड़ें</string>
