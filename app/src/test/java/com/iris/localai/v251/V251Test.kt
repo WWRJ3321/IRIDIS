@@ -91,7 +91,7 @@ class V251Test {
         assertTrue(em.contains("MemoryPreflight.needMoe(MoeLoad.nonExpertBytes(info, model.sizeBytes), info.expsBytes, proj, cfg.contextLength, gpu)"))
         assertTrue(em.contains("moeCpu = moeCpu && model.format == ModelFormat.GGUF,"))
         val ml = src("app/src/main/java/com/iris/localai/engine/MoeLoad.kt")
-        assertTrue(ml.contains("info?.moe == true && (setting ?: (plainLevel == MemoryPreflight.Level.SHORT))"))
+        assertTrue(ml.contains("info?.moe == true && (setting ?: (plainLevel != MemoryPreflight.Level.OK))"))
         val mp = src("app/src/main/java/com/iris/localai/engine/load/MemoryPreflight.kt")
         assertTrue(mp.contains("val resident = nonExpertBytes + expertBytes / 4 + extraBytes"))
         val q = src("app/src/main/java/com/iris/localai/engine/GgufQuant.kt")
