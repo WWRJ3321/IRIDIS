@@ -33,6 +33,8 @@ object StorageUsage {
         const val MODEL_LEFTOVER_SHARED = "model:leftover-shared"
         /** 2.5.0-beta9: downloaded image-generation models (models/imagegen), never a leftover. */
         const val IMAGEGEN = "model:imagegen"
+        /** 2.5.1: 已隐藏的生图模型（sd15-mnn，MNN CPU）残留，仅可删除。 */
+        const val IMAGEGEN_HIDDEN = "model:imagegen-hidden"
         const val CACHE_PREFIX = "cache:"
         const val CACHE_ORPHAN = "cache:orphan"
         const val CACHE_OPENCL = "cache:opencl"
@@ -103,6 +105,12 @@ object StorageUsage {
 
     /** 2.5.0-beta9: image-generation models folder inside the models dirs (= last part of ImageGenFiles.MODELS_SUB). */
     const val IMAGEGEN_DIR = "imagegen"
+    /** 2.5.1: 已隐藏的生图模型目录（= ImageCatalog.SD15_MNN_ID）。 */
+    val HIDDEN_IMAGE_DIRS = setOf(com.iris.localai.imagegen.ImageCatalog.SD15_MNN_ID)
+
+    /** 2.5.1: [imgDirs] 下已隐藏生图模型的目录（存在的）。 */
+    fun hiddenImageDirs(imgDirs: List<File>): List<File> =
+        imgDirs.flatMap { d -> HIDDEN_IMAGE_DIRS.map { File(d, it) } }.filter { it.isDirectory }
 
     private val PARTIAL_SUFFIXES = listOf(".part", ".tmp", ".temp", ".download", ".crdownload", ".partial")
 
@@ -296,14 +304,19 @@ object StorageUsage {
             leftoverList += own; leftoverList += shr
             // 2.5.0-beta9: image models (models/imagegen, private and shared) as one entry; managed in 生图.
             val imgDirs = listOfNotNull(File(p.modelsDir, IMAGEGEN_DIR), sharedDir?.let { File(it, IMAGEGEN_DIR) }).filter { it.isDirectory }
-            val img = imgDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }
-            val imgCount = imgDirs.sumOf { d -> d.listFiles().orEmpty().count { it.isDirectory } }
+            // 2.5.1: 已隐藏的生图模型（sd15-mnn）单列一行可删除，不计入「生图模型」
+            val hiddenDirs = hiddenImageDirs(imgDirs)
+            val hidden = hiddenDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }
+            val img = imgDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }.let { Usage(it.bytes - hidden.bytes, it.files - hidden.files) }
+            val imgCount = imgDirs.sumOf { d -> d.listFiles().orEmpty().count { it.isDirectory && it.name !in HIDDEN_IMAGE_DIRS } }
             val leftover = own.sumOf { it.bytes }
             val sharedLeftover = shr.sumOf { it.bytes }
             groups += Group(Category.MODELS, list.sortedByDescending { it.bytes } +
                 listOfNotNull(
                     Entry(Ids.IMAGEGEN, com.iris.localai.I18n.s(com.iris.localai.R.string.v259_imagegen_models), img.bytes, img.files, count = imgCount,
                         external = imgDirs.isNotEmpty() && imgDirs.all { outside(it) }).takeIf { img.files > 0 },
+                    Entry(Ids.IMAGEGEN_HIDDEN, "Stable Diffusion 1.5 (CPU)", hidden.bytes, hidden.files,
+                        external = hiddenDirs.isNotEmpty() && hiddenDirs.all { outside(it) }).takeIf { hidden.files > 0 },
                     Entry(Ids.MODEL_LEFTOVER, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f70b9), leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
                     Entry(Ids.MODEL_LEFTOVER_SHARED, com.iris.localai.I18n.s(com.iris.localai.R.string.util_45d2eb), sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
                 ))

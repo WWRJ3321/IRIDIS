@@ -39,6 +39,12 @@ struct LoadParams {
     /// (models with nextn_predict_layers > 0; builds with IRIS_SPEC only). Any failure while setting
     /// it up leaves the model on normal decoding (see Engine::spec_status()).
     int32_t spec_draft = 0;
+    /// 2.5.1: MoE 专家张量（ffn_*_exps）留在 CPU（mmap），GPU 只放其余部分；CPU-only 时专家本就 mmap。
+    bool moe_cpu = false;
+    /// 2.5.1: >0 覆盖激活专家数（<arch>.expert_used_count，clamp 到 [1, expert_count]）；0 = 模型默认；非 MoE 忽略。
+    int32_t n_expert_used = 0;
+    /// 2.5.1: true = 加载时不预读（无 MAP_POPULATE、整文件 MADV_RANDOM），专家按需读盘。moe_cpu 时强制 true。
+    bool no_prefetch = false;
 };
 
 struct SamplingParams {
@@ -159,6 +165,13 @@ public:
     /// 2.5.0-beta9: MTP draft count the JNI layer passes to the next load() (0 = off).
     void set_spec_draft(int32_t n) { spec_cfg_.store(n < 0 ? 0 : n); }
     int32_t spec_draft_cfg() const { return spec_cfg_.load(); }
+    /// 2.5.1: MoE 专家按需加载 / 激活专家数，JNI 在下次 load() 前设置（nativeSetMoe）。
+    void set_moe(bool moe_cpu, int32_t n_expert_used) {
+        moe_cpu_cfg_.store(moe_cpu);
+        expert_used_cfg_.store(n_expert_used < 0 ? 0 : n_expert_used);
+    }
+    bool moe_cpu_cfg() const { return moe_cpu_cfg_.load(); }
+    int32_t expert_used_cfg() const { return expert_used_cfg_.load(); }
 
     /// Thread-safe; may be called from any thread while generate() runs.
     void cancel() { cancelled_.store(true, std::memory_order_release); }
@@ -233,6 +246,8 @@ private:
     int32_t spec_n_ = 0;             // max draft tokens per step
     [[maybe_unused]] int32_t spec_req_ = 0; // LoadParams::spec_draft of the current load
     std::atomic<int32_t> spec_cfg_{0};
+    std::atomic<bool> moe_cpu_cfg_{false};     // 2.5.1
+    std::atomic<int32_t> expert_used_cfg_{0};  // 2.5.1
     bool spec_sync_ = false;         // draft context has seen every target decode since the last clear
     std::string spec_status_ = "off";
     mutable std::mutex mu_;          // serialises load/unload/generate/reset

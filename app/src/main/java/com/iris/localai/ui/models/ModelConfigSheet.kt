@@ -115,6 +115,12 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.mtp == true
         }
     }
+    // 2.5.1: MoE 信息（专家数 / 默认激活数）从 GGUF 头读取；只有 MoE 才显示「专家按需加载」「激活专家数」。
+    val moeInfo by androidx.compose.runtime.produceState<com.iris.localai.engine.GgufQuant.Info?>(null, model.path) {
+        value = if (model.format != com.iris.localai.data.ModelFormat.GGUF) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.takeIf { it.moe }
+        }
+    }
     val c = Iris.colors
 
     IrisSheet(onDismiss = onDismiss) {
@@ -324,6 +330,22 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                         OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp_sub) +
                             (if (com.iris.localai.engine.MtpTag.gpuNote(eff.backend, loaded?.details?.backend)) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_mtp_gpu) else ""),
                             onChange = { on -> set { it.copy(mtp = on) } }, onReset = { set { it.copy(mtp = null) } })
+                    }
+                    moeInfo?.let { mi ->
+                        // 2.5.1: 专家按需加载（MoE）：默认 = 自动（内存不足时开），开关 + 「恢复默认」，不新增分段控件。
+                        Divider()
+                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
+                            subtitle = com.iris.localai.I18n.s(if (o.moeCpu == null) com.iris.localai.R.string.v251_moe_cpu_auto else com.iris.localai.R.string.v251_moe_cpu_sub),
+                            onChange = { on -> set { it.copy(moeCpu = on) } }, onReset = { set { it.copy(moeCpu = null) } })
+                        Divider()
+                        // 2.5.1: 激活专家数 0 = 模型默认，1..min(32, 专家数)
+                        val maxExp = minOf(com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)
+                        OvSlider(
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts), eff.expertUsed.coerceAtMost(maxExp).toFloat(), o.expertUsed == null, 0f..maxExp.toFloat(),
+                            if (eff.expertUsed == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_default, mi.expertUsed) else "${eff.expertUsed.coerceAtMost(maxExp)}",
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_sub), steps = (maxExp - 1).coerceAtLeast(0),
+                            onChange = { v -> set { it.copy(expertUsed = v.toInt()) } }, onReset = { set { it.copy(expertUsed = null) } },
+                        )
                     }
                     Divider()
                     OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), eff.warmup, o.warmup == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27),

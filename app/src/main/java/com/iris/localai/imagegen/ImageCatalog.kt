@@ -111,7 +111,7 @@ object ImageCatalog {
 
     /** Repo listing (api/models/…/tree/main) checked 2026-10-22; .gitattributes / README.md left out. */
     val SD15_MNN = ImageModel(
-        id = "sd15-mnn", tier = Tier.LOW, name = "Stable Diffusion 1.5 (CPU)", backend = Backend.MNN_CPU,
+        id = SD15_MNN_ID, tier = Tier.LOW, name = "Stable Diffusion 1.5 (CPU)", backend = Backend.MNN_CPU,
         files = listOf(
             "alphas.txt" to 6_999L,
             "merges.txt" to 524_619L,
@@ -122,7 +122,7 @@ object ImageCatalog {
             "vae_decoder.mnn" to 183_960L,
             "vae_decoder.mnn.weight" to 49_639_636L,
             "vocab.json" to 1_059_962L,
-        ).map { (f, size) -> RemoteFile(mnnUrl(f), size, "sd15-mnn/$f") },
+        ).map { (f, size) -> RemoteFile(mnnUrl(f), size, "$SD15_MNN_ID/$f") },
         fixedSize = 512, defaultSteps = 20, defaultCfg = 7.5f,
         hfRepo = MNN_REPO,
     )
@@ -303,11 +303,17 @@ object ImageCatalog {
     /** Every model the app knows (downloaded ones are found by id even on another phone). */
     val known: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
 
-    /** 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer). */
+    /**
+     * 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer).
+     * 2.5.1: MNN CPU 生图（sd15-mnn）隐藏：不进下载列表 / runnableModels / generate_image；已下载的在存储页删除。
+     */
     val all: List<ImageModel> by lazy {
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
-        known.filter { !it.sdq || ImageRules.sdqListed(arch) }
+        known.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }
     }
+
+    /** 2.5.1: 已隐藏模型的目录名（存储页单独列出以便删除）。 */
+    const val SD15_MNN_ID = "sd15-mnn"
 
     fun byId(id: String): ImageModel? = known.firstOrNull { it.id == id }
 }
@@ -316,4 +322,6 @@ object ImageCatalog {
 object ImageRules {
     const val SDQ_MIN_HTP = 79
     fun sdqListed(htpArch: Int?): Boolean = (htpArch ?: 0) >= SDQ_MIN_HTP
+    /** 2.5.1: Backend.MNN_CPU 不再列出（下载、生图选择、generate_image 都排除）。 */
+    fun listed(m: ImageModel): Boolean = m.backend != Backend.MNN_CPU
 }

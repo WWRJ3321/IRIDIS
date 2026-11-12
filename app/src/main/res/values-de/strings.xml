@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d Zeichen</string>
     <string name="v259_live_chip_thinking">Denkt</string>
     <string name="v259_live_chip">%1$d Z.</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">Experten bei Bedarf laden (MoE)</string>
+    <string name="v251_moe_cpu_auto">Auto: an bei knappem Speicher; Experten werden bei Bedarf gelesen</string>
+    <string name="v251_moe_cpu_sub">Experten bleiben auf der CPU und laden bei Bedarf: weniger RAM, langsamer. Gilt nach Neuladen</string>
+    <string name="v251_experts">Aktive Experten</string>
+    <string name="v251_experts_default">Modellstandard (%1$d)</string>
+    <string name="v251_experts_sub">Weniger ist schneller, Qualität kann sinken. Gilt nach Neuladen</string>
+    <string name="v251_reap_purpose">MoE, von Dritten beschnitten, Chinesisch ungetestet; Experten bei Bedarf laden</string>
+    <string name="v251_sd15_mnn_hidden">Nicht mehr angeboten, kann gelöscht werden</string>
+    <string name="v251_sd15_mnn_delete_title">Dieses Bildmodell löschen?</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) wurde eingestellt. Löschen gibt den Speicher frei.</string>
 </resources>

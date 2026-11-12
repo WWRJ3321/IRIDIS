@@ -152,6 +152,8 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     val socModel = remember { if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MODEL }.getOrNull() else android.os.Build.HARDWARE }
     val chip = remember { com.iris.localai.data.DeviceRecommend.chip(socMan, socModel) }
     val forDevice = remember { com.iris.localai.data.DeviceRecommend.pick(total, chip) }
+    // 2.5.1: 额外推荐（12 GB / 16 GB 机的 Gemma 4 19B REAP），排在原推荐之后
+    val forDeviceExtra = remember { com.iris.localai.data.DeviceRecommend.extras(total, chip) }
     // 2.4.4: downloads show their progress in the notification shade; ask once (Android 13+).
     run {
         val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -316,6 +318,9 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     item(key = "for-device-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_title)) }
                     item(key = "for-device", contentType = "rec") {
                         RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id }, mtpPath = ggufPath(rec))
+                    }
+                    items(forDeviceExtra, key = { "for-device-" + it.id }, contentType = { "rec" }) { x ->
+                        RecCard(x, status(x), size(x), ramHint(x), actions, onOpen = { detailId = x.id }, mtpPath = ggufPath(x))
                     }
                     item(key = "for-device-why", contentType = "hint") {
                         val dr = com.iris.localai.data.DeviceRecommend

@@ -286,8 +286,9 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
                 val hit = com.iris.localai.data.GgufSearch.RepoHit(k.repoId, com.iris.localai.data.GgufSearch.Site.HF, license = item.licence)
                 // 2.4.3: saved under k.localFile (a renamed file keeps the repo path for the URL)
                 val mainLocal = com.iris.localai.data.ModelFiles.sanitizeFileName(k.localFile)
+                // 2.5.1: 投影可来自另一个仓库（k.mmprojPath）
                 val files = listOf(Triple(k.file, k.size, mainLocal)) + listOfNotNull(k.mmproj?.takeIf { withVision }?.let {
-                    Triple(it, k.mmprojSize, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it))
+                    Triple(k.mmprojPath ?: it, k.mmprojSize, com.iris.localai.data.GgufSearch.projectorLocalName(mainLocal, it))
                 })
                 c.mnnHub.startGguf(c.scope, hit, files, c.settings.current.downloadSource) { m ->
                     if (c.engine.state.value !is EngineState.Ready) c.engine.load(m)

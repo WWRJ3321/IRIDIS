@@ -86,6 +86,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             val listener = LoadProgressListener { p -> onProgress(p); true }
             // 2.5.0-beta9: MTP is set up inside the load; any failure there falls back to normal decoding.
             jni.setMtp(h, if (npu) 0 else config.mtpDraft.coerceIn(0, 8))
+            // 2.5.1: MoE 专家按需加载（专家留 CPU、mmap 不预读）+ 激活专家数
+            jni.setMoe(h, config.moeCpu, config.expertUsed.coerceIn(0, 32))
             val err = jni.load(
                 h, path, config.contextLength, config.threads, config.batchSize.coerceIn(32, 2048),
                 config.flashAttention, if (gpu) GPU_ALL_LAYERS else 0,

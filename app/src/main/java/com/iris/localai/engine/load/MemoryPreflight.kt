@@ -20,9 +20,20 @@ object MemoryPreflight {
         modelBytes + modelBytes / 8 + kvPerToken(modelBytes) * contextLength.coerceAtLeast(512) + OVERHEAD +
             (if (gpu) modelBytes else 0L)
 
-    fun check(availBytes: Long, modelBytes: Long, contextLength: Int, gpu: Boolean): Verdict {
+    /**
+     * 2.5.1: 专家按需加载（MoE）时的内存需求：非专家张量 + 专家张量的 25%（常驻热点页）+ KV；
+     * GPU 只额外拷贝非专家部分。[extraBytes] 为 mmproj 等其它文件。
+     */
+    fun needMoe(nonExpertBytes: Long, expertBytes: Long, extraBytes: Long, contextLength: Int, gpu: Boolean): Long {
+        val resident = nonExpertBytes + expertBytes / 4 + extraBytes
+        val total = nonExpertBytes + expertBytes + extraBytes
+        return resident + resident / 8 + kvPerToken(total) * contextLength.coerceAtLeast(512) + OVERHEAD +
+            (if (gpu) nonExpertBytes + extraBytes else 0L)
+    }
+
+    fun check(availBytes: Long, modelBytes: Long, contextLength: Int, gpu: Boolean, needOverride: Long = 0L): Verdict {
         if (modelBytes <= 0 || availBytes <= 0) return Verdict(Level.OK, 0, availBytes, null)
-        val need = need(modelBytes, contextLength, gpu)
+        val need = if (needOverride > 0) needOverride else need(modelBytes, contextLength, gpu)
         val level = when {
             need <= availBytes -> Level.OK
             need <= availBytes + availBytes / 2 -> Level.TIGHT

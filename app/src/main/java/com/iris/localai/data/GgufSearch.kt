@@ -296,7 +296,16 @@ object GgufSearch {
     }
 
     /** Urls for one file of [hit] (HF: through the download sources incl. 魔搭 when mapped; 魔搭 hit: 魔搭 only). */
+    /** 2.5.1: 同一次下载里取另一个 HF 仓库的文件（如投影在非 i1 仓库），路径写作 "hf-repo:<owner/name>::<file>"。 */
+    private const val CROSS = "hf-repo:"
+    fun crossRepoPath(repoId: String, file: String): String = "$CROSS$repoId::$file"
+
     suspend fun urls(hit: RepoHit, path: String, chosen: DownloadSource, demote: DownloadSource? = null): List<SourceUrl> {
+        if (path.startsWith(CROSS) && "::" in path) {
+            val repo = path.removePrefix(CROSS).substringBefore("::")
+            val file = path.substringAfter("::")
+            return urls(RepoHit(repo, Site.HF, license = hit.license), file, chosen, demote)
+        }
         val p = MnnHub.encodePath(path)
         return when (hit.site) {
             Site.MS -> listOf(SourceUrl(DownloadSource.MODELSCOPE, "${DownloadSources.MS}/models/${hit.id}/resolve/master/$p"))

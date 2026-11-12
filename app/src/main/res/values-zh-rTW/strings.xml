@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d 字</string>
     <string name="v259_live_chip_thinking">思考</string>
     <string name="v259_live_chip">%1$d字</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">專家按需載入（MoE）</string>
+    <string name="v251_moe_cpu_auto">自動：記憶體不足時開啟，專家從儲存空間按需讀取</string>
+    <string name="v251_moe_cpu_sub">專家留在 CPU 按需讀取，省記憶體但較慢。重新載入後生效</string>
+    <string name="v251_experts">啟用專家數</string>
+    <string name="v251_experts_default">模型預設（%1$d）</string>
+    <string name="v251_experts_sub">越少越快，品質可能下降。重新載入後生效</string>
+    <string name="v251_reap_purpose">MoE 剪枝版，第三方剪枝，中文未測；建議開啟專家按需載入</string>
+    <string name="v251_sd15_mnn_hidden">已不再提供，可刪除</string>
+    <string name="v251_sd15_mnn_delete_title">刪除此生圖模型？</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) 已停用，刪除後釋放空間。</string>
 </resources>

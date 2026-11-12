@@ -14,9 +14,15 @@ object RecommendedCatalog {
         /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically); 2.4.4: [file] = that one file instead. */
         data class Hub(val repoId: String, val file: String? = null) : Kind
         /** One known GGUF file (+ optional vision projector) through MnnHub.startGguf. */
-        data class Gguf(val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0, val localName: String? = null) : Kind {
+        data class Gguf(
+            val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0, val localName: String? = null,
+            /** 2.5.1: 投影文件所在的另一个 HF 仓库（null = 与模型同仓库）。 */
+            val mmprojRepo: String? = null,
+        ) : Kind {
             /** 2.4.3: name on disk ([localName] renames a file like "Qwen3.5-4B.Q4_K_M.gguf" that would read as the base model). */
             val localFile: String get() = localName ?: file
+            /** 2.5.1: 下载用的投影路径（跨仓库时带 [GgufSearch.crossRepoPath] 前缀）。 */
+            val mmprojPath: String? get() = mmproj?.let { f -> mmprojRepo?.let { GgufSearch.crossRepoPath(it, f) } ?: f }
         }
         /** A 生图 model (ImageGenDownloader). */
         data class Image(val modelId: String) : Kind
@@ -81,6 +87,20 @@ object RecommendedCatalog {
         localName = "Qwen3.5-$size-Claude-4.6-Opus-Reasoning-Distilled-Q4_K_M.gguf",
     )
 
+    /**
+     * 2.5.1: Gemma 4 19B-A4B REAP（第三方专家剪枝 MoE，中文未测），mradermacher i1 量化；投影来自非 i1 仓库。
+     * 文件名与大小来自 HF tree API 2026-11-12。建议开「专家按需加载」。
+     */
+    const val REAP_REPO = "mradermacher/gemma-4-19b-a4b-it-REAP-i1-GGUF"
+    const val REAP_MMPROJ_REPO = "mradermacher/gemma-4-19b-a4b-it-REAP-GGUF"
+    const val REAP_IQ3 = "$REAP_REPO#IQ3_XXS"
+    const val REAP_Q4 = "$REAP_REPO#Q4_0"
+    private fun reap(id: String, quant: String, bytes: Long) = Item(
+        id, Section.CHAT, "Gemma 4 19B REAP（$quant）", com.iris.localai.I18n.s(com.iris.localai.R.string.v251_reap_purpose), bytes, Engine.GGUF,
+        Kind.Gguf(REAP_REPO, "gemma-4-19b-a4b-it-REAP.i1-$quant.gguf", bytes, "gemma-4-19b-a4b-it-REAP.mmproj-Q8_0.gguf", 806_408_480L, mmprojRepo = REAP_MMPROJ_REPO),
+        quant = "i1-$quant", licence = "Gemma",
+    )
+
     const val CODER_REPO = "ccore/Qwen3.5-4B-3D-Coder"
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
         "有柔和灯光和阴影，可以用鼠标或手指拖动旋转视角。直接输出完整代码。"
@@ -141,6 +161,9 @@ object RecommendedCatalog {
         lms3("4B", 2_497_280_704L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79)),
         mnn("Qwen3 8B", "Qwen3-8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462), 5.5),
         lms3("8B", 5_027_783_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462)),
+        // 2.5.1: Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
+        reap(REAP_IQ3, "IQ3_XXS", 8_311_270_560L),
+        reap(REAP_Q4, "Q4_0", 10_647_317_152L),
         // ---- 特色模型 ----
         Item(
             CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", com.iris.localai.I18n.s(com.iris.localai.R.string.data_c2d28e),

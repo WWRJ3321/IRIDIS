@@ -32,6 +32,8 @@ interface LlamaJni {
     fun setMtp(h: Long, nDraft: Int) {}
     /** 2.5.0-beta9: "off" | "active n=…" | "fallback: …" for the loaded model. */
     fun mtpStatus(h: Long): String = "off"
+    /** 2.5.1: MoE 专家按需加载 + 激活专家数（0 = 模型默认），作用于下次 [load]；旧库没有该符号时忽略。 */
+    fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) {}
 }
 
 object LlamaJnis {
@@ -56,6 +58,7 @@ object LlamaJnis {
         // An older library without these symbols simply keeps normal decoding.
         override fun setMtp(h: Long, nDraft: Int) { runCatching { LlamaNative.nativeSetMtp(h, nDraft) } }
         override fun mtpStatus(h: Long): String = runCatching { LlamaNative.nativeMtpStatus(h) }.getOrDefault("off")
+        override fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) { runCatching { LlamaNative.nativeSetMoe(h, moeCpu, expertUsed) } }
     }
     val htp: LlamaJni = object : LlamaJni {
         override fun create() = LlamaHtpNative.nativeCreate()
@@ -71,6 +74,7 @@ object LlamaJnis {
         override fun meta(h: Long) = LlamaHtpNative.nativeMeta(h)
         override fun generate(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray, sink: PieceSink?) =
             LlamaHtpNative.nativeGenerate(h, roles, contents, floats, ints, sink)
+        override fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) { runCatching { LlamaHtpNative.nativeSetMoe(h, moeCpu, expertUsed) } }
     }
 }
 
@@ -83,6 +87,8 @@ object LlamaHtpNative {
         handle: Long, pathUtf8: ByteArray, nCtx: Int, nThreads: Int, nBatch: Int,
         flashAttn: Boolean, nGpuLayers: Int, kvType: Int, useMmap: Boolean, listener: LoadProgressListener?,
     ): String?
+    /** 2.5.1: MoE 专家按需加载 + 激活专家数（下次 nativeLoad）。 */
+    @JvmStatic external fun nativeSetMoe(handle: Long, moeCpu: Boolean, nExpertUsed: Int)
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
     @JvmStatic external fun nativeClearCancel(handle: Long)

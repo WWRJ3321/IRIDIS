@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d 字</string>
     <string name="v259_live_chip_thinking">思考</string>
     <string name="v259_live_chip">%1$d字</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">エキスパートのオンデマンド読み込み（MoE）</string>
+    <string name="v251_moe_cpu_auto">自動：メモリ不足時にオン、エキスパートはストレージから随時読み込み</string>
+    <string name="v251_moe_cpu_sub">エキスパートを CPU に置き随時読み込み。省メモリだが低速。再読み込み後に有効</string>
+    <string name="v251_experts">アクティブなエキスパート数</string>
+    <string name="v251_experts_default">モデル既定（%1$d）</string>
+    <string name="v251_experts_sub">少ないほど高速、品質は下がる場合あり。再読み込み後に有効</string>
+    <string name="v251_reap_purpose">第三者による MoE 枝刈り版、中国語は未検証。オンデマンド読み込み推奨</string>
+    <string name="v251_sd15_mnn_hidden">提供終了、削除できます</string>
+    <string name="v251_sd15_mnn_delete_title">この画像生成モデルを削除しますか？</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) は提供を終了しました。削除すると容量が空きます。</string>
 </resources>

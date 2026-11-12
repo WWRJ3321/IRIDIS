@@ -168,8 +168,9 @@ class V250Test {
     @Test fun versionAndSdk() {
         val g = src("app/build.gradle.kts")
         assertTrue(g.contains("compileSdk = 36"))
-        assertTrue(g.contains("versionCode = 249"))
-        assertTrue(g.contains("versionName = \"2.5.0\""))
+        // 2.5.1: 版本号由 V251Test 断言；这里只要求不低于 2.5.0
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 249)
+        assertTrue(Regex("versionName = \"2\\.5\\.\\d+\"").containsMatchIn(g))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta2"))
         assertTrue(src("CHANGELOG.md").contains("## 2.5.0 Beta3"))

@@ -21,6 +21,7 @@
 #include <sys/system_properties.h>
 #endif
 #include "llama.h"
+#include "gguf.h"
 #ifdef IRIS_SPEC
 // 2.5.0-beta9: MTP self-speculative decoding through llama.cpp common/speculative (draft-mtp).
 #include "common.h"
@@ -391,6 +392,40 @@ bool Engine::abort_cb(void *data) {
     return self->cancelled_.load(std::memory_order_relaxed);
 }
 
+// 2.5.1: 专家张量留 CPU 的 buffer-type override（pattern 是 std::regex，llama-model-loader 里 regex_search）
+static const llama_model_tensor_buft_override *moe_cpu_overrides() {
+    static llama_model_tensor_buft_override ov[2] = {
+        {"\\.ffn_(up|down|gate|gate_up)_exps", nullptr},
+        {nullptr, nullptr},
+    };
+    ov[0].buft = ggml_backend_cpu_buffer_type();
+    return ov;
+}
+
+// 2.5.1: 只读 GGUF 头，取 general.architecture 与 <arch>.expert_count（非 MoE 返回 0）
+static int64_t gguf_expert_count(const std::string &path, std::string &arch) {
+    gguf_init_params gp{/*no_alloc=*/true, /*ctx=*/nullptr};
+    gguf_context *g = gguf_init_from_file(path.c_str(), gp);
+    if (!g) return 0;
+    int64_t n = 0;
+    const int64_t ka = gguf_find_key(g, "general.architecture");
+    if (ka >= 0 && gguf_get_kv_type(g, ka) == GGUF_TYPE_STRING) {
+        arch = gguf_get_val_str(g, ka);
+        const int64_t ke = gguf_find_key(g, (arch + ".expert_count").c_str());
+        if (ke >= 0) {
+            switch (gguf_get_kv_type(g, ke)) {
+                case GGUF_TYPE_UINT32: n = gguf_get_val_u32(g, ke); break;
+                case GGUF_TYPE_INT32:  n = gguf_get_val_i32(g, ke); break;
+                case GGUF_TYPE_UINT64: n = (int64_t) gguf_get_val_u64(g, ke); break;
+                case GGUF_TYPE_INT64:  n = gguf_get_val_i64(g, ke); break;
+                default: break;
+            }
+        }
+    }
+    gguf_free(g);
+    return n;
+}
+
 bool Engine::load(const std::string &path, const LoadParams &params,
                   const ProgressCallback &progress, std::string &error) {
     std::lock_guard<std::mutex> lk(mu_);
@@ -423,6 +458,37 @@ bool Engine::load(const std::string &path, const LoadParams &params,
     mp.load_mode = params.use_mmap ? LLAMA_LOAD_MODE_MMAP : LLAMA_LOAD_MODE_NONE;
     mp.progress_callback = progress_trampoline;
     mp.progress_callback_user_data = &pctx;
+
+    // 2.5.1: MoE 专家按需加载。有 GPU 时专家张量 override 到 CPU buffer（mmap 按需读）；
+    // CPU-only 时专家本就 mmap，无需 override。
+    const bool moe_cpu = params.moe_cpu;
+    if (moe_cpu && devices[0]) mp.tensor_buft_overrides = moe_cpu_overrides();
+    // 2.5.1: CPU 额外 buffer（Q4_0 等 aarch64 repack / KleidiAI）会把权重复制到匿名内存，专家就不再按需从 mmap 读；
+    // 专家按需加载时关闭（代价：CPU 上这些量化的矩阵乘略慢）。
+    if (moe_cpu) mp.use_extra_bufts = false;
+    // 2.5.1: 激活专家数覆盖（kv_overrides 数组以 key[0]=0 结尾）
+    llama_model_kv_override kvo[2];
+    std::memset(kvo, 0, sizeof(kvo));
+    int64_t expert_used = 0;
+    if (params.n_expert_used > 0) {
+        std::string arch;
+        const int64_t n_exp = gguf_expert_count(path, arch);
+        if (n_exp > 1 && !arch.empty()) {
+            expert_used = std::clamp<int64_t>(params.n_expert_used, 1, n_exp);
+            kvo[0].tag = LLAMA_KV_OVERRIDE_TYPE_INT;
+            snprintf(kvo[0].key, sizeof(kvo[0].key), "%s.expert_used_count", arch.c_str());
+            kvo[0].val_i64 = expert_used;
+            kvo[1].key[0] = 0;
+            mp.kv_overrides = kvo;
+        }
+    }
+    const bool no_prefetch = moe_cpu || params.no_prefetch;
+#ifdef LLAMA_HAS_MMAP_PREFETCH
+    llama_set_mmap_prefetch(!no_prefetch);
+#endif
+    resource_log("load: moe_cpu=%d%s expert_used=%lld no_prefetch=%d extra_bufts=%d",
+                 moe_cpu ? 1 : 0, (moe_cpu && devices[0]) ? "(exps->CPU)" : "",
+                 (long long) expert_used, no_prefetch ? 1 : 0, mp.use_extra_bufts ? 1 : 0);
 #ifdef IRIS_SPEC
     // 2.5.0-beta9: the NextN / MTP tensors are skipped unless asked for; only then can a draft
     // context be built on this model. Off (the default) loads exactly as before.
@@ -431,6 +497,9 @@ bool Engine::load(const std::string &path, const LoadParams &params,
 #endif
 
     model_ = llama_model_load_from_file(path.c_str(), mp);
+#ifdef LLAMA_HAS_MMAP_PREFETCH
+    llama_set_mmap_prefetch(true);  // 全局开关复位，不影响后续其它模型加载
+#endif
     if (!model_) {
         gpu_name_.clear();
         error = "无法加载模型文件（文件损坏、格式不受支持或内存不足）";

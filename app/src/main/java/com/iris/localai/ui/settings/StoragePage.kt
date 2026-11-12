@@ -251,6 +251,13 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
 
     fun noteDone(text: String) { _note.value = text }
 
+    /** 2.5.1: 删除已隐藏的生图模型（sd15-mnn）目录，私有与共享目录都删。 */
+    fun deleteHiddenImageModels() = io {
+        val p = paths()
+        val imgDirs = listOfNotNull(File(p.modelsDir, StorageUsage.IMAGEGEN_DIR), p.sharedModelsDir?.let { File(it, StorageUsage.IMAGEGEN_DIR) })
+        freed(StorageUsage.hiddenImageDirs(imgDirs).sumOf { StorageUsage.deleteTree(it) }, "Stable Diffusion 1.5 (CPU)")
+    }
+
     // ---- 2.1.0: models folder (Download/IRIDIS/models with 全部文件访问) ----
     data class ModelsFolder(val path: String, val shared: Boolean, val pendingCount: Int = 0, val pendingBytes: Long = 0)
     private val _folder = MutableStateFlow<ModelsFolder?>(null)
@@ -301,6 +308,8 @@ private sealed interface StoragePending {
     data object AllHistory : StoragePending
     data class LeftoverFile(val item: StorageUsage.Leftover) : StoragePending
     data class Partials(val count: Int, val bytes: Long) : StoragePending
+    /** 2.5.1: 已隐藏的 sd15-mnn。 */
+    data object HiddenImage : StoragePending
 }
 
 object StorageText {
@@ -372,6 +381,9 @@ fun StoragePage(
                             subtitleMaxLines = 2,
                             onClick = onImageModels, trailing = { if (onImageModels != null) Chevron() },
                         )
+                    } else if (e.id == Ids.IMAGEGEN_HIDDEN) {
+                        // 2.5.1: sd15-mnn 已不再提供，只留删除
+                        ActionRow(e, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), destructive = true, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_sd15_mnn_hidden)) { pending = StoragePending.HiddenImage }
                     } else if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
                         SettingsRow(
                             e.label, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d07d97, sizeLine(e)),
@@ -586,6 +598,13 @@ fun StoragePage(
             message = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_578347, p.pack.title),
             confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
             onConfirm = { vm.deletePack(p.pack).invokeOnCompletion { storage.refresh() } },
+            onDismiss = { pending = null },
+        )
+        StoragePending.HiddenImage -> ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_sd15_mnn_delete_title),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_sd15_mnn_delete),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
+            onConfirm = { storage.deleteHiddenImageModels(); pending = null },
             onDismiss = { pending = null },
         )
         StoragePending.Undo -> ConfirmDialog(

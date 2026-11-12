@@ -197,12 +197,23 @@ class EngineManager(
     ): Backend = BackendCapabilities.preferred(cfg.backend, model.format, model.fileName, backendOptions(model))
 
     /** 2.2.14 / 2.5.0 Beta6: free RAM (ActivityManager.availMem) vs. model file + mmproj + context. Blocking (file sizes). */
-    private fun memoryVerdict(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): MemoryPreflight.Verdict {
+    private fun memoryVerdict(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): MemoryPreflight.Verdict =
+        memoryPlan(model, cfg, gpu).first
+
+    /**
+     * 2.5.1: 内存预检 + 是否启用专家按需加载（MoE）。专家按需加载生效时，所需内存 = 非专家张量 + 专家张量 25% + KV
+     * （[MemoryPreflight.needMoe]，专家字节按 GGUF 张量名含 `_exps` 统计）。
+     */
+    private fun memoryPlan(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): Pair<MemoryPreflight.Verdict, Boolean> {
         val mi = android.app.ActivityManager.MemoryInfo()
         appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
         // 2.4.4: the vision projector (mmproj) is loaded too — count it.
         val proj = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj)?.let { java.io.File(it).length() } ?: 0L else 0L
-        return MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, gpu)
+        val plain = MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, gpu)
+        val info = if (model.format == ModelFormat.GGUF) GgufQuant.of(java.io.File(model.path)) else null
+        if (!MoeLoad.active(cfg.moeCpu, info, plain.level) || info == null) return plain to false
+        val need = MemoryPreflight.needMoe(MoeLoad.nonExpertBytes(info, model.sizeBytes), info.expsBytes, proj, cfg.contextLength, gpu)
+        return MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, gpu, needOverride = need) to true
     }
 
     /**
@@ -418,9 +429,12 @@ class EngineManager(
                 else preferredBackend(model, cfg, useTier).let { if (clHung && it == Backend.GPU) Backend.CPU else it }
             // 2.2.14: free RAM vs. model + context; warn (never block) before a likely OOM crash.
             // 2.5.0 Beta6: file reads (mmproj lookup, GGUF header) run on IO, never on the main thread.
+            // 2.5.1: 同一次预检决定是否启用专家按需加载（MoE）。
+            var moeCpu = false
             runCatching {
-                val v = withContext(kotlinx.coroutines.Dispatchers.IO) { memoryVerdict(model, cfg, preferred == Backend.GPU) }
-                Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)}")
+                val (v, moe) = withContext(kotlinx.coroutines.Dispatchers.IO) { memoryPlan(model, cfg, preferred == Backend.GPU) }
+                moeCpu = moe
+                Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)} moe_cpu=$moe")
                 v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
@@ -471,7 +485,8 @@ class EngineManager(
                                 backend = backend,
                                 kvCacheType = if (cfg.flashAttention) cfg.kvCacheType else 0,
                                 batchSize = cfg.batchSize.takeIf { it > 0 } ?: plan.batch,
-                                useMmap = cfg.useMmap && !settings.current.mnnForceNoMmap,
+                                // 2.5.1: 专家按需加载依赖 mmap
+                                useMmap = (cfg.useMmap || (moeCpu && model.format == ModelFormat.GGUF)) && !settings.current.mnnForceNoMmap,
                                 noVisual = settings.current.mnnNoVisual,
                                 resources = plan,
                                 mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
@@ -480,6 +495,9 @@ class EngineManager(
                                 mtpDraft = if (safeMode || model.format != ModelFormat.GGUF) 0 else GgufQuant.mtpDraft(cfg.mtp, quant, backend),
                                 // 2.5.0-beta10: LiteRT-LM speculative decoding (built-in drafter), same switch.
                                 litertMtp = LiteRtMtp.enabled(cfg.mtp, safeMode, model.format == ModelFormat.LITERT, backend),
+                                // 2.5.1: MoE 专家按需加载 / 激活专家数（只对 GGUF MoE 生效）
+                                moeCpu = moeCpu && model.format == ModelFormat.GGUF,
+                                expertUsed = if (model.format == ModelFormat.GGUF) MoeLoad.expertUsed(cfg.expertUsed, quant) else 0,
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

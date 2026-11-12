@@ -49,6 +49,10 @@ data class ModelOverrides(
     val mmproj: String? = null,
     /** 2.5.0-beta9, GGUF with MTP layers: MTP 加速（实验）. null = off (default). */
     val mtp: Boolean? = null,
+    /** 2.5.1, GGUF MoE: 专家按需加载。null = 自动（MoE 且内存预检不足时开）。 */
+    val moeCpu: Boolean? = null,
+    /** 2.5.1, GGUF MoE: 激活专家数，0 / null = 模型默认。 */
+    val expertUsed: Int? = null,
 ) {
     val isEmpty: Boolean get() = this == ModelOverrides()
 
@@ -69,10 +73,11 @@ data class ModelOverrides(
         batchSize = batchSize?.coerceIn(0, 2048),
         kvCacheType = kvCacheType?.coerceIn(0, 2),
         engine = com.iris.localai.engine.geniex.GenieX.parseEngine(engine),
+        expertUsed = expertUsed?.coerceIn(0, com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI),
     )
 
     /** Keys whose change only takes effect after reloading the model. */
-    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj, mtp)
+    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj, mtp, moeCpu, expertUsed)
 }
 
 /** Global defaults + one model's overrides, fully resolved. */
@@ -104,6 +109,10 @@ data class EffectiveModelConfig(
     val mmproj: String? = null,
     /** 2.5.0-beta9: MTP speculative decoding requested (only used when the GGUF has MTP layers). */
     val mtp: Boolean = false,
+    /** 2.5.1: [ModelOverrides.moeCpu] as is (null = 自动). */
+    val moeCpu: Boolean? = null,
+    /** 2.5.1: 激活专家数，0 = 模型默认. */
+    val expertUsed: Int = 0,
 ) {
     companion object {
         fun resolve(s: AppSettings, format: ModelFormat?, o: ModelOverrides?): EffectiveModelConfig {
@@ -135,6 +144,8 @@ data class EffectiveModelConfig(
                     ?: com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
                 mmproj = m.mmproj,
                 mtp = m.mtp ?: false,
+                moeCpu = m.moeCpu,
+                expertUsed = m.expertUsed ?: 0,
             )
         }
     }

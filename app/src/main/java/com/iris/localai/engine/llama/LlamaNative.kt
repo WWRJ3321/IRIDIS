@@ -60,6 +60,8 @@ object LlamaNative {
     ): String?
     /** 2.5.0-beta9: MTP draft tokens per step for the next [nativeLoad] (0 = off). */
     @JvmStatic external fun nativeSetMtp(handle: Long, nDraft: Int)
+    /** 2.5.1: MoE 专家留 CPU 按需加载 + 激活专家数（0 = 模型默认），作用于下次 [nativeLoad]。 */
+    @JvmStatic external fun nativeSetMoe(handle: Long, moeCpu: Boolean, nExpertUsed: Int)
     /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>". */
     @JvmStatic external fun nativeMtpStatus(handle: Long): String
     @JvmStatic external fun nativeUnload(handle: Long)

@@ -142,6 +142,9 @@ IRIS_JNI(nativeLoad)(
     lp.kv_q8 = lp.kv_type == 1;
     lp.use_mmap = use_mmap == JNI_TRUE;
     lp.spec_draft = e->spec_draft_cfg();  // 2.5.0-beta9 (nativeSetMtp)
+    lp.moe_cpu = e->moe_cpu_cfg();               // 2.5.1 (nativeSetMoe)
+    lp.n_expert_used = e->expert_used_cfg();
+    lp.no_prefetch = lp.moe_cpu;
 
     jmethodID on_progress = nullptr;
     if (listener) {
@@ -171,6 +174,12 @@ IRIS_JNI(nativeLoad)(
 JNIEXPORT void JNICALL
 IRIS_JNI(nativeSetMtp)(JNIEnv *, jobject, jlong h, jint n_draft) {
     if (auto *e = engine(h)) e->set_spec_draft(n_draft);
+}
+
+/** 2.5.1: MoE 专家留 CPU 按需加载 + 激活专家数（0 = 模型默认），作用于下次 nativeLoad。 */
+JNIEXPORT void JNICALL
+IRIS_JNI(nativeSetMoe)(JNIEnv *, jobject, jlong h, jboolean moe_cpu, jint n_expert_used) {
+    if (auto *e = engine(h)) e->set_moe(moe_cpu == JNI_TRUE, n_expert_used);
 }
 
 /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>" for the loaded model. */

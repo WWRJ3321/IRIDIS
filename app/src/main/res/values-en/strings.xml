@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d chars</string>
     <string name="v259_live_chip_thinking">Think</string>
     <string name="v259_live_chip">%1$d ch</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">Load experts on demand (MoE)</string>
+    <string name="v251_moe_cpu_auto">Auto: on when memory is short; experts read from storage as needed</string>
+    <string name="v251_moe_cpu_sub">Experts stay on the CPU and load on demand: less RAM, slower. Applies after reload</string>
+    <string name="v251_experts">Active experts</string>
+    <string name="v251_experts_default">Model default (%1$d)</string>
+    <string name="v251_experts_sub">Fewer is faster; quality may drop. Applies after reload</string>
+    <string name="v251_reap_purpose">Pruned MoE by a third party, Chinese untested; turn on on-demand experts</string>
+    <string name="v251_sd15_mnn_hidden">No longer offered; can be deleted</string>
+    <string name="v251_sd15_mnn_delete_title">Delete this image model?</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) has been retired. Deleting it frees the space.</string>
 </resources>

@@ -36,6 +36,10 @@ data class LoadConfig(
     val mtpDraft: Int = 0,
     /** 2.5.0-beta10, LiteRT-LM: ExperimentalFlags.enableSpeculativeDecoding for this load (set before every Engine). */
     val litertMtp: Boolean = false,
+    /** 2.5.1, GGUF (llama.cpp) MoE: 专家张量留 CPU、mmap 按需读（不预读）。 */
+    val moeCpu: Boolean = false,
+    /** 2.5.1, GGUF MoE: 激活专家数覆盖，0 = 模型默认。 */
+    val expertUsed: Int = 0,
 )
 
 data class SamplingConfig(

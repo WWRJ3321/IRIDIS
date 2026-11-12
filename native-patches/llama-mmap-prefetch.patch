@@ -1,0 +1,107 @@
+diff --git a/include/llama.h b/include/llama.h
+index 3877b69..4509a84 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -568,6 +568,12 @@ extern "C" {
+     LLAMA_API size_t llama_max_parallel_sequences(void);
+     LLAMA_API size_t llama_max_tensor_buft_overrides(void);
+ 
++    // IRIDIS patch: global switch for mmap prefetching (default true = upstream behaviour).
++    // false: model loads skip MAP_POPULATE / MADV_WILLNEED and advise the whole file RANDOM
++    // (fadvise RANDOM too), so pages (e.g. MoE experts left on the CPU) are read on demand.
++#define LLAMA_HAS_MMAP_PREFETCH 1
++    LLAMA_API void llama_set_mmap_prefetch(bool on);
++
+     LLAMA_API bool llama_supports_mmap       (void);
+     LLAMA_API bool llama_supports_mlock      (void);
+     LLAMA_API bool llama_supports_gpu_offload(void);
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index 4d1cd31..6c9a097 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -10,6 +10,7 @@
+ #include <stdexcept>
+ #include <cerrno>
+ #include <algorithm>
++#include <atomic>
+ 
+ #ifdef __has_include
+     #if __has_include(<unistd.h>)
+@@ -485,7 +486,14 @@ struct llama_mmap::impl {
+         int flags = MAP_SHARED;
+         if (numa) { prefetch = 0; }
+ #ifdef __linux__
+-        if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
++        const bool random_access = !llama_mmap_get_prefetch(); // IRIDIS patch
++        if (random_access) {
++            prefetch = 0;
++            if (posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM)) {
++                LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_RANDOM) failed: %s\n",
++                        strerror(errno));
++            }
++        } else if (posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL)) {
+             LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
+                     strerror(errno));
+         }
+@@ -518,7 +526,7 @@ struct llama_mmap::impl {
+         for (const auto & range : lazy_ranges) {
+             advise(range.first, range.second, POSIX_MADV_RANDOM, "POSIX_MADV_RANDOM");
+         }
+-        if (numa) {
++        if (numa || !llama_mmap_get_prefetch()) { // IRIDIS patch: whole file RANDOM when prefetch is off
+             if (posix_madvise(addr, file->size(), POSIX_MADV_RANDOM)) {
+                 LLAMA_LOG_WARN("warning: posix_madvise(.., POSIX_MADV_RANDOM) failed: %s\n",
+                         strerror(errno));
+@@ -834,6 +842,11 @@ const bool llama_mlock::SUPPORTED = true;
+ const bool llama_mlock::SUPPORTED = false;
+ #endif
+ 
++// IRIDIS patch: global mmap prefetch switch (see llama_set_mmap_prefetch in llama.h)
++static std::atomic<bool> g_llama_mmap_prefetch{true};
++void llama_mmap_set_prefetch(bool on) { g_llama_mmap_prefetch.store(on); }
++bool llama_mmap_get_prefetch() { return g_llama_mmap_prefetch.load(); }
++
+ void llama_prefetch(llama_memory_ranges mr) {
+ #if defined(__linux__) || defined(__APPLE__) || (defined(_WIN32) && _WIN32_WINNT >= 0x602)
+     if (mr.empty()) {
+diff --git a/src/llama-mmap.h b/src/llama-mmap.h
+index 6c6393d..325ac5f 100644
+--- a/src/llama-mmap.h
++++ b/src/llama-mmap.h
+@@ -89,4 +89,8 @@ using llama_memory_ranges = std::vector<llama_memory_range>;
+ // Prefetch the host pages covering these memory ranges.
+ void llama_prefetch(llama_memory_ranges mr);
+ 
++// IRIDIS patch: state behind llama_set_mmap_prefetch() (default true)
++void llama_mmap_set_prefetch(bool on);
++bool llama_mmap_get_prefetch();
++
+ size_t llama_path_max();
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 3c4e598..4f7321f 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -1979,7 +1979,7 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
+     // per-tensor activation precision policy
+     prec_policy.load(ml, *this);
+ 
+-    ml.init_mappings(true, use_mlock ? &pimpl->mlock_mmaps : nullptr);
++    ml.init_mappings(llama_mmap_get_prefetch(), use_mlock ? &pimpl->mlock_mmaps : nullptr); // IRIDIS patch
+     pimpl->mappings.reserve(ml.mappings.size());
+ 
+     // create the backend buffers
+diff --git a/src/llama.cpp b/src/llama.cpp
+index e3699ea..c40754b 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -87,6 +87,10 @@ size_t llama_max_devices(void) {
+     return 16;
+ }
+ 
++void llama_set_mmap_prefetch(bool on) { // IRIDIS patch
++    llama_mmap_set_prefetch(on);
++}
++
+ size_t llama_max_tensor_buft_overrides() {
+     return 4096;
+ }

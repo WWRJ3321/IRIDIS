@@ -185,7 +185,8 @@ class RepositoryImageGenBackend(
 ) : com.iris.localai.agent.ImageGenBackend {
     override fun runnableModels(): List<ImageModel> {
         val dl = runCatching { repo.downloaded() }.getOrDefault(emptySet())
-        return repo.catalog.filter { it.id in dl }
+        // 2.5.1: catalog 已排除 MNN CPU；这里再保险一次
+        return repo.catalog.filter { it.id in dl && ImageRules.listed(it) }
     }
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =

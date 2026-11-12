@@ -17,7 +17,7 @@ import java.io.File
 class DownloadPageV2217Test {
     @Test fun sectionsAndFeaturedCoder() {
         assertEquals(listOf("对话", "特色模型", "生图", "语音", "翻译"), Section.entries.map { it.title })
-        assertEquals(27, RecommendedCatalog.section(Section.CHAT).size)
+        assertEquals(29, RecommendedCatalog.section(Section.CHAT).size) // 2.5.1: +2 Gemma 4 19B REAP
         val coder = RecommendedCatalog.section(Section.FEATURED).first()
         assertEquals("ccore/Qwen3.5-4B-3D-Coder", coder.repoId)
         assertEquals("Apache-2.0", coder.licence)

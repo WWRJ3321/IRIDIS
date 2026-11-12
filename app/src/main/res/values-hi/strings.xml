@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d अक्षर</string>
     <string name="v259_live_chip_thinking">सोच</string>
     <string name="v259_live_chip">%1$d अ.</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">एक्सपर्ट ज़रूरत पर लोड करें (MoE)</string>
+    <string name="v251_moe_cpu_auto">स्वचालित: मेमोरी कम होने पर चालू; एक्सपर्ट ज़रूरत पर स्टोरेज से पढ़े जाते हैं</string>
+    <string name="v251_moe_cpu_sub">एक्सपर्ट CPU पर रहते हैं और ज़रूरत पर लोड होते हैं: कम RAM, धीमा। दोबारा लोड करने पर लागू</string>
+    <string name="v251_experts">सक्रिय एक्सपर्ट</string>
+    <string name="v251_experts_default">मॉडल डिफ़ॉल्ट (%1$d)</string>
+    <string name="v251_experts_sub">कम = तेज़, गुणवत्ता घट सकती है। दोबारा लोड करने पर लागू</string>
+    <string name="v251_reap_purpose">तृतीय-पक्ष द्वारा छँटा MoE, चीनी परखी नहीं; एक्सपर्ट ज़रूरत पर लोड चालू करें</string>
+    <string name="v251_sd15_mnn_hidden">अब उपलब्ध नहीं; हटाया जा सकता है</string>
+    <string name="v251_sd15_mnn_delete_title">यह इमेज मॉडल हटाएँ?</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) बंद कर दिया गया है। हटाने से जगह खाली होगी।</string>
 </resources>

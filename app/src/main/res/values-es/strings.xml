@@ -2078,4 +2078,15 @@
     <string name="v259_live_chars">%1$d caracteres</string>
     <string name="v259_live_chip_thinking">Piensa</string>
     <string name="v259_live_chip">%1$d car.</string>
+    <!-- 2.5.1 -->
+    <string name="v251_moe_cpu">Cargar expertos bajo demanda (MoE)</string>
+    <string name="v251_moe_cpu_auto">Auto: activo si falta memoria; los expertos se leen según se necesitan</string>
+    <string name="v251_moe_cpu_sub">Los expertos quedan en la CPU y se cargan bajo demanda: menos RAM, más lento. Se aplica al recargar</string>
+    <string name="v251_experts">Expertos activos</string>
+    <string name="v251_experts_default">Predeterminado del modelo (%1$d)</string>
+    <string name="v251_experts_sub">Menos es más rápido; la calidad puede bajar. Se aplica al recargar</string>
+    <string name="v251_reap_purpose">MoE podado por terceros, chino sin probar; activa expertos bajo demanda</string>
+    <string name="v251_sd15_mnn_hidden">Ya no se ofrece; se puede eliminar</string>
+    <string name="v251_sd15_mnn_delete_title">¿Eliminar este modelo de imagen?</string>
+    <string name="v251_sd15_mnn_delete">Stable Diffusion 1.5 (CPU) se ha retirado. Al eliminarlo se libera el espacio.</string>
 </resources>
