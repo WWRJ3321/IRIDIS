@@ -48,9 +48,26 @@ object HtmlSandbox {
             "img-src data: blob:" + (if (allowImages) " https:" else "") + "; font-src data:; media-src data: blob:; " +
             "connect-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
 
+    /**
+     * 2.5.2: script errors used to fail silently (a blank 3D scene). This first script shows them in a
+     * small bar at the bottom of the preview: uncaught errors, rejected promises, scripts that failed
+     * to load, and a missing WebGL context.
+     */
+    const val ERROR_OVERLAY: String = "<script>(function(){var n=0;function show(m){if(n++>4)return;var add=function(){" +
+        "var b=document.getElementById('__iris_err');if(!b){b=document.createElement('div');b.id='__iris_err';" +
+        "b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:40%;overflow:auto;" +
+        "padding:6px 10px;background:#1f1f1f;color:#f2b8b5;font:12px/1.4 monospace;white-space:pre-wrap;word-break:break-word';" +
+        "document.body.appendChild(b);}b.textContent+=(b.textContent?'\\n':'')+'JS: '+m;};" +
+        "if(document.body)add();else addEventListener('DOMContentLoaded',add);}" +
+        "addEventListener('error',function(e){var t=e.target;if(t&&t!==window&&(t.src||t.href)){show('load failed '+(t.src||t.href));return;}" +
+        "show((e.message||'error')+(e.lineno?' @'+e.lineno+':'+e.colno:''));},true);" +
+        "addEventListener('unhandledrejection',function(e){var r=e.reason;show('promise: '+(r&&r.message?r.message:String(r)));});" +
+        "var gc=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(k){var x=gc.apply(this,arguments);" +
+        "if(!x&&/webgl/i.test(String(k)))show('WebGL unavailable ('+k+')');return x;};})();</script>"
+
     private fun head(allowImages: Boolean, importMap: String? = null) =
         "<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"${csp(allowImages)}\">" +
-            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" + (importMap ?: "")
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" + (importMap ?: "") + ERROR_OVERLAY
 
     private val HEAD_TAG = Regex("<head(?:\\s[^>]*)?>", RegexOption.IGNORE_CASE)
     private val HTML_TAG = Regex("<html(?:\\s[^>]*)?>", RegexOption.IGNORE_CASE)

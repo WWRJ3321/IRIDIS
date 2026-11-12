@@ -124,4 +124,13 @@ class V252UserReqTest {
         assertEquals("**本版未在真机测试。**", sec.lines()[1])
         for (w in listOf("新手引导", "Cookie", "charset", "DuckDuckGo", "种子", "下载/IRIDIS/models")) assertTrue(w, sec.contains(w))
     }
+
+    @Test fun htmlPreviewFullscreenAndErrors() {
+        val v = src("app/src/main/java/com/iris/localai/ui/markdown/RichViews.kt")
+        assertTrue(v.contains("DialogWindowProvider"))
+        assertTrue(v.contains("setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)"))
+        val r = src("app/src/main/java/com/iris/localai/ui/markdown/RichContent.kt")
+        assertTrue(r.contains("(importMap ?: \"\") + ERROR_OVERLAY"))
+        assertTrue(r.contains("unhandledrejection") && r.contains("WebGL unavailable"))
+    }
 }

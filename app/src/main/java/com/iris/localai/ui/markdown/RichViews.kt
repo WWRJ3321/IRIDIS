@@ -215,6 +215,13 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
     val c = Iris.colors
     var showSource by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        // 2.5.2: the activity handles rotation itself, so the dialog window kept its first size (wider /
+        // taller than the screen after a turn). Match the window to the screen on every configuration.
+        val cfg = LocalConfiguration.current
+        val dialogWindow = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+        LaunchedEffect(cfg.screenWidthDp, cfg.screenHeightDp, cfg.orientation) {
+            dialogWindow?.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+        }
         Column(Modifier.fillMaxSize().background(c.background).systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
