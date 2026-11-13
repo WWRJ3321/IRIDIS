@@ -74,6 +74,8 @@ private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERAT
     MEMORY_LIST, KNOWLEDGE,
     /** 2.5.0 Beta6: 智能体 › MCP 服务 and 知识库 › 新建/编辑文字 as real routes (the file to edit rides in KbEditorNav). */
     MCP, KB_EDITOR,
+    /** 2.5.4: 设置 › 下载源 (one setting for every download). */
+    DOWNLOAD_SOURCE,
     /** 2.5.0 Beta6: 关于 › 许可证 and 单个许可证全文 as real routes (the file rides in LicenseNav). */
     LICENSES, LICENSE_TEXT }
 
@@ -304,6 +306,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.DOWNLOAD_MODELS -> com.iris.localai.ui.models.DownloadModelsScreen(onBack = pop, onTryPrompt = { p -> chat.setDraft(p); home() })
         Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)
         Route.LANGUAGE -> com.iris.localai.ui.settings.LanguagePage(onBack = pop)
+        Route.DOWNLOAD_SOURCE -> com.iris.localai.ui.settings.DownloadSourcePage(settingsVm, onBack = pop)
         Route.SETTINGS -> SettingsHome(
             settingsVm, onBack = pop,
             onOpen = { p -> push(routeOf(p)) },
@@ -367,6 +370,7 @@ private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.STORAGE -> Route.STORAGE
     SettingsPage.DEVELOPER -> Route.DEVELOPER
     SettingsPage.DEV_CONTEXT -> Route.DEV_CONTEXT
+    SettingsPage.DOWNLOAD_SOURCE -> Route.DOWNLOAD_SOURCE
 }
 
 /** System "remove animations" switch, re-read whenever the app comes back to the foreground. */

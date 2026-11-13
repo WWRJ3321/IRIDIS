@@ -1416,7 +1416,7 @@
     <string name="settings_e57f3c">Idioma de reconocimiento</string>
     <string name="settings_a6541c">Modelo de reconocimiento de voz</string>
     <string name="settings_27eaa4">Modelo de síntesis de voz</string>
-    <string name="settings_9efdd4">Avanzado: ID de voz, interrupción y origen de descarga</string>
+    <string name="settings_9efdd4">Avanzado: ID de voz e interrupción</string>
     <string name="settings_966b10">ID de voz</string>
     <string name="settings_8d7696">Interrupción en chat de voz</string>
     <string name="settings_3a1c52">Sensibilidad para interrumpir la respuesta al hablar</string>
@@ -1429,7 +1429,7 @@
     <string name="settings_906f6a">; con altavoz, toca la esfera</string>
     <string name="settings_959016">Interrumpir más fácil (reproducir como llamada)</string>
     <string name="settings_02fac3">Más sensible; volumen de llamada, peor audio</string>
-    <string name="settings_4a492f">Igual que en «Modelos y carga»</string>
+    <string name="settings_4a492f">Para modelos, imágenes, traducción y voz</string>
     <string name="settings_855f7b">Solo uso no comercial</string>
     <string name="settings_7e41cf">Ver licencia del modelo</string>
     <string name="settings_46ffe3">Traducir a</string>
@@ -2096,6 +2096,9 @@
     <string name="v251_moe_cpu">Cargar expertos bajo demanda (MoE)</string>
     <string name="v251_moe_cpu_auto">Auto: activo si falta memoria; los expertos se leen según se necesitan</string>
     <string name="v251_moe_cpu_sub">Los expertos quedan en la CPU y se cargan bajo demanda: menos RAM, más lento. Se aplica al recargar</string>
+    <string name="v254_les">Planificación anticipada de expertos (LES)</string>
+    <string name="v254_les_auto">Auto: activo con expertos bajo demanda; precarga la capa siguiente</string>
+    <string name="v254_les_sub">Precarga expertos de la capa siguiente y guarda los frecuentes, solo CPU. Se aplica al recargar</string>
     <string name="v251_experts">Expertos activos</string>
     <string name="v251_experts_default">Predeterminado del modelo (%1$d)</string>
     <string name="v251_experts_sub">Menos es más rápido; la calidad puede bajar. Se aplica al recargar</string>

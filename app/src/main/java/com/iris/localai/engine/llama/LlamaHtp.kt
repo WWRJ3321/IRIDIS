@@ -34,6 +34,9 @@ interface LlamaJni {
     fun mtpStatus(h: Long): String = "off"
     /** 2.5.1: MoE 专家按需加载 + 激活专家数（0 = 模型默认），作用于下次 [load]；旧库没有该符号时忽略。 */
     fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) {}
+    /** 2.5.4: LES（只有 libiris_llama 有；旧库 / NPU 库无此符号时保持原样）。 */
+    fun setLes(h: Long, on: Boolean, dir: ByteArray) {}
+    fun lesStatus(h: Long): String = "off"
 }
 
 object LlamaJnis {
@@ -59,6 +62,8 @@ object LlamaJnis {
         override fun setMtp(h: Long, nDraft: Int) { runCatching { LlamaNative.nativeSetMtp(h, nDraft) } }
         override fun mtpStatus(h: Long): String = runCatching { LlamaNative.nativeMtpStatus(h) }.getOrDefault("off")
         override fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) { runCatching { LlamaNative.nativeSetMoe(h, moeCpu, expertUsed) } }
+        override fun setLes(h: Long, on: Boolean, dir: ByteArray) { runCatching { LlamaNative.nativeSetLes(h, on, dir) } }
+        override fun lesStatus(h: Long): String = runCatching { LlamaNative.nativeLesStatus(h) }.getOrDefault("off")
     }
     val htp: LlamaJni = object : LlamaJni {
         override fun create() = LlamaHtpNative.nativeCreate()

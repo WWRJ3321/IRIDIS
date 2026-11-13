@@ -117,6 +117,8 @@ internal object RichText {
 }
 
 private val PREVIEW_MAX = 360.dp
+/** 2.5.4: a page that fills its viewport (3D / canvas / height:100%) gets this fixed card height instead of a measured one. */
+private val PREVIEW_FILL = 300.dp
 
 // ------------------------------------------------------------------------------------------ HTML
 
@@ -150,7 +152,7 @@ private fun HtmlCard(source: String, kind: HtmlBlocks.Kind, allowImages: Boolean
             }
         }
         if (showSource) SourceText(source, Modifier.heightIn(max = PREVIEW_MAX))
-        else WebPreview(doc, allowImages)
+        else WebPreview(doc, allowImages, fills = remember(source, kind) { kind == HtmlBlocks.Kind.HTML && HtmlSandbox.fillsViewport(source) })
     }
     if (fullscreen) HtmlFullscreen(doc, source, kind, allowImages) { fullscreen = false }
 }
@@ -183,12 +185,18 @@ private fun SourceText(source: String, modifier: Modifier = Modifier) {
  * are non-empty): scrolled away it is destroyed, and its last height keeps the layout steady.
  */
 @Composable
-private fun WebPreview(doc: String, allowImages: Boolean) {
+private fun WebPreview(doc: String, allowImages: Boolean, fills: Boolean = false) {
     val c = Iris.colors
     var visible by remember { mutableStateOf(false) }
     var crashed by remember(doc) { mutableStateOf(false) }
     var contentHeight by remember(doc) { mutableIntStateOf(0) }
-    val h: Dp = if (contentHeight > 0) contentHeight.dp.coerceIn(48.dp, PREVIEW_MAX) else 160.dp
+    // 2.5.4: a full-viewport page (Three.js canvas sized to innerHeight, html/body height:100%) has no
+    // content height to measure; measuring it made the card track its own viewport. Fixed height instead.
+    val h: Dp = when {
+        fills -> PREVIEW_FILL
+        contentHeight > 0 -> contentHeight.dp.coerceIn(48.dp, PREVIEW_MAX)
+        else -> 160.dp
+    }
     Box(
         Modifier.fillMaxWidth().height(h).background(c.surfaceVariant)
             .onGloballyPositioned { visible = it.boundsInWindow().height > 0f },
@@ -199,14 +207,35 @@ private fun WebPreview(doc: String, allowImages: Boolean) {
             visible -> key(doc) {
                 AndroidView(
                     factory = { ctx ->
-                        sandboxWebView(ctx, allowImages, onHeight = { contentHeight = it }, onGone = { crashed = true })
-                            .also { it.loadDataWithBaseURL(ThreeAssets.BASE, doc, "text/html", "utf-8", null) }
+                        sandboxWebView(ctx, allowImages, onHeight = if (fills) null else ({ contentHeight = it }), onGone = { crashed = true })
+                            .also { it.loadWhenSized(doc) }
                     },
                     onRelease = { destroyWebView(it) },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             else -> Icon(IrisIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.space20))
+        }
+    }
+}
+
+/**
+ * 2.5.4 (网页预览 Three.js 空白): the document used to be loaded in the AndroidView factory, before the
+ * WebView had a size, so scripts read innerWidth / innerHeight = 0 and sized their canvas 0×0 (inline
+ * style beats the page's CSS). Load only once the view has a real size; on later size changes (card height,
+ * rotation) also fire `resize` so pages that listen re-fit.
+ */
+private fun WebView.loadWhenSized(doc: String) {
+    var loaded = false
+    addOnLayoutChangeListener { v, l, t, r, b, ol, ot, or0, ob ->
+        val w = r - l; val h = b - t
+        if (w <= 0 || h <= 0) return@addOnLayoutChangeListener
+        val web = v as WebView
+        if (!loaded) {
+            loaded = true
+            web.post { web.loadDataWithBaseURL(ThreeAssets.BASE, doc, "text/html", "utf-8", null) }
+        } else if (w != or0 - ol || h != ob - ot) {
+            web.postDelayed({ web.evaluateJavascript(HtmlSandbox.RESIZE_JS, null) }, 120)
         }
     }
 }
@@ -233,7 +262,7 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
                 if (showSource) SourceText(source, Modifier.fillMaxSize().padding(top = IrisDimens.space8))
                 else key(doc) {
                     AndroidView(
-                        factory = { ctx -> sandboxWebView(ctx, allowImages, onHeight = null, onGone = onDismiss).also { it.loadDataWithBaseURL(ThreeAssets.BASE, doc, "text/html", "utf-8", null) } },
+                        factory = { ctx -> sandboxWebView(ctx, allowImages, onHeight = null, onGone = onDismiss).also { it.loadWhenSized(doc) } },
                         onRelease = { destroyWebView(it) },
                         modifier = Modifier.fillMaxSize(),
                     )

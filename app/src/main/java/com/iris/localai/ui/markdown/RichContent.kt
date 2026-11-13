@@ -65,6 +65,15 @@ object HtmlSandbox {
         "var gc=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(k){var x=gc.apply(this,arguments);" +
         "if(!x&&/webgl/i.test(String(k)))show('WebGL unavailable ('+k+')');return x;};})();</script>"
 
+    /** 2.5.4: sent after the preview changes size, so pages sized from innerWidth / innerHeight re-fit. */
+    const val RESIZE_JS: String = "try{window.dispatchEvent(new Event('resize'))}catch(e){}"
+
+    private val FILL_CSS = Regex("(?:html|body)[^{}]*\\{[^}]*height\\s*:\\s*100(?:%|vh)", RegexOption.IGNORE_CASE)
+    private val FILL_JS = Regex("<canvas\\b|innerHeight|WebGLRenderer|getContext\\s*\\(\\s*['\"]webgl", RegexOption.IGNORE_CASE)
+
+    /** 2.5.4: the page fills its viewport (3D / canvas / html,body height:100%) rather than having a content height. */
+    fun fillsViewport(source: String): Boolean = FILL_CSS.containsMatchIn(source) || FILL_JS.containsMatchIn(source)
+
     private fun head(allowImages: Boolean, importMap: String? = null) =
         "<meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"${csp(allowImages)}\">" +
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" + (importMap ?: "") + ERROR_OVERLAY

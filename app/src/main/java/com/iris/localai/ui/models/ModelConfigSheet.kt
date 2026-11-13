@@ -337,6 +337,13 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                         OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
                             subtitle = com.iris.localai.I18n.s(if (o.moeCpu == null) com.iris.localai.R.string.v251_moe_cpu_auto else com.iris.localai.R.string.v251_moe_cpu_sub),
                             onChange = { on -> set { it.copy(moeCpu = on) } }, onReset = { set { it.copy(moeCpu = null) } })
+                        // 2.5.4: LES 前瞻专家调度（只 qwen35moe）
+                        if (com.iris.localai.engine.MoeLoad.lesSupported(mi)) {
+                            Divider()
+                            OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: (eff.moeCpu ?: false), o.les == null,
+                                subtitle = com.iris.localai.I18n.s(if (o.les == null) com.iris.localai.R.string.v254_les_auto else com.iris.localai.R.string.v254_les_sub),
+                                onChange = { on -> set { it.copy(les = on) } }, onReset = { set { it.copy(les = null) } })
+                        }
                         Divider()
                         // 2.5.1: 激活专家数 0 = 模型默认，1..min(32, 专家数)
                         val maxExp = minOf(com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)

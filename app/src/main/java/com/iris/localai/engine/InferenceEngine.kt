@@ -40,6 +40,8 @@ data class LoadConfig(
     val moeCpu: Boolean = false,
     /** 2.5.1, GGUF MoE: 激活专家数覆盖，0 = 模型默认。 */
     val expertUsed: Int = 0,
+    /** 2.5.4: LES 前瞻专家调度（qwen35moe，CPU）。 */
+    val les: Boolean = false,
 )
 
 data class SamplingConfig(

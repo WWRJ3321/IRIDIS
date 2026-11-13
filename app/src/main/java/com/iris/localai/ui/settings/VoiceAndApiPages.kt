@@ -231,16 +231,6 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_02fac3),
                     ) { on -> vm.update { it.copy(bargeInVoiceComm = on) } }
                 }
-
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
-                SettingsGroup {
-                    DownloadSource.entries.forEachIndexed { i, src ->
-                        if (i > 0) Divider()
-                        CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
-                    }
-                }
-
-                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a492f))
             }
         }
     }

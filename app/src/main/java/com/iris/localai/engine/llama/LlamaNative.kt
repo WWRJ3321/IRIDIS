@@ -62,6 +62,10 @@ object LlamaNative {
     @JvmStatic external fun nativeSetMtp(handle: Long, nDraft: Int)
     /** 2.5.1: MoE 专家留 CPU 按需加载 + 激活专家数（0 = 模型默认），作用于下次 [nativeLoad]。 */
     @JvmStatic external fun nativeSetMoe(handle: Long, moeCpu: Boolean, nExpertUsed: Int)
+    /** 2.5.4: LES 前瞻专家调度开关 + manifest 目录（下次 nativeLoad）。 */
+    @JvmStatic external fun nativeSetLes(handle: Long, on: Boolean, dirUtf8: ByteArray)
+    /** 2.5.4: "off" | "on" | "skip: <reason>"。 */
+    @JvmStatic external fun nativeLesStatus(handle: Long): String
     /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>". */
     @JvmStatic external fun nativeMtpStatus(handle: Long): String
     @JvmStatic external fun nativeUnload(handle: Long)

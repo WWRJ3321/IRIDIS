@@ -6,6 +6,7 @@
 | 组件 | 版本 | 许可证 | 义务 |
 |---|---|---|---|
 | llama.cpp / ggml (ggml-org) | master @ 785322d (2026-11-01) | MIT | 保留版权声明与许可证全文 |
+| LES 前瞻专家调度（OpenBMB/llama.cpp-omni：llama-moe-slot、llama-moe-experts、tools/moe） | a64932e (2026-10-19)，移植进 libiris_llama（native-patches/llama-les.patch） | MIT | 保留版权声明与许可证全文 |
 | nlohmann/json, cpp-httplib 等 llama.cpp vendor 库 | 随 llama.cpp | MIT | 同上（见 third_party/llama.cpp/licenses） |
 | MNN (alibaba) | master @ 9f097c5，经 scripts/mnn-port-patch.py 修改 | Apache-2.0 | 附许可证；按 Apache-2.0 第 4(b) 条，补丁脚本在每个被修改的文件首行写入 `// Modified by IRIDIS: <改动说明>`（涉及 OpenCLRuntime.cpp、llm.hpp、llm.cpp、omni.cpp、MoEModule.cpp、PipelineModule.cpp） |
 | LiteRT-LM (Google) | 0.18.0 (Maven) | Apache-2.0 | 附许可证与 NOTICE |

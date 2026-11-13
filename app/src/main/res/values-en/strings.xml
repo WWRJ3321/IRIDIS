@@ -1416,7 +1416,7 @@
     <string name="settings_e57f3c">Recognition language</string>
     <string name="settings_a6541c">Speech recognition model</string>
     <string name="settings_27eaa4">Speech synthesis model</string>
-    <string name="settings_9efdd4">Advanced: voice ID, interruption and download source</string>
+    <string name="settings_9efdd4">Advanced: voice ID and interruption</string>
     <string name="settings_966b10">Voice ID</string>
     <string name="settings_8d7696">Voice chat interruption</string>
     <string name="settings_3a1c52">How easily speaking interrupts a reply</string>
@@ -1429,7 +1429,7 @@
     <string name="settings_906f6a">; on speaker, tap the orb</string>
     <string name="settings_959016">Easier to interrupt (play replies as a call)</string>
     <string name="settings_02fac3">More sensitive; uses call volume, lower quality</string>
-    <string name="settings_4a492f">Shared with Models &amp; loading</string>
+    <string name="settings_4a492f">Used for models, images, translation and voice</string>
     <string name="settings_855f7b">Non-commercial only</string>
     <string name="settings_7e41cf">See model license</string>
     <string name="settings_46ffe3">Translate to</string>
@@ -2096,6 +2096,9 @@
     <string name="v251_moe_cpu">Load experts on demand (MoE)</string>
     <string name="v251_moe_cpu_auto">Auto: on when memory is short; experts read from storage as needed</string>
     <string name="v251_moe_cpu_sub">Experts stay on the CPU and load on demand: less RAM, slower. Applies after reload</string>
+    <string name="v254_les">Lookahead expert scheduling (LES)</string>
+    <string name="v254_les_auto">Auto: on with on-demand experts; prefetches next-layer experts</string>
+    <string name="v254_les_sub">Prefetches next-layer experts and caches hot ones, CPU only. Applies after reload</string>
     <string name="v251_experts">Active experts</string>
     <string name="v251_experts_default">Model default (%1$d)</string>
     <string name="v251_experts_sub">Fewer is faster; quality may drop. Applies after reload</string>

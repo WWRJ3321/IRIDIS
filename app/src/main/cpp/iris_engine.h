@@ -45,6 +45,10 @@ struct LoadParams {
     int32_t n_expert_used = 0;
     /// 2.5.1: true = 加载时不预读（无 MAP_POPULATE、整文件 MADV_RANDOM），专家按需读盘。moe_cpu 时强制 true。
     bool no_prefetch = false;
+    /// 2.5.4: LES（前瞻专家调度，移植自 OpenBMB llama.cpp-omni）。仅 qwen35moe、单文件 GGUF、CPU。
+    /// 专家改由运行时 preadv 读进槽位缓存，下一层专家按路由预测提前读。les_dir 存放自动生成的 manifest。
+    bool les = false;
+    std::string les_dir;
 };
 
 struct SamplingParams {
@@ -171,6 +175,16 @@ public:
         expert_used_cfg_.store(n_expert_used < 0 ? 0 : n_expert_used);
     }
     bool moe_cpu_cfg() const { return moe_cpu_cfg_.load(); }
+    void set_les(bool on, const std::string &dir) {
+        std::lock_guard<std::mutex> lk(les_mu_);
+        les_cfg_ = on;
+        les_dir_cfg_ = dir;
+    }
+    bool les_cfg() const { std::lock_guard<std::mutex> lk(les_mu_); return les_cfg_; }
+    std::string les_dir_cfg() const { std::lock_guard<std::mutex> lk(les_mu_); return les_dir_cfg_; }
+    /// 2.5.4: 本次加载 LES 状态：0 = 未请求，1 = 已启用，-1 = 请求了但不适用（原因见 les_note()）
+    int les_state() const { return les_state_.load(); }
+    std::string les_note() const { std::lock_guard<std::mutex> lk(les_mu_); return les_note_; }
     int32_t expert_used_cfg() const { return expert_used_cfg_.load(); }
 
     /// Thread-safe; may be called from any thread while generate() runs.
@@ -247,6 +261,12 @@ private:
     [[maybe_unused]] int32_t spec_req_ = 0; // LoadParams::spec_draft of the current load
     std::atomic<int32_t> spec_cfg_{0};
     std::atomic<bool> moe_cpu_cfg_{false};     // 2.5.1
+    mutable std::mutex les_mu_;                // 2.5.4 LES
+    bool les_cfg_ = false;
+    std::string les_dir_cfg_;
+    std::string les_note_;
+    std::atomic<int> les_state_{0};
+    std::string les_arch_tmp_;
     std::atomic<int32_t> expert_used_cfg_{0};  // 2.5.1
     bool spec_sync_ = false;         // draft context has seen every target decode since the last clear
     std::string spec_status_ = "off";

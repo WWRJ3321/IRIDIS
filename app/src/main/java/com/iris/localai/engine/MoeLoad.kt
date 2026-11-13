@@ -16,6 +16,15 @@ object MoeLoad {
         return setting.coerceIn(1, minOf(MAX_EXPERTS_UI, info.expertCount))
     }
 
+    /** 2.5.4: LES 只支持 qwen35moe（MiniCPM-V 4.7 / Qwen3.5 MoE 架构）。 */
+    const val LES_ARCH = "qwen35moe"
+
+    fun lesSupported(info: GgufQuant.Info?): Boolean = info?.moe == true && info.arch == LES_ARCH
+
+    /** 2.5.4: LES 设置 null = 自动：专家按需加载生效时开；true/false = 用户指定（架构不符一律不开）。 */
+    fun lesActive(setting: Boolean?, info: GgufQuant.Info?, moeActive: Boolean): Boolean =
+        lesSupported(info) && (setting ?: moeActive)
+
     /** 非专家张量字节（总张量未知时用文件大小近似）。 */
     fun nonExpertBytes(info: GgufQuant.Info, fileBytes: Long): Long =
         ((if (info.tensorBytes > 0) info.tensorBytes else fileBytes) - info.expsBytes).coerceAtLeast(0)

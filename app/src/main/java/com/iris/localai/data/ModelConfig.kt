@@ -53,6 +53,8 @@ data class ModelOverrides(
     val moeCpu: Boolean? = null,
     /** 2.5.1, GGUF MoE: 激活专家数，0 / null = 模型默认。 */
     val expertUsed: Int? = null,
+    /** 2.5.4, GGUF qwen35moe: LES 前瞻专家调度。null = 自动（专家按需加载生效时开）。 */
+    val les: Boolean? = null,
 ) {
     val isEmpty: Boolean get() = this == ModelOverrides()
 
@@ -77,7 +79,7 @@ data class ModelOverrides(
     )
 
     /** Keys whose change only takes effect after reloading the model. */
-    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj, mtp, moeCpu, expertUsed)
+    fun loadSignature(): List<Any?> = listOf(backend, contextLength, batchSize, kvCacheType, flashAttention, useMmap, threads, engine, mmproj, mtp, moeCpu, expertUsed, les)
 }
 
 /** Global defaults + one model's overrides, fully resolved. */
@@ -113,6 +115,8 @@ data class EffectiveModelConfig(
     val moeCpu: Boolean? = null,
     /** 2.5.1: 激活专家数，0 = 模型默认. */
     val expertUsed: Int = 0,
+    /** 2.5.4: [ModelOverrides.les] as is (null = 自动). */
+    val les: Boolean? = null,
 ) {
     companion object {
         fun resolve(s: AppSettings, format: ModelFormat?, o: ModelOverrides?): EffectiveModelConfig {
@@ -146,6 +150,7 @@ data class EffectiveModelConfig(
                 mtp = m.mtp ?: false,
                 moeCpu = m.moeCpu,
                 expertUsed = m.expertUsed ?: 0,
+                les = m.les,
             )
         }
     }

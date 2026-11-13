@@ -788,6 +788,8 @@ object SourceText {
     val IMPORT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_aa27cc)
     val AUTO_SWITCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_389994)
     val FOOTNOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_c0f2d7)
+    /** 2.5.4: footnote of 设置 › 下载源 (one setting for every download). */
+    val SHARED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4a492f)
     fun hint(s: com.iris.localai.data.DownloadSource): String = when (s) {
         com.iris.localai.data.DownloadSource.AUTO -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_6acd72)
         com.iris.localai.data.DownloadSource.MODELSCOPE -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_35fcd5)

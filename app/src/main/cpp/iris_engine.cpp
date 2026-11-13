@@ -426,6 +426,92 @@ static int64_t gguf_expert_count(const std::string &path, std::string &arch) {
     return n;
 }
 
+// 2.5.4: LES — writes an "in-place" experts manifest that points straight into the GGUF
+// (each routed expert tensor is [.., .., n_expert] contiguous, so expert e of a family lives at
+// data_offset + e * bytes_per_expert). No repacked copy of the experts is needed on the phone.
+// Returns the manifest path, or an empty string with `why` set when the model is not eligible.
+static std::string les_write_manifest(const std::string &path, const std::string &dir,
+                                      int64_t expert_used_override, std::string &why) {
+    gguf_init_params gp{/*no_alloc=*/true, /*ctx=*/nullptr};
+    gguf_context *g = gguf_init_from_file(path.c_str(), gp);
+    if (!g) { why = "gguf"; return {}; }
+    auto get_int = [&](const std::string &key) -> int64_t {
+        const int64_t k = gguf_find_key(g, key.c_str());
+        if (k < 0) return 0;
+        switch (gguf_get_kv_type(g, k)) {
+            case GGUF_TYPE_UINT32: return gguf_get_val_u32(g, k);
+            case GGUF_TYPE_INT32:  return gguf_get_val_i32(g, k);
+            case GGUF_TYPE_UINT64: return (int64_t) gguf_get_val_u64(g, k);
+            case GGUF_TYPE_INT64:  return gguf_get_val_i64(g, k);
+            default: return 0;
+        }
+    };
+    std::string arch;
+    const int64_t ka = gguf_find_key(g, "general.architecture");
+    if (ka >= 0 && gguf_get_kv_type(g, ka) == GGUF_TYPE_STRING) arch = gguf_get_val_str(g, ka);
+    if (arch != "qwen35moe") { gguf_free(g); why = "arch:" + arch; return {}; }
+    if (get_int("split.count") > 1) { gguf_free(g); why = "split"; return {}; }
+    const int64_t n_expert = get_int(arch + ".expert_count");
+    int64_t n_used = get_int(arch + ".expert_used_count");
+    if (expert_used_override > 0) n_used = expert_used_override;
+    if (n_expert < 2 || n_used < 1) { gguf_free(g); why = "experts"; return {}; }
+
+    const size_t data_off = gguf_get_data_offset(g);
+    std::string entries;
+    int n_entries = 0;
+    const int64_t nt = gguf_get_n_tensors(g);
+    for (int64_t i = 0; i < nt; i++) {
+        const std::string name = gguf_get_tensor_name(g, i);
+        int layer = -1;
+        char fam[64] = {0};
+        if (std::sscanf(name.c_str(), "blk.%d.%63[^.].weight", &layer, fam) != 2) continue;
+        const std::string family(fam);
+        if (family != "ffn_gate_exps" && family != "ffn_up_exps" && family != "ffn_down_exps" &&
+            family != "ffn_gate_up_exps") continue;
+        if (name != "blk." + std::to_string(layer) + "." + family + ".weight") continue;
+        const size_t nbytes = gguf_get_tensor_size(g, i);
+        if (nbytes == 0 || nbytes % (size_t) n_expert != 0) { gguf_free(g); why = "shape:" + name; return {}; }
+        const size_t bpe = nbytes / (size_t) n_expert;
+        std::string tname = ggml_type_name(gguf_get_tensor_type(g, i));
+        for (auto &c : tname) c = (char) std::tolower((unsigned char) c);
+        char buf[512];
+        snprintf(buf, sizeof(buf),
+                 "%s{\"layer\":%d,\"tensor_family\":\"%s\",\"tensor_name\":\"%s\",\"quant_type\":\"%s\","
+                 "\"repacked_file\":\"%s\",\"repacked_offset\":%zu,\"exact_byte_length\":%zu,"
+                 "\"bytes_per_expert\":%zu,\"expert_stride\":%zu,\"expert_count\":%lld}",
+                 n_entries ? "," : "", layer, family.c_str(), name.c_str(), tname.c_str(), "@MODEL@",
+                 data_off + gguf_get_tensor_offset(g, i), nbytes, bpe, bpe, (long long) n_expert);
+        entries += buf;
+        n_entries++;
+    }
+    gguf_free(g);
+    if (n_entries == 0) { why = "no_experts"; return {}; }
+    // the model path goes in once, JSON-escaped
+    std::string esc;
+    for (char c : path) {
+        if (c == '"' || c == '\\') esc += '\\';
+        esc += c;
+    }
+    size_t pos = 0;
+    while ((pos = entries.find("@MODEL@", pos)) != std::string::npos) {
+        entries.replace(pos, 7, esc);
+        pos += esc.size();
+    }
+    char head[256];
+    snprintf(head, sizeof(head),
+             "{\"schema_version\":1,\"experts_kind\":\"omni_moe_gguf\",\"layout\":\"layer_major_expert\","
+             "\"model\":{\"arch\":\"%s\",\"expert_count\":%lld,\"expert_used_count\":%lld},\"entries\":[",
+             arch.c_str(), (long long) n_expert, (long long) n_used);
+    const std::string out = dir + "/les-manifest.json";
+    FILE *f = std::fopen(out.c_str(), "wb");
+    if (!f) { why = "write"; return {}; }
+    const std::string json = std::string(head) + entries + "]}";
+    const bool ok = std::fwrite(json.data(), 1, json.size(), f) == json.size();
+    std::fclose(f);
+    if (!ok) { why = "write"; return {}; }
+    return out;
+}
+
 bool Engine::load(const std::string &path, const LoadParams &params,
                   const ProgressCallback &progress, std::string &error) {
     std::lock_guard<std::mutex> lk(mu_);
@@ -482,13 +568,38 @@ bool Engine::load(const std::string &path, const LoadParams &params,
             mp.kv_overrides = kvo;
         }
     }
-    const bool no_prefetch = moe_cpu || params.no_prefetch;
+    // 2.5.4: LES. Eligible models only (qwen35moe, one-file GGUF); everything else loads as before.
+    les_state_.store(0);
+    std::string les_manifest;
+    if (params.les && !params.les_dir.empty()) {
+        std::string why;
+        les_manifest = les_write_manifest(path, params.les_dir, expert_used, why);
+        {
+            std::lock_guard<std::mutex> lk2(les_mu_);
+            les_note_ = les_manifest.empty() ? why : std::string();
+        }
+        les_state_.store(les_manifest.empty() ? -1 : 1);
+    }
+    if (!les_manifest.empty()) {
+        // read by the slot runtime once per process (static); same values every load
+        setenv("LLAMA_MOE_DECODE_WINDOW", "auto", 0);
+        setenv("LLAMA_MOE_LOOKAHEAD_PREFETCH", "1", 0);
+        setenv("LLAMA_MOE_LOOKAHEAD_PREFETCH_DEPTH", "8", 0);
+        mp.moe_experts_path = les_manifest.c_str();
+        mp.moe_slot_bank = (int32_t) std::max<int64_t>(1, gguf_expert_count(path, les_arch_tmp_));
+        // CPU only: the slots must be CPU-addressable, and the expert reads replace the GPU path
+        devices[0] = nullptr;
+        gpu_name_.clear();
+        mp.n_gpu_layers = 0;
+        mp.tensor_buft_overrides = nullptr;
+    }
+    const bool no_prefetch = moe_cpu || params.no_prefetch || !les_manifest.empty();
 #ifdef LLAMA_HAS_MMAP_PREFETCH
     llama_set_mmap_prefetch(!no_prefetch);
 #endif
-    resource_log("load: moe_cpu=%d%s expert_used=%lld no_prefetch=%d extra_bufts=%d",
+    resource_log("load: moe_cpu=%d%s expert_used=%lld no_prefetch=%d extra_bufts=%d les=%d",
                  moe_cpu ? 1 : 0, (moe_cpu && devices[0]) ? "(exps->CPU)" : "",
-                 (long long) expert_used, no_prefetch ? 1 : 0, mp.use_extra_bufts ? 1 : 0);
+                 (long long) expert_used, no_prefetch ? 1 : 0, mp.use_extra_bufts ? 1 : 0, les_state_.load());
 #ifdef IRIS_SPEC
     // 2.5.0-beta9: the NextN / MTP tensors are skipped unless asked for; only then can a draft
     // context be built on this model. Off (the default) loads exactly as before.

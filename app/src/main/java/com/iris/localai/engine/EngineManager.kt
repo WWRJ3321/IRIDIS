@@ -498,6 +498,8 @@ class EngineManager(
                                 // 2.5.1: MoE 专家按需加载 / 激活专家数（只对 GGUF MoE 生效）
                                 moeCpu = moeCpu && model.format == ModelFormat.GGUF,
                                 expertUsed = if (model.format == ModelFormat.GGUF) MoeLoad.expertUsed(cfg.expertUsed, quant) else 0,
+                                // 2.5.4: LES 前瞻专家调度（安全模式不开）
+                                les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu),
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

@@ -44,6 +44,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     @Volatile private var visionLoaded = false
     /** 2.5.0-beta9: MTP speculative decoding is on for the loaded model (native status "active …"). */
     @Volatile private var mtpActive = false
+    /** 2.5.4: LES 状态（"off" / "on" / "skip: …"）；on 时原生层强制 CPU。 */
+    @Volatile var lesStatus: String = "off"
+        private set
     @Volatile private var active: Request? = null
 
     // ---- 1.7.2: mid-reply resource-tier switch (CPU backend only) ----
@@ -88,6 +91,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             jni.setMtp(h, if (npu) 0 else config.mtpDraft.coerceIn(0, 8))
             // 2.5.1: MoE 专家按需加载（专家留 CPU、mmap 不预读）+ 激活专家数
             jni.setMoe(h, config.moeCpu, config.expertUsed.coerceIn(0, 32))
+            // 2.5.4: LES（只在 CPU/GPU 库；manifest 写在 cache/les）
+            val lesDir = context?.let { java.io.File(it.cacheDir, "les").apply { mkdirs() }.path }
+            jni.setLes(h, config.les && !npu && lesDir != null, (lesDir ?: "").toByteArray(Charsets.UTF_8))
             val err = jni.load(
                 h, path, config.contextLength, config.threads, config.batchSize.coerceIn(32, 2048),
                 config.flashAttention, if (gpu) GPU_ALL_LAYERS else 0,
@@ -98,13 +104,16 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             val mtp = if (config.mtpDraft > 0 && !npu) jni.mtpStatus(h) else "off"
             mtpActive = MtpStats.active(mtp)
             if (config.mtpDraft > 0) android.util.Log.i(LOG_TAG, "MTP ${model.fileName}: $mtp")
+            lesStatus = if (config.les && !npu) jni.lesStatus(h) else "off"
+            if (config.les) android.util.Log.i(LOG_TAG, "LES ${model.fileName}: $lesStatus")
             val accel = if (npu) com.iris.localai.engine.Backend.NPU else com.iris.localai.engine.Backend.GPU
-            activeBackend = if (gpu) accel else com.iris.localai.engine.Backend.CPU
+            val lesOn = lesStatus == "on"
+            activeBackend = if (gpu && !lesOn) accel else com.iris.localai.engine.Backend.CPU
             val m = runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }
                 .getOrDefault(NativeMeta())
             // No OpenCL device: llama.cpp silently stays on the CPU. Report it as a GPU failure so
             // the manager's fallback chain (and the UI's "实际后端") tell the truth.
-            if (gpu && m.gpu.isBlank()) {
+            if (gpu && !lesOn && m.gpu.isBlank()) {
                 loaded = false
                 jni.unload(h)
                 throw EngineException(if (npu) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1ac99d) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4b134d))

@@ -204,10 +204,10 @@ class V253Test {
     // ---------------------------------------------------------------- ③ 版本 / CHANGELOG
     @Test fun versionAndChangelog() {
         val g = src("app/build.gradle.kts")
-        assertTrue(g.contains("versionCode = 252"))
-        assertTrue(g.contains("versionName = \"2.5.3\""))
+        // 2.5.4: 版本号随新版前进，只查 2.5.3 段仍在 2.5.2 之前
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 252)
         val c = src("CHANGELOG.md")
-        assertTrue(c.indexOf("## 2.5.3（未发布）") in 0 until c.indexOf("## 2.5.2"))
+        assertTrue(c.indexOf("## 2.5.3") in 0 until c.indexOf("## 2.5.2"))
         val sec = c.substring(c.indexOf("## 2.5.3"), c.indexOf("## 2.5.2"))
         assertEquals("**本版未在真机测试。**", sec.lines()[1])
         for (w in listOf("新手引导", "只有高亮的按钮可点", "动画")) assertTrue(w, sec.contains(w))

@@ -1416,7 +1416,7 @@
     <string name="settings_e57f3c">認識言語</string>
     <string name="settings_a6541c">音声認識モデル</string>
     <string name="settings_27eaa4">音声合成モデル</string>
-    <string name="settings_9efdd4">詳細：声の番号、割り込み、ダウンロード元</string>
+    <string name="settings_9efdd4">詳細：声の番号と割り込み</string>
     <string name="settings_966b10">声の番号</string>
     <string name="settings_8d7696">音声会話の割り込み</string>
     <string name="settings_3a1c52">話しかけて返答を中断する感度</string>
@@ -1429,7 +1429,7 @@
     <string name="settings_906f6a">。スピーカー時は球をタップ</string>
     <string name="settings_959016">中断しやすくする（返答を通話音声で再生）</string>
     <string name="settings_02fac3">より敏感。通話音量で音質やや低下</string>
-    <string name="settings_4a492f">「モデルと読み込み」と共通</string>
+    <string name="settings_4a492f">モデル・画像・翻訳・音声すべてに適用</string>
     <string name="settings_855f7b">非商用のみ</string>
     <string name="settings_7e41cf">モデルのライセンスを参照</string>
     <string name="settings_46ffe3">翻訳先</string>
@@ -2096,6 +2096,9 @@
     <string name="v251_moe_cpu">エキスパートのオンデマンド読み込み（MoE）</string>
     <string name="v251_moe_cpu_auto">自動：メモリ不足時にオン、エキスパートはストレージから随時読み込み</string>
     <string name="v251_moe_cpu_sub">エキスパートを CPU に置き随時読み込み。省メモリだが低速。再読み込み後に有効</string>
+    <string name="v254_les">先読みエキスパートスケジューリング（LES）</string>
+    <string name="v254_les_auto">自動：オンデマンド読み込み時にオン、次層のエキスパートを先読み</string>
+    <string name="v254_les_sub">次層のエキスパートを先読みし頻出分をキャッシュ、CPU のみ。再読み込み後に有効</string>
     <string name="v251_experts">アクティブなエキスパート数</string>
     <string name="v251_experts_default">モデル既定（%1$d）</string>
     <string name="v251_experts_sub">少ないほど高速、品質は下がる場合あり。再読み込み後に有効</string>

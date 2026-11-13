@@ -288,7 +288,6 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         keyboardActions = KeyboardActions(onSearch = { submit() }),
                         modifier = Modifier.weight(1f),
                     )
-                    SourceChip(settings.downloadSource, vm::setDownloadSource)
                 }
             }
             item(key = "tabs", contentType = "tabs") {
@@ -596,34 +595,3 @@ private fun RecDetailSheet(
     }
 }
 
-/** Compact 下载源 chip (自动 / 魔搭 / hf-mirror / HF) with a menu. */
-@Composable
-private fun SourceChip(source: DownloadSource, onSource: (DownloadSource) -> Unit) {
-    val c = Iris.colors
-    var open by remember { mutableStateOf(false) }
-    val interaction = remember { MutableInteractionSource() }
-    Box {
-        Row(
-            Modifier.height(IrisDimens.rowMinHeight)
-                .pressScale(interaction, GlassTokens.PRESS_SCALE)
-                .clip(IrisRadius.pillShape).background(c.surfaceVariant)
-                .pressTint(interaction, IrisRadius.pillShape)
-                .clickable(interaction, null, onClickLabel = SourceText.TITLE) { open = true }
-                .padding(horizontal = IrisDimens.space12),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(IrisDimens.space4),
-        ) {
-            Column {
-                Text(SourceText.TITLE, style = IrisType.micro, color = c.textTertiary)
-                Text(source.short, style = IrisType.labelSmall, color = c.text, maxLines = 1)
-            }
-            Icon(Icons.Outlined.ExpandMore, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.iconSmall))
-        }
-        IrisMenu(open, { open = false }) {
-            DownloadSource.entries.forEach { s ->
-                IrisMenuItem(s.short, if (s == source) Icons.Outlined.Check else null) { onSource(s); open = false }
-            }
-            Text(SourceText.hint(source), style = IrisType.caption, color = c.textTertiary,
-                modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8).widthIn(max = IrisDimens.drawerWidth))
-        }
-    }
-}

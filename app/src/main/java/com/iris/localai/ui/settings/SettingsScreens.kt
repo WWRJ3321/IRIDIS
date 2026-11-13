@@ -97,7 +97,7 @@ import kotlin.math.roundToInt
  * with rarely used items folded under 「高级」. No storage key or default value changed.
  */
 /** 2.1.3: DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
-enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT }
+enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT, DOWNLOAD_SOURCE }
 
 private val THEME_OPTIONS get() = listOf(ThemeMode.SYSTEM to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_71bbc7), ThemeMode.LIGHT to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48d0a0), ThemeMode.DARK to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41e8e8))
 
@@ -182,6 +182,9 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3dc3df))
             SettingsGroup {
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516), SettingsText.MODEL_BACKEND, com.iris.localai.ui.icons.IrisIcons.Chip) { onOpen(SettingsPage.MODEL_BACKEND) }
+                Divider()
+                // 2.5.4: one 下载源 for every download (models, 生图, 翻译包, 语音); the per-page pickers are gone.
+                NavItem(com.iris.localai.ui.models.SourceText.TITLE, s.downloadSource.label, com.iris.localai.ui.icons.IrisIcons.Download) { onOpen(SettingsPage.DOWNLOAD_SOURCE) }
                 Divider()
                 NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70), SettingsText.GENERATION, com.iris.localai.ui.icons.IrisIcons.Spark) { onOpen(SettingsPage.GENERATION) }
                 Divider()
@@ -277,15 +280,6 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
                 SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41ba97), icon = com.iris.localai.ui.icons.IrisIcons.Reload, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1a7844), onClick = { vm.reloadModel() })
             }
 
-            // 2.2.16: model / voice / 生图 downloads; 自动 picks the fastest reachable source and falls through.
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_d98cb5))
-            SettingsGroup {
-                com.iris.localai.data.DownloadSource.entries.forEachIndexed { i, src ->
-                    if (i > 0) Divider()
-                    CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
-                }
-            }
-            GroupFootnote(com.iris.localai.ui.models.SourceText.FOOTNOTE)
 
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_494ef0))
             SettingsGroup {
@@ -893,6 +887,23 @@ private fun RuntimeRack(vm: SettingsViewModel, onOpen: (SettingsPage) -> Unit) {
 
 /** 1.14.1 外观: theme, visual effects, feedback. */
 /** 2.3.4: 设置 › 语言 — the 2.3.1 picker on its own page (follow system + the 7 UI languages). */
+/** 2.5.4: 设置 › 下载源 — the only place to pick it; models, 生图, 翻译包 and 语音 all follow [AppSettings.downloadSource]. */
+@Composable
+fun DownloadSourcePage(vm: SettingsViewModel, onBack: () -> Unit) {
+    val s by vm.settings.collectAsStateWithLifecycle()
+    SubpageScaffold(com.iris.localai.ui.models.SourceText.TITLE, onBack) {
+        ScrollBody {
+            SettingsGroup {
+                com.iris.localai.data.DownloadSource.entries.forEachIndexed { i, src ->
+                    if (i > 0) Divider()
+                    CheckRow(src.label, selected = s.downloadSource == src) { vm.update { it.copy(downloadSource = src) } }
+                }
+            }
+            GroupFootnote(com.iris.localai.ui.models.SourceText.SHARED)
+        }
+    }
+}
+
 @Composable
 fun LanguagePage(onBack: () -> Unit) {
     val context = LocalContext.current

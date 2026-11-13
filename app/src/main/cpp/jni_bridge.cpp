@@ -145,6 +145,8 @@ IRIS_JNI(nativeLoad)(
     lp.moe_cpu = e->moe_cpu_cfg();               // 2.5.1 (nativeSetMoe)
     lp.n_expert_used = e->expert_used_cfg();
     lp.no_prefetch = lp.moe_cpu;
+    lp.les = e->les_cfg();                       // 2.5.4 (nativeSetLes)
+    lp.les_dir = e->les_dir_cfg();
 
     jmethodID on_progress = nullptr;
     if (listener) {
@@ -180,6 +182,22 @@ IRIS_JNI(nativeSetMtp)(JNIEnv *, jobject, jlong h, jint n_draft) {
 JNIEXPORT void JNICALL
 IRIS_JNI(nativeSetMoe)(JNIEnv *, jobject, jlong h, jboolean moe_cpu, jint n_expert_used) {
     if (auto *e = engine(h)) e->set_moe(moe_cpu == JNI_TRUE, n_expert_used);
+}
+
+/** 2.5.4: LES（前瞻专家调度）开关与 manifest 目录，作用于下次 nativeLoad。 */
+JNIEXPORT void JNICALL
+IRIS_JNI(nativeSetLes)(JNIEnv *env, jobject, jlong h, jboolean on, jbyteArray jdir) {
+    if (auto *e = engine(h)) e->set_les(on == JNI_TRUE, jdir ? bytes_to_string(env, jdir) : std::string());
+}
+
+/** 2.5.4: "off" | "on" | "skip: <reason>" for the loaded model. */
+JNIEXPORT jstring JNICALL
+IRIS_JNI(nativeLesStatus)(JNIEnv *env, jobject, jlong h) {
+    auto *e = engine(h);
+    if (!e) return env->NewStringUTF("off");
+    const int st = e->les_state();
+    const std::string s = st == 1 ? "on" : st == -1 ? "skip: " + e->les_note() : "off";
+    return env->NewStringUTF(s.c_str());
 }
 
 /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>" for the loaded model. */
