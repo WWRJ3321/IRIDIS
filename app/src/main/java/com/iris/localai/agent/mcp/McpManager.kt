@@ -95,10 +95,19 @@ class McpManager(context: Context) {
         JsonRpc.json.decodeFromString(ListSerializer(McpServer.serializer()), prefs.getString("servers", null) ?: "[]")
     }.getOrDefault(emptyList())
 
+    /** 2.5.8: 编码放到单线程后台（工具多、schema 大时在主线程编码会卡到开关点不动）；界面立即用新值。 */
+    private val saver = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "mcp-save").apply { isDaemon = true } }
+
     private fun save(list: List<McpServer>) {
         _servers.value = list
-        prefs.edit().putString("servers", JsonRpc.json.encodeToString(ListSerializer(McpServer.serializer()), list)).apply()
+        saver.execute {
+            if (_servers.value !== list) return@execute // 已有更新的值排在后面，跳过这次
+            runCatching { prefs.edit().putString("servers", JsonRpc.json.encodeToString(ListSerializer(McpServer.serializer()), list)).apply() }
+        }
     }
+
+    /** 2.5.8: 一次开/关某服务的全部工具。 */
+    fun setAllTools(id: String, on: Boolean) = update(id) { s -> s.copy(disabledTools = if (on) emptySet() else s.tools.map { it.name }.toSet()) }
 
     fun update(id: String, f: (McpServer) -> McpServer) = save(_servers.value.map { if (it.id == id) f(it) else it })
 

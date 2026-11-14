@@ -52,6 +52,13 @@ object McpText {
     val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b7ad17)
     val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1462ba)
     val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e1ee4f)
+    /** 2.5.8: 超过这个数默认折叠工具列表。 */
+    const val FOLD_AT = 12
+    fun toolsTitle(on: Int, all: Int): String = com.iris.localai.I18n.s(com.iris.localai.R.string.mcp258_tools, on, all)
+    val FOLD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.mcp258_fold)
+    val UNFOLD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.mcp258_unfold)
+    val ALL_ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.mcp258_all_on)
+    val ALL_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.mcp258_all_off)
 }
 
 /** 2.3.0 ②: 设置 › 智能体 › MCP 服务 — add / test / enable / delete remote MCP servers and their tools. */
@@ -101,10 +108,29 @@ fun McpPage(onBack: () -> Unit) {
                         if (s.alwaysAllow) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5c5b0a), { mcp.update(s.id) { it.copy(alwaysAllow = false) } }, style = IrisButtonStyle.Tonal, compact = true, modifier = Modifier.weight(1f))
                         IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { deleting = s }, style = IrisButtonStyle.Tonal, compact = true, destructive = true, modifier = Modifier.weight(1f))
                     }
-                    s.tools.forEach { t ->
+                    // 2.5.8: 工具多时折叠；描述裁剪只算一次；每行带 key，开关只重组自己那行。
+                    if (s.tools.isNotEmpty()) {
+                        val descs = remember(s.tools) { s.tools.associate { it.name to com.iris.localai.agent.mcp.McpSchema.trimDescription(it.description).ifBlank { null } } }
+                        var open by remember(s.id) { mutableStateOf(s.tools.size <= McpText.FOLD_AT) }
+                        val onCount = s.tools.count { it.name !in s.disabledTools }
                         Divider()
-                        SwitchRow(t.name, t.name !in s.disabledTools, subtitle = com.iris.localai.agent.mcp.McpSchema.trimDescription(t.description).ifBlank { null }, enabled = s.enabled) { on ->
-                            mcp.update(s.id) { it.copy(disabledTools = if (on) it.disabledTools - t.name else it.disabledTools + t.name) }
+                        SettingsRow(
+                            McpText.toolsTitle(onCount, s.tools.size), subtitle = if (open) McpText.FOLD else McpText.UNFOLD,
+                            enabled = s.enabled, onClick = { open = !open },
+                        )
+                        if (open) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                                IrisButton(McpText.ALL_ON, { mcp.setAllTools(s.id, true) }, style = IrisButtonStyle.Tonal, compact = true, enabled = s.enabled, modifier = Modifier.weight(1f))
+                                IrisButton(McpText.ALL_OFF, { mcp.setAllTools(s.id, false) }, style = IrisButtonStyle.Tonal, compact = true, enabled = s.enabled, modifier = Modifier.weight(1f))
+                            }
+                            s.tools.forEach { t ->
+                                androidx.compose.runtime.key(t.name) {
+                                    Divider()
+                                    SwitchRow(t.name, t.name !in s.disabledTools, subtitle = descs[t.name], enabled = s.enabled) { on ->
+                                        mcp.update(s.id) { it.copy(disabledTools = if (on) it.disabledTools - t.name else it.disabledTools + t.name) }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

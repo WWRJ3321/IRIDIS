@@ -410,7 +410,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, onOpenDownload: () -> Unit = {}, vm: ModelsViewModel = viewModel()) {
+fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.SettingsViewModel? = null, onOpenDownload: () -> Unit = {}, onOpenGuide: () -> Unit = {}, vm: ModelsViewModel = viewModel()) {
     val c = Iris.colors
     val models by vm.models.collectAsStateWithLifecycle()
     val engine by vm.engine.collectAsStateWithLifecycle()
@@ -491,6 +491,9 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                             modifier = Modifier.fillMaxWidth().tourTarget(TourId.IMPORT),
                         )
                     }
+                    // 2.5.8: 看懂模型（科普）
+                    IrisButton(ModelGuide.TITLE + " · " + ModelGuide.ENTRY_HINT, onOpenGuide, style = IrisButtonStyle.Text, compact = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space4))
                     if (vm.mnnSupported) {
                         // 2.2.17 C: one status line; progress / pause / 换源重试 live on the card in 下载模型
                         DownloadText.statusLine(hub)?.let { line ->

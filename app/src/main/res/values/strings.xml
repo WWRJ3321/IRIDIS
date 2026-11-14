@@ -2187,4 +2187,13 @@
     <string name="v256_theme_mist">烟雨</string>
     <string name="v256_theme_sky">云霄</string>
     <string name="m256_folder">模型位置</string>
+    <string name="mcp258_tools">工具（已开 %1$d / %2$d）</string>
+    <string name="mcp258_fold">点按收起</string>
+    <string name="mcp258_unfold">点按展开逐个开关</string>
+    <string name="mcp258_all_on">全部开</string>
+    <string name="mcp258_all_off">全部关</string>
+    <string name="st258_in_app">在应用内（卸载应用会删除）</string>
+    <string name="st258_held">%1$s 正在使用，先卸载模型再移动</string>
+    <string name="md258_unfold">展开全部 %1$d 行</string>
+    <string name="md258_fold">收起</string>
 </resources>

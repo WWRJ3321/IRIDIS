@@ -2186,4 +2186,13 @@
     <string name="v256_theme_mist">Misty rain</string>
     <string name="v256_theme_sky">Sky</string>
     <string name="m256_folder">Model folder</string>
+    <string name="mcp258_tools">Tools (%1$d / %2$d on)</string>
+    <string name="mcp258_fold">Tap to collapse</string>
+    <string name="mcp258_unfold">Tap to toggle one by one</string>
+    <string name="mcp258_all_on">All on</string>
+    <string name="mcp258_all_off">All off</string>
+    <string name="st258_in_app">In app storage (removed on uninstall)</string>
+    <string name="st258_held">%1$s in use; unload the model first, then move</string>
+    <string name="md258_unfold">Show all %1$d lines</string>
+    <string name="md258_fold">Collapse</string>
 </resources>

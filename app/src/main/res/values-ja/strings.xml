@@ -2186,4 +2186,13 @@
     <string name="v256_theme_mist">煙雨</string>
     <string name="v256_theme_sky">雲霄</string>
     <string name="m256_folder">Model folder</string>
+    <string name="mcp258_tools">ツール（%1$d / %2$d 有効）</string>
+    <string name="mcp258_fold">タップで閉じる</string>
+    <string name="mcp258_unfold">タップで個別に切り替え</string>
+    <string name="mcp258_all_on">すべてオン</string>
+    <string name="mcp258_all_off">すべてオフ</string>
+    <string name="st258_in_app">アプリ内（アンインストールで削除）</string>
+    <string name="st258_held">%1$s 使用中。先にモデルをアンロードしてください</string>
+    <string name="md258_unfold">全 %1$d 行を表示</string>
+    <string name="md258_fold">閉じる</string>
 </resources>

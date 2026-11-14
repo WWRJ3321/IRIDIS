@@ -2,6 +2,7 @@ package com.iris.localai.ui.markdown
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -125,6 +126,7 @@ private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.grap
             Text(rememberInline(block.text, c), style = body, modifier = Modifier.weight(1f))
         }
         is MdBlock.Table -> TableBlock(block, c)
+        is MdBlock.Math -> MathBlock(block, c, color)
         MdBlock.Rule -> Box(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4).height(1.dp).background(c.outline))
     }
 }
@@ -140,6 +142,7 @@ private fun inline(text: String, c: IrisColors): AnnotatedString = buildAnnotate
                 is MdInline.Code -> withStyle(
                     SpanStyle(fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.S, background = c.surfaceVariant),
                 ) { append("\u2009" + n.text + "\u2009") }
+                is MdInline.Math -> withStyle(SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)) { append(TexText.render(n.tex)) }
                 is MdInline.Link -> withLink(
                     LinkAnnotation.Url(
                         n.url,
@@ -175,12 +178,43 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
                 copied = true
             }
         }
-        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = com.iris.localai.ui.theme.IrisSpace.M, bottom = IrisDimens.space12)) {
+        // 2.5.8: 长代码默认折叠，回复里不再一屏屏都是代码；生成中不折叠
+        val lines = remember(block.code) { block.code.count { it == '\n' } + 1 }
+        val foldable = block.closed && lines > CODE_FOLD_LINES
+        var expanded by remember(block.code) { mutableStateOf(false) }
+        val shown = remember(block.code, expanded, foldable) {
+            if (foldable && !expanded) block.code.lineSequence().take(CODE_PEEK_LINES).joinToString("\n") else block.code
+        }
+        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = com.iris.localai.ui.theme.IrisSpace.M, bottom = if (foldable) IrisDimens.space4 else IrisDimens.space12)) {
             Text(
-                block.code, fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, lineHeight = 20.sp, color = c.text,
+                shown, fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, lineHeight = 20.sp, color = c.text,
                 softWrap = false,
             )
         }
+        if (foldable) {
+            Text(
+                if (expanded) com.iris.localai.I18n.s(com.iris.localai.R.string.md258_fold) else com.iris.localai.I18n.s(com.iris.localai.R.string.md258_unfold, lines),
+                color = c.onAccentContainer, fontSize = com.iris.localai.ui.theme.IrisFontSize.S,
+                modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                    .padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = com.iris.localai.ui.theme.IrisSpace.M, top = IrisDimens.space4, bottom = IrisDimens.space12),
+            )
+        }
+    }
+}
+
+/** 2.5.8: 超过这么多行的代码块折叠，只露前 [CODE_PEEK_LINES] 行。 */
+internal const val CODE_FOLD_LINES = 40
+internal const val CODE_PEEK_LINES = 20
+
+/** 2.5.8: 独立公式：转成 Unicode 文本，居中，过宽可横向滑动；长按复制原 LaTeX 由消息菜单负责。 */
+@Composable
+private fun MathBlock(block: MdBlock.Math, c: IrisColors, color: androidx.compose.ui.graphics.Color) {
+    val text = remember(block.tex) { TexText.render(block.tex) }
+    Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = IrisDimens.space4), contentAlignment = Alignment.Center) {
+        Text(
+            text, color = color, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
+            fontSize = com.iris.localai.ui.theme.IrisFontSize.M, lineHeight = 26.sp, textAlign = TextAlign.Center, softWrap = false,
+        )
     }
 }
 

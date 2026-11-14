@@ -2186,4 +2186,13 @@
     <string name="v256_theme_mist">Nebelregen</string>
     <string name="v256_theme_sky">Himmel</string>
     <string name="m256_folder">Model folder</string>
+    <string name="mcp258_tools">Tools (%1$d / %2$d an)</string>
+    <string name="mcp258_fold">Tippen zum Einklappen</string>
+    <string name="mcp258_unfold">Tippen, um einzeln zu schalten</string>
+    <string name="mcp258_all_on">Alle an</string>
+    <string name="mcp258_all_off">Alle aus</string>
+    <string name="st258_in_app">Im App-Speicher (wird bei Deinstallation gelöscht)</string>
+    <string name="st258_held">%1$s in Benutzung; Modell zuerst entladen</string>
+    <string name="md258_unfold">Alle %1$d Zeilen zeigen</string>
+    <string name="md258_fold">Einklappen</string>
 </resources>

@@ -76,6 +76,8 @@ private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERAT
     MCP, KB_EDITOR,
     /** 2.5.4: 设置 › 下载源 (one setting for every download). */
     DOWNLOAD_SOURCE,
+    /** 2.5.8: 模型与加载 › 看懂模型。 */
+    MODEL_GUIDE,
     /** 2.5.0 Beta6: 关于 › 许可证 and 单个许可证全文 as real routes (the file rides in LicenseNav). */
     LICENSES, LICENSE_TEXT }
 
@@ -308,7 +310,8 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.CHARACTERS -> com.iris.localai.ui.character.CharactersPage(onBack = pop, onStartChat = { id -> chat.startCharacterChat(id); home() })
         Route.IMAGEGEN -> com.iris.localai.ui.imagegen.ImageGenScreen(onBack = pop, onSendToChat = { path -> chat.attachGeneratedImage(path); pop() })
         // 2.2.16: one 「模型与加载」 page (models + 档位 + load settings); 设置 › 模型与加载 opens it too
-        Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm, onOpenDownload = { push(Route.DOWNLOAD_MODELS) })
+        Route.MODELS -> ModelsScreen(onBack = pop, settingsVm = settingsVm, onOpenDownload = { push(Route.DOWNLOAD_MODELS) }, onOpenGuide = { push(Route.MODEL_GUIDE) })
+        Route.MODEL_GUIDE -> com.iris.localai.ui.models.ModelGuidePage(onBack = pop)
         // 2.2.17 C: full 下载模型 page; 「试一试」 puts the demo prompt into the chat input
         Route.DOWNLOAD_MODELS -> com.iris.localai.ui.models.DownloadModelsScreen(onBack = pop, onTryPrompt = { p -> chat.setDraft(p); home() })
         Route.APPEARANCE -> com.iris.localai.ui.settings.AppearancePage(settingsVm, onBack = pop)

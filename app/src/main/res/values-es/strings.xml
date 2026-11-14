@@ -2186,4 +2186,13 @@
     <string name="v256_theme_mist">Llovizna</string>
     <string name="v256_theme_sky">Cielo</string>
     <string name="m256_folder">Model folder</string>
+    <string name="mcp258_tools">Herramientas (%1$d / %2$d activas)</string>
+    <string name="mcp258_fold">Toca para contraer</string>
+    <string name="mcp258_unfold">Toca para activar una a una</string>
+    <string name="mcp258_all_on">Todas activas</string>
+    <string name="mcp258_all_off">Todas inactivas</string>
+    <string name="st258_in_app">En la app (se borra al desinstalar)</string>
+    <string name="st258_held">%1$s en uso; descarga el modelo antes de mover</string>
+    <string name="md258_unfold">Mostrar las %1$d líneas</string>
+    <string name="md258_fold">Contraer</string>
 </resources>

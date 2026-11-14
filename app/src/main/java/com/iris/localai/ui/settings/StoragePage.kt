@@ -259,7 +259,8 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- 2.1.0: models folder (Download/IRIDIS/models with 全部文件访问) ----
-    data class ModelsFolder(val path: String, val shared: Boolean, val pendingCount: Int = 0, val pendingBytes: Long = 0)
+    /** 2.5.8: [heldBytes] = 应用内但正在使用、这次移不了的模型。 */
+    data class ModelsFolder(val path: String, val shared: Boolean, val pendingCount: Int = 0, val pendingBytes: Long = 0, val heldBytes: Long = 0)
     private val _folder = MutableStateFlow<ModelsFolder?>(null)
     val folder: StateFlow<ModelsFolder?> = _folder.asStateFlow()
     val move = c.models.moveState
@@ -276,7 +277,9 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
         _folder.value = withContext(Dispatchers.IO) {
             val loc = c.models.location()
             val plan = c.models.pendingMove(inUse())
-            ModelsFolder(loc.dir.absolutePath, loc.shared, plan.move.size, plan.move.sumOf { com.iris.localai.data.ModelDirs.totalBytes(it) })
+            val all = c.models.pendingMove()
+            val bytes = plan.move.sumOf { com.iris.localai.data.ModelDirs.totalBytes(it) }
+            ModelsFolder(loc.dir.absolutePath, loc.shared, plan.move.size, bytes, all.move.sumOf { com.iris.localai.data.ModelDirs.totalBytes(it) } - bytes)
         }
     }
 
@@ -397,7 +400,8 @@ fun StoragePage(
                             subtitle = listOfNotNull(
                                 Format.bytes(e.bytes), m?.format?.label, if (e.withProjector) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dec5b6) else null,
                                 if (inUse) StorageText.IN_USE else null,
-                                if (e.external) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b044a5, com.iris.localai.data.ModelDirs.SHARED_LABEL) else null,
+                                if (e.external) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b044a5, com.iris.localai.data.ModelDirs.SHARED_LABEL)
+                                else com.iris.localai.I18n.s(com.iris.localai.R.string.st258_in_app), // 2.5.8: 算进应用占用，卸载应用会删除
                             ).joinToString(" · "),
                             subtitleMaxLines = 2,
                             trailing = {
@@ -901,6 +905,14 @@ private fun ColumnScope.ModelsFolderRows(folder: StorageViewModel.ModelsFolder?,
                 (move?.error?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_85bada, it) } ?: ""),
             subtitleMaxLines = 3,
             trailing = { IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_68d982), onMove, style = IrisButtonStyle.Text, compact = true) },
+        )
+    }
+    // 2.5.8: 正在用的应用内模型不会被移走，说清楚要先卸载
+    if (f.shared && move?.active != true && f.heldBytes > 0) {
+        Divider()
+        SettingsRow(
+            ModelFolderText.MOVE, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
+            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.st258_held, Format.bytes(f.heldBytes)), subtitleMaxLines = 2,
         )
     }
 }

@@ -2186,4 +2186,13 @@
     <string name="v256_theme_mist">धुंध</string>
     <string name="v256_theme_sky">आसमान</string>
     <string name="m256_folder">Model folder</string>
+    <string name="mcp258_tools">टूल (%1$d / %2$d चालू)</string>
+    <string name="mcp258_fold">छिपाने के लिए टैप करें</string>
+    <string name="mcp258_unfold">एक-एक करके बदलने के लिए टैप करें</string>
+    <string name="mcp258_all_on">सभी चालू</string>
+    <string name="mcp258_all_off">सभी बंद</string>
+    <string name="st258_in_app">ऐप में (अनइंस्टॉल पर हट जाएगा)</string>
+    <string name="st258_held">%1$s उपयोग में; पहले मॉडल अनलोड करें</string>
+    <string name="md258_unfold">सभी %1$d पंक्तियाँ दिखाएँ</string>
+    <string name="md258_fold">छिपाएँ</string>
 </resources>

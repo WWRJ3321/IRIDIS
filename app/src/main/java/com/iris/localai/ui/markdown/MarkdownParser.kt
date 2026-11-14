@@ -20,11 +20,14 @@ sealed interface MdBlock {
     data object Rule : MdBlock
     /** 2.2: `![alt](url)` split out of a paragraph; [url] is classified by [ImageRefs] when shown. */
     data class Image(val alt: String, val url: String) : MdBlock
+    /** 2.5.8: 独立公式（$$…$$ / \\[…\\]），按 [TexText] 转成可读文本居中显示。 */
+    data class Math(val tex: String, val closed: Boolean = true) : MdBlock
 
     enum class Align { START, CENTER, END }
 }
 
 object MarkdownParser {
+    private val SINGLE_MATH = Regex("^\\$\\$(.+)\\$\\$$|^\\\\\\[(.+)\\\\]$")
     private val HEADING = Regex("^(#{1,6})\\s+(.*?)\\s*#*\\s*$")
     private val RULE = Regex("^\\s{0,3}([-*_])(\\s*\\1){2,}\\s*$")
     private val UL = Regex("^(\\s*)([-*+])\\s+(.*)$")
@@ -68,15 +71,24 @@ object MarkdownParser {
                 continue
             }
 
-            if (t == "$$") {
+            // 2.5.8: 单行 $$…$$ / \[…\]
+            val single = SINGLE_MATH.matchEntire(t)
+            if (single != null) {
+                flush()
+                out += MdBlock.Math(single.groupValues[1].ifEmpty { single.groupValues[2] })
+                i++
+                continue
+            }
+            if (t == "$$" || t == "\\[") {
+                val close = if (t == "$$") "$$" else "\\]"
                 flush()
                 val math = StringBuilder()
                 i++
-                while (i < lines.size && lines[i].trim() != "$$") {
+                while (i < lines.size && lines[i].trim() != close) {
                     if (math.isNotEmpty()) math.append('\n')
                     math.append(lines[i]); i++
                 }
-                out += MdBlock.Code("math", math.toString(), closed = i < lines.size)
+                out += MdBlock.Math(math.toString(), closed = i < lines.size)
                 i++
                 continue
             }
@@ -204,6 +216,8 @@ sealed interface MdInline {
     data class Italic(val children: List<MdInline>) : MdInline
     data class Strike(val children: List<MdInline>) : MdInline
     data class Code(val text: String) : MdInline
+    /** 2.5.8: 行内公式（$…$ / \\(…\\)）。 */
+    data class Math(val tex: String) : MdInline
     data class Link(val text: String, val url: String) : MdInline
 }
 
@@ -216,7 +230,8 @@ object InlineParser {
             "|<(https?://[^>\\s]+)>" +                    // 7 autolink
             "|(?<![\\w*])\\*(?![\\s*])(.+?)(?<![\\s*])\\*(?![\\w*])" + // 8 italic *
             "|(?<![\\w_])_(?![\\s_])(.+?)(?<![\\s_])_(?![\\w_])" +     // 9 italic _
-            "|(?<![\\w$])\\$(?![\\s$])([^$\\n]+?)(?<!\\s)\\$(?![\\w$])", // 10 inline math
+            "|(?<![\\w$])\\$(?![\\s$])([^$\\n]+?)(?<!\\s)\\$(?![\\w$])" + // 10 inline math
+            "|\\\\\\((.+?)\\\\\\)", // 11 \\( inline math \\) (2.5.8)
     )
 
     fun parse(text: String): List<MdInline> {
@@ -234,7 +249,8 @@ object InlineParser {
                 g[7].isNotEmpty() -> MdInline.Link(g[7], g[7])
                 g[8].isNotEmpty() -> MdInline.Italic(parse(g[8]))
                 g[9].isNotEmpty() -> MdInline.Italic(parse(g[9]))
-                g[10].isNotEmpty() -> MdInline.Code(g[10])
+                g[10].isNotEmpty() -> MdInline.Math(g[10])
+                g[11].isNotEmpty() -> MdInline.Math(g[11])
                 else -> MdInline.Text(m.value)
             }
             last = m.range.last + 1

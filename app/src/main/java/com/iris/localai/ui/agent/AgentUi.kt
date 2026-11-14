@@ -201,7 +201,10 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                 )
             }
         }
-        if (step.result.isNotBlank() && plan == null) {
+        // 2.5.8: 生图进行中 → 方框流动色 + 进度条
+        val generating = step.tool == "generate_image" && step.status == StepStatus.RUNNING
+        if (generating) ImageGenLiveCard(step.result.ifBlank { StepText.status(step.status) })
+        if (step.result.isNotBlank() && plan == null && !generating) {
             Text(
                 step.result, style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space2),
