@@ -117,7 +117,8 @@ object StorageUsage {
     /** Interrupted download / import: `.part` (ModelRepository / MnnHub / HttpDownload) or another temp name. */
     fun isPartialName(name: String): Boolean {
         val n = name.lowercase()
-        return PARTIAL_SUFFIXES.any { n.endsWith(it) } || n.startsWith(".tmp") || n.startsWith(".pending-")
+        return PARTIAL_SUFFIXES.any { n.endsWith(it) } || n.startsWith(".tmp") || n.startsWith(".pending-") ||
+            com.iris.localai.data.ModelRepository.SEG_RE.matches(n) // 2.5.6
     }
 
     /**

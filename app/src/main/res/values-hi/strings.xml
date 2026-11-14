@@ -2097,8 +2097,8 @@
     <string name="v251_moe_cpu_auto">स्वचालित: मेमोरी कम होने पर चालू; एक्सपर्ट ज़रूरत पर स्टोरेज से पढ़े जाते हैं</string>
     <string name="v251_moe_cpu_sub">एक्सपर्ट CPU पर रहते हैं और ज़रूरत पर लोड होते हैं: कम RAM, धीमा। दोबारा लोड करने पर लागू</string>
     <string name="v254_les">आगे की एक्सपर्ट शेड्यूलिंग (LES)</string>
-    <string name="v254_les_auto">स्वचालित: ज़रूरत पर एक्सपर्ट लोड होने पर चालू; अगली लेयर पहले से पढ़ता है</string>
-    <string name="v254_les_sub">अगली लेयर के एक्सपर्ट पहले पढ़ता और बार-बार वाले कैश करता है, सिर्फ़ CPU। दोबारा लोड करने पर लागू</string>
+    <string name="v254_les_auto">ऑटो: ऑन-डिमांड एक्सपर्ट पर चालू; GPU चुनने पर बंद</string>
+    <string name="v254_les_sub">अगली लेयर के एक्सपर्ट पहले से पढ़ता है। केवल CPU: चालू रहने पर GPU उपयोग नहीं होता। रीलोड के बाद लागू</string>
     <string name="v251_experts">सक्रिय एक्सपर्ट</string>
     <string name="v251_experts_default">मॉडल डिफ़ॉल्ट (%1$d)</string>
     <string name="v251_experts_sub">कम = तेज़, गुणवत्ता घट सकती है। दोबारा लोड करने पर लागू</string>
@@ -2176,4 +2176,14 @@
     <string name="v255_notes_feature">नया</string>
     <string name="v255_notes_exp">प्रायोगिक</string>
     <string name="v255_notes_fix">बग सुधार</string>
+    <string name="v256_warn_popups">चेतावनी पॉप-अप</string>
+    <string name="v256_warn_popups_sub">लोड या इमेज बनाने से पहले मेमोरी कम हो तो पूछें। बंद: सीधे शुरू (क्रैश हो सकता है)</string>
+    <string name="v256_sha_bad">%1$s का sha256 मेल नहीं खाया; हटाकर फिर डाउनलोड कर रहे हैं</string>
+    <string name="v256_ctx_len">कॉन्टेक्स्ट लंबाई</string>
+    <string name="v256_ctx_len_now">अभी %1$s</string>
+    <string name="v256_ctx_len_hint">बदलने पर मॉडल फिर से लोड होगा; लंबा होने पर ज़्यादा मेमोरी लगती है</string>
+    <string name="v256_ctx_len_reload">कॉन्टेक्स्ट %1$s किया, मॉडल फिर से लोड हो रहा है</string>
+    <string name="v256_theme_mist">धुंध</string>
+    <string name="v256_theme_sky">आसमान</string>
+    <string name="m256_folder">Model folder</string>
 </resources>

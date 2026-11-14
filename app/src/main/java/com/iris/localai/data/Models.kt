@@ -257,6 +257,8 @@ data class AppSettings(
     // ---- 1.7.0 ----
     /** In-chat performance overlay (speed / CPU / memory / GPU if readable) while generating. */
     val perfOverlay: Boolean = false,
+    /** 2.5.6: 风险提示弹窗（加载前内存不足、生图内存偏紧）；false = 不弹，直接加载 / 生成。 */
+    val warnPopups: Boolean = true,
     /** Keep generating in the background (foreground service + progress notification). */
     val backgroundGeneration: Boolean = true,
     val askedNotificationPermission: Boolean = false,
@@ -349,7 +351,7 @@ data class AppSettings(
     val ggufEngine: String = "llama",
 
     // ---- 2.1.4 外观 ----
-    /** 配色: [com.iris.localai.ui.theme.IrisPalette.id] — "default" / "sakura" / "mint" / "lilac" / "cream". */
+    /** 配色: [com.iris.localai.ui.theme.IrisPalette.id] — "default" / "sakura" / "mint" / "lilac" / "cream" / "mist" / "sky". */
     val themePalette: String = "default",
     /** 2.5.0 界面风格: [com.iris.localai.ui.theme.IrisStyle.id] — "soft" (柔光, default) / "classic" (经典). */
     val uiStyle: String = "soft",

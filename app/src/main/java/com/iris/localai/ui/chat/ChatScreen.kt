@@ -868,6 +868,9 @@ fun ChatScreen(
             onCompact = vm::compactNow,
             onClearCompaction = vm::clearCompaction,
             showStrategy = settings.developerMode,
+            contextLength = vm.loadedContext().first,
+            trainContext = vm.loadedContext().second,
+            onContextLength = vm::setContextLength,
         )
     }
 }

@@ -60,7 +60,7 @@ data class ModelOverrides(
 
     fun sanitized(): ModelOverrides = copy(
         backend = Backend.parse(backend)?.name,
-        contextLength = contextLength?.coerceIn(512, 131072),
+        contextLength = contextLength?.coerceIn(CtxScale.MIN, CtxScale.MAX),
         maxNewTokens = maxNewTokens?.let { TokenLimit.sanitize(it) },
         temperature = temperature?.clampOr(0f, 2f, 0.7f),
         topP = topP?.clampOr(0.05f, 1f, 0.95f),
@@ -215,4 +215,16 @@ object TokenLimit {
      */
     fun resolve(n: Int, contextLength: Int, llama: Boolean): Int =
         if (!isUnlimited(n)) n else if (llama) UNLIMITED else contextLength.coerceAtLeast(256)
+}
+
+/** 2.5.6: context length limits (512 – 512K) and the log2 slider scale (each step doubles). */
+object CtxScale {
+    const val MIN = 512
+    const val MAX = 524288
+    val RANGE: ClosedFloatingPointRange<Float> = 9f..19f
+    fun toPos(n: Int): Float = (kotlin.math.ln(n.coerceIn(MIN, MAX).toDouble()) / kotlin.math.ln(2.0)).toFloat()
+    fun fromPos(p: Float, step: Int): Int {
+        val raw = Math.pow(2.0, p.toDouble().coerceIn(9.0, 19.0))
+        return (Math.round(raw / step) * step).toInt().coerceIn(MIN, MAX)
+    }
 }

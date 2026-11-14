@@ -68,11 +68,10 @@ fun AgentExtraSections() {
     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7ad823))
     SettingsGroup {
         Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space6)) {
-            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1e3939), subtitle = s.search.label)
-            // 2.0.0: six services no longer fit a segmented control: one check row each.
-            SearchProvider.entries.forEach { p ->
-                Divider()
-                CheckRow(p.short, selected = s.search == p) {
+            // 2.5.6: three choices, no header row (谷歌 / 必应 search in the in-app browser).
+            SearchProvider.LISTED.forEachIndexed { i, p ->
+                if (i > 0) Divider()
+                CheckRow(p.short, selected = SearchProvider.shownAs(s.search) == p) {
                     agent.settings.update { it.copy(searchProvider = p.name, searchProviderChosen = true) }
                 }
             }
@@ -98,7 +97,7 @@ fun AgentExtraSections() {
         if (skills.isEmpty()) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3d3223))
         skills.forEachIndexed { i, sk ->
             if (i > 0) Divider()
-            SettingsRow(sk.name, subtitle = sk.description.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_69d2be) } + " · " + sk.source, subtitleMaxLines = 2)
+            SettingsRow(sk.name, subtitle = sk.description.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_69d2be) }, subtitleMaxLines = 2)
         }
     }
     GroupFootnote(SkillText.FOLDER)

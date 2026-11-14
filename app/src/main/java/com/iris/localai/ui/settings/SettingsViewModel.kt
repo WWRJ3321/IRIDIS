@@ -129,6 +129,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun update(block: (AppSettings) -> AppSettings) = c.settings.update(block)
     fun resetGeneration() = c.settings.resetGeneration()
     fun resetLoadOptions() = c.settings.resetLoadOptions()
+    fun resetLoadTuning() = c.settings.resetLoadTuning()
     fun resetContext() = c.settings.resetContext()
     fun reloadModel() = viewModelScope.launch { c.engine.reload() }
 

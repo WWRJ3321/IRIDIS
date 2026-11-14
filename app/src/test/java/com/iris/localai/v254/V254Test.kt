@@ -41,7 +41,7 @@ class V254Test {
         val a = com.iris.localai.data.ModelOverrides()
         assertTrue(a.loadSignature() != a.copy(les = true).loadSignature())
         assertTrue(src("app/src/main/java/com/iris/localai/engine/EngineManager.kt")
-            .contains("les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu)"))
+            .contains("les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu, gpu = backend == Backend.GPU)"))
     }
 
     @Test fun lesWiring() {

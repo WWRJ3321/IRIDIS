@@ -212,7 +212,7 @@ class MnnHub(private val repo: ModelRepository) {
     private suspend fun fetch(cands: List<SourceUrl>, target: File, expected: Long, onBytes: (Long) -> Unit) {
         DownloadSources.fetchAny(
             cands, target, expected, onBytes,
-            fetch = { u, t, e, b -> HttpDownload.fetchOnce(u, t, e, b) },
+            fetch = { u, t, e, b -> com.iris.localai.util.ParallelDownload.fetch(u, t, e, b) }, // 2.5.6: 多线程分块 + sha256
             onSource = { c -> _state.value = _state.value.copy(source = c.label) },
             onSwitch = { msg -> _state.value = _state.value.copy(notice = msg) },
         )

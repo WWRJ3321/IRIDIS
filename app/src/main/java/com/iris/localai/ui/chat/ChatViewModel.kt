@@ -451,7 +451,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         warmJob?.cancel() // 2.4.0: a pending warm-up of the old model never delays the switch
         // 2.5.0 Beta6: memory short → ask first (仍要加载 / 取消), never a hard block.
         val v = c.engine.preflight(model)
-        if (v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) { memWarn.value = model to v.message; return@launch }
+        if (c.settings.current.warnPopups && v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) { memWarn.value = model to v.message; return@launch }
         c.engine.load(model)
     }.also { loadJob = it }
     internal val memWarn = MutableStateFlow<Pair<LocalModel, String>?>(null)
@@ -1109,6 +1109,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
      * 1.9.0: GPU first load taking long (see [com.iris.localai.engine.SlowLoadHint]): the model's
      * own backend becomes CPU and, once the running load returns, it is reloaded on the CPU.
      */
+    /** 2.5.6: (n_ctx, trained n_ctx) of the loaded model, (0, 0) when none. */
+    fun loadedContext(): Pair<Int, Int> =
+        (c.engine.state.value as? EngineState.Ready)?.details?.let { it.contextLength to it.trainContextLength } ?: (0 to 0)
+
+    /** 2.5.6: 上下文长度 from the chat's context sheet: saved for this model, then the model reloads. */
+    fun setContextLength(n: Int) {
+        val st = c.engine.state.value as? EngineState.Ready ?: return
+        c.modelConfigs.update(st.model.id) { it.copy(contextLength = n) }
+        notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len_reload, shortTokens(n))
+        viewModelScope.launch { c.engine.reload() }
+    }
+
     fun switchLoadingModelToCpu() {
         val st = c.engine.state.value as? EngineState.Loading ?: return
         val m = st.model

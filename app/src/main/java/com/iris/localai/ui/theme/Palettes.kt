@@ -13,7 +13,11 @@ enum class IrisPalette(val id: String, val label: String, val light: IrisColors,
     SAKURA("sakura", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_fe96de), SakuraLight, SakuraDark),
     MINT("mint", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_d72c6c), MintLight, MintDark),
     LILAC("lilac", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_dc19f4), LilacLight, LilacDark),
-    CREAM("cream", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_ff1a86), CreamLight, CreamDark);
+    CREAM("cream", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_ff1a86), CreamLight, CreamDark),
+    /** 2.5.6: 烟雨白 page, 淡珊瑚 bubbles, 窈蓝 accent. */
+    MIST("mist", com.iris.localai.I18n.s(com.iris.localai.R.string.v256_theme_mist), MistLight, MistDark),
+    /** 2.5.6: 云霄 blue bubbles, 乳白 chat, 玫瑰粉 accent. */
+    SKY("sky", com.iris.localai.I18n.s(com.iris.localai.R.string.v256_theme_sky), SkyLight, SkyDark);
 
     fun colors(dark: Boolean): IrisColors = if (dark) this.dark else light
 
@@ -137,3 +141,47 @@ internal val CreamDark = tinted(
     codeBackground = 0xFF211C12, segmentThumb = 0xFF3F3726, switchOffTrack = 0xFF3A3324, switchOffThumb = 0xFF8C8268,
     outline = 0x24FFF0C8, glassTint = 0x8C18140B, glassTintOpaque = 0xEB211C12,
 )
+
+// ---- 2.5.6 烟雨（烟雨白 #E3E3E5 · 淡珊瑚 #FFD0DC · 窈蓝 #7C9FCD，按对比度调深） ----
+internal val MistLight = tinted(
+    IrisLightColors,
+    background = 0xFFF4F4F6, chatBackground = 0xFFFBF9FA, surface = 0xFFFFFFFF, surfaceVariant = 0xFFFBE5EB,
+    text = 0xFF1C1E26, textSecondary = 0xFF575A68, textTertiary = 0xFF7E818D,
+    accent = 0xFF4E73A8, accentContainer = 0xFFE1E9F6, onAccentContainer = 0xFF2D4F82,
+    codeBackground = 0xFFF5F3F5, segmentThumb = 0xFFFFFFFF, switchOffTrack = 0xFFE3E3E5, switchOffThumb = 0xFFFFFFFF,
+    outline = 0x1A2A3550, glassTint = 0x99FBFAFC, glassTintOpaque = 0xF0FBFAFC,
+)
+internal val MistDark = tinted(
+    IrisDarkColors,
+    background = 0xFF0B0C11, chatBackground = 0xFF0B0C11, surface = 0xFF1A1C24, surfaceVariant = 0xFF2B2530,
+    text = 0xFFF5F6FA, textSecondary = 0xFFB7B9C6, textTertiary = 0xFF9093A1,
+    accent = 0xFF5C82BA, accentContainer = 0xFF1F2E47, onAccentContainer = 0xFFA9C4EC,
+    codeBackground = 0xFF1A1C24, segmentThumb = 0xFF3A3C48, switchOffTrack = 0xFF33353F, switchOffThumb = 0xFF878A98,
+    outline = 0x24E3E3E5, glassTint = 0x8C12131A, glassTintOpaque = 0xEB1A1C24,
+)
+
+// ---- 2.5.6 云霄（云霄 #A6D2EB · 乳白 #FFFEF3 · 玫瑰粉 #E17F93，按对比度调深） ----
+internal val SkyLight = tinted(
+    IrisLightColors,
+    background = 0xFFF2F8FB, chatBackground = 0xFFFFFEF3, surface = 0xFFFFFFFF, surfaceVariant = 0xFFDDEFF7,
+    text = 0xFF16222A, textSecondary = 0xFF4E5F69, textTertiary = 0xFF75858F,
+    accent = 0xFFC24F6A, accentContainer = 0xFFFBE2E8, onAccentContainer = 0xFF93314A,
+    codeBackground = 0xFFF1F6F9, segmentThumb = 0xFFFFFFFF, switchOffTrack = 0xFFDCE7EE, switchOffThumb = 0xFFFFFFFF,
+    outline = 0x1A1E4A66, glassTint = 0x99FAFDFF, glassTintOpaque = 0xF0FAFDFF,
+)
+internal val SkyDark = tinted(
+    IrisDarkColors,
+    background = 0xFF091015, chatBackground = 0xFF091015, surface = 0xFF162028, surfaceVariant = 0xFF1F3341,
+    text = 0xFFF2F8FB, textSecondary = 0xFFAFC2CD, textTertiary = 0xFF8A9EA9,
+    accent = 0xFFD2647E, accentContainer = 0xFF4A1E2B, onAccentContainer = 0xFFFFB3C3,
+    codeBackground = 0xFF162028, segmentThumb = 0xFF2C3F4C, switchOffTrack = 0xFF283844, switchOffThumb = 0xFF7F939E,
+    outline = 0x24D6EEFA, glassTint = 0x8C0F181F, glassTintOpaque = 0xEB162028,
+)
+
+/** 2.5.6: 烟雨 / 云霄 swatches show their three source colours as a gradient (null = plain accent dot). */
+val IrisPalette.swatchGradient: List<Color>?
+    get() = when (this) {
+        IrisPalette.MIST -> listOf(Color(0xFFE3E3E5), Color(0xFFFFD0DC), Color(0xFF7C9FCD))
+        IrisPalette.SKY -> listOf(Color(0xFFA6D2EB), Color(0xFFFFFEF3), Color(0xFFE17F93))
+        else -> null
+    }

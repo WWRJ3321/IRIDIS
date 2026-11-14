@@ -49,6 +49,8 @@ class ModelRepository(private val context: Context) {
             val files = dir.listFiles().orEmpty()
             // Remove leftovers from interrupted imports (but never one that is being written right now).
             files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts && it.name !in heldParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
+            // 2.5.6: 分块下载的块文件（<name>.part.s<起点>）跟着它的 .part 走
+            files.filter { f -> SEG_RE.matches(f.name) && f.name.substringBeforeLast(".s") !in activeParts && f.name.substringBeforeLast(".s") !in heldParts }.forEach { it.delete() }
             files.flatMap { f -> entriesOf(f, mnn) }
                 // 2.2.5: projector files (mmproj) belong to their parent model; never listed as models
                 // anywhere (home menu, 档位与加载, 模型管理, GUI pickers). They stay on disk (and move
@@ -483,6 +485,8 @@ class ModelRepository(private val context: Context) {
 
     internal companion object {
         const val PART_SUFFIX = ".part"
+        /** 2.5.6: [com.iris.localai.util.ParallelDownload] 的块文件。 */
+        val SEG_RE = Regex(".+\\.part\\.s\\d+$")
     }
 }
 

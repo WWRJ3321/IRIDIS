@@ -154,7 +154,7 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     fun load(m: LocalModel) = viewModelScope.launch {
         // 2.5.0 Beta6: memory short → ask 「仍要加载 / 取消」 first (never blocks).
         val v = c.engine.preflight(m)
-        if (v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) _memWarn.value = m to v.message
+        if (c.settings.current.warnPopups && v.level == com.iris.localai.engine.MemoryPreflight.Level.SHORT && v.message != null) _memWarn.value = m to v.message
         else c.engine.load(m)
     }
     private val _memWarn = MutableStateFlow<Pair<LocalModel, String>?>(null)
@@ -645,22 +645,18 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: com.iris.localai.ui.settings.Se
                 }
             }
             item(key = "footer", contentType = "footer") {
+                // 2.5.6: one row — where the models live, and the move button when they are app-private.
                 folder?.let { f ->
-                    GroupFootnote(f.path, monospace = true, modifier = Modifier.padding(top = IrisDimens.space4))
-                    if (!f.shared) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(start = IrisDimens.groupGutter, end = IrisDimens.groupGutter, top = IrisDimens.space4),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                com.iris.localai.I18n.s(com.iris.localai.R.string.models_5f4be2), style = IrisType.secondary, color = c.textTertiary,
-                                modifier = Modifier.weight(1f).padding(start = IrisDimens.space16),
-                            )
-                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_0b5542), { openAllFilesAccess(context) }, style = IrisButtonStyle.Text, compact = true)
-                        }
+                    Spacer(Modifier.height(IrisDimens.space12))
+                    SettingsGroup {
+                        SettingsRow(
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.m256_folder),
+                            subtitle = if (f.shared) f.path.removePrefix("/storage/emulated/0/") else com.iris.localai.I18n.s(com.iris.localai.R.string.models_5f4be2),
+                            subtitleMaxLines = 2,
+                            trailing = if (f.shared) null else ({ IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_0b5542), { openAllFilesAccess(context) }, style = IrisButtonStyle.Text, compact = true) }),
+                        )
                     }
                 }
-                GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.models_85c491))
             }
             // 2.2.16: the former 设置 › 模型与加载 (加载、下载源、默认后端、NPU、加载选项) on the same page
             if (settingsVm != null) item(key = "load-settings", contentType = "loadSettings") {

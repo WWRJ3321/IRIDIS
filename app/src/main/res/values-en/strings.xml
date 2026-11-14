@@ -2097,8 +2097,8 @@
     <string name="v251_moe_cpu_auto">Auto: on when memory is short; experts read from storage as needed</string>
     <string name="v251_moe_cpu_sub">Experts stay on the CPU and load on demand: less RAM, slower. Applies after reload</string>
     <string name="v254_les">Lookahead expert scheduling (LES)</string>
-    <string name="v254_les_auto">Auto: on with on-demand experts; prefetches next-layer experts</string>
-    <string name="v254_les_sub">Prefetches next-layer experts and caches hot ones, CPU only. Applies after reload</string>
+    <string name="v254_les_auto">Auto: on with on-demand experts; off when GPU is chosen</string>
+    <string name="v254_les_sub">Prefetches next-layer experts and caches hot ones. CPU only: GPU is not used while on. Applies after reload</string>
     <string name="v251_experts">Active experts</string>
     <string name="v251_experts_default">Model default (%1$d)</string>
     <string name="v251_experts_sub">Fewer is faster; quality may drop. Applies after reload</string>
@@ -2176,4 +2176,14 @@
     <string name="v255_notes_feature">New</string>
     <string name="v255_notes_exp">Experimental</string>
     <string name="v255_notes_fix">Bug fixes</string>
+    <string name="v256_warn_popups">Warning pop-ups</string>
+    <string name="v256_warn_popups_sub">Ask first when memory looks short before loading or generating images. Off: load or generate right away (may crash)</string>
+    <string name="v256_sha_bad">%1$s failed its sha256 check; deleted and downloading again</string>
+    <string name="v256_ctx_len">Context length</string>
+    <string name="v256_ctx_len_now">Current %1$s</string>
+    <string name="v256_ctx_len_hint">Changing it reloads the model. Longer uses more memory; lengths above what the model was trained on are hidden</string>
+    <string name="v256_ctx_len_reload">Context length set to %1$s, reloading the model</string>
+    <string name="v256_theme_mist">Misty rain</string>
+    <string name="v256_theme_sky">Sky</string>
+    <string name="m256_folder">Model folder</string>
 </resources>

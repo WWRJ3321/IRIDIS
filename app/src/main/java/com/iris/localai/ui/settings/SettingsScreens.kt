@@ -319,30 +319,7 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.vg245_title), s.visionGpu, subtitle = com.iris.localai.I18n.s(if (s.visionGpu) com.iris.localai.R.string.vg245_on else com.iris.localai.R.string.vg245_off)) { on -> vm.update { it.copy(visionGpu = on) } }
             }
 
-            // 2.1.3: every load option sits behind 「高级」 (defaults unchanged).
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_04e3d1))
-            SettingsGroup {
-                AdvancedFold("load", SettingsText.ADVANCED) {
-                    SwitchRow("Flash Attention", s.flashAttention, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c67060)) { on -> vm.update { it.copy(flashAttention = on) } }
-                    Divider()
-                    SegmentedRow(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1747d7), listOf("F16", "Q8_0", "Q4_0"), s.kvCacheType.coerceIn(0, 2),
-                        { i -> vm.update { it.copy(kvCacheType = i) } },
-                        subtitle = if (s.flashAttention) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9637e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1cf9cd),
-                    )
-                    Divider()
-                    SliderRow(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b65a0d), s.batchSize.toFloat(), 0f..2048f,
-                        if (s.batchSize == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, vm.tierBatch(s.resourceTier)) else "${s.batchSize}",
-                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6935d2),
-                    ) { v -> vm.update { it.copy(batchSize = (v / 64).toInt() * 64) } }
-                    Divider()
-                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_475473), s.useMmap, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_300fac)) { on -> vm.update { it.copy(useMmap = on) } }
-                    Divider()
-                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), s.warmup, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27)) { on -> vm.update { it.copy(warmup = on) } }
-                }
-            }
-            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a309b))
+            // 2.5.6: 加载选项 moved to 设置 › 生成 (模型与加载 manages models only).
 }
 
 /** 设置 › 生成. */
@@ -406,6 +383,34 @@ fun GenerationPage(vm: SettingsViewModel, onBack: () -> Unit) {
                 }
             }
             GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3b9f4b))
+
+            // 2.1.3: every load option sits behind 「高级」 (defaults unchanged).
+            Row(Modifier.fillMaxWidth().padding(end = IrisDimens.groupGutter), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_04e3d1)) }
+                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), vm::resetLoadTuning, style = IrisButtonStyle.Text, compact = true)
+            }
+            SettingsGroup {
+                AdvancedFold("load", SettingsText.ADVANCED) {
+                    SwitchRow("Flash Attention", s.flashAttention, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c67060)) { on -> vm.update { it.copy(flashAttention = on) } }
+                    Divider()
+                    SegmentedRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1747d7), listOf("F16", "Q8_0", "Q4_0"), s.kvCacheType.coerceIn(0, 2),
+                        { i -> vm.update { it.copy(kvCacheType = i) } },
+                        subtitle = if (s.flashAttention) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b9637e) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1cf9cd),
+                    )
+                    Divider()
+                    SliderRow(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b65a0d), s.batchSize.toFloat(), 0f..2048f,
+                        if (s.batchSize == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, vm.tierBatch(s.resourceTier)) else "${s.batchSize}",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6935d2),
+                    ) { v -> vm.update { it.copy(batchSize = (v / 64).toInt() * 64) } }
+                    Divider()
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_475473), s.useMmap, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_300fac)) { on -> vm.update { it.copy(useMmap = on) } }
+                    Divider()
+                    SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), s.warmup, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27)) { on -> vm.update { it.copy(warmup = on) } }
+                }
+            }
+            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a309b))
         }
     }
 
@@ -441,8 +446,8 @@ fun DevContextMemoryPage(vm: SettingsViewModel, onBack: () -> Unit, onOpenList: 
         run {
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0ebfd1))
             SettingsGroup {
-                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), s.contextLength.toFloat(), 1024f..32768f, "${s.contextLength} tokens", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_474626)) { v ->
-                    vm.update { it.copy(contextLength = (v / 1024).toInt() * 1024) }
+                SliderRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), com.iris.localai.data.CtxScale.toPos(s.contextLength), com.iris.localai.data.CtxScale.RANGE, "${s.contextLength} tokens", subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_474626)) { v ->
+                    vm.update { it.copy(contextLength = com.iris.localai.data.CtxScale.fromPos(v, 1024)) }
                 }
             }
 
@@ -1072,6 +1077,9 @@ fun DeveloperPage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPa
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2bb191), s.showStatusRack, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e41af)) { on -> vm.update { it.copy(showStatusRack = on) } }
                 Divider()
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a99d5a), s.perfOverlay, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8a2e4e)) { on -> vm.update { it.copy(perfOverlay = on) } }
+                Divider()
+                // 2.5.6: 风险提示弹窗开关
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.v256_warn_popups), s.warnPopups, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v256_warn_popups_sub)) { on -> vm.update { it.copy(warnPopups = on) } }
                 Divider()
                 SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2c1040), s.topBarCapsules, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65d1b5)) { on -> vm.update { it.copy(topBarCapsules = on) } }
             }

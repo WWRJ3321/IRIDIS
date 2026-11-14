@@ -1,6 +1,6 @@
 ---
 name: note-taking
-description: Keep the user's notes and to-do lists as Markdown files in the workspace.
+description: 在工作区用 Markdown 记笔记和待办
 ---
 - Notes live in notes/ (one file per topic, e.g. notes/shopping.md). To-dos in notes/todo.md as `- [ ] item`.
 - Before adding, read_file the note (or search_local for it) so nothing is overwritten.

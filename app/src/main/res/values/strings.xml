@@ -387,7 +387,7 @@
     <string name="models_d38003">还没有模型</string>
     <string name="models_22adbb">导入模型文件或文件夹，在线下载，或直接放到下方目录</string>
     <string name="models_adf29d">导入模型文件，或用数据线 / adb 直接放到下方目录</string>
-    <string name="models_5f4be2">卸载 App 时这些模型会一起被删除</string>
+    <string name="models_5f4be2">应用内部 · 卸载 App 时一起删除</string>
     <string name="models_0b5542">改存到下载目录</string>
     <string name="models_85c491">可在「下载模型」获取，或拷进上方文件夹</string>
     <string name="models_ce618f">删除模型？</string>
@@ -687,7 +687,7 @@
     <string name="agent_7ad823">联网搜索</string>
     <string name="agent_1e3939">搜索服务</string>
     <string name="agent_a31d9b">SearXNG 地址，如 https://searx.example.org</string>
-    <string name="agent_add6ac">「谷歌/必应（浏览器）」用内置浏览器搜索，遇到人机验证请在浏览器页完成一次。其他服务只收到搜索词。自建 SearXNG 需公网地址。</string>
+    <string name="agent_add6ac">谷歌、必应在内置浏览器里搜，遇到人机验证在浏览器页完成一次；失败时自动改用必应接口。新闻直接查必应新闻。</string>
     <string name="agent_3d3223">没有技能</string>
     <string name="agent_69d2be">（无说明）</string>
     <string name="agent_b56fbe">备份与日志</string>
@@ -715,13 +715,13 @@
     <string name="agent_05df6c">\n包含 API 密钥</string>
     <string name="agent_f7cd9b">\n\n现在的对话、记忆和设置会被备份里的内容替换，导入完成后 IRIDIS 会自动重启。</string>
     <string name="agent_c48c91">自定义技能放在 %1$s/&lt;名字&gt;/SKILL.md</string>
-    <string name="agent_0062b5">（应用私有目录模式下在应用内部）。智能体只能用「技能」工具读取，不能修改。</string>
+    <string name="agent_0062b5">（只读）</string>
     <string name="agent_82dbde">多步任务先列步骤，你确认后再执行</string>
     <string name="agent_088993">工具用法用到时再载入，省上下文、首字更快</string>
     <string name="agent_7b8eeb">工具、权限与工作区</string>
     <string name="agent_7228e9">输入框也可切换；关闭则不调用工具</string>
     <string name="agent_171de9">一次回复最多调用几次工具</string>
-    <string name="agent_08d02e">点工具右侧的权限可切换：允许 = 直接执行，询问 = 每次确认，拒绝 = 不执行。</string>
+    <string name="agent_08d02e">允许 = 直接执行，询问 = 每次确认，拒绝 = 不执行</string>
     <string name="agent_82e503">工具与权限</string>
     <string name="agent_3c92e3">智能体只能访问这个工作区；修改前自动备份，可撤销最近 20 步。</string>
     <string name="agent_c637d6">工作区位置</string>
@@ -2064,7 +2064,7 @@
     <string name="v250_api_clear">清除</string>
     <string name="v250_mem_info">索引与预算</string>
     <string name="v250_tool_files">读写文件与本地搜索</string>
-    <string name="v250_tool_files_sub">读取、写入工作区文件，并在工作区里搜索；一个开关同时控制。「询问」= 写入前询问，读取与搜索直接允许</string>
+    <string name="v250_tool_files_sub">读写工作区文件、搜索。「询问」只在写入前问</string>
     <string name="v250_mem_title">内存可能不足</string>
     <string name="v250_mem_load">仍要加载</string>
     <string name="v250_rec_title">为本机推荐</string>
@@ -2098,8 +2098,8 @@
     <string name="v251_moe_cpu_auto">自动：内存不足时开启，专家从存储按需读取</string>
     <string name="v251_moe_cpu_sub">专家留在 CPU 按需读取，省内存但较慢。重新加载后生效</string>
     <string name="v254_les">前瞻专家调度（LES）</string>
-    <string name="v254_les_auto">自动：专家按需加载时开启，预读下一层专家</string>
-    <string name="v254_les_sub">预读下一层专家并缓存常用专家，仅 CPU。重新加载后生效</string>
+    <string name="v254_les_auto">自动：专家按需加载时开启；选了 GPU 时不开</string>
+    <string name="v254_les_sub">预读下一层专家并缓存常用专家。开启后只用 CPU，GPU 不生效。重新加载后生效</string>
     <string name="v251_experts">激活专家数</string>
     <string name="v251_experts_default">模型默认（%1$d）</string>
     <string name="v251_experts_sub">越少越快，质量可能下降。重新加载后生效</string>
@@ -2177,4 +2177,14 @@
     <string name="v255_notes_feature">新功能</string>
     <string name="v255_notes_exp">实验功能</string>
     <string name="v255_notes_fix">Bug 修复</string>
+    <string name="v256_warn_popups">风险提示弹窗</string>
+    <string name="v256_warn_popups_sub">加载前内存不足、生图内存偏紧时先弹窗确认。关掉后直接加载或生成，可能闪退</string>
+    <string name="v256_sha_bad">%1$s 校验失败（sha256 不符），已删除并重新下载</string>
+    <string name="v256_ctx_len">上下文长度</string>
+    <string name="v256_ctx_len_now">当前 %1$s</string>
+    <string name="v256_ctx_len_hint">改完会重新加载模型；越长越占内存，超过模型训练长度的不显示</string>
+    <string name="v256_ctx_len_reload">上下文长度改为 %1$s，正在重新加载模型</string>
+    <string name="v256_theme_mist">烟雨</string>
+    <string name="v256_theme_sky">云霄</string>
+    <string name="m256_folder">模型位置</string>
 </resources>

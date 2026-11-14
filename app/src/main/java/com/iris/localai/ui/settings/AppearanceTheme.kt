@@ -1,5 +1,8 @@
 package com.iris.localai.ui.settings
 
+import androidx.compose.foundation.horizontalScroll
+import com.iris.localai.ui.theme.swatchGradient
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -47,8 +50,8 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(bottom = com.iris.localai.ui.theme.IrisSpace.M)) {
         SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = com.iris.localai.ui.icons.IrisIcons.Contrast)
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding).selectableGroup(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = IrisDimens.rowPadding).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
             val selected = IrisPalette.of(selectedId)
             for (p in IrisPalette.entries) {
@@ -66,7 +69,7 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
                             .then(if (isSel) Modifier.border(IrisDimens.space2, p.colors(c.isDark).accent, CircleShape) else Modifier)
                             .padding(IrisDimens.space4)
                             .clip(CircleShape)
-                            .background(p.colors(c.isDark).accent),
+                            .then(p.swatchGradient?.let { g -> Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(g)) } ?: Modifier.background(p.colors(c.isDark).accent)),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isSel) Icon(com.iris.localai.ui.icons.IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp))

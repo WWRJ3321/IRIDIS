@@ -97,6 +97,21 @@ object AgentText {
         com.iris.localai.agent.ReadFileTool, com.iris.localai.agent.WriteFileTool, com.iris.localai.agent.SearchLocalTool,
     )
     /** Tools shown on their own row: not the merged file tools, not 长期记忆 (on 上下文、记忆和知识库), not the internal 载入工具. */
+    /** 2.5.6: one short line per tool in 设置 (the model still gets the full [AgentTool.description]). */
+    private val SHORT = mapOf(
+        "plan" to "多步任务先列计划",
+        "web_search" to "搜网页和新闻",
+        "web_fetch" to "打开网页读文字",
+        "browser" to "在内置浏览器里点击、输入",
+        "screen" to "看屏幕、代你点按（需无障碍）",
+        "skill" to "按需读取技能说明",
+        "generate_image" to "本机生图，存到工作区",
+        "phone" to "闹钟、日历、打开 App 等手机操作",
+        "kb_search" to "检索知识库",
+        "recall" to "翻找较早的对话记录",
+    )
+    fun shortDesc(tool: com.iris.localai.agent.AgentTool): String =
+        SHORT[tool.name]?.takeIf { com.iris.localai.I18n.uiLang() == "zh-CN" } ?: tool.description
     fun listedTools(): List<com.iris.localai.agent.AgentTool> = AgentTools.all.filter { t ->
         FILE_TOOLS.none { it.name == t.name } && t.name != com.iris.localai.agent.MemoryTool.name && t.name != com.iris.localai.agent.ActivateTool.name
     }
@@ -219,7 +234,7 @@ fun AgentSettingsPage(
                 AgentText.listedTools().forEach { tool ->
                     Divider()
                     ToolRow(
-                        label = tool.label, description = tool.description, on = s.isEnabled(tool), permission = s.permission(tool),
+                        label = tool.label, description = AgentText.shortDesc(tool), on = s.isEnabled(tool), permission = s.permission(tool),
                         onToggle = { v -> agent.settings.update { it.copy(enabled = it.enabled + (tool.name to v)) } },
                         onPermission = { p -> agent.settings.update { it.copy(permissions = it.permissions + (tool.name to p.name)) } },
                     )
@@ -269,7 +284,7 @@ fun AgentSettingsPage(
                     SettingsRow(
                         AgentText.LOCATION, icon = com.iris.localai.ui.icons.IrisIcons.Folder,
                         subtitle = AgentText.path(WorkspaceResolver.display(ws)) + (ws.fallbackReason?.let { "\n⚠ $it" } ?: "") +
-                            (legacyHint?.let { "\n⚠ $it" } ?: "") + "\n" + AgentText.LOCATION_NOTE,
+                            (legacyHint?.let { "\n⚠ $it" } ?: ""),
                         subtitleColor = if (ws.fallbackReason != null || legacyHint != null) Iris.colors.danger else Iris.colors.textTertiary,
                     )
                     val locs = WorkspaceLocation.entries
@@ -331,7 +346,8 @@ fun AgentSettingsPage(
                             }.onFailure { runCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
                         },
                     )
-                    if (ws.location == WorkspaceLocation.DOWNLOADS) {
+                    // 2.5.6: the SAF grant is only a fallback — hidden once 全部文件访问 is on.
+                    if (ws.location == WorkspaceLocation.DOWNLOADS && !allFiles) {
                     Divider()
                     SettingsRow(
                         AgentText.SAF, icon = com.iris.localai.ui.icons.IrisIcons.Folder,

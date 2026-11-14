@@ -62,7 +62,7 @@ class V214ThemesTest {
     }
 
     @Test fun palettesHaveLightAndDarkVariants() {
-        assertEquals(listOf("默认", "樱花粉", "薄荷绿", "丁香紫", "奶油黄"), IrisPalette.entries.map { it.label })
+        assertEquals(listOf("默认", "樱花粉", "薄荷绿", "丁香紫", "奶油黄", "烟雨", "云霄"), IrisPalette.entries.map { it.label })
         assertEquals(IrisPalette.entries.size, IrisPalette.entries.map { it.id }.toSet().size)
         for (p in IrisPalette.entries) {
             assertFalse(p.label, p.colors(false).isDark)

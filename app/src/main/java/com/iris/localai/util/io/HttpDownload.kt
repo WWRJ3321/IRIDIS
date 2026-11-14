@@ -27,7 +27,10 @@ object HttpDownload {
     }
 
     /** One attempt (callers own the retry / mirror policy). [onBytes] gets the bytes on disk so far. */
-    suspend fun fetchOnce(url0: String, target: File, expected: Long, onBytes: (Long) -> Unit) {
+    suspend fun fetchOnce(url0: String, target: File, expected: Long, onBytes: (Long) -> Unit) = fetchOnce(url0, target, expected, null, onBytes)
+
+    /** 2.5.6: [sha256] (lower-case hex) = check the whole file before it is renamed; null = size only. */
+    suspend fun fetchOnce(url0: String, target: File, expected: Long, sha256: String?, onBytes: (Long) -> Unit) {
         val range = splitRange(url0)
         val url = range?.first ?: url0
         val base = range?.second ?: 0L
@@ -35,6 +38,7 @@ object HttpDownload {
         if (part.exists() && part.length() > expected) part.delete()
         val offset = if (part.exists()) part.length() else 0L
         if (expected > 0 && offset == expected) { // finished earlier, rename failed / was interrupted
+            verify(part, sha256)
             if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, target.name))
             onBytes(expected)
             return
@@ -73,9 +77,42 @@ object HttpDownload {
         } finally {
             conn.disconnect()
         }
+        verify(part, sha256)
         if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, target.name))
         onBytes(expected)
     }
+
+    /** 2.5.6: the whole file did not hash to the source's sha256: the `.part` is deleted so the next try starts clean. */
+    class ChecksumMismatch(msg: String) : IOException(msg)
+
+    /** 2.5.6: sha256 of [part] against [sha256] (null = skip). A mismatch deletes [part] and throws [ChecksumMismatch]. */
+    suspend fun verify(part: File, sha256: String?) {
+        if (sha256 == null) return
+        val got = sha256Of(part)
+        if (!got.equals(sha256, ignoreCase = true)) {
+            part.delete()
+            throw ChecksumMismatch(com.iris.localai.I18n.s(com.iris.localai.R.string.v256_sha_bad, part.name.removeSuffix(PART)))
+        }
+    }
+
+    suspend fun sha256Of(f: File): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { ins ->
+            val buf = ByteArray(1 shl 20)
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val n = ins.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private val HEX64 = Regex("^[0-9a-fA-F]{64}$")
+
+    /** 2.5.6: HF / hf-mirror put the LFS sha256 in `X-Linked-Etag` of the resolve hop (CDN ETags may be other hashes: never used); anything else → null. Pure. */
+    fun shaFromEtag(v: String?): String? = v?.trim()?.removePrefix("W/")?.trim('"')?.takeIf { HEX64.matches(it) }?.lowercase()
 
     /** 2.2.16: full size of the remote file from a 206 Content-Range or a 200 Content-Length; null = unknown. Pure. */
     fun remoteTotal(contentRange: String?, contentLength: Long, partial: Boolean, offset: Long): Long? {
@@ -90,8 +127,13 @@ object HttpDownload {
      * GET with manual redirect handling (so a Range header survives cross-host redirects).
      * 2.2.16: read timeout = 20 s without bytes (a stall → the caller moves to the next source).
      */
-    fun open(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8, timeoutMs: Int = 0): HttpURLConnection {
+    fun open(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8, timeoutMs: Int = 0): HttpURLConnection =
+        openMeta(start, rangeFrom, rangeTo, maxRedirects, timeoutMs).first
+
+    /** 2.5.6: [open] plus the sha256 any hop advertised ([shaFromEtag]). */
+    fun openMeta(start: String, rangeFrom: Long, rangeTo: Long = -1L, maxRedirects: Int = 8, timeoutMs: Int = 0): Pair<HttpURLConnection, String?> {
         var url = start
+        var sha: String? = null
         repeat(maxRedirects) {
             val c = (URL(url).openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = false
@@ -102,12 +144,13 @@ object HttpDownload {
                 else if (rangeFrom > 0) setRequestProperty("Range", "bytes=$rangeFrom-")
             }
             val code = try { c.responseCode } catch (e: IOException) { c.disconnect(); throw e }
+            if (sha == null) sha = shaFromEtag(c.getHeaderField("X-Linked-Etag"))
             if (code in 300..399) {
                 val loc = c.getHeaderField("Location")
                 c.disconnect()
                 url = URL(URL(url), loc ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_fcc7a6))).toString()
             } else {
-                return c
+                return c to sha
             }
         }
         throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_9b8100))

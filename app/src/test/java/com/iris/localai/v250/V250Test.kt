@@ -59,7 +59,7 @@ class V250Test {
         assertTrue(IrisStyle.isValid("soft")); assertFalse(IrisStyle.isValid(""))
         assertEquals("soft", com.iris.localai.data.AppSettings().uiStyle)
         // palettes untouched by the style switch (source check: IrisPalette needs Compose at class init)
-        assertEquals(5, Regex("^    [A-Z]+\\(\"[a-z]+\", ", RegexOption.MULTILINE).findAll(src("app/src/main/java/com/iris/localai/ui/theme/Palettes.kt")).count())
+        assertEquals(7, Regex("^    [A-Z]+\\(\"[a-z]+\", ", RegexOption.MULTILINE).findAll(src("app/src/main/java/com/iris/localai/ui/theme/Palettes.kt")).count())
     }
 
     // ---- 2 structure: Beta4 restores the 2.4.6 settings structure (only visual changes stay) ----

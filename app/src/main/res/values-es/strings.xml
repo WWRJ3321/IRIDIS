@@ -2097,8 +2097,8 @@
     <string name="v251_moe_cpu_auto">Auto: activo si falta memoria; los expertos se leen según se necesitan</string>
     <string name="v251_moe_cpu_sub">Los expertos quedan en la CPU y se cargan bajo demanda: menos RAM, más lento. Se aplica al recargar</string>
     <string name="v254_les">Planificación anticipada de expertos (LES)</string>
-    <string name="v254_les_auto">Auto: activo con expertos bajo demanda; precarga la capa siguiente</string>
-    <string name="v254_les_sub">Precarga expertos de la capa siguiente y guarda los frecuentes, solo CPU. Se aplica al recargar</string>
+    <string name="v254_les_auto">Auto: activo con expertos bajo demanda; no con GPU</string>
+    <string name="v254_les_sub">Precarga expertos de la siguiente capa y guarda los frecuentes. Solo CPU: la GPU no se usa. Se aplica al recargar</string>
     <string name="v251_experts">Expertos activos</string>
     <string name="v251_experts_default">Predeterminado del modelo (%1$d)</string>
     <string name="v251_experts_sub">Menos es más rápido; la calidad puede bajar. Se aplica al recargar</string>
@@ -2176,4 +2176,14 @@
     <string name="v255_notes_feature">Nuevo</string>
     <string name="v255_notes_exp">Experimental</string>
     <string name="v255_notes_fix">Correcciones</string>
+    <string name="v256_warn_popups">Avisos emergentes</string>
+    <string name="v256_warn_popups_sub">Preguntar si falta memoria antes de cargar o generar imágenes. Desactivado: empieza directamente (puede cerrarse)</string>
+    <string name="v256_sha_bad">%1$s no pasó la verificación sha256; se borra y se vuelve a descargar</string>
+    <string name="v256_ctx_len">Longitud de contexto</string>
+    <string name="v256_ctx_len_now">Actual %1$s</string>
+    <string name="v256_ctx_len_hint">Al cambiarla se recarga el modelo. Más larga usa más memoria</string>
+    <string name="v256_ctx_len_reload">Contexto cambiado a %1$s, recargando el modelo</string>
+    <string name="v256_theme_mist">Llovizna</string>
+    <string name="v256_theme_sky">Cielo</string>
+    <string name="m256_folder">Model folder</string>
 </resources>

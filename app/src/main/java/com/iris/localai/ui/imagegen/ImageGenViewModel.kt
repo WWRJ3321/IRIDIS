@@ -221,6 +221,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
         val req = s.request()
         val model = s.model
+        // 2.5.6: 关了风险提示弹窗 = 跳过内存预检，直接生成
+        if (!container.settings.current.warnPopups) engines.sdEngine().forceOnce = true
         _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, lowMem = false, lastSeed = null,
             progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {

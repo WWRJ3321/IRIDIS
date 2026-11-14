@@ -43,7 +43,7 @@ class V200BrowserSearchTest {
         val chosen = AgentSettings(searchProvider = "AUTO", searchProviderChosen = true)
         assertEquals(SearchProvider.AUTO, chosen.migrated().search)
         // short picker labels
-        assertEquals("谷歌（浏览器）", SearchProvider.GOOGLE_BROWSER.short)
+        assertEquals("谷歌", SearchProvider.GOOGLE_BROWSER.short)
         assertTrue(SearchProvider.entries.all { it.short.length <= 12 })
     }
 

@@ -2097,8 +2097,8 @@
     <string name="v251_moe_cpu_auto">自動：メモリ不足時にオン、エキスパートはストレージから随時読み込み</string>
     <string name="v251_moe_cpu_sub">エキスパートを CPU に置き随時読み込み。省メモリだが低速。再読み込み後に有効</string>
     <string name="v254_les">先読みエキスパートスケジューリング（LES）</string>
-    <string name="v254_les_auto">自動：オンデマンド読み込み時にオン、次層のエキスパートを先読み</string>
-    <string name="v254_les_sub">次層のエキスパートを先読みし頻出分をキャッシュ、CPU のみ。再読み込み後に有効</string>
+    <string name="v254_les_auto">自動：エキスパート随時読み込み時にオン、GPU 選択時はオフ</string>
+    <string name="v254_les_sub">次層のエキスパートを先読みしよく使うものをキャッシュ。オン中は CPU のみで GPU は使われません。再読み込み後に反映</string>
     <string name="v251_experts">アクティブなエキスパート数</string>
     <string name="v251_experts_default">モデル既定（%1$d）</string>
     <string name="v251_experts_sub">少ないほど高速、品質は下がる場合あり。再読み込み後に有効</string>
@@ -2176,4 +2176,14 @@
     <string name="v255_notes_feature">新機能</string>
     <string name="v255_notes_exp">実験的機能</string>
     <string name="v255_notes_fix">バグ修正</string>
+    <string name="v256_warn_popups">警告ポップアップ</string>
+    <string name="v256_warn_popups_sub">読み込み・画像生成の前にメモリ不足なら確認します。オフにするとすぐ実行（クラッシュの恐れ）</string>
+    <string name="v256_sha_bad">%1$s の sha256 検証に失敗。削除して再ダウンロードします</string>
+    <string name="v256_ctx_len">コンテキスト長</string>
+    <string name="v256_ctx_len_now">現在 %1$s</string>
+    <string name="v256_ctx_len_hint">変更するとモデルを再読み込みします。長いほどメモリを使います</string>
+    <string name="v256_ctx_len_reload">コンテキスト長を %1$s に変更、モデルを再読み込み中</string>
+    <string name="v256_theme_mist">煙雨</string>
+    <string name="v256_theme_sky">雲霄</string>
+    <string name="m256_folder">Model folder</string>
 </resources>

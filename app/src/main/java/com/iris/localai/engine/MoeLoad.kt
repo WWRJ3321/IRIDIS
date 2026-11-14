@@ -21,9 +21,12 @@ object MoeLoad {
 
     fun lesSupported(info: GgufQuant.Info?): Boolean = info?.moe == true && info.arch == LES_ARCH
 
-    /** 2.5.4: LES 设置 null = 自动：专家按需加载生效时开；true/false = 用户指定（架构不符一律不开）。 */
-    fun lesActive(setting: Boolean?, info: GgufQuant.Info?, moeActive: Boolean): Boolean =
-        lesSupported(info) && (setting ?: moeActive)
+    /**
+     * 2.5.4: LES 设置 null = 自动：专家按需加载生效时开；true/false = 用户指定（架构不符一律不开）。
+     * 2.5.6: 自动时后端是 GPU 就不开（LES 只走 CPU，会让 GPU 失效）；用户手动打开仍照开。
+     */
+    fun lesActive(setting: Boolean?, info: GgufQuant.Info?, moeActive: Boolean, gpu: Boolean = false): Boolean =
+        lesSupported(info) && (setting ?: (moeActive && !gpu))
 
     /** 非专家张量字节（总张量未知时用文件大小近似）。 */
     fun nonExpertBytes(info: GgufQuant.Info, fileBytes: Long): Long =

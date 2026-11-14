@@ -2097,8 +2097,8 @@
     <string name="v251_moe_cpu_auto">Auto: an bei knappem Speicher; Experten werden bei Bedarf gelesen</string>
     <string name="v251_moe_cpu_sub">Experten bleiben auf der CPU und laden bei Bedarf: weniger RAM, langsamer. Gilt nach Neuladen</string>
     <string name="v254_les">Vorausschauende Experten-Planung (LES)</string>
-    <string name="v254_les_auto">Auto: an bei Experten auf Abruf; lädt Experten der nächsten Schicht vor</string>
-    <string name="v254_les_sub">Lädt Experten der nächsten Schicht vor und cacht häufige, nur CPU. Gilt nach Neuladen</string>
+    <string name="v254_les_auto">Auto: an bei Experten auf Abruf; aus bei GPU</string>
+    <string name="v254_les_sub">Lädt Experten der nächsten Schicht vor und cacht häufige. Nur CPU: GPU wird dann nicht genutzt. Wirkt nach Neuladen</string>
     <string name="v251_experts">Aktive Experten</string>
     <string name="v251_experts_default">Modellstandard (%1$d)</string>
     <string name="v251_experts_sub">Weniger ist schneller, Qualität kann sinken. Gilt nach Neuladen</string>
@@ -2176,4 +2176,14 @@
     <string name="v255_notes_feature">Neu</string>
     <string name="v255_notes_exp">Experimentell</string>
     <string name="v255_notes_fix">Fehlerbehebungen</string>
+    <string name="v256_warn_popups">Warn-Pop-ups</string>
+    <string name="v256_warn_popups_sub">Bei knappem Speicher vor dem Laden oder Bildgenerieren nachfragen. Aus: sofort starten (kann abstürzen)</string>
+    <string name="v256_sha_bad">%1$s: sha256-Prüfung fehlgeschlagen, gelöscht und neu geladen</string>
+    <string name="v256_ctx_len">Kontextlänge</string>
+    <string name="v256_ctx_len_now">Aktuell %1$s</string>
+    <string name="v256_ctx_len_hint">Eine Änderung lädt das Modell neu. Länger braucht mehr Speicher</string>
+    <string name="v256_ctx_len_reload">Kontextlänge auf %1$s gesetzt, Modell wird neu geladen</string>
+    <string name="v256_theme_mist">Nebelregen</string>
+    <string name="v256_theme_sky">Himmel</string>
+    <string name="m256_folder">Model folder</string>
 </resources>

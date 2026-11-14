@@ -65,7 +65,7 @@ import java.util.Locale
  * The synthesizer speaks with the cloned voice whenever cloneVoiceId names a saved voice and ZipVoice is
  * installed, before any imported model or built-in pack — so the radios must use the same rule.
  */
-internal object VoiceChoice {
+object VoiceChoice {
     fun cloneActive(cloneId: String, voiceIds: Collection<String>, zipInstalled: Boolean): Boolean =
         cloneId.isNotEmpty() && zipInstalled && cloneId in voiceIds
 
@@ -102,15 +102,11 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
     SettingsGroup {
         PackRow(
             pack, state, vm.packBytes(pack), selected = cloneOn,
-            onUse = {}, onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
+            // 2.5.6: one radio group with the voices above — tapping ZipVoice picks the first saved voice (none yet → 新建).
+            onUse = { voices.firstOrNull()?.let { vm.useClone(it.id) } ?: run { creating = true } }, onDownload = { vm.download(pack) }, onCancel = { vm.cancelDownload(pack) }, onDelete = { vm.deletePack(pack) },
         )
         if (installed) {
-            Divider()
-            VoiceChoiceRow(
-                title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bf998), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_41db47),
-                selected = !cloneOn,
-                onSelect = { vm.useClone("") },
-            )
+            // 2.5.6: no 「不用克隆音色」 row — picking a model above turns the cloned voice off (VoiceChoice.pickPack).
             voices.forEach { v ->
                 Divider()
                 val playing = previewTarget == v.id && preview != SettingsViewModel.Preview.Idle && preview !is SettingsViewModel.Preview.Failed

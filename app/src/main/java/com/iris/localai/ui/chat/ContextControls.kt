@@ -100,6 +100,10 @@ fun ContextSheet(
     onClearCompaction: () -> Unit = {},
     /** 2.2.9 E: 本对话的策略 only with 开发者选项 › 开发者模式 on. */
     showStrategy: Boolean = false,
+    /** 2.5.6: 上下文长度 of the loaded model (0 = nothing loaded); [trainContext] caps the choices. */
+    contextLength: Int = 0,
+    trainContext: Int = 0,
+    onContextLength: ((Int) -> Unit)? = null,
 ) {
     val c = Iris.colors
     IrisSheet(onDismiss = onDismiss) {
@@ -115,6 +119,19 @@ fun ContextSheet(
                 val r = CornerRadius(size.height / 2)
                 drawRoundRect(track, cornerRadius = r)
                 drawRoundRect(fill, Offset.Zero, Size(size.width * usage.fraction, size.height), r)
+            }
+        }
+        if (onContextLength != null && contextLength > 0) {
+            val opts = ContextChoices.options(contextLength, trainContext)
+            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len))
+            SettingsGroup {
+                com.iris.localai.ui.components.SegmentedRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len_now, shortTokens(contextLength)),
+                    opts.map { shortTokens(it) },
+                    opts.indexOf(contextLength).coerceAtLeast(0),
+                    onSelect = { i -> val n = opts[i]; if (n != contextLength) { onContextLength(n); onDismiss() } },
+                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len_hint),
+                )
             }
         }
         if (showStrategy || usage.overridden) {
@@ -180,6 +197,19 @@ private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enab
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
             if (selected) Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
         }
+    }
+}
+
+/** 2.5.6: context lengths offered in the context sheet: at most 5, around the current one, never above the trained length. */
+object ContextChoices {
+    val ALL = listOf(2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288)
+    fun options(current: Int, train: Int): List<Int> {
+        val cap = if (train > 0) train else ALL.last()
+        val list = (ALL.filter { it <= cap } + current).filter { it > 0 }.distinct().sorted()
+        if (list.size <= 5) return list
+        val i = list.indexOf(current)
+        val start = (i - 2).coerceIn(0, list.size - 5)
+        return list.subList(start, start + 5)
     }
 }
 

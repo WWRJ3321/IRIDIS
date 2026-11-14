@@ -222,7 +222,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
         } else if (!planStep) com.iris.localai.ui.components.ScrollSafeFold(open) {
             SelectionContainer {
                 Text(
-                    step.detail.take(4000), style = IrisType.monoSmall, color = c.text,
+                    com.iris.localai.agent.SearchText.forPeople(step.tool, step.detail).take(4000), style = IrisType.monoSmall, color = c.text,
                     modifier = Modifier
                         .padding(top = IrisDimens.space8)
                         .fillMaxWidth()

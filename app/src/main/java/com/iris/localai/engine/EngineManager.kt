@@ -499,7 +499,7 @@ class EngineManager(
                                 moeCpu = moeCpu && model.format == ModelFormat.GGUF,
                                 expertUsed = if (model.format == ModelFormat.GGUF) MoeLoad.expertUsed(cfg.expertUsed, quant) else 0,
                                 // 2.5.4: LES 前瞻专家调度（安全模式不开）
-                                les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu),
+                                les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu, gpu = backend == Backend.GPU),
                             ),
                         ) { p ->
                             // Native loaders report progress very often; only publish visible changes.

@@ -227,8 +227,8 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c1185, fixed), enabled = false)
                 } else {
                     OvSlider(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), eff.contextLength.toFloat(), o.contextLength == null, 512f..32768f, "${eff.contextLength}",
-                        onChange = { v -> set { it.copy(contextLength = ((v / 512).toInt() * 512).coerceAtLeast(512)) } },
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), com.iris.localai.data.CtxScale.toPos(eff.contextLength), o.contextLength == null, com.iris.localai.data.CtxScale.RANGE, "${eff.contextLength}",
+                        onChange = { v -> set { it.copy(contextLength = com.iris.localai.data.CtxScale.fromPos(v, 512)) } },
                         onReset = { set { it.copy(contextLength = null) } },
                     )
                 }
@@ -251,7 +251,9 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     // 2.5.4: LES 前瞻专家调度（只 qwen35moe）
                     if (com.iris.localai.engine.MoeLoad.lesSupported(mi)) {
                         Divider()
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: (eff.moeCpu ?: false), o.les == null,
+                        // 2.5.6: 手动选了 GPU 时，自动不开 LES
+                        val gpuPicked = o.backend == com.iris.localai.engine.Backend.GPU.name
+                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: ((eff.moeCpu ?: false) && !gpuPicked), o.les == null,
                             subtitle = com.iris.localai.I18n.s(if (o.les == null) com.iris.localai.R.string.v254_les_auto else com.iris.localai.R.string.v254_les_sub),
                             onChange = { on -> set { it.copy(les = on) } }, onReset = { set { it.copy(les = null) } })
                     }

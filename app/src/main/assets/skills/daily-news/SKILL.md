@@ -1,6 +1,6 @@
 ---
 name: daily-news
-description: Summarize today's news on a topic (or general headlines) in Chinese.
+description: 汇总今日新闻（可指定主题），中文回答
 ---
 1. Call web_search with the topic and "新闻" (news=true). Without a topic use "今日要闻".
 2. If the results are thin, search once more with different words (for example in English).

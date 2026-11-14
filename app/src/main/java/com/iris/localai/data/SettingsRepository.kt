@@ -56,6 +56,12 @@ class SettingsRepository(context: Context) {
         )
     }
 
+    /** 2.5.6: 「恢复默认」 of 加载选项 on 设置 › 生成 (backends stay; they live on 模型与加载). */
+    fun resetLoadTuning() = update {
+        val d = AppSettings()
+        it.copy(flashAttention = d.flashAttention, kvQuant = d.kvQuant, kvCacheType = d.kvCacheType.takeIf { k -> k >= 0 } ?: if (d.kvQuant) 1 else 0, batchSize = d.batchSize, useMmap = d.useMmap, warmup = d.warmup)
+    }
+
     /** 1.7.8: 「恢复默认」 on 设置 › 上下文与记忆. */
     fun resetContext() = update {
         val d = AppSettings()
@@ -90,7 +96,7 @@ fun AppSettings.sanitized(): AppSettings {
         minP = minP.clampOr(0f, 0.5f, d.minP),
         repeatPenalty = repeatPenalty.clampOr(1f, 2f, d.repeatPenalty),
         maxNewTokens = TokenLimit.sanitize(maxNewTokens),
-        contextLength = contextLength.coerceIn(512, 131072),
+        contextLength = contextLength.coerceIn(CtxScale.MIN, CtxScale.MAX),
         threads = threads.coerceIn(0, 12),
         powerMode = powerMode.coerceIn(0, 2),
         targetTps = targetTps.coerceIn(0, 60),

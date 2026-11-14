@@ -233,7 +233,7 @@ object ImageDownloads {
  * App-scoped 生图 model downloads (like MnnHub: jobs live in AppContainer.scope, so they keep going
  * when the 生图 page is closed). One job per model; [states] drives the page's progress bars.
  */
-class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: Fetcher = { u, t, e, b -> HttpDownload.fetchOnce(u, t, e, b) }) {
+class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: Fetcher = { u, t, e, b -> com.iris.localai.util.ParallelDownload.fetch(u, t, e, b) }) {
     private val _states = MutableStateFlow<Map<String, ImageDl>>(emptyMap())
     val states: StateFlow<Map<String, ImageDl>> = _states.asStateFlow()
     private val jobs = mutableMapOf<String, Job>()

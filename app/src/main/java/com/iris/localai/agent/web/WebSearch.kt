@@ -12,8 +12,8 @@ import java.net.URLEncoder
  * picker's label.
  */
 enum class SearchProvider(val label: String, val short: String) {
-    GOOGLE_BROWSER("谷歌（浏览器）：像在手机上搜索，验证失败时改用必应", "谷歌（浏览器）"),
-    BING_BROWSER("必应（浏览器）：内置浏览器打开必应", "必应（浏览器）"),
+    GOOGLE_BROWSER("谷歌（浏览器）：像在手机上搜索，验证失败时改用必应", "谷歌"),
+    BING_BROWSER("必应（浏览器）：内置浏览器打开必应", "必应"),
     AUTO("自动（必应，失败时 DuckDuckGo）", "自动"),
     BING("必应", "必应"),
     DUCKDUCKGO("DuckDuckGo", "DuckDuckGo"),
@@ -21,6 +21,9 @@ enum class SearchProvider(val label: String, val short: String) {
 
     companion object {
         val DEFAULT = GOOGLE_BROWSER
+        /** 2.5.6: the picker lists these three; AUTO/BING/DUCKDUCKGO stay readable and show as 必应. */
+        val LISTED = listOf(GOOGLE_BROWSER, BING_BROWSER, SEARXNG)
+        fun shownAs(p: SearchProvider): SearchProvider = if (p in LISTED) p else BING_BROWSER
         fun parse(s: String?): SearchProvider = entries.firstOrNull { it.name.equals(s?.trim(), true) } ?: DEFAULT
     }
 }
@@ -54,6 +57,11 @@ object WebSearchTool : AgentTool {
         // results) falls back to Bing over HTTP for this query, with the reason in the output.
         var notice: String? = null
         var blocked: String? = null
+        // 2.5.6: news goes to Bing's news feed first (dated articles, not portal home pages).
+        if (news && env.fetcher != null) {
+            val nh = runCatching { SearchText.newsFeed(env.fetcher, q) }.getOrDefault(emptyList())
+            if (nh.isNotEmpty()) return ok(q, "必应新闻", nh, null, env)
+        }
         if (BrowserSearch.isBrowser(env.searchProvider) && env.searchBrowser != null) {
             val o = BrowserSearch.search(env.searchBrowser, env.searchProvider, q, news)
             if (o.hits.isNotEmpty()) return ok(q, o.engine, o.hits, null, env)
@@ -106,6 +114,20 @@ object SearchText {
         val e = URLEncoder.encode(q, "UTF-8")
         return if (news) "https://www.bing.com/news/search?q=$e&format=rss" else "https://www.bing.com/search?format=rss&q=$e"
     }
+
+    /** 2.5.6: Bing news RSS, newest first; a bare 「新闻」 asks for today's headlines. */
+    fun newsFeed(f: WebFetcher, q: String): List<SearchHit> {
+        val bare = q.replace(NEWS, "").replace(Regex("[\\s最近期今日今天的一下帮我找看]+"), "").isEmpty()
+        val query = if (bare) "今日要闻" else q
+        val body = runCatching { f.fetch(rssUrl(query, true), UA) }.getOrNull()?.takeIf { it.status in 200..299 }?.body ?: return emptyList()
+        return newestFirst(parseRss(body)).take(MAX_HITS)
+    }
+
+    private val RSS_DATE = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.US)
+    /** Hits with a date first, newest first; undated keep their order after them. */
+    fun newestFirst(hits: List<SearchHit>): List<SearchHit> = hits.withIndex().sortedWith(compareByDescending<IndexedValue<SearchHit>> {
+        runCatching { synchronized(RSS_DATE) { RSS_DATE.parse(it.value.date)?.time } }.getOrNull() ?: Long.MIN_VALUE
+    }.thenBy { it.index }).map { it.value }
 
     fun htmlUrl(q: String): String = "https://www.bing.com/search?q=" + URLEncoder.encode(q, "UTF-8")
 
@@ -216,10 +238,15 @@ object SearchText {
     /** "Fri, 16 Oct 2026 00:51:55 GMT" → "16 Oct 2026". */
     fun shortDate(s: String): String = Regex("\\d{1,2} \\w{3} \\d{4}").find(s)?.value.orEmpty()
 
+    /** 2.5.6: the expanded card without the model-facing instruction and notes. */
+    fun forPeople(tool: String, detail: String): String =
+        if (tool != "web_search" || !detail.contains("Search results for")) detail
+        else detail.substringAfter("Search results for").substringAfter('\n').trimStart('\n')
+
     fun render(q: String, hits: List<SearchHit>): String = buildString {
         // 2.1.7: tells the model to answer from the snippets (it used to read "read a page for
         // details" as the next step and kept fetching until the step limit).
-        append("Search results for \"").append(q).append("\" (answer from these, citing them inline as [1], [2]; web_fetch a url only if more detail is needed):\n")
+        append("Search results for \"").append(q).append("\" (today is ").append(java.time.LocalDate.now()).append("; answer from these, citing them inline as [1], [2]; web_fetch a url only if more detail is needed):\n")
         hits.forEachIndexed { i, h ->
             append(i + 1).append(". ").append(h.title)
             val meta = listOf(h.source, h.date).filter { it.isNotBlank() }.joinToString(", ")
