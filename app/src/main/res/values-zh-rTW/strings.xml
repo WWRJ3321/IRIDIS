@@ -521,7 +521,7 @@
     <string name="settings_97fdbb">選了「按 token 預算」以外的策略：對話模式不再自動整理，主頁面顯示「%1$s」。</string>
     <string name="settings_9a4613">每個對話可在上下文用量處單獨設定。上下文平移僅 GGUF 模型支援。</string>
     <string name="settings_81791e">資源檔</string>
-    <string name="settings_25a91d">越低越省電，越高越快</string>
+    <string name="settings_25a91d">越低越省電，越高越快；</string>
     <string name="settings_81197c">。</string>
     <string name="settings_ed5278">功耗</string>
     <string name="settings_ddb982">空閒自動卸載模型</string>
@@ -1731,7 +1731,7 @@
     <string name="engine_0a66ca">生成中 · 執行緒/核心/優先順序立即生效（批次下一條）</string>
     <string name="engine_7f77bf">生成中 · GPU 推理，下一條回覆生效</string>
     <string name="engine_243289">GPU：隻影響宿主執行緒</string>
-    <string name="engine_2203f1">GPU / NPU 後端：檔位隻影響宿主執行緒（提交計算、取樣、分詞和驅動執行緒），推理本身在 GPU / NPU 上；執行緒數基本不起作用</string>
+    <string name="engine_2203f1">GPU / NPU 下幾乎不影響速度</string>
     <string name="engine_a6ac8b">GPU/NPU 後端：檔位隻影響宿主執行緒（提交、取樣、分詞與驅動執行緒），執行緒數基本不起作用</string>
     <string name="engine_06408f">至少選 1 個核心</string>
     <string name="engine_b25e22">執行緒數要在 1 到 %1$s（所選核心數）之間</string>

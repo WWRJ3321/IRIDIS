@@ -176,7 +176,22 @@ class ImageGenRepository(internal val context: Context) {
 class RepositoryImageGenBackend(
     private val repo: ImageGenRepository,
     private val engine: ImageGenEngine = ImageGenEngines.get(repo.context),
+    /** 2.5.7: the chat model's unload / reload (null = not wired, e.g. tests). */
+    private val yielder: () -> com.iris.localai.agent.ChatModelYield? = { null },
 ) : com.iris.localai.agent.ImageGenBackend {
+    override suspend fun makeRoom(model: ImageModel): (suspend () -> Unit)? {
+        val y = yielder() ?: return null
+        val bytes = ImageGenFiles.sizeBytes(model) ?: return null
+        val avail = runCatching {
+            val am = repo.context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+        }.getOrDefault(0L)
+        if (!com.iris.localai.agent.ImageMemory.mustYield(avail, bytes)) return null
+        return y.yieldModel()
+    }
+
+    override fun releaseNow() { (engine as? ImageGenEngines)?.release() }
+
     override fun runnableModels(): List<ImageModel> {
         val dl = runCatching { repo.downloaded() }.getOrDefault(emptySet())
         // 2.5.1: catalog 已排除 MNN CPU；这里再保险一次

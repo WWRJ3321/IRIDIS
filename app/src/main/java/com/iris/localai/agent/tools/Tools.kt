@@ -92,6 +92,10 @@ class ToolEnv(
     val knowledge: KnowledgeSearch? = null,
     /** 2.1.7: on-device image generation for generate_image (null = not available → "no model" error). */
     val imageGen: ImageGenBackend? = null,
+    /** 2.5.7: the image model the user picked for generate_image ("" = 自动). */
+    val imageModelId: String = "",
+    /** 2.5.7: free the chat model's memory first when the image model would not fit. */
+    val imageMakeRoom: Boolean = true,
     /** 2.1.9: the GUI agent for `screen` (null = not available). */
     val gui: GuiTaskBackend? = null,
 )
@@ -329,6 +333,27 @@ interface ImageGenBackend {
     fun save(png: ByteArray, req: com.iris.localai.imagegen.ImageRequest, model: com.iris.localai.imagegen.ImageModel): File
     /** Stops a running [generate] (called when the agent run is stopped). */
     fun cancel() {}
+    /**
+     * 2.5.7: when [model] would not fit next to the chat model, unloads the chat model and returns how to load
+     * it back; null = nothing done (enough memory, or nothing loaded).
+     */
+    suspend fun makeRoom(model: com.iris.localai.imagegen.ImageModel): (suspend () -> Unit)? = null
+    /** 2.5.7: frees the image model right away (before the chat model is loaded back). */
+    fun releaseNow() {}
+}
+
+/** 2.5.7: lets generate_image take the chat model's memory for a while. */
+interface ChatModelYield {
+    /** Unloads the loaded chat model; returns the action that loads it again (null = none was loaded). */
+    suspend fun yieldModel(): (suspend () -> Unit)?
+}
+
+/** 2.5.7: rough memory a 生图 model needs while running (weights + activations + runtime). Pure. */
+object ImageMemory {
+    private const val MB = 1024L * 1024
+    fun need(modelBytes: Long): Long = if (modelBytes <= 0) 0L else modelBytes + modelBytes / 4 + 500 * MB
+    /** True = unload the chat model first. Unknown sizes / memory never trigger it. */
+    fun mustYield(availBytes: Long, modelBytes: Long): Boolean = availBytes > 0 && modelBytes > 0 && availBytes < need(modelBytes)
 }
 
 /**
@@ -360,6 +385,23 @@ object GenerateImageTool : SuspendTool {
     )
 
     private fun num(args: JsonObject, vararg keys: String): Double? = Args.str(args, *keys)?.trim()?.takeIf { it.isNotEmpty() }?.toDoubleOrNull()
+
+    const val YIELDED = "内存不足，已暂时卸载文本模型"
+    const val RELOADING = "重新加载文本模型…"
+
+    /**
+     * 2.5.7: [preferredId] when downloaded and able to take this call; otherwise automatic — with a reference
+     * image the first model that takes one (not NPU / sd.cpp), else the first non-sd.cpp model (an sd.cpp
+     * model, FLUX.2 Klein / Z-Image, only when it is the only one). Null = none can take a reference image.
+     */
+    fun pickModel(models: List<com.iris.localai.imagegen.ImageModel>, preferredId: String, withRef: Boolean): com.iris.localai.imagegen.ImageModel? {
+        val sd = com.iris.localai.imagegen.Backend.SDCPP
+        val qnn = com.iris.localai.imagegen.Backend.QNN
+        val takesRef = { m: com.iris.localai.imagegen.ImageModel -> m.backend != qnn && m.backend != sd }
+        if (preferredId.isNotEmpty()) models.firstOrNull { it.id == preferredId && (!withRef || takesRef(it)) }?.let { return it }
+        if (withRef) return models.firstOrNull(takesRef)
+        return models.firstOrNull { it.backend != sd } ?: models.firstOrNull()
+    }
 
     /** Lenient parsing: aliases, numbers as strings, blanks = absent. Throws for a missing prompt. */
     fun parse(args: JsonObject): Parsed {
@@ -402,19 +444,29 @@ object GenerateImageTool : SuspendTool {
         // A reference image needs a model that takes one (not the fixed-size NPU context binary).
         // 2.4.0: sd.cpp models (FLUX.2 Klein / Z-Image) take no reference image, and inside an agent run the chat
         // model stays loaded, so the lighter models go first; an sd.cpp model only when it is the one downloaded.
-        val sd = com.iris.localai.imagegen.Backend.SDCPP
-        val model = if (init != null) models.firstOrNull { it.backend != com.iris.localai.imagegen.Backend.QNN && it.backend != sd }
+        // 2.5.7: the model picked in 设置 › 智能体 › 生图 wins when it can take this call.
+        val model = pickModel(models, env.imageModelId, init != null)
             ?: return ToolResult(false, "Error: the available image model cannot edit a picture; call without image", "该模型暂不支持参考图")
-        else models.firstOrNull { it.backend != sd } ?: models.first()
         val backend = env.imageGen!!
         val req = request(withStyle(p, imageStyle), model, init?.path)
+        // 2.5.7: not enough memory next to the chat model → unload it, generate, free the image model, load it back.
+        val restore = if (env.imageMakeRoom) runCatching { backend.makeRoom(model) }.getOrNull() else null
+        if (restore != null) progress(YIELDED)
         // 2.2.14: the model in use is always named.
         progress("${model.name} 生成中…")
-        val png = try {
+        val result = try {
             backend.generate(req, model) { step, total -> progress("${model.name} 生成中 $step/$total") }
         } catch (e: kotlinx.coroutines.CancellationException) {
             backend.cancel(); throw e
-        }.getOrElse { e -> return ToolResult(false, "Error: image generation failed: ${e.message ?: e.javaClass.simpleName}", (e.message ?: "生图失败").take(40)) }
+        } finally {
+            if (restore != null) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                runCatching { backend.releaseNow() }
+                kotlinx.coroutines.delay(500)
+                progress(RELOADING)
+                runCatching { restore() }
+            }
+        }
+        val png = result.getOrElse { e -> return ToolResult(false, "Error: image generation failed: ${e.message ?: e.javaClass.simpleName}", (e.message ?: "生图失败").take(40)) }
         val file = backend.save(png, req, model)
         val rel = if (env.sandbox.inside(file.canonicalFile)) env.sandbox.relative(file) else file.path
         return ToolResult(

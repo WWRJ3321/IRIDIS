@@ -43,6 +43,14 @@ class AppContainer(app: Application) {
         override fun blocker() = gui.blocker()
         override suspend fun run(task: String, progress: (String) -> Unit) = gui.run(task, progress)
     } }
+    /** 2.5.7: generate_image may unload the chat model for a large image model and load it back after. */
+    init { agent.chatYield = object : com.iris.localai.agent.ChatModelYield {
+        override suspend fun yieldModel(): (suspend () -> Unit)? {
+            val m = engine.readyModel ?: return null
+            engine.unload("为生图让出内存")
+            return { engine.load(m, reason = "生图完成，重新加载") }
+        }
+    } }
     val voiceStore = VoiceModelStore(app)
     /** 2.3.2 角色卡: Download/IRIDIS/characters (or filesDir/iridis/characters). */
     val characters = com.iris.localai.character.CharacterStore({ agent.appRoot }, File(app.filesDir, "iridis/characters"))

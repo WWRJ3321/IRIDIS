@@ -16,6 +16,12 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.5.7", listOf(
+            f("设置 › 智能体 › 生图：可指定智能体生图用的模型，默认自动。"),
+            f("生图时内存不够会先卸载文本模型，生完再装回（可关）。"),
+            b("生图页模型卡片高度不一。"),
+            f("性能与资源的说明文字精简。"),
+        )),
         Release("2.5.6", listOf(
             f("下载改为多线程分块（4 路）：断线只重下出错的那一块；下完按 sha256 校验（Hugging Face / hf-mirror），不符自动删掉重下。"),
             f("智能体工具列表的说明改短，少说废话。"),

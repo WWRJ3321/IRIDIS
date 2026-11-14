@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -157,8 +158,10 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
         ) {
             full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)) }
             full {
+                // 2.5.7: 卡片等高（按最高的一张），状态行贴底
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.groupGutter),
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.groupGutter)
+                        .height(androidx.compose.foundation.layout.IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
                 ) {
                     for (m in vm.catalog) ModelChip(m, selected = m.id == s.modelId, downloaded = m.id in s.downloaded,
@@ -386,7 +389,7 @@ private fun ModelChip(
 ) {
     val c = Iris.colors
     Column(
-        Modifier.widthIn(min = 150.dp, max = 190.dp)
+        Modifier.width(170.dp).fillMaxHeight()
             .clip(IrisRadius.largeShape)
             .background(if (selected) c.accentContainer else c.surfaceElevated)
             .border(1.dp, if (selected) c.onAccentContainer.copy(alpha = 0.25f) else c.outline, IrisRadius.largeShape)
@@ -398,6 +401,7 @@ private fun ModelChip(
         Text(m.name, style = IrisType.labelSmall, color = fg, maxLines = 2)
         if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary, maxLines = 2)
         Spacer(Modifier.height(IrisDimens.space4))
+        Spacer(Modifier.weight(1f))
         Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
         Spacer(Modifier.height(IrisDimens.space4))
         when (dl) {

@@ -47,6 +47,10 @@ data class AgentSettings(
     val lazyTools: Boolean = true,
     /** 1.14.0 计划模式: multi-step tasks are planned first and wait for the user's OK. */
     val planFirst: Boolean = false,
+    /** 2.5.7: generate_image 用的生图模型 id；空 = 自动。 */
+    val imageModel: String = "",
+    /** 2.5.7: 内存不够时先卸载文本模型，生完再装回。 */
+    val imageMakeRoom: Boolean = true,
 ) {
     val search: SearchProvider get() = SearchProvider.parse(searchProvider)
     val workspaceLocation: WorkspaceLocation get() = WorkspaceLocation.parse(workspace)
@@ -410,6 +414,8 @@ class AgentContainer(context: Context) {
         chunkTokens = chunkTokens,
         knowledge = KnowledgeSearch { q, n -> knowledge.search(q, n) },
         imageGen = imageGen,
+        imageModelId = settings.current.imageModel,
+        imageMakeRoom = settings.current.imageMakeRoom,
         gui = gui,
     )
 
@@ -429,10 +435,16 @@ class AgentContainer(context: Context) {
     /** 2.1.9: `screen`'s backend (set by the app container: GuiAgentRunner). */
     @Volatile var gui: GuiTaskBackend? = null
 
+    /** 2.5.7: unloads / reloads the chat model around a large image (set by the app container). */
+    @Volatile var chatYield: com.iris.localai.agent.ChatModelYield? = null
+
     /** 2.1.7: generate_image's backend (生图 repository + engine). */
     private val imageGen: ImageGenBackend by lazy {
-        com.iris.localai.imagegen.RepositoryImageGenBackend(com.iris.localai.imagegen.ImageGenRepository(appContext))
+        com.iris.localai.imagegen.RepositoryImageGenBackend(com.iris.localai.imagegen.ImageGenRepository(appContext), yielder = { chatYield })
     }
+
+    /** 2.5.7: downloaded image models generate_image can use (设置 › 智能体 › 生图). */
+    fun imageModels(): List<com.iris.localai.imagegen.ImageModel> = runCatching { imageGen.runnableModels() }.getOrDefault(emptyList())
 
     /** 1.10.6: whether the app holds 全部文件访问 (MANAGE_EXTERNAL_STORAGE, Android 11+). */
     fun hasAllFilesAccess(): Boolean = runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false)

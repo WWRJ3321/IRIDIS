@@ -562,7 +562,7 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     ) { v -> vm.update { it.copy(thermalCutoffC = com.iris.localai.engine.ThermalCutoff.sanitize(kotlin.math.round(v).toInt())) } }
                 }
                 Divider()
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3ffddc), s.keepScreenOn, icon = Icons.Outlined.ScreenLockPortrait, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_65fb6d)) { on -> vm.update { it.copy(keepScreenOn = on) } }
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3ffddc), s.keepScreenOn, icon = Icons.Outlined.ScreenLockPortrait) { on -> vm.update { it.copy(keepScreenOn = on) } }
                 Divider()
                 AdvancedFold("perf", SettingsText.ADVANCED) {
                     Divider()

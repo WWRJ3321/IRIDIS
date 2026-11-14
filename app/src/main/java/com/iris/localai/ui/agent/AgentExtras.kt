@@ -88,6 +88,27 @@ fun AgentExtraSections() {
     }
     GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_add6ac))
 
+    // ---- 生图（2.5.7）：generate_image 用哪个模型，内存不够时是否先卸载文本模型 ----
+    val imageModels by produceState(emptyList<com.iris.localai.imagegen.ImageModel>(), s) {
+        value = withContext(Dispatchers.IO) { agent.imageModels() }
+    }
+    if (imageModels.isNotEmpty()) {
+        SectionTitle("生图")
+        SettingsGroup {
+            val picked = s.imageModel.takeIf { id -> imageModels.any { it.id == id } }.orEmpty()
+            CheckRow("自动", selected = picked.isEmpty()) { agent.settings.update { it.copy(imageModel = "") } }
+            imageModels.forEach { m ->
+                Divider()
+                CheckRow(m.name, selected = picked == m.id) { agent.settings.update { it.copy(imageModel = m.id) } }
+            }
+            Divider()
+            com.iris.localai.ui.components.SwitchRow("内存不够时先卸载文本模型", s.imageMakeRoom, subtitle = "生完再装回，要多等几秒") { on ->
+                agent.settings.update { it.copy(imageMakeRoom = on) }
+            }
+        }
+        GroupFootnote("带参考图时，选的模型不支持会自动换一个")
+    }
+
     // ---- 技能 ----
     SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143))
     val skills by produceState(emptyList<com.iris.localai.agent.SkillInfo>(), s) {
