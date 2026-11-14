@@ -2163,4 +2163,17 @@
     <string name="tour253_mcp_b">Remote-MCP-Server für weitere Tools verbinden.</string>
     <string name="tour253_replay_t">Kurze Einführung</string>
     <string name="tour253_replay_b">Hier jederzeit erneut ansehen.</string>
+    <!-- 2.5.5 -->
+    <string name="v255_moe_section">Experten laden (MoE)</string>
+    <string name="v255_rename">Name</string>
+    <string name="v255_rename_sub">Folgt dem Dateinamen; ändert nur die Anzeige</string>
+    <string name="v255_rename_file">Datei: %1$s</string>
+    <string name="v255_nanbeige_purpose">Von Nanbeige; stark bei Logik und Agenten. Schleifen-Schichten, langsamer als die Größe vermuten lässt</string>
+    <string name="v255_notes_title">Neu in dieser Version</string>
+    <string name="v255_notes_history">Versionsverlauf</string>
+    <string name="v255_notes_history_sub">Neue Funktionen und Fehlerbehebungen je Version</string>
+    <string name="v255_notes_ok">Verstanden</string>
+    <string name="v255_notes_feature">Neu</string>
+    <string name="v255_notes_exp">Experimentell</string>
+    <string name="v255_notes_fix">Fehlerbehebungen</string>
 </resources>

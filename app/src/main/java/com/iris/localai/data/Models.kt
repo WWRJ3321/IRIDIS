@@ -161,9 +161,13 @@ data class LocalModel(
     val path: String,
     val sizeBytes: Long,
     val format: ModelFormat,
+    /** 2.5.5: 用户起的显示名（[ModelAliases]），null = 按文件名。 */
+    val alias: String? = null,
 ) {
     val id: String get() = fileName
-    val displayName: String get() = when (format) {
+    val displayName: String get() = alias ?: fileDisplayName
+    /** 按文件名推出来的名字（改名前的原名）。 */
+    val fileDisplayName: String get() = when (format) {
         ModelFormat.MNN -> ModelNames.displayMnn(fileName)
         ModelFormat.QAIRT -> com.iris.localai.engine.geniex.QairtBundle.displayName(fileName)
         else -> ModelNames.display(fileName)
@@ -306,6 +310,9 @@ data class AppSettings(
      */
     @kotlinx.serialization.SerialName("tour253_done")
     val tour253Done: Boolean = false,
+    /** 2.5.5: 已看过「此次更新」的版本（versionName）；空 = 没看过。 */
+    @kotlinx.serialization.SerialName("notes_seen")
+    val notesSeen: String = "",
     /** 2.0.1: 温度限速 — pace generation from this temperature (°C, 35–50); 0 = off. */
     val thermalLimitC: Int = 0,
     /** 2.1.0 引用知识库: 对话 replies quote up to 3 snippets from workspace/knowledge (only when it has files). */

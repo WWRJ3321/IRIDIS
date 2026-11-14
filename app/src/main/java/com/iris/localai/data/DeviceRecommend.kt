@@ -23,7 +23,8 @@ object DeviceRecommend {
 
     /** Chip class from Build.SOC_MODEL ("SM8750", "MT6991"…); UNKNOWN when it says nothing useful. */
     fun chip(manufacturer: String?, soc: String?): Chip {
-        val s = soc.orEmpty().lowercase().trim()
+        // 2.5.5: 平板版型号（MT8910 = 天玑 9500）先换成手机版型号再分级
+        val s = soc.orEmpty().lowercase().trim().let { raw -> com.iris.localai.engine.NpuIds.SOC_ALIAS[raw.takeWhile(Char::isLetterOrDigit)] ?: raw }
         val num = Regex("\\d{3,4}").find(s)?.value?.toIntOrNull()
         return when (vendor(manufacturer, soc)) {
             Vendor.QUALCOMM -> when {

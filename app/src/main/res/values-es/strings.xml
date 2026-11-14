@@ -2163,4 +2163,17 @@
     <string name="tour253_mcp_b">Conecta servidores MCP remotos para más herramientas.</string>
     <string name="tour253_replay_t">Guía rápida</string>
     <string name="tour253_replay_b">Vuelve a verla aquí cuando quieras.</string>
+    <!-- 2.5.5 -->
+    <string name="v255_moe_section">Carga de expertos (MoE)</string>
+    <string name="v255_rename">Nombre</string>
+    <string name="v255_rename_sub">Sigue el nombre del archivo; solo cambia cómo se muestra</string>
+    <string name="v255_rename_file">Archivo: %1$s</string>
+    <string name="v255_nanbeige_purpose">De Nanbeige; bueno en razonamiento y agentes. Capas en bucle, más lento de lo que sugiere su tamaño</string>
+    <string name="v255_notes_title">Novedades</string>
+    <string name="v255_notes_history">Historial de versiones</string>
+    <string name="v255_notes_history_sub">Funciones nuevas y correcciones de cada versión</string>
+    <string name="v255_notes_ok">Entendido</string>
+    <string name="v255_notes_feature">Nuevo</string>
+    <string name="v255_notes_exp">Experimental</string>
+    <string name="v255_notes_fix">Correcciones</string>
 </resources>

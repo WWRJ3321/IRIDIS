@@ -149,8 +149,15 @@ class MainActivity : ComponentActivity() {
                         AppNavigation(
                             chat,
                             showTour = com.iris.localai.ui.tour.TourLogic.shouldShow(settings.welcomeAccepted, settings.tour253Done),
-                            onTourDone = { container.settings.update { it.copy(tour253Done = true) } },
+                            // 2.5.5: 全新安装引导结束时记为已看过本版「此次更新」，不紧接着再弹
+                            onTourDone = { container.settings.update { it.copy(tour253Done = true).let { n -> n.copy(notesSeen = n.notesSeen.ifEmpty { com.iris.localai.BuildConfig.VERSION_NAME }) } } },
                         )
+                        // 2.5.5: 升级后首次打开弹一次「此次更新」
+                        if (com.iris.localai.data.UpdateNotes.shouldShow(settings.welcomeAccepted, settings.tour253Done, settings.notesSeen, com.iris.localai.BuildConfig.VERSION_NAME)) {
+                            com.iris.localai.ui.whatsnew.UpdateNotesSheet(com.iris.localai.BuildConfig.VERSION_NAME, history = false) {
+                                container.settings.update { it.copy(notesSeen = com.iris.localai.BuildConfig.VERSION_NAME) }
+                            }
+                        }
                     } else com.iris.localai.ui.welcome.WelcomeScreen(
                         onStart = { container.settings.update { it.copy(welcomeAccepted = true) } },
                     )

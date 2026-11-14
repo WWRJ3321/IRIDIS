@@ -175,6 +175,7 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
     val s by vm.settings.collectAsStateWithLifecycle()
     val api by vm.apiStatus.collectAsStateWithLifecycle()
     var confirmWipe by rememberSaveable { mutableStateOf(false) }
+    var showNotes by rememberSaveable { mutableStateOf(false) } // 2.5.5
 
     SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e366cc), onBack) {
         ScrollBody {
@@ -240,11 +241,15 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
                 Box(Modifier.tourTarget(TourId.REPLAY)) {
                     NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.tour253_replay), com.iris.localai.I18n.s(com.iris.localai.R.string.tour253_replay_sub), com.iris.localai.ui.icons.IrisIcons.Spark) { vm.update { it.copy(tour253Done = false) } }
                 }
+                Divider()
+                // 2.5.5: 更新历史
+                NavItem(com.iris.localai.I18n.s(com.iris.localai.R.string.v255_notes_history), com.iris.localai.I18n.s(com.iris.localai.R.string.v255_notes_history_sub), com.iris.localai.ui.icons.IrisIcons.Info) { showNotes = true }
             }
             VersionFooter(SettingsText.versionLine(BuildConfig.VERSION_NAME), SettingsText.TAGLINE)
         }
     }
 
+    if (showNotes) com.iris.localai.ui.whatsnew.UpdateNotesSheet(BuildConfig.VERSION_NAME, history = true) { showNotes = false }
     if (confirmWipe) {
         ConfirmDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1db0aa),

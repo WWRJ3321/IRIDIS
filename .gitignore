@@ -34,3 +34,6 @@ third_party/qnn-api/
 # 2.2.15: built-in Hexagon runtime assets (scripts/build-llama-htp.sh)
 /prebuilt-assets/
 /build-native-htp/
+
+# 本地交接文档，不入库
+/HANDOFF-STATUS.md

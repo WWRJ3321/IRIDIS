@@ -101,10 +101,11 @@ class V251Test {
     @Test fun settingsRowsNoNewSegmented() {
         val s = src("app/src/main/java/com/iris/localai/ui/models/ModelConfigSheet.kt")
         assertTrue(s.contains("R.string.v251_moe_cpu)") && s.contains("R.string.v251_experts)"))
-        val block = s.substring(s.indexOf("moeInfo?.let { mi ->"), s.indexOf("R.string.settings_810ed9"))
+        val block = s.substring(s.indexOf("moeInfo?.let { mi ->"), s.indexOf("SectionFold(\"model-adv-\"")) // 2.5.5: MoE 组移到高级折叠之前
         assertFalse("禁止新分段控件", block.contains("SegmentedRow") || block.contains("Segmented"))
         assertTrue(block.contains("OvSwitch(") && block.contains("OvSlider("))
-        assertFalse("不新增分组", block.contains("SectionTitle(") || block.contains("SettingsGroup"))
+        // 2.5.5: 用户要求 MoE 单独成组（v255_moe_section），只允许这一个分组
+        assertTrue(block.contains("R.string.v255_moe_section"))
     }
 
     @Test fun reapCatalogAndRecommend() {

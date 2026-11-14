@@ -85,6 +85,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     fun set(block: (ModelOverrides) -> ModelOverrides) = repo.update(model.id, block)
     fun f2(v: Float) = String.format(Locale.US, "%.2f", v)
     var editPrompt by remember { mutableStateOf(false) }
+    var editName by remember { mutableStateOf(false) } // 2.5.5
     var editSeed by remember { mutableStateOf(false) }
     var pickMmproj by remember { mutableStateOf(false) }
     var mmprojTick by remember { mutableIntStateOf(0) }
@@ -123,8 +124,11 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     }
     val c = Iris.colors
 
+    // 2.5.5: 改名后表头立即跟着变（model 参数是打开时的快照）
+    val liveModels by container.models.models.collectAsStateWithLifecycle()
+    val shownName = liveModels.firstOrNull { it.fileName == model.fileName }?.displayName ?: model.displayName
     IrisSheet(onDismiss = onDismiss) {
-        SheetHeader(model.displayName) {
+        SheetHeader(shownName) {
             IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), { repo.reset(model.id) }, style = IrisButtonStyle.Text, compact = true, enabled = !o.isEmpty)
         }
         val maxH = (LocalConfiguration.current.screenHeightDp * 0.78f).dp
@@ -192,6 +196,14 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             // ---- Behaviour ----
             SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_a04961))
             SettingsGroup {
+                // 2.5.5: 自定义显示名（不改文件名）
+                SettingsRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename),
+                    subtitle = com.iris.localai.data.ModelAliases.of(model.fileName)?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename_file, model.fileName) }
+                        ?: com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename_sub),
+                    onClick = { editName = true },
+                )
+                Divider()
                 SegmentedRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.models_1d878d), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.models_112be9), com.iris.localai.I18n.s(com.iris.localai.R.string.components_849320), com.iris.localai.I18n.s(com.iris.localai.R.string.components_d58a55)),
                     when (o.thinking) { null -> 0; true -> 1; false -> 2 },
@@ -226,6 +238,33 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     onChange = { v -> set { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 128)) } },
                     onReset = { set { it.copy(maxNewTokens = null) } },
                 )
+            }
+
+            moeInfo?.let { mi ->
+                // 2.5.5: 流式按需加载从「高级」折叠里移出，单独成组。
+                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v255_moe_section))
+                SettingsGroup {
+                    // 2.5.1: 专家按需加载（MoE）：默认 = 自动（内存不足时开），开关 + 「恢复默认」，不新增分段控件。
+                    OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
+                        subtitle = com.iris.localai.I18n.s(if (o.moeCpu == null) com.iris.localai.R.string.v251_moe_cpu_auto else com.iris.localai.R.string.v251_moe_cpu_sub),
+                        onChange = { on -> set { it.copy(moeCpu = on) } }, onReset = { set { it.copy(moeCpu = null) } })
+                    // 2.5.4: LES 前瞻专家调度（只 qwen35moe）
+                    if (com.iris.localai.engine.MoeLoad.lesSupported(mi)) {
+                        Divider()
+                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: (eff.moeCpu ?: false), o.les == null,
+                            subtitle = com.iris.localai.I18n.s(if (o.les == null) com.iris.localai.R.string.v254_les_auto else com.iris.localai.R.string.v254_les_sub),
+                            onChange = { on -> set { it.copy(les = on) } }, onReset = { set { it.copy(les = null) } })
+                    }
+                    Divider()
+                    // 2.5.1: 激活专家数 0 = 模型默认，1..min(32, 专家数)
+                    val maxExp = minOf(com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)
+                    OvSlider(
+                        com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts), eff.expertUsed.coerceAtMost(maxExp).toFloat(), o.expertUsed == null, 0f..maxExp.toFloat(),
+                        if (eff.expertUsed == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_default, mi.expertUsed) else "${eff.expertUsed.coerceAtMost(maxExp)}",
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_sub), steps = (maxExp - 1).coerceAtLeast(0),
+                        onChange = { v -> set { it.copy(expertUsed = v.toInt()) } }, onReset = { set { it.copy(expertUsed = null) } },
+                    )
+                }
             }
 
             // 2.0.x: what is rarely touched folds away; unsupported options are not drawn one by
@@ -331,29 +370,6 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                             (if (com.iris.localai.engine.MtpTag.gpuNote(eff.backend, loaded?.details?.backend)) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_mtp_gpu) else ""),
                             onChange = { on -> set { it.copy(mtp = on) } }, onReset = { set { it.copy(mtp = null) } })
                     }
-                    moeInfo?.let { mi ->
-                        // 2.5.1: 专家按需加载（MoE）：默认 = 自动（内存不足时开），开关 + 「恢复默认」，不新增分段控件。
-                        Divider()
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
-                            subtitle = com.iris.localai.I18n.s(if (o.moeCpu == null) com.iris.localai.R.string.v251_moe_cpu_auto else com.iris.localai.R.string.v251_moe_cpu_sub),
-                            onChange = { on -> set { it.copy(moeCpu = on) } }, onReset = { set { it.copy(moeCpu = null) } })
-                        // 2.5.4: LES 前瞻专家调度（只 qwen35moe）
-                        if (com.iris.localai.engine.MoeLoad.lesSupported(mi)) {
-                            Divider()
-                            OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: (eff.moeCpu ?: false), o.les == null,
-                                subtitle = com.iris.localai.I18n.s(if (o.les == null) com.iris.localai.R.string.v254_les_auto else com.iris.localai.R.string.v254_les_sub),
-                                onChange = { on -> set { it.copy(les = on) } }, onReset = { set { it.copy(les = null) } })
-                        }
-                        Divider()
-                        // 2.5.1: 激活专家数 0 = 模型默认，1..min(32, 专家数)
-                        val maxExp = minOf(com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)
-                        OvSlider(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts), eff.expertUsed.coerceAtMost(maxExp).toFloat(), o.expertUsed == null, 0f..maxExp.toFloat(),
-                            if (eff.expertUsed == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_default, mi.expertUsed) else "${eff.expertUsed.coerceAtMost(maxExp)}",
-                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_sub), steps = (maxExp - 1).coerceAtLeast(0),
-                            onChange = { v -> set { it.copy(expertUsed = v.toInt()) } }, onReset = { set { it.copy(expertUsed = null) } },
-                        )
-                    }
                     Divider()
                     OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), eff.warmup, o.warmup == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27),
                         onChange = { on -> set { it.copy(warmup = on) } }, onReset = { set { it.copy(warmup = null) } })
@@ -405,6 +421,17 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
         }
     }
 
+    if (editName) {
+        TextInputDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename),
+            initial = com.iris.localai.data.ModelAliases.of(model.fileName) ?: model.fileDisplayName,
+            onConfirm = { t -> container.models.rename(model.fileName, t.takeIf { it.trim() != model.fileDisplayName }) },
+            onDismiss = { editName = false },
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
+            placeholder = model.fileDisplayName,
+            allowEmpty = true,
+        )
+    }
     if (editPrompt) {
         TextInputDialog(
             title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_24c18d),

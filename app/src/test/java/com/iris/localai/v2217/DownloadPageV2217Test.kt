@@ -17,7 +17,7 @@ import java.io.File
 class DownloadPageV2217Test {
     @Test fun sectionsAndFeaturedCoder() {
         assertEquals(listOf("对话", "特色模型", "生图", "语音", "翻译", "知识库嵌入模型"), Section.entries.map { it.title })
-        assertEquals(29, RecommendedCatalog.section(Section.CHAT).size) // 2.5.1: +2 Gemma 4 19B REAP
+        assertEquals(30, RecommendedCatalog.section(Section.CHAT).size) // 2.5.1: +2 Gemma 4 19B REAP; 2.5.5: +南北阁
         val coder = RecommendedCatalog.section(Section.FEATURED).first()
         assertEquals("ccore/Qwen3.5-4B-3D-Coder", coder.repoId)
         assertEquals("Apache-2.0", coder.licence)
@@ -30,7 +30,7 @@ class DownloadPageV2217Test {
         assertTrue(RecommendedCatalog.section(Section.SPEECH).isNotEmpty())
         // folded: 6 top chat models, expand shows all
         assertEquals(6, RecommendedCatalog.visible(Section.CHAT, false).size)
-        assertEquals(29, RecommendedCatalog.visible(Section.CHAT, true).size) // 2.5.1: +2 REAP
+        assertEquals(30, RecommendedCatalog.visible(Section.CHAT, true).size) // 2.5.1: +2 REAP
         assertEquals(1, RecommendedCatalog.visible(Section.FEATURED, false).size)
         // plain purposes, no jargon walls
         RecommendedCatalog.ITEMS.forEach { assertTrue(it.name, it.purpose.isNotBlank() && it.purpose.length <= 40) }

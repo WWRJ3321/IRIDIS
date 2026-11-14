@@ -101,6 +101,7 @@ object RecommendedCatalog {
         quant = "i1-$quant", licence = "Gemma",
     )
 
+    const val NANBEIGE_REPO = "bartowski/Nanbeige_Nanbeige4.2-3B-GGUF"
     const val CODER_REPO = "ccore/Qwen3.5-4B-3D-Coder"
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
         "有柔和灯光和阴影，可以用鼠标或手指拖动旋转视角。直接输出完整代码。"
@@ -161,6 +162,8 @@ object RecommendedCatalog {
         lms3("4B", 2_497_280_704L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79)),
         mnn("Qwen3 8B", "Qwen3-8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462), 5.5),
         lms3("8B", 5_027_783_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462)),
+        // 2.5.5: 南北阁 Nanbeige4.2 3B（循环 Transformer：22 层跑两遍，比同尺寸慢）；bartowski imatrix，HF tree API 2026-11-14。
+        gguf("Nanbeige 4.2 3B", NANBEIGE_REPO, "Nanbeige_Nanbeige4.2-3B-Q4_K_M.gguf", 2_684_023_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.v255_nanbeige_purpose)),
         // 2.5.1: Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
         reap(REAP_IQ3, "IQ3_XXS", 8_311_270_560L),
         reap(REAP_Q4, "Q4_0", 10_647_317_152L),

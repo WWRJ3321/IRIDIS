@@ -2163,4 +2163,17 @@
     <string name="tour253_mcp_b">रिमोट MCP सर्वर जोड़ें, ज़्यादा टूल पाएँ।</string>
     <string name="tour253_replay_t">शुरुआती गाइड</string>
     <string name="tour253_replay_b">यह टूर कभी भी यहाँ फिर देखें।</string>
+    <!-- 2.5.5 -->
+    <string name="v255_moe_section">एक्सपर्ट लोडिंग (MoE)</string>
+    <string name="v255_rename">नाम</string>
+    <string name="v255_rename_sub">फ़ाइल नाम जैसा; केवल दिखने वाला नाम बदलता है</string>
+    <string name="v255_rename_file">फ़ाइल: %1$s</string>
+    <string name="v255_nanbeige_purpose">Nanbeige का; तर्क और एजेंट में मज़बूत। लूप वाली परतें, आकार से धीमा</string>
+    <string name="v255_notes_title">इस अपडेट में नया</string>
+    <string name="v255_notes_history">अपडेट इतिहास</string>
+    <string name="v255_notes_history_sub">हर संस्करण की नई सुविधाएँ और सुधार</string>
+    <string name="v255_notes_ok">ठीक है</string>
+    <string name="v255_notes_feature">नया</string>
+    <string name="v255_notes_exp">प्रायोगिक</string>
+    <string name="v255_notes_fix">बग सुधार</string>
 </resources>

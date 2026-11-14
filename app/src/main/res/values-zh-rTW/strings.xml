@@ -2163,4 +2163,17 @@
     <string name="tour253_mcp_b">接入遠端 MCP 伺服器，擴充可用工具。</string>
     <string name="tour253_replay_t">新手導覽</string>
     <string name="tour253_replay_b">隨時可以在這裡再看一遍。</string>
+    <!-- 2.5.5 -->
+    <string name="v255_moe_section">專家載入（MoE）</string>
+    <string name="v255_rename">名稱</string>
+    <string name="v255_rename_sub">跟隨檔名，只改顯示不改檔案</string>
+    <string name="v255_rename_file">檔案：%1$s</string>
+    <string name="v255_nanbeige_purpose">南北閣出品，推理與智能體能力強；循環結構，比同尺寸慢</string>
+    <string name="v255_notes_title">此次更新</string>
+    <string name="v255_notes_history">更新歷史</string>
+    <string name="v255_notes_history_sub">每個版本的新功能與修復</string>
+    <string name="v255_notes_ok">知道了</string>
+    <string name="v255_notes_feature">新功能</string>
+    <string name="v255_notes_exp">實驗功能</string>
+    <string name="v255_notes_fix">Bug 修復</string>
 </resources>

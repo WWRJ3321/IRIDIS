@@ -2163,4 +2163,17 @@
     <string name="tour253_mcp_b">リモート MCP サーバーでツールを追加。</string>
     <string name="tour253_replay_t">はじめてガイド</string>
     <string name="tour253_replay_b">いつでもここからもう一度見られます。</string>
+    <!-- 2.5.5 -->
+    <string name="v255_moe_section">エキスパート読み込み（MoE）</string>
+    <string name="v255_rename">名前</string>
+    <string name="v255_rename_sub">ファイル名どおり。表示名だけ変わります</string>
+    <string name="v255_rename_file">ファイル：%1$s</string>
+    <string name="v255_nanbeige_purpose">Nanbeige製。推論とエージェントに強い。ループ構造のため同サイズより遅め</string>
+    <string name="v255_notes_title">今回の更新</string>
+    <string name="v255_notes_history">更新履歴</string>
+    <string name="v255_notes_history_sub">各バージョンの新機能と修正</string>
+    <string name="v255_notes_ok">OK</string>
+    <string name="v255_notes_feature">新機能</string>
+    <string name="v255_notes_exp">実験的機能</string>
+    <string name="v255_notes_fix">バグ修正</string>
 </resources>

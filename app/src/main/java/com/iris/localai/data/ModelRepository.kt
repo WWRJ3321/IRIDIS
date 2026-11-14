@@ -58,9 +58,15 @@ class ModelRepository(private val context: Context) {
                 .filterNot { isSplitTail(it.fileName) }
                 .filterNot { com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(it.fileName) } // 2.5.1: 知识库嵌入模型 are not chat models
         }
-        val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.sortedBy { it.displayName.lowercase() }, savedOrder())
+        val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.map { it.copy(alias = ModelAliases.of(it.fileName)) }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list
         list
+    }
+
+    /** 2.5.5: 改显示名（不动文件），立即刷新列表。 */
+    fun rename(fileName: String, name: String?) {
+        ModelAliases.set(context, fileName, name)
+        _models.value = _models.value.map { if (it.fileName == fileName) it.copy(alias = ModelAliases.of(fileName)) else it }
     }
 
     /** 2.2.2: the user's own order (模型管理 › 拖动排序); the home menu lists models in this order. */

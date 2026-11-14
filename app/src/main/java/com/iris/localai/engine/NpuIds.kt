@@ -21,9 +21,15 @@ object NpuIds {
     fun baseSocId(raw: String?): String? {
         val s = raw.orEmpty().trim().lowercase()
         if (s.isEmpty()) return null
-        BASE.find(s)?.let { return it.groupValues[1] + it.groupValues[2] }
+        BASE.find(s)?.let { val b = it.groupValues[1] + it.groupValues[2]; return SOC_ALIAS[b] ?: b }
         return s.takeWhile { it.isLetterOrDigit() }.ifEmpty { null }
     }
+
+    /**
+     * 2.5.5: 同一颗芯片的平板版报另一个型号。用户实机（8.8 英寸平板，系统显示「天玑9500 最高 4.21GHz」）
+     * Build.SOC_MODEL = "MT8910"，按 MT6993（天玑 9500）处理：NPU 模型、推荐、机型分级都跟着走。
+     */
+    val SOC_ALIAS: Map<String, String> = mapOf("mt8910" to "mt6993")
 
     /** Lower-case base SoC id a file was compiled for ("sm8750"), or null for a portable model. */
     fun targetSoc(fileName: String): String? = FILE_SOC.find(fileName)?.groupValues?.get(1)?.lowercase()
