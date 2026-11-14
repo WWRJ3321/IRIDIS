@@ -31,6 +31,15 @@ if [ "$actual" != "$LLAMA_COMMIT" ]; then
   echo "llama.cpp: expected $LLAMA_COMMIT but found $actual" >&2
   exit 1
 fi
+# IRIDIS patches (LES, mmap prefetch switch): iris_engine.cpp needs them since 2.5.4. Order matters; idempotent.
+for p in native-patches/llama-les.patch native-patches/llama-mmap-prefetch.patch; do
+  if git -C third_party/llama.cpp apply --reverse --check "$PWD/$p" 2>/dev/null; then
+    echo "llama.cpp: $p already applied"
+  else
+    git -C third_party/llama.cpp apply "$PWD/$p" || { echo "llama.cpp: cannot apply $p" >&2; exit 1; }
+    echo "llama.cpp: applied $p"
+  fi
+done
 
 sha() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
 if [ -f "$SHERPA_AAR" ] && [ "$(sha "$SHERPA_AAR")" = "$SHERPA_SHA256" ]; then
@@ -45,8 +54,10 @@ fi
 
 # ---- MNN prebuilt (full flavour, third_party/mnn) ----
 MNN_COMMIT="9f097c5fdd48e0cac4468d4cc53a828794d96888"
-MNN_TAR_SHA256="b275016e22db724cdac033749a384e3a729540a4a722cf4e6be640cd9a0360c2"
-MNN_URL="https://github.com/WWRJ3321/IRIDIS/releases/download/v2.0.0-beta/mnn-prebuilt-arm64.tar.gz"
+# v2.0.0-beta release asset is gone (404). mnn.yml publishes the tar to the ci/mnn-out branch; pinned by SHA-256 below.
+# Override with MNN_URL=... (e.g. a release asset) if that branch is ever rebuilt.
+MNN_TAR_SHA256="fede068b24f8ec3059d61a590773eee30686cb381a383c88da65155e8b5acaf9"
+MNN_URL="${MNN_URL:-https://raw.githubusercontent.com/WWRJ3321/IRIDIS/ci/mnn-out/mnn-prebuilt-arm64.tar.gz}"
 if [ "${1:-}" = "--build-mnn" ]; then
   NDK="${NDK:?set NDK=/path/to/android-ndk-r30}" sh scripts/build-mnn-android.sh
 else

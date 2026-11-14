@@ -1,0 +1,7 @@
+# 只更新 GitHub Actions。Gradle 依赖（AGP / Kotlin / Compose）与原生库版本手动升级：
+# 它们与 R8、NDK、预编译库互相绑定，自动 PR 多半编不过。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

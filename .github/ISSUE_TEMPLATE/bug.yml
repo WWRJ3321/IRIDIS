@@ -1,0 +1,22 @@
+name: 问题反馈 / Bug report
+description: 闪退、功能异常、显示错误
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: { label: IRIDIS 版本（设置 › 关于）, placeholder: "2.5.5" }
+    validations: { required: true }
+  - type: input
+    id: device
+    attributes: { label: 机型与芯片, placeholder: "小米 15 / 骁龙 8 Elite" }
+    validations: { required: true }
+  - type: input
+    id: model
+    attributes: { label: 模型与后端（如有）, placeholder: "Qwen3-4B Q4_K_M / GPU" }
+  - type: textarea
+    id: steps
+    attributes: { label: 复现步骤与实际结果 }
+    validations: { required: true }
+  - type: textarea
+    id: log
+    attributes: { label: 日志（App 内「导出日志」，如有）, render: text }

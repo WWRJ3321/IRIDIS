@@ -62,7 +62,7 @@
 2. 首页模型菜单 ›「模型与加载」›「下载模型」：从推荐列表下载、在线搜索 GGUF，或从文件导入
 3. 开聊；需要工具时打开「智能体」
 
-**要求**：Android 12+、arm64（骁龙 8 Gen 1 及以上）；4B 以上模型建议 12 GB 内存。
+**要求**：Android 12+、arm64。骁龙 8 Gen 1 及以上用普通版；骁龙 855/865/870/888 等无 i8mm 的老芯片用 legacy 版（`-legacy.apk`，CPU 兼容引擎，较慢，不支持 NPU 与生图）；4B 以上模型建议 12 GB 内存。
 
 > [!NOTE]
 > 从 IRIS LocalAI 升级：2.1.0 起包名改为 `com.iridis`，不能覆盖安装。先在旧版导出备份，装新版后在 设置 › 存储 › 备份与恢复 导入。
@@ -102,7 +102,7 @@ cp local.properties.example local.properties   # 填 sdk.dir / ndk.path
 ./gradlew assembleFullRelease                  # 仅 llama.cpp：assembleLiteRelease
 ```
 
-JDK 17 · Android SDK 35 · NDK r27c+ · CMake。详见 [docs/BUILD.md](docs/BUILD.md)。
+JDK 17 · Android SDK 36 · NDK r27c+ · CMake。详见 [docs/BUILD.md](docs/BUILD.md)。
 
 ## 交流
 

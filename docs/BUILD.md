@@ -4,7 +4,7 @@
 | 项 | 版本 |
 |----|------|
 | JDK | 17 或 21 |
-| Android SDK | platform 35、build-tools 35.0.0 |
+| Android SDK | platform 36（compileSdk 36，targetSdk 35）、build-tools 35.0.0 |
 | NDK | r27c（`27.2.12479018`）或更新；arm64 Linux 主机可用第三方 arm64-host NDK（`local.properties` 中 `ndk.path`） |
 | CMake | ≥ 3.22（SDK Manager 安装，或 `cmake.dir` 指定） |
 | Gradle | 8.11.1（wrapper 自动下载） |
@@ -12,7 +12,7 @@
 
 ## 步骤
 ```bash
-sh scripts/fetch-deps.sh          # llama.cpp 源码 + sherpa-onnx AAR + MNN 预编译库（均 SHA-256 校验）
+sh scripts/fetch-deps.sh          # llama.cpp 源码（自动打 native-patches/ 补丁）+ sherpa-onnx AAR + MNN 预编译库（均 SHA-256 校验）
 cp local.properties.example local.properties   # 填写 sdk.dir
 ./gradlew testFullDebugUnitTest   # JVM 单元测试（lite 版用 testLiteDebugUnitTest）
 ./gradlew assembleFullDebug       # app/build/outputs/apk/full/debug/（lite 版：assembleLiteDebug）

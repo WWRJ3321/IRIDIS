@@ -59,7 +59,7 @@
 2. Home model menu › Models & loading › Download models: pick from the recommended list, search GGUF online, or import a file
 3. Start chatting; turn on Agent when you need tools
 
-**Requirements**: Android 12+, arm64 (Snapdragon 8 Gen 1 or newer); 12 GB RAM recommended for models above 4B.
+**Requirements**: Android 12+, arm64. Snapdragon 8 Gen 1 or newer: regular APK; older chips without i8mm (Snapdragon 855/865/870/888, etc.): the `-legacy.apk` (CPU compatibility engine, slower, no NPU or image generation); 12 GB RAM recommended for models above 4B.
 
 > [!NOTE]
 > Upgrading from IRIS LocalAI: from 2.1.0 the package is `com.iridis` and cannot install over the old app. Export a backup in the old app, then import it in Settings › Storage › Backup & restore.
@@ -99,7 +99,7 @@ cp local.properties.example local.properties   # set sdk.dir / ndk.path
 ./gradlew assembleFullRelease                  # llama.cpp only: assembleLiteRelease
 ```
 
-JDK 17 · Android SDK 35 · NDK r27c+ · CMake. See [docs/BUILD.md](docs/BUILD.md).
+JDK 17 · Android SDK 36 · NDK r27c+ · CMake. See [docs/BUILD.md](docs/BUILD.md).
 
 ## License
 
