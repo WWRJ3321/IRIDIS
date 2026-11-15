@@ -213,7 +213,9 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
         // 2.1.7: pictures the step made (generate_image), tap → full-screen viewer.
         if (step.images.isNotEmpty()) {
             Row(Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space6), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-                step.images.take(4).forEach { com.iris.localai.ui.markdown.ImageThumbnail(it) }
+                // 2.6.2: 生图单张与等待方框同尺寸（168dp），不再缩成小框
+                val big = step.tool == "generate_image" && step.images.size == 1
+                step.images.take(4).forEach { if (big) com.iris.localai.ui.markdown.ImageThumbnail(it, 168.dp) else com.iris.localai.ui.markdown.ImageThumbnail(it) }
             }
         }
         if (plan != null) com.iris.localai.ui.components.ScrollSafeFold(open) {

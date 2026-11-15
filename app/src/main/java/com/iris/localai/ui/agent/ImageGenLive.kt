@@ -55,7 +55,8 @@ fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
     val drift by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse), label = "drift")
     // 柔和马卡龙色，跟随主题强调色
     val palette = remember(c.accent) {
-        listOf(c.accent.copy(alpha = 0.85f), Color(0xFFF7C6D9), Color(0xFFC9E4F7), Color(0xFFD9F2D0), Color(0xFFF9E3B8), c.accent.copy(alpha = 0.85f))
+        // 2.6.2: 加深饱和度（原马卡龙色太淡，混出来发灰）
+        listOf(c.accent, Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF06B6D4), Color(0xFFF59E0B), c.accent)
     }
     val target = ImageGenLive.progressOf(line)
     val shown by animateFloatAsState(target ?: 0f, label = "p")
@@ -71,6 +72,8 @@ fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
             val r = w * (0.45f + 0.2f * drift)
             drawRect(Brush.radialGradient(listOf(palette[(1 + (phase * 4).toInt()) % 5].copy(alpha = 0.7f), Color.Transparent),
                 center = Offset(w * (0.25f + 0.5f * drift), h * (0.75f - 0.5f * drift)), radius = r))
+            drawRect(Brush.radialGradient(listOf(palette[(3 + (phase * 4).toInt()) % 5].copy(alpha = 0.6f), Color.Transparent),
+                center = Offset(w * (0.75f - 0.5f * drift), h * (0.25f + 0.5f * drift)), radius = w * (0.4f + 0.15f * (1f - drift))))
         }
         Spacer(Modifier.padding(top = IrisDimens.space6))
         IrisProgressBar(target, Modifier.width(168.dp), height = 4.dp, track = c.outline)
