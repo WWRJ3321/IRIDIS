@@ -1,6 +1,7 @@
 package com.iris.localai.ui.chat
 
 
+import com.iris.localai.data.plusPass
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -547,6 +548,7 @@ internal suspend fun ChatViewModel.runReply(requester: Requester, reply: ChatMes
                         raw.append(com.iris.localai.util.ThinkOnlyPolicy.bridge(parts))
                         publish(false)
                         pass(noThinking = true, answerOnly = true)
+                        result = result?.let { r -> r.copy(stats = first.stats.plusPass(r.stats)) } // 2.6.1: tok/s over both passes
                         val again = ThinkParser.parse(prefix + raw.toString(), expectThinking = prefix.isNotEmpty())
                         val r2 = result ?: first
                         val v2 = com.iris.localai.util.ThinkOnlyPolicy.decide(again, r2.reason, r2.error, alreadyContinued = true, maxNewTokens = maxNew)

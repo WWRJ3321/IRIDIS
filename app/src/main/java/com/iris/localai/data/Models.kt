@@ -23,6 +23,21 @@ data class GenerationStats(
         get() = if (generateMs > 0) generatedTokens * 1000f / generateMs else 0f
 }
 
+/**
+ * 2.6.1: one reply written in two passes (thinking ran out / think-only → answer with thinking off): add the second
+ * pass's decode to the first so the bubble's tok/s covers the whole reply. Before, only the short answer pass was
+ * kept, it fell under the 8-token / 300 ms floor and tok/s vanished. Pure.
+ */
+fun GenerationStats?.plusPass(next: GenerationStats?): GenerationStats? = when {
+    this == null -> next
+    next == null -> this
+    else -> next.copy(
+        promptTokens = promptTokens, reusedTokens = reusedTokens, prefillMs = prefillMs + next.prefillMs,
+        generatedTokens = generatedTokens + next.generatedTokens, generateMs = generateMs + next.generateMs,
+        shiftedTokens = shiftedTokens + next.shiftedTokens,
+    )
+}
+
 @Serializable
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
