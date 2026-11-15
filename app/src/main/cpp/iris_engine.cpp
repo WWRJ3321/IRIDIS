@@ -953,6 +953,12 @@ std::string Engine::format_prompt(const std::vector<ChatMessage> &messages, bool
         out += "<|im_start|>assistant\n";
     }
 
+    // 2.5.9: Qwen3.5 小模型（0.8B/2B 等）模板默认不思考，只有 enable_thinking=true 才开 <think>。
+    // llama_chat_apply_template 不跑 jinja、不传这个开关，所以开思考时由我们补上 <think>\n。
+    if (!disable_thinking && template_.find("enable_thinking") != std::string::npos &&
+        template_.find("<think>") != std::string::npos && ends_with(out, "assistant\n")) {
+        out += "<think>\n";
+    }
     if (disable_thinking && template_.find("<think>") != std::string::npos) {
         // Same trick Qwen3 uses for enable_thinking=false: pre-fill an empty reasoning block.
         if (ends_with(out, "<think>\n")) out += "\n</think>\n\n";
