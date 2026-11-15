@@ -16,10 +16,10 @@ class V262Test {
     private fun res(locale: String) = src("src/main/res/$locale/strings.xml")
 
     @Test fun version() {
-        assertEquals("2.6.2", UpdateNotes.RELEASES.first().version)
+        // 2.6.3: later versions keep this green (2.6.2 stays in the list, versionCode only grows).
+        assertNotNull(UpdateNotes.find("2.6.2"))
         val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.2\""))
-        assertTrue(g.contains("versionCode = 261"))
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 261)
         assertTrue(src("CHANGELOG.md").contains("## 2.6.2（"))
         assertFalse(UpdateNotes.RELEASES.flatMap { it.items }.any { it.text.contains("测试版") })
     }

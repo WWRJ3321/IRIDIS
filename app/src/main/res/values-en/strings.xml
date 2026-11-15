@@ -2215,4 +2215,12 @@
     <string name="img262_apply">Apply</string>
     <string name="img262_reset">Reset</string>
     <string name="img262_save_failed">Couldn\'t save the picture; attachment unchanged</string>
+    <string name="dl263_discard">Delete partial</string>
+    <string name="dl263_discard_msg">Delete the %1$s downloaded so far? The next download starts over.</string>
+    <string name="hs263_in_messages">In messages</string>
+    <string name="ex263_user">Me</string>
+    <string name="ex263_assistant">Assistant</string>
+    <string name="ex263_share">Share</string>
+    <string name="ex263_failed">Export failed</string>
+    <string name="ex263_txt">Plain text (.txt)</string>
 </resources>

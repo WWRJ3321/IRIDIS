@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,6 +86,8 @@ private sealed interface DrawerEntry {
     val key: String
     data class Header(val label: String) : DrawerEntry { override val key get() = "h-$label" }
     data class Item(val summary: ConversationSummary) : DrawerEntry { override val key get() = summary.id }
+    /** 2.6.3: a message that matches the search (snippet + highlight); tap → that message. */
+    data class Hit(val hit: com.iris.localai.data.HistorySearch.Hit) : DrawerEntry { override val key get() = "m-" + hit.conversationId + "-" + hit.messageId }
 }
 
 @Composable
@@ -110,6 +113,11 @@ fun HistoryDrawer(
     onRestore: (String) -> Unit = {},
     onPurge: (String) -> Unit = {},
     onEmptyTrash: () -> Unit = {},
+    /** 2.6.3 全文搜索: message hits for a query. */
+    onSearchMessages: suspend (String) -> List<com.iris.localai.data.HistorySearch.Hit> = { emptyList() },
+    onOpenAt: (String, String) -> Unit = { id, _ -> onOpen(id) },
+    /** 2.6.3: share the selected conversations as one file. */
+    onExport: (Set<String>, com.iris.localai.data.ChatExport.Format) -> Unit = { _, _ -> },
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
@@ -127,8 +135,17 @@ fun HistoryDrawer(
     // 1.14.3: leaving the drawer (back to the chat, or to another page) ends multi-select.
     LaunchedEffect(open) { if (!open) { selected = emptySet(); deletingMany = false } }
 
+    // 2.6.3: message hits, searched off the main thread after a short pause in typing.
+    var hits by remember { mutableStateOf<List<com.iris.localai.data.HistorySearch.Hit>>(emptyList()) }
+    LaunchedEffect(query, summaries) {
+        val q = query.trim()
+        if (q.isEmpty()) { hits = emptyList(); return@LaunchedEffect }
+        kotlinx.coroutines.delay(250)
+        hits = runCatching { onSearchMessages(q) }.getOrDefault(emptyList())
+    }
+    var exportMenu by remember { mutableStateOf(false) }
     // Flattened once per data change; the list itself only diffs keys.
-    val entries = remember(summaries, query) {
+    val entries = remember(summaries, query, hits) {
         val q = query.trim()
         val filtered = if (q.isEmpty()) summaries else summaries.filter { it.title.contains(q, ignoreCase = true) }
         val pinned = filtered.filter { it.pinned }
@@ -136,6 +153,10 @@ fun HistoryDrawer(
         buildList {
             if (pinned.isNotEmpty()) { add(DrawerEntry.Header(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d43ff))); pinned.forEach { add(DrawerEntry.Item(it)) } }
             rest.forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
+            if (q.isNotEmpty() && hits.isNotEmpty()) {
+                add(DrawerEntry.Header(com.iris.localai.I18n.s(com.iris.localai.R.string.hs263_in_messages)))
+                hits.forEach { add(DrawerEntry.Hit(it)) }
+            }
         }
     }
 
@@ -194,7 +215,7 @@ fun HistoryDrawer(
                     items(
                         entries,
                         key = { it.key },
-                        contentType = { if (it is DrawerEntry.Header) 0 else 1 },
+                        contentType = { when (it) { is DrawerEntry.Header -> 0; is DrawerEntry.Item -> 1; is DrawerEntry.Hit -> 2 } },
                     ) { e ->
                         val anim = if (reduce) Modifier else Modifier.animateItem(
                             fadeInSpec = IrisMotion.standard(),
@@ -206,6 +227,7 @@ fun HistoryDrawer(
                                 e.label, style = IrisType.caption.copy(fontWeight = IrisType.labelSmall.fontWeight), color = c.textTertiary,
                                 modifier = anim.padding(start = IrisDimens.pageGutter, top = IrisDimens.space16, bottom = IrisDimens.space4),
                             )
+                            is DrawerEntry.Hit -> if (!selecting) SearchHitRow(e.hit, anim) { onOpenAt(e.hit.conversationId, e.hit.messageId) }
                             is DrawerEntry.Item -> {
                                 val s = e.summary
                                 ConversationItem(
@@ -236,6 +258,17 @@ fun HistoryDrawer(
                 SelectAction(Icons.Outlined.PushPin, if (allPinned) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_84e4fa) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d43ff), enabled = chosen.isNotEmpty()) {
                     chosen.forEach { if (it.pinned == allPinned) onPin(it.id, !allPinned) }
                     selected = emptySet()
+                }
+                // 2.6.3: 分享 / 导出 the chosen conversations (Markdown / TXT / JSON, one file).
+                Box {
+                    SelectAction(Icons.Outlined.Share, com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_share), enabled = chosen.isNotEmpty()) { exportMenu = true }
+                    com.iris.localai.ui.components.IrisMenu(exportMenu, onDismiss = { exportMenu = false }) {
+                        for (f in com.iris.localai.data.ChatExport.Format.entries) {
+                            com.iris.localai.ui.components.IrisMenuItem(ExportText.label(f), null) {
+                                exportMenu = false; onExport(chosen.map { it.id }.toSet(), f); selected = emptySet()
+                            }
+                        }
+                    }
                 }
                 SelectAction(Icons.Outlined.DriveFileRenameOutline, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), enabled = chosen.size == 1) {
                     renaming = chosen.first(); selected = emptySet()
@@ -299,6 +332,43 @@ fun HistoryDrawer(
         )
     }
     if (showTrash) TrashSheet(trash, onRestore, onPurge, onEmptyTrash, onDismiss = { showTrash = false })
+}
+
+/** 2.6.3: export format names in the 分享 menu. */
+internal object ExportText {
+    fun label(f: com.iris.localai.data.ChatExport.Format): String = when (f) {
+        com.iris.localai.data.ChatExport.Format.MARKDOWN -> "Markdown (.md)"
+        com.iris.localai.data.ChatExport.Format.TXT -> com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_txt)
+        com.iris.localai.data.ChatExport.Format.JSON -> "JSON (.json)"
+    }
+}
+
+/** 2.6.3: one search hit — conversation title, then the snippet with the matches highlighted. */
+@Composable
+private fun SearchHitRow(h: com.iris.localai.data.HistorySearch.Hit, modifier: Modifier, onClick: () -> Unit) {
+    val c = Iris.colors
+    val text = remember(h, c.accent) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(h.snippet)
+            h.ranges.forEach { r ->
+                if (r.first >= 0 && r.last < h.snippet.length) addStyle(
+                    androidx.compose.ui.text.SpanStyle(color = c.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, background = c.accent.copy(alpha = 0.14f)),
+                    r.first, r.last + 1,
+                )
+            }
+        }
+    }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = IrisDimens.space8, vertical = com.iris.localai.ui.theme.IrisSpace.XS)
+            .clip(IrisRadius.mediumShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
+    ) {
+        Text(h.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = IrisType.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, style = IrisType.secondary, color = c.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 /** 2.1: short labels of the drawer's bottom navigation. */

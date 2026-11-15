@@ -378,6 +378,55 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         viewModelScope.launch { c.engine.resetForNewChat() }
     }
 
+    // ------------------------------------------------------------------ 2.6.3 历史搜索 / 导出
+    private val searchIndex by lazy { com.iris.localai.data.MessageSearchIndex(c.conversations) }
+    /** Message hits for [query] in every saved conversation (titles are filtered by the drawer itself). */
+    suspend fun searchMessages(query: String): List<com.iris.localai.data.HistorySearch.Hit> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { searchIndex.search(summaries.value, query) }
+
+    /** A message the chat list should scroll to once its conversation is shown (search hit). */
+    val jumpTo = MutableStateFlow<String?>(null)
+    fun openAt(conversationId: String, messageId: String) { jumpTo.value = messageId; open(conversationId) }
+    fun jumpDone() { jumpTo.value = null }
+
+    /** Writes the chosen conversations as one file and opens the share sheet. */
+    fun exportChats(ids: Collection<String>, format: com.iris.localai.data.ChatExport.Format) {
+        viewModelScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val order = summaries.value.map { it.id }
+                    val list = ids.sortedBy { order.indexOf(it) }.mapNotNull { c.conversations.load(it) }
+                    if (list.isEmpty()) return@runCatching false
+                    val user = com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_user)
+                    val bot = com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_assistant)
+                    val untitled = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a)
+                    val now = System.currentTimeMillis()
+                    val E = com.iris.localai.data.ChatExport
+                    val body = when (format) {
+                        com.iris.localai.data.ChatExport.Format.MARKDOWN -> E.markdown(list, user, bot, untitled)
+                        com.iris.localai.data.ChatExport.Format.TXT -> E.txt(list, user, bot, untitled)
+                        com.iris.localai.data.ChatExport.Format.JSON -> E.json(list, com.iris.localai.BuildConfig.VERSION_NAME, now)
+                    }
+                    val ctx: android.content.Context = getApplication()
+                    val dir = java.io.File(ctx.cacheDir, "shared/export").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+                    val f = java.io.File(dir, E.fileName(list, format, now, untitled)).apply { writeText(body) }
+                    val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = format.mime
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, f.name)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        ctx.startActivity(android.content.Intent.createChooser(send, com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_share)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                    true
+                }.getOrDefault(false)
+            }
+            if (!ok) android.widget.Toast.makeText(getApplication(), com.iris.localai.I18n.s(com.iris.localai.R.string.ex263_failed), android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun open(id: String) {
         if (runningInBackground()) {
             if (id == conversation.value.id) { viewing.value = null; return }

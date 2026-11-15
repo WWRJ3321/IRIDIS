@@ -2215,4 +2215,12 @@
     <string name="img262_apply">適用</string>
     <string name="img262_reset">リセット</string>
     <string name="img262_save_failed">画像を保存できず、添付は変更されていません</string>
+    <string name="dl263_discard">途中のファイルを削除</string>
+    <string name="dl263_discard_msg">ダウンロード済みの %1$s を削除します。次回は最初からです。</string>
+    <string name="hs263_in_messages">メッセージ内</string>
+    <string name="ex263_user">自分</string>
+    <string name="ex263_assistant">アシスタント</string>
+    <string name="ex263_share">共有</string>
+    <string name="ex263_failed">エクスポートに失敗しました</string>
+    <string name="ex263_txt">テキスト (.txt)</string>
 </resources>

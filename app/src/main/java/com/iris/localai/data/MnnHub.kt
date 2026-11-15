@@ -66,7 +66,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (target.exists() || repo.find(name) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, name))
         val partName = name + ModelRepository.PART_SUFFIX
         if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
-        repo.unholdParts(); curParts = listOf(partName)
+        repo.unholdParts(); curParts = listOf(partName); curDir = modelsDir
         _state.value = State(repoId = repoId, active = true, file = com.iris.localai.I18n.s(com.iris.localai.R.string.data_864643))
         try {
             // 2.2.16: list the repo on every candidate source (自动: in parallel, the listing doubles as the
@@ -133,7 +133,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (target.exists() || repo.find(fileName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, fileName))
         val partName = fileName + ModelRepository.PART_SUFFIX
         if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
-        curParts = listOf(partName)
+        curParts = listOf(partName); curDir = modelsDir
         try {
             val have = HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L
             val free = StatFs(modelsDir.absolutePath).availableBytes
@@ -262,7 +262,7 @@ class MnnHub(private val repo: ModelRepository) {
         if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, mainName))
         val claimed = files.map { it.third + ModelRepository.PART_SUFFIX }
         if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, hit.id)) }
-        repo.unholdParts(); curParts = claimed
+        repo.unholdParts(); curParts = claimed; curDir = modelsDir
         val total = files.sumOf { it.second }
         _state.value = State(repoId = hit.id, active = true, totalBytes = total, file = mainName)
         try {
@@ -305,6 +305,19 @@ class MnnHub(private val repo: ModelRepository) {
     /** User 「取消」: stop and clear the card (the .part files stay, a later download of the same model resumes). */
     fun cancel() { pausing = false; job?.cancel(); if (_state.value.paused) { repo.unholdParts(); _state.value = State() } }
 
+    /**
+     * 2.6.3: 「清除」 on a paused download: deletes what it already wrote (.part files, segments, an
+     * emptied model folder) and clears the card. Returns the bytes freed (0 when nothing was paused).
+     */
+    fun discard(): Long {
+        if (!_state.value.paused || job?.isActive == true) return 0L
+        val dir = curDir
+        val freed = if (dir != null) runCatching { PartCleanup.discard(dir, curParts, keepDir = repo.modelsDir) }.getOrDefault(0L) else 0L
+        repo.unholdParts(); curParts = emptyList(); curDir = null
+        _state.value = State()
+        return freed
+    }
+
     /** 2.2.17 C 「暂停」: stop, keep the progress; [resume] continues from the .part files on the same sources. */
     fun pause() { if (job?.isActive == true) { pausing = true; job?.cancel() } }
     fun resume() { if (job?.isActive != true) retry?.invoke(null) }
@@ -315,6 +328,8 @@ class MnnHub(private val repo: ModelRepository) {
 
     /** 2.3.1: `.part` names of the current download; held in [ModelRepository] while paused so cleanup keeps them. */
     @Volatile private var curParts: List<String> = emptyList()
+    /** 2.6.3: the folder [curParts] live in (models/ or models/<name>/ for GGUF). */
+    @Volatile private var curDir: File? = null
 
     /** State after a download ended with [t]: paused, cancelled (cleared) or failed. */
     private fun stopped(repoId: String, t: Throwable): State {

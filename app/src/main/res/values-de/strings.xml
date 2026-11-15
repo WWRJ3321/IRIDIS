@@ -2215,4 +2215,12 @@
     <string name="img262_apply">Anwenden</string>
     <string name="img262_reset">Zurücksetzen</string>
     <string name="img262_save_failed">Bild nicht gespeichert, Anhang unverändert</string>
+    <string name="dl263_discard">Teildownload löschen</string>
+    <string name="dl263_discard_msg">Die bisher geladenen %1$s löschen? Der nächste Download beginnt von vorn.</string>
+    <string name="hs263_in_messages">In Nachrichten</string>
+    <string name="ex263_user">Ich</string>
+    <string name="ex263_assistant">Assistent</string>
+    <string name="ex263_share">Teilen</string>
+    <string name="ex263_failed">Export fehlgeschlagen</string>
+    <string name="ex263_txt">Text (.txt)</string>
 </resources>

@@ -30,6 +30,17 @@ object FoldMotion {
 
     /** Height shown for [fraction] of a [full]-pixel tall body (springs may overshoot; clamped). */
     fun height(full: Int, fraction: Float): Int = (full * fraction.coerceIn(0f, 1f)).roundToInt().coerceIn(0, full)
+
+    /**
+     * 2.6.3 (#10 again): bodies taller than this never grow frame by frame — they take their full
+     * height at once and only fade. A long thinking block growing inside the list while a fling
+     * starts left the upper half of the screen drawing stale text; past one screen the growth is
+     * not visible anyway.
+     */
+    const val TALL_PX = 2400
+
+    /** Height for [fraction] with the tall-body rule: anything open shows its full height when [full] ≥ [TALL_PX]. */
+    fun heightFor(full: Int, fraction: Float): Int = if (full >= TALL_PX && fraction > 0f) full else height(full, fraction)
 }
 
 /**
@@ -53,11 +64,16 @@ fun ScrollSafeFold(visible: Boolean, modifier: Modifier = Modifier, content: @Co
     if (!present) return
     Layout(
         content = content,
-        modifier = modifier.clipToBounds().graphicsLayer { alpha = progress.value.coerceIn(0f, 1f) },
+        // 2.6.3: ModulateAlpha — the fade no longer renders the whole (possibly very tall) body into an
+        // offscreen buffer, which is what drew garbage at the top of the screen mid-scroll.
+        modifier = modifier.clipToBounds().graphicsLayer {
+            alpha = progress.value.coerceIn(0f, 1f)
+            compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
+        },
     ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(constraints.copy(minHeight = 0)) }
         val w = placeables.maxOfOrNull { it.width } ?: 0
         val full = placeables.maxOfOrNull { it.height } ?: 0
-        layout(w.coerceIn(constraints.minWidth, constraints.maxWidth), FoldMotion.height(full, progress.value).coerceIn(constraints.minHeight, constraints.maxHeight)) { placeables.forEach { it.place(0, 0) } }
+        layout(w.coerceIn(constraints.minWidth, constraints.maxWidth), FoldMotion.heightFor(full, progress.value).coerceIn(constraints.minHeight, constraints.maxHeight)) { placeables.forEach { it.place(0, 0) } }
     }
 }

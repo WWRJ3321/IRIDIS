@@ -302,6 +302,9 @@ fun ChatScreen(
                 onRestore = vm::restoreChat,
                 onPurge = vm::purgeChat,
                 onEmptyTrash = vm::emptyTrash,
+                onSearchMessages = vm::searchMessages,
+                onOpenAt = { cid, mid -> vm.openAt(cid, mid); scope.launch { drawer.close() } },
+                onExport = vm::exportChats,
             )
         },
     ) {
@@ -362,6 +365,17 @@ fun ChatScreen(
                     follow = true
                     scrollToEnd(false)
                 }
+            }
+            // 2.6.3: a 历史搜索 hit → scroll to that message (after the landing above), once.
+            val jumpTarget by vm.jumpTo.collectAsState()
+            LaunchedEffect(ui.conversation.id, jumpTarget, messages.size) {
+                val target = jumpTarget ?: return@LaunchedEffect
+                val idx = messages.indexOfFirst { it.id == target }
+                if (idx < 0) return@LaunchedEffect
+                androidx.compose.runtime.withFrameNanos { }
+                follow = false
+                listState.scrollToItem(idx)
+                vm.jumpDone()
             }
             // A new message (sent by the user or a new reply) always brings the bottom into view.
             LaunchedEffect(messages.size) {

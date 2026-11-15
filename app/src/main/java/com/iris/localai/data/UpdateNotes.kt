@@ -16,6 +16,12 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.3", listOf(
+            f("聊天记录可搜消息内容：命中片段高亮，点一下跳到那条消息。"),
+            f("会话长按多选后可分享：Markdown / TXT / JSON。"),
+            f("下载暂停后可「清除已下载」，释放空间。"),
+            b("展开思考或工具日志时快速滑动，上半屏文字错乱。"),
+        )),
         Release("2.6.2", listOf(
             f("图片查看页改成沉浸式，可双指缩放；输入框里的图片能裁剪、旋转、涂鸦。"),
             f("知识库没下载的嵌入模型，点一下直接去下载。"),

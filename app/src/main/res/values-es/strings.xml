@@ -2215,4 +2215,12 @@
     <string name="img262_apply">Aplicar</string>
     <string name="img262_reset">Restablecer</string>
     <string name="img262_save_failed">No se guardó la imagen; el adjunto no cambió</string>
+    <string name="dl263_discard">Borrar descarga parcial</string>
+    <string name="dl263_discard_msg">¿Borrar los %1$s descargados? La próxima descarga empezará de cero.</string>
+    <string name="hs263_in_messages">En mensajes</string>
+    <string name="ex263_user">Yo</string>
+    <string name="ex263_assistant">Asistente</string>
+    <string name="ex263_share">Compartir</string>
+    <string name="ex263_failed">Error al exportar</string>
+    <string name="ex263_txt">Texto (.txt)</string>
 </resources>

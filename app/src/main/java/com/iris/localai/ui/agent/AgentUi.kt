@@ -92,16 +92,26 @@ fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (Ag
     // earlier steps fold into one 「已执行 N 步」 row; the newest steps always stay visible.
     val keep = StepFold.visible(steps.size)
     var expanded by rememberSaveable(steps.first().id) { mutableStateOf(false) }
-    // 2.4.5 (#10): no size animation while the chat list scrolls (removing the modifier lands on the final size).
-    val listScrolling by com.iris.localai.ui.components.LocalListScrolling.current
-    Column(Modifier.fillMaxWidth().then(if (listScrolling) Modifier else Modifier.animateContentSize()), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-        val folded = if (expanded) 0 else steps.size - keep
-        if (steps.size > keep) {
-            val hidden = steps.take(steps.size - keep)
+    // 2.6.3 (#10): no animateContentSize on the whole column any more — the earlier steps open in a
+    // ScrollSafeFold (snaps while the list moves, tall bodies do not grow frame by frame).
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+        val hiddenCount = steps.size - keep
+        if (hiddenCount > 0) {
+            val hidden = steps.take(hiddenCount)
             StepFoldRow(StepFold.summary(hidden, expanded), expanded) { expanded = !expanded }
+            com.iris.localai.ui.components.ScrollSafeFold(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                    hidden.forEach { st ->
+                        androidx.compose.runtime.key(st.id) {
+                            if (st.lead.isNotBlank()) lead(st)
+                            AgentStepCard(st, streaming)
+                        }
+                    }
+                }
+            }
         }
         // 1.13.3: think → write → tool card → think … in the order it happened.
-        steps.drop(folded).forEach { st ->
+        steps.drop(hiddenCount.coerceAtLeast(0)).forEach { st ->
             androidx.compose.runtime.key(st.id) {
                 if (st.lead.isNotBlank()) lead(st)
                 AgentStepCard(st, streaming)

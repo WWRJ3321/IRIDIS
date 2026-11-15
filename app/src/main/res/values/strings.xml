@@ -2216,4 +2216,12 @@
     <string name="img262_apply">应用</string>
     <string name="img262_reset">还原</string>
     <string name="img262_save_failed">图片没存上，附件未改</string>
+    <string name="dl263_discard">清除已下载</string>
+    <string name="dl263_discard_msg">删除已下载的 %1$s，下次从头开始。</string>
+    <string name="hs263_in_messages">消息中</string>
+    <string name="ex263_user">我</string>
+    <string name="ex263_assistant">助手</string>
+    <string name="ex263_share">分享</string>
+    <string name="ex263_failed">导出失败</string>
+    <string name="ex263_txt">纯文本 (.txt)</string>
 </resources>

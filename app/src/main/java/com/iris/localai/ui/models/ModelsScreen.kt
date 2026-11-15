@@ -406,6 +406,8 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelDownload() = c.mnnHub.cancel()
+    /** 2.6.3: paused download → delete what it already wrote. */
+    fun discardDownload() = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { c.mnnHub.discard(); c.models.refresh() }
     init { refresh(); refreshImageModels() }
 }
 

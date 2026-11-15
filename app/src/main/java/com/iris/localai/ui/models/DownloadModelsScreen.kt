@@ -94,6 +94,8 @@ object DownloadText {
     val ONE_AT_A_TIME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d7c432)
     val PAUSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8d63ef)
     val CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)
+    /** 2.6.3: paused → delete the downloaded part. */
+    val DISCARD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.dl263_discard)
     val VISION_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_25cef9)
     val TRY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8c0dd3)
     val TRY_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_6ebc23)
@@ -251,6 +253,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                 else -> vm.cancelDownload()
             }
         }
+        override fun discard() { vm.discardDownload() }
         override fun import() = importFile()
     }
 
@@ -310,7 +313,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                             }
                             if (s is RecStatus.Paused) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56), vm::resumeDownload, compact = true)
                         }
-                        DownloadBlock(s, onPause = vm::pauseDownload, onRetry = vm::retryOtherSource, onCancel = vm::cancelDownload, onImport = importFile)
+                        DownloadBlock(s, onPause = vm::pauseDownload, onRetry = vm::retryOtherSource, onCancel = vm::cancelDownload, onImport = importFile, onDiscard = { vm.discardDownload() })
                     }
                 }
             }
@@ -423,6 +426,7 @@ private interface RecActions {
     fun pause()
     fun retry(item: RecommendedCatalog.Item)
     fun cancel(item: RecommendedCatalog.Item)
+    fun discard() {}
     fun import()
 }
 
@@ -498,13 +502,13 @@ private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ram
                 PrimaryButton(item, s, actions)
             }
         }
-        DownloadBlock(s, onPause = actions::pause, onRetry = { actions.retry(item) }, onCancel = { actions.cancel(item) }, onImport = actions::import)
+        DownloadBlock(s, onPause = actions::pause, onRetry = { actions.retry(item) }, onCancel = { actions.cancel(item) }, onImport = actions::import, onDiscard = actions::discard)
     }
 }
 
 /** Inline progress (暂停 / 取消), paused (换源重试 / 取消) or failure (one reason, 换源重试, 从文件导入). */
 @Composable
-private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit, onCancel: () -> Unit, onImport: () -> Unit) {
+private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit, onCancel: () -> Unit, onImport: () -> Unit, onDiscard: (() -> Unit)? = null) {
     val c = Iris.colors
     when (s) {
         is RecStatus.Downloading -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
@@ -524,6 +528,18 @@ private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Text, compact = true)
                 IrisButton(DownloadText.CANCEL, onCancel, style = IrisButtonStyle.Text, compact = true)
+            }
+            // 2.6.3: 清除已下载 — confirm, then the .part files go and the card is back to 下载.
+            if (onDiscard != null) {
+                var asking by remember { mutableStateOf(false) }
+                IrisButton(DownloadText.DISCARD, { asking = true }, style = IrisButtonStyle.Text, compact = true)
+                if (asking) com.iris.localai.ui.components.ConfirmDialog(
+                    title = DownloadText.DISCARD,
+                    message = com.iris.localai.I18n.s(com.iris.localai.R.string.dl263_discard_msg, com.iris.localai.data.Format.bytes(s.done)),
+                    confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
+                    onConfirm = { asking = false; onDiscard() },
+                    onDismiss = { asking = false },
+                )
             }
         }
         is RecStatus.Failed -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
@@ -599,7 +615,7 @@ private fun RecDetailSheet(
             }
         }
         Column(Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-            DownloadBlock(s, onPause = actions::pause, onRetry = { actions.retry(item) }, onCancel = { actions.cancel(item) }, onImport = actions::import)
+            DownloadBlock(s, onPause = actions::pause, onRetry = { actions.retry(item) }, onCancel = { actions.cancel(item) }, onImport = actions::import, onDiscard = actions::discard)
             if (s == RecStatus.Blocked) Text(DownloadText.ONE_AT_A_TIME, style = IrisType.caption, color = c.warning)
             if (s !is RecStatus.Failed && s !is RecStatus.Downloading) {
                 PrimaryButton(item, s, actions, Modifier.fillMaxWidth(), compact = false, withVision = withVision)

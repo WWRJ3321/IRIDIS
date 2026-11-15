@@ -2215,4 +2215,12 @@
     <string name="img262_apply">लागू करें</string>
     <string name="img262_reset">रीसेट</string>
     <string name="img262_save_failed">चित्र सेव नहीं हुआ; अटैचमेंट नहीं बदला</string>
+    <string name="dl263_discard">आंशिक डाउनलोड हटाएँ</string>
+    <string name="dl263_discard_msg">अब तक डाउनलोड हुए %1$s हटाएँ? अगला डाउनलोड शुरू से होगा।</string>
+    <string name="hs263_in_messages">संदेशों में</string>
+    <string name="ex263_user">मैं</string>
+    <string name="ex263_assistant">सहायक</string>
+    <string name="ex263_share">साझा करें</string>
+    <string name="ex263_failed">निर्यात विफल</string>
+    <string name="ex263_txt">सादा पाठ (.txt)</string>
 </resources>
