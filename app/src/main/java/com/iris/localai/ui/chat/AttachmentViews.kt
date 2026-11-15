@@ -169,7 +169,8 @@ fun AttachmentStrip(
 /** 2.6.2: writes an edited picture next to the attachments and returns the replacing attachment. */
 internal object ImageEditSave {
     fun save(context: android.content.Context, old: Attachment, edited: android.graphics.Bitmap): Attachment? = runCatching {
-        val (name, format) = ImageEditMath.outName(old.name)
+        val (name, png) = ImageEditMath.outName(old.name)
+        val format = if (png) android.graphics.Bitmap.CompressFormat.PNG else android.graphics.Bitmap.CompressFormat.JPEG
         val out = java.io.File(com.iris.localai.util.Attachments.dir(context), java.util.UUID.randomUUID().toString().take(8) + "-" + name)
         if (!ImageEditOps.write(edited, out, format)) { out.delete(); return null }
         old.copy(name = name, path = out.path, mime = if (format == android.graphics.Bitmap.CompressFormat.PNG) "image/png" else "image/jpeg", sizeBytes = out.length())

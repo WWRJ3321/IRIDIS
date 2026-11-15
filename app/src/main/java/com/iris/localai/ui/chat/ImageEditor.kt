@@ -94,27 +94,38 @@ object ImageEditMath {
 
     /** [crop] after dragging [h] by [d] (picture px), kept inside [bw]×[bh] and at least [minSide] each way. */
     fun drag(crop: Rect, h: Handle, d: Offset, bw: Float, bh: Float, minSide: Float): Rect {
+        val o = dragBox(floatArrayOf(crop.left, crop.top, crop.right, crop.bottom), h, d.x, d.y, bw, bh, minSide)
+        return Rect(o[0], o[1], o[2], o[3])
+    }
+
+    /** [drag] on a plain box (left, top, right, bottom). */
+    fun dragBox(box: FloatArray, h: Handle, dx: Float, dy: Float, bw: Float, bh: Float, minSide: Float): FloatArray {
+        val (l, t, r, b) = box.toList()
         val m = minSide.coerceAtMost(min(bw, bh))
         return when (h) {
             Handle.MOVE -> {
-                val dx = d.x.coerceIn(-crop.left, bw - crop.right)
-                val dy = d.y.coerceIn(-crop.top, bh - crop.bottom)
-                crop.translate(dx, dy)
+                val x = dx.coerceIn(-l, bw - r)
+                val y = dy.coerceIn(-t, bh - b)
+                floatArrayOf(l + x, t + y, r + x, b + y)
             }
-            Handle.TOP_LEFT -> Rect((crop.left + d.x).coerceIn(0f, crop.right - m), (crop.top + d.y).coerceIn(0f, crop.bottom - m), crop.right, crop.bottom)
-            Handle.TOP_RIGHT -> Rect(crop.left, (crop.top + d.y).coerceIn(0f, crop.bottom - m), (crop.right + d.x).coerceIn(crop.left + m, bw), crop.bottom)
-            Handle.BOTTOM_LEFT -> Rect((crop.left + d.x).coerceIn(0f, crop.right - m), crop.top, crop.right, (crop.bottom + d.y).coerceIn(crop.top + m, bh))
-            Handle.BOTTOM_RIGHT -> Rect(crop.left, crop.top, (crop.right + d.x).coerceIn(crop.left + m, bw), (crop.bottom + d.y).coerceIn(crop.top + m, bh))
+            Handle.TOP_LEFT -> floatArrayOf((l + dx).coerceIn(0f, r - m), (t + dy).coerceIn(0f, b - m), r, b)
+            Handle.TOP_RIGHT -> floatArrayOf(l, (t + dy).coerceIn(0f, b - m), (r + dx).coerceIn(l + m, bw), b)
+            Handle.BOTTOM_LEFT -> floatArrayOf((l + dx).coerceIn(0f, r - m), t, r, (b + dy).coerceIn(t + m, bh))
+            Handle.BOTTOM_RIGHT -> floatArrayOf(l, t, (r + dx).coerceIn(l + m, bw), (b + dy).coerceIn(t + m, bh))
         }
     }
 
     /** Whole-pixel crop box inside the picture, or null when it is (about) the whole picture. */
-    fun pixels(crop: Rect, bw: Int, bh: Int): android.graphics.Rect? {
-        val l = crop.left.roundToInt().coerceIn(0, bw - 1)
-        val t = crop.top.roundToInt().coerceIn(0, bh - 1)
-        val r = crop.right.roundToInt().coerceIn(l + 1, bw)
-        val b = crop.bottom.roundToInt().coerceIn(t + 1, bh)
-        return if (l == 0 && t == 0 && r == bw && b == bh) null else android.graphics.Rect(l, t, r, b)
+    fun pixels(crop: Rect, bw: Int, bh: Int): android.graphics.Rect? =
+        pixelBox(crop.left, crop.top, crop.right, crop.bottom, bw, bh)?.let { android.graphics.Rect(it[0], it[1], it[2], it[3]) }
+
+    /** [pixels] as (left, top, right, bottom). */
+    fun pixelBox(left: Float, top: Float, right: Float, bottom: Float, bw: Int, bh: Int): IntArray? {
+        val l = left.roundToInt().coerceIn(0, bw - 1)
+        val t = top.roundToInt().coerceIn(0, bh - 1)
+        val r = right.roundToInt().coerceIn(l + 1, bw)
+        val b = bottom.roundToInt().coerceIn(t + 1, bh)
+        return if (l == 0 && t == 0 && r == bw && b == bh) null else intArrayOf(l, t, r, b)
     }
 
     /** Size of a [w]×[h] picture after [quarters] quarter turns. */
@@ -126,11 +137,11 @@ object ImageEditMath {
     /** The editor's pen colours. */
     val PEN = listOf(0xFFFF3B30, 0xFFFFCC00, 0xFF34C759, 0xFF0A84FF, 0xFFFFFFFF, 0xFF000000)
 
-    /** Saved as PNG when the original name says so, else JPEG; the name keeps its stem. */
-    fun outName(name: String): Pair<String, Bitmap.CompressFormat> {
+    /** Saved as PNG (second = true) when the original name says so, else JPEG; the name keeps its stem. */
+    fun outName(name: String): Pair<String, Boolean> {
         val ext = name.substringAfterLast('.', "").lowercase()
         val stem = if (name.contains('.')) name.substringBeforeLast('.') else name
-        return if (ext == "png") "$stem.png" to Bitmap.CompressFormat.PNG else "$stem.jpg" to Bitmap.CompressFormat.JPEG
+        return if (ext == "png") "$stem.png" to true else "$stem.jpg" to false
     }
 }
 

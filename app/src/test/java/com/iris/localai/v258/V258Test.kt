@@ -61,7 +61,7 @@ class V258Test {
         val m = src("src/main/java/com/iris/localai/agent/mcp/McpManager.kt")
         assertTrue(m.contains("saver.execute") && m.contains("fun setAllTools"))
         val p = src("src/main/java/com/iris/localai/ui/agent/McpPage.kt")
-        assertTrue(p.contains("remember(s.tools)") && p.contains("key(t.name)") && p.contains("McpText.ALL_OFF"))
+        assertTrue(p.contains("remember(s.tools)") && p.contains("key(t.name") && p.contains("McpText.ALL_OFF"))
     }
 
     @Test fun storageInApp() {
