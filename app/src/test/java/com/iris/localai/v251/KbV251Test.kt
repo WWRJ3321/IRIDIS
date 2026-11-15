@@ -61,7 +61,7 @@ class KbV251Test {
         val out = KbVectors.select(chunks, bm, cos, KbEmbedModels.QWEN3_MIN_COS)
         assertTrue(out.size <= 2)
         assertEquals("d1.md", out.first().file)        // in both lists
-        assertFalse(out.any { it.file == "d0.md" })     // cosine below the gate
+        assertTrue(out.any { it.file == "d0.md" })      // 2.6.1: cosine below the gate but a relevant keyword hit → kept (union)
         assertTrue(KbVectors.select(chunks, emptyList(), doubleArrayOf(0.1, 0.2, 0.3, 0.1), 0.45).isEmpty())
     }
 

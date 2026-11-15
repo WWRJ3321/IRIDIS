@@ -28,11 +28,12 @@ class V260Test {
     }
 
     @Test fun barIndexAndCurrent() {
-        assertEquals(0, ThinkLevelBar.indexAt(-5f, 100f))
-        assertEquals(0, ThinkLevelBar.indexAt(50f, 100f))
-        assertEquals(2, ThinkLevelBar.indexAt(250f, 100f))
+        // 2.6.1: three segments 低 中 高 → levels 1..3; 关 is the tap, not in the bar
+        assertEquals(1, ThinkLevelBar.indexAt(-5f, 100f))
+        assertEquals(1, ThinkLevelBar.indexAt(50f, 100f))
+        assertEquals(3, ThinkLevelBar.indexAt(250f, 100f))
         assertEquals(3, ThinkLevelBar.indexAt(999f, 100f))
-        assertEquals(0, ThinkLevelBar.current(false, 3))
+        assertEquals(3, ThinkLevelBar.current(false, 3))
         assertEquals(2, ThinkLevelBar.current(true, 0))
         assertEquals(1, ThinkLevelBar.current(true, 1))
     }
@@ -55,8 +56,7 @@ class V260Test {
     }
 
     @Test fun releaseNotes() {
-        assertEquals("2.6.0", UpdateNotes.RELEASES.first().version)
+        assertNotNull(UpdateNotes.find("2.6.0"))
         assertEquals("2.6.0", UpdateNotes.base("2.6.0-beta"))
-        assertTrue(src("build.gradle.kts").contains("versionName = \"2.6.0-beta\""))
     }
 }

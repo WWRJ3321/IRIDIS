@@ -37,20 +37,21 @@ import kotlin.math.abs
 
 /** 2.6.0: pure helpers of the 思考档位 bar (tested in V260Test). */
 object ThinkLevelBar {
-    const val SEGMENTS = 4
+    /** 2.6.1: 低 中 高 only — on / off stays the pill's tap (user: 点一下开、点一下关，长按只调档位). */
+    const val SEGMENTS = 3
     const val SEGMENT_DP = 52
     const val HEIGHT_DP = 40
     const val GAP_DP = 8
 
-    /** Segment under the finger, [x] in px from the pill's left edge (the bar starts there too). */
+    /** Level (1 低 .. 3 高) under the finger, [x] in px from the pill's left edge (the bar starts there too). */
     fun indexAt(x: Float, segmentPx: Float): Int =
-        if (segmentPx <= 0f) 0 else (x / segmentPx).toInt().coerceIn(0, SEGMENTS - 1).let { if (x < 0f) 0 else it }
+        if (segmentPx <= 0f || x < 0f) 1 else (x / segmentPx).toInt().coerceIn(0, SEGMENTS - 1) + 1
 
-    /** Segment shown as current: 0 关 when thinking is off, else the level (中 when none chosen). */
-    fun current(thinking: Boolean, level: Int): Int = if (!thinking) 0 else if (level in 1..3) level else 2
+    /** Level shown as current: the chosen one (中 when none), whether thinking is on or off. */
+    @Suppress("UNUSED_PARAMETER")
+    fun current(thinking: Boolean, level: Int): Int = if (level in 1..3) level else 2
 
     fun labels(): List<String> = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_off),
         com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_low),
         com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_mid),
         com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_high),
@@ -60,8 +61,8 @@ object ThinkLevelBar {
 private object Cancelled
 
 /**
- * 思考 pill: tap = on / off (as before); long-press opens 关 低 中 高 above it, slide to choose,
- * release to apply ([onPick] gets 0..3).
+ * 思考 pill: tap = on / off (as before); long-press opens 低 中 高 above it, slide to choose,
+ * release to apply ([onPick] gets 1..3, which also turns thinking on).
  */
 @Composable
 internal fun ThinkPill(
@@ -148,7 +149,7 @@ internal fun ThinkPill(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ThinkLevelBar.labels().forEachIndexed { i, t ->
-                        val on = i == sel
+                        val on = i + 1 == sel
                         Box(
                             Modifier.width(ThinkLevelBar.SEGMENT_DP.dp).fillMaxHeight().padding(3.dp)
                                 .clip(IrisRadius.pillShape)

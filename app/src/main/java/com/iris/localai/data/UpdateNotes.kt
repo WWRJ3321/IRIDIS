@@ -16,6 +16,13 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.1", listOf(
+            f("思考：短按开/关，长按选 低 / 中 / 高。"),
+            f("思考档位胶囊加弹出动画。"),
+            b("下了嵌入模型后知识库几乎不引用。"),
+            b("思考后补写回答时 tok/s 不显示。"),
+            b("知识库页两张卡片贴在一起。"),
+        )),
         Release("2.6.0", listOf(
             x("引擎升级到 llama.cpp 1.0（测试版）。"),
             f("长按「思考」选档位：关 / 低 / 中 / 高，滑动选择、松手生效。"),
