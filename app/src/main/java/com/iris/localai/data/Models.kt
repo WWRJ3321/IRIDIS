@@ -339,6 +339,8 @@ data class AppSettings(
      * limit). 0 = old behaviour: reasoning and answer share [maxNewTokens].
      */
     val thinkingBudget: Int = 2048,
+    /** 2.6.0: 思考档位 chosen by long-pressing 思考. 0 = not chosen (use [thinkingBudget]), 1 低, 2 中, 3 高. */
+    val thinkLevel: Int = 0,
 
     // ---- 2.1.0 ----
     /** 触感反馈: haptics for sends, steps, long-press, sliders… (ui/feedback/IrisFeedback). */

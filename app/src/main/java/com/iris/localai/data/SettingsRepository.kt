@@ -120,6 +120,7 @@ fun AppSettings.sanitized(): AppSettings {
         resourceTier = resourceTier.coerceIn(-1, com.iris.localai.engine.ResourceTier.entries.size - 1),
         tierProfiles = com.iris.localai.engine.TierProfiles.sanitize(tierProfiles),
         thinkingBudget = thinkingBudget.coerceIn(0, 32768),
+        thinkLevel = thinkLevel.coerceIn(0, 3),
         defaultBackends = defaultBackends.filter { (k, v) ->
             ModelFormat.entries.any { it.name == k } && com.iris.localai.engine.Backend.parse(v) != null
         },

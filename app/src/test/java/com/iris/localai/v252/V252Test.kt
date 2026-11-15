@@ -86,7 +86,7 @@ class V252Test {
         val g = src("app/build.gradle.kts")
         // 2.5.3: exact version asserted by V253Test; here only not lower than 2.5.2.
         assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 251)
-        assertTrue(Regex("versionName = \"2\\.5\\.\\d+\"").containsMatchIn(g))
+        assertTrue(Regex("versionName = \"2\\.[5-9]\\.\\d+(-beta)?\"").containsMatchIn(g))
     }
 
     @Test fun changelog() {

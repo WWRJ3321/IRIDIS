@@ -638,6 +638,7 @@ fun ChatScreen(
                         editing = editingId != null,
                         generating = ui.isGenerating,
                         deepThinking = ui.deepThinking,
+                        thinkLevel = settings.thinkLevel,
                         thinkingSupported = ui.supportsThinking,
                         listening = listening,
                         micLevel = micLevel,
@@ -708,6 +709,7 @@ fun ChatScreen(
                     },
                     onCancelEdit = { editingId = null; input = "" },
                     onToggleThinking = { vm.setDeepThinking(!ui.deepThinking) },
+                    onThinkLevel = { vm.setThinkLevel(it) },
                     onHoldToTalkStart = { /* 1.13.1: keep the keyboard (user: 语音输入会中断键盘) */ withMic { listening = true; vm.dictation.warmLanguage = settings.asrLanguage; vm.dictation.start() } },
                     onHoldToTalkEnd = {
                         if (listening) {

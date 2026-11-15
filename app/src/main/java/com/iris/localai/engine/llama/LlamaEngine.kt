@@ -141,6 +141,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 trainContextLength = m.nCtxTrain,
                 supportsThinking = m.supportsThinking,
                 thinkingPrefilled = m.thinkingPrefilled,
+                thinkEffort = m.thinkEffort,
                 hasChatTemplate = m.hasChatTemplate,
                 supportsVision = vision && vm.vision,
                 fallbackNote = visionNote,
@@ -178,7 +179,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         val ints = intArrayOf(
             params.topK, params.repeatLastN, params.maxNewTokens, params.seed /* -1 = random */,
             if (params.disableThinking) 1 else 0, 1, /* honour a cancel issued before the call */
-            if (params.contextShift) 1 else 0, params.keepTokens,
+            if (params.contextShift) 1 else 0, params.keepTokens, params.thinkEffort,
         )
         val result = try {
             withContext(nativeThread) {
@@ -339,6 +340,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         val hasChatTemplate: Boolean = false,
         val supportsThinking: Boolean = false,
         val thinkingPrefilled: Boolean = false,
+        val thinkEffort: String = "",
         val vision: Boolean = false,
         val visionGpu: Boolean = false,
     )

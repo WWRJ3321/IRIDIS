@@ -2197,4 +2197,9 @@
     <string name="md258_fold">छिपाएँ</string>
     <string name="pf259_temp">तापमान %1$s °C</string>
     <string name="v259_lfm_purpose">24B MoE, 2B सक्रिय, अनसेंसर्ड; 12 GB RAM</string>
+    <string name="think_lv_off">बंद</string>
+    <string name="think_lv_low">कम</string>
+    <string name="think_lv_mid">मध्यम</string>
+    <string name="think_lv_high">अधिक</string>
+    <string name="think_lv_hint">स्तर के लिए देर तक दबाएँ</string>
 </resources>

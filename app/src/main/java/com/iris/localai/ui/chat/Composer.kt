@@ -96,6 +96,8 @@ data class ComposerState(
     val generating: Boolean,
     val deepThinking: Boolean,
     val thinkingSupported: Boolean,
+    /** 2.6.0: 思考档位 (0 none chosen, 1 低, 2 中, 3 高). */
+    val thinkLevel: Int = 0,
     val listening: Boolean,
     val micLevel: Float,
     val transcribing: Boolean,
@@ -174,6 +176,8 @@ fun Composer(
     onStop: () -> Unit,
     onCancelEdit: () -> Unit,
     onToggleThinking: () -> Unit,
+    /** 2.6.0: long-press 思考 → 0 关, 1 低, 2 中, 3 高. */
+    onThinkLevel: (Int) -> Unit = {},
     onHoldToTalkStart: () -> Unit,
     onHoldToTalkEnd: () -> Unit,
     onVoiceMode: () -> Unit,
@@ -358,12 +362,14 @@ fun Composer(
                 horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.XS),
             ) {
                 Spacer(Modifier.width(0.dp))
-                ComposerPill(
+                ThinkPill(
                     ComposerText.THINK,
-                    selected = state.deepThinking,
+                    thinking = state.deepThinking,
+                    level = state.thinkLevel,
                     enabled = state.thinkingSupported,
                     onClick = onToggleThinking,
                     onDisabledClick = onThinkingUnsupported,
+                    onPick = onThinkLevel,
                     icon = com.iris.localai.ui.icons.IrisIcons.Think,
                     modifier = Modifier.tourTarget(TourId.THINK),
                 )

@@ -52,6 +52,8 @@ data class SamplingConfig(
     val repeatPenalty: Float,
     val maxNewTokens: Int,
     val disableThinking: Boolean,
+    /** 2.6.0: gpt-oss / Spark reasoning effort, 0 = model default, 1 low, 2 medium, 3 high. */
+    val thinkEffort: Int = 0,
     /** Decode threads for this request (0 = keep current). Lets the manager throttle on heat. */
     val threads: Int = 0,
     val repeatLastN: Int = 64,
@@ -82,6 +84,8 @@ data class ModelDetails(
     val visionMaxSide: Int = 0,
     /** The chat template opens <think> itself, so the reply starts mid-reasoning. */
     val thinkingPrefilled: Boolean = false,
+    /** 2.6.0: "oss" / "spark" when the model has its own reasoning-effort levels, else "". */
+    val thinkEffort: String = "",
     val hasChatTemplate: Boolean,
     /** Human-readable backend line, e.g. "GPU · Adreno 830 · OpenCL". */
     val backend: String,

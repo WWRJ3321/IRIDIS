@@ -408,7 +408,7 @@ internal suspend fun ChatViewModel.runReply(requester: Requester, reply: ChatMes
         var plan: com.iris.localai.util.ContextPlan? = null
         // 1.7.8: reasoning budget on top of the answer's limit (0 = shared limit, ≤ 1.7.7).
         val eff0 = c.engine.effective()
-        val budget = if (!disableThinking && details?.supportsThinking == true) s.thinkingBudget else 0
+        val budget = if (!disableThinking && details?.supportsThinking == true) com.iris.localai.engine.ThinkLevel.budget(s.thinkLevel, s.thinkingBudget, details.thinkEffort) else 0
         var thinkBudgetHit = false
 
         /**

@@ -733,6 +733,7 @@ class EngineManager(
             repeatPenalty = cfg.repeatPenalty,
             maxNewTokens = com.iris.localai.data.TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF),
             disableThinking = disableThinking,
+            thinkEffort = if (disableThinking) 0 else ThinkLevel.effort(settings.current.thinkLevel, readyDetails?.thinkEffort.orEmpty()),
             threads = plan.threads,
             repeatLastN = cfg.repeatLastN,
             presencePenalty = cfg.presencePenalty,

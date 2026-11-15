@@ -2197,4 +2197,9 @@
     <string name="md258_fold">Contraer</string>
     <string name="pf259_temp">Temp. %1$s °C</string>
     <string name="v259_lfm_purpose">MoE 24B, 2B activos, sin censura; 12 GB</string>
+    <string name="think_lv_off">No</string>
+    <string name="think_lv_low">Bajo</string>
+    <string name="think_lv_mid">Medio</string>
+    <string name="think_lv_high">Alto</string>
+    <string name="think_lv_hint">Mantén pulsado: nivel</string>
 </resources>

@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.0", listOf(
+            x("引擎升级到 llama.cpp 1.0（测试版）。"),
+            f("长按「思考」选档位：关 / 低 / 中 / 高，滑动选择、松手生效。"),
+            b("Qwen3.5 2B 等小模型开思考没反应。"),
+        )),
         Release("2.5.9", listOf(
             f("开发者性能浮窗显示温度（电池温度，42 °C 起标红）。"),
             f("下载推荐新增 LFM2.5 24B-A2B 无审查版（IQ2_XS，8.5 GB）。"),

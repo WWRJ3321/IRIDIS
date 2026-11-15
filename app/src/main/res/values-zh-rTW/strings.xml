@@ -2197,4 +2197,9 @@
     <string name="md258_fold">收起</string>
     <string name="pf259_temp">溫度 %1$s °C</string>
     <string name="v259_lfm_purpose">24B MoE 只算 2B，快；無審查，2 位元量化有損，需 12 GB</string>
+    <string name="think_lv_off">關</string>
+    <string name="think_lv_low">低</string>
+    <string name="think_lv_mid">中</string>
+    <string name="think_lv_high">高</string>
+    <string name="think_lv_hint">長按思考可選檔位</string>
 </resources>

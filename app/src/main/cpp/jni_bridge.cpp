@@ -262,6 +262,7 @@ IRIS_JNI(nativeMeta)(JNIEnv *env, jobject, jlong h) {
     j += std::string("\"hasChatTemplate\":") + (m.has_chat_template ? "true" : "false") + ",";
     j += std::string("\"supportsThinking\":") + (m.supports_thinking ? "true" : "false") + ",";
     j += std::string("\"thinkingPrefilled\":") + (m.thinking_prefilled ? "true" : "false") + ",";
+    j += "\"thinkEffort\":\"" + json_escape(m.think_effort) + "\",";
     j += "\"gpu\":\"" + json_escape(m.gpu) + "\",";
     j += std::string("\"vision\":") + (e && e->has_vision() ? "true" : "false") + ",";
     j += std::string("\"visionGpu\":") + (e && e->vision_on_gpu() ? "true" : "false");
@@ -293,13 +294,13 @@ static jstring run_generate(JNIEnv *env, jlong h, jobjectArray roles, jobjectArr
 
     iris::SamplingParams sp;
     jfloat f[6] = {0.7f, 0.95f, 0.05f, 1.1f, 0.0f, 0.0f};
-    jint i[8] = {40, 64, 2048, -1, 0, 0, 0, 4};
+    jint i[9] = {40, 64, 2048, -1, 0, 0, 0, 4, 0};
     if (jf) {
         const jsize nf = std::min<jsize>(env->GetArrayLength(jf), 6);
         if (nf >= 4) env->GetFloatArrayRegion(jf, 0, nf, f);
     }
     if (ji) {
-        const jsize ni = std::min<jsize>(env->GetArrayLength(ji), 8);
+        const jsize ni = std::min<jsize>(env->GetArrayLength(ji), 9);
         if (ni >= 5) env->GetIntArrayRegion(ji, 0, ni, i);
     }
     sp.temperature = f[0];
@@ -316,6 +317,7 @@ static jstring run_generate(JNIEnv *env, jlong h, jobjectArray roles, jobjectArr
     sp.presence_penalty = f[5];
     sp.context_shift = i[6] != 0;
     sp.n_keep = std::max<jint>(0, i[7]);
+    sp.think_effort = std::clamp<jint>(i[8], 0, 3);
 
     jmethodID on_piece = nullptr;
     if (sink) {

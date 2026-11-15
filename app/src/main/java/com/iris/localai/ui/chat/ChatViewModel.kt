@@ -466,6 +466,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (genJob?.isActive == true) { notice.value = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4a1a73); return@launch }
         c.engine.unload()
     }
+    /** 2.6.0: 思考档位 from the long-press bar: 0 = thinking off, 1..3 = 低 / 中 / 高 (and thinking on). */
+    fun setThinkLevel(level: Int) {
+        if (level <= 0) { setDeepThinking(false); return }
+        c.settings.update { it.copy(thinkLevel = level.coerceIn(1, 3)) }
+        setDeepThinking(true)
+    }
     /** Writes to the loaded model's own thinking switch when it has one, otherwise the global one. */
     fun setDeepThinking(on: Boolean) {
         val id = c.engine.readyModel?.id

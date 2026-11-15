@@ -2197,4 +2197,9 @@
     <string name="md258_fold">Einklappen</string>
     <string name="pf259_temp">Temp. %1$s °C</string>
     <string name="v259_lfm_purpose">24B MoE, 2B aktiv, unzensiert; ab 12 GB</string>
+    <string name="think_lv_off">Aus</string>
+    <string name="think_lv_low">Wenig</string>
+    <string name="think_lv_mid">Mittel</string>
+    <string name="think_lv_high">Viel</string>
+    <string name="think_lv_hint">Lang drücken: Denkstufe</string>
 </resources>

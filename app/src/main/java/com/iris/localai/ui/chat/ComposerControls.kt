@@ -104,6 +104,8 @@ internal fun ComposerPill(
     onDisabledClick: (() -> Unit)? = null,
     /** 1.10.2: the small top-left variant (28 dp, 13 sp). */
     compact: Boolean = false,
+    /** 2.6.0: taps handled by the caller's own gesture (思考 long-press bar). */
+    customGesture: Boolean = false,
 ) {
     val c = Iris.colors
     val dark = c.isDark
@@ -112,7 +114,7 @@ internal fun ComposerPill(
     val bg by animateColorAsState(ComposerPillStyle.background(on, dark, Iris.colors.accent), motionSpec(IrisMotion.Color), label = "pillBg")
     val fg by animateColorAsState(ComposerPillStyle.content(on, dark, Iris.colors.onAccent), motionSpec(IrisMotion.Color), label = "pillFg")
     val a = if (enabled) 1f else ComposerPillStyle.DISABLED_ALPHA
-    val clickable = enabled || onDisabledClick != null
+    val clickable = (enabled || onDisabledClick != null) && !customGesture
     Row(
         modifier
             .height((if (compact) ComposerPillStyle.COMPACT_HEIGHT_DP else ComposerPillStyle.HEIGHT_DP).dp)

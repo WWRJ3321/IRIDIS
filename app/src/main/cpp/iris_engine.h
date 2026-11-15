@@ -67,6 +67,7 @@ struct SamplingParams {
     int32_t n_keep = 4;
     uint32_t seed = 0xFFFFFFFF; // LLAMA_DEFAULT_SEED (random)
     bool disable_thinking = false; // pre-fill an empty <think></think> block for reasoning models
+    int32_t think_effort = 0;      // 2.6.0: 0 = model default, 1 low, 2 medium, 3 high (gpt-oss / Spark)
     /// When true, a cancel() issued before generate() started is honoured instead of being
     /// cleared. The caller must then clear stale requests itself with clear_cancel() (the JNI
     /// layer does this so a "stop" tapped while the request is still queued is never lost).
@@ -106,6 +107,7 @@ struct ModelMeta {
     bool has_chat_template = false;
     bool supports_thinking = false;   // template mentions <think>
     bool thinking_prefilled = false;  // template already opens <think> (DeepSeek-R1 style)
+    std::string think_effort;         // 2.6.0: "oss" / "spark" when the model has its own effort levels
     std::string architecture;
     std::string gpu;              // GPU device the model was offloaded to, empty when CPU-only
 };
@@ -210,7 +212,7 @@ public:
     void reset();
 
     /// Exposed for tests.
-    std::string format_prompt(const std::vector<ChatMessage> &messages, bool disable_thinking) const;
+    std::string format_prompt(const std::vector<ChatMessage> &messages, bool disable_thinking, int effort = 0) const;
     std::vector<int32_t> tokenize(const std::string &text) const;
 
 private:

@@ -147,7 +147,7 @@ class V244Test {
     @Test fun sparkTemplateRenderedNatively() {
         val cpp = src("app/src/main/cpp/iris_engine.cpp")
         assertTrue("std::string format_spark(" in cpp)
-        assertTrue("if (is_spark_template(template_)) return format_spark(messages, !disable_thinking);" in cpp)
+        assertTrue("if (is_spark_template(template_)) return format_spark(messages, !disable_thinking" in cpp)
         assertTrue("!is_spark_template(template_)) {" in cpp) // not the ChatML fallback
         assertFalse(Regex("\\\\x9Cend").containsMatchIn(cpp)) // \x9Ce would be read as one hex escape
     }

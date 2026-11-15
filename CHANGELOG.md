@@ -2,6 +2,15 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.0 Beta（未真机测试）
+**本版未在真机测试，测试版。**
+
+- 推理引擎升级到 llama.cpp 1.0.0（2026-11-13 正式版，API 稳定），LES 前瞻专家调度与 mmap 预取补丁已重新移植。
+- 思考档位：长按「思考」弹出横条，左右滑选 关 / 低 / 中 / 高，松手生效；短按仍是开/关。
+  - gpt-oss 用自带 reasoning effort（low / medium / high，思考关 = low）；Spark 用 thinking_effort（低 = low，中/高 = high）。
+  - 其它模型（Qwen 等）按思考长度封顶：低 1K、中 4K、高不限；到上限后关掉思考直接写回答。没选过档位时沿用 设置 › 思考预算。
+- 修复：Qwen3.5 2B 等默认不思考的小模型（GGUF），开思考没反应；现在开思考时补上 <think>。
+
 ## 2.5.9（未真机测试）
 **本版未在真机测试。**
 

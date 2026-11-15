@@ -23,7 +23,7 @@ class V255Test {
 
     @Test fun notesCurrentVersionListed() {
         val gradle = src("app/build.gradle.kts")
-        val v = Regex("versionName = \"([\\d.]+)\"").find(gradle)!!.groupValues[1]
+        val v = Regex("versionName = \"([\\d.]+)").find(gradle)!!.groupValues[1]
         val r = UpdateNotes.find(v)!!
         assertEquals(v, UpdateNotes.RELEASES.first().version)
         assertTrue(r.items.isNotEmpty())
