@@ -35,7 +35,7 @@ object KbEmbedText {
  * progress, and — when none is downloaded — a one-line pointer to 下载模型 › 知识库嵌入模型.
  */
 @Composable
-fun KbEmbedRow(kb: KnowledgeBase) {
+fun KbEmbedRow(kb: KnowledgeBase, inGroup: Boolean = false) {
     val sem = kb.semantic ?: return
     val progress by sem.progress.collectAsStateWithLifecycle()
     var tick by remember { mutableIntStateOf(0) }
@@ -45,7 +45,8 @@ fun KbEmbedRow(kb: KnowledgeBase) {
     }
     val chosen = remember(tick) { sem.chosen }
     val model = KbEmbedModels.pick(chosen, installed.map { it.id })
-    SettingsGroup {
+    // 2.6.1: inGroup = drawn inside the caller's card (索引 group) so it doesn't sit flush against another card.
+    val row: @Composable () -> Unit = {
         SettingsRow(
             I18n.s(R.string.kb251_embed_row), icon = IrisIcons.Search,
             subtitle = KbEmbedText.line(model, chosen, installed.isNotEmpty(), progress), subtitleMaxLines = 1,
@@ -53,6 +54,7 @@ fun KbEmbedRow(kb: KnowledgeBase) {
             trailing = { com.iris.localai.ui.components.Chevron() },
         )
     }
+    if (inGroup) row() else SettingsGroup { row() }
     if (picking) {
         IrisDialog(
             onDismiss = { picking = false }, title = I18n.s(R.string.kb251_embed_row),
