@@ -225,7 +225,7 @@ class HttpServer(
         private const val TAG = "HttpServer"
         private const val MAX_CONNECTIONS = 8
         private const val MAX_HEAD = 16 * 1024
-        private const val MAX_BODY = 8L * 1024 * 1024
+        private const val MAX_BODY = 16L * 1024 * 1024 // 2.6.4: 8 → 16 MB for base64 images
         private const val READ_TIMEOUT_MS = 30_000
         /** Whole request line + headers must arrive within this (per-read timeout alone allows trickling). */
         private const val HEAD_TIMEOUT_MS = 10_000
@@ -298,6 +298,9 @@ class HttpResponder(private val out: OutputStream, private val cors: Boolean = t
     fun text(status: Int, body: String) = send(status, "text/plain; charset=utf-8", body.toByteArray(Charsets.UTF_8))
 
     fun empty(status: Int) = send(status, "text/plain", ByteArray(0))
+
+    /** 2.6.4: a binary body (audio from /v1/audio/speech). */
+    fun bytes(status: Int, contentType: String, body: ByteArray) = send(status, contentType, body)
 
     /** CORS preflight answer (OPTIONS): echoes the requested headers, see [HttpServer.corsAllowHeaders]. */
     fun preflight(requestHeaders: Map<String, String>) {

@@ -39,17 +39,22 @@ import java.util.UUID
  *   GET  /api/tags                 (Ollama)
  *   POST /api/chat                 (Ollama, NDJSON stream)
  *   GET  /health
+ *   2.6.4: image_url in chat (vision models), POST /v1/images/generations (生图), POST /v1/audio/speech (朗读)
  */
 private const val GEN_TAG = "IrisGen"
 
 /** Paths that exist (a wrong method on them is 405, not 404). */
-private val KNOWN_PATHS = setOf("/v1/models", "/api/tags", "/v1/chat/completions", "/api/chat")
+private val KNOWN_PATHS = setOf("/v1/models", "/api/tags", "/v1/chat/completions", "/api/chat", "/v1/images/generations", "/v1/audio/speech")
 
 class ApiRoutes(
     private val engine: EngineManager,
     private val models: ModelRepository,
     private val settings: SettingsRepository,
     private val json: kotlinx.serialization.json.Json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true },
+    /** 2.6.4: 生图 / 朗读 for the media endpoints (null = 501). */
+    private val media: ApiMedia? = null,
+    /** 2.6.4: where pictures sent in chat are written for the vision model (null = image_url refused). */
+    private val imageDir: java.io.File? = null,
 ) {
     suspend fun handle(req: HttpRequest, res: HttpResponder) {
         if (req.method == "OPTIONS") return res.preflight(req.headers)
@@ -62,6 +67,8 @@ class ApiRoutes(
             "GET" to "/api/tags" -> listModels(res, ollama = true)
             "POST" to "/v1/chat/completions" -> chatCompletions(req, res)
             "POST" to "/api/chat" -> ollamaChat(req, res)
+            "POST" to "/v1/images/generations" -> imageGenerations(req, res)
+            "POST" to "/v1/audio/speech" -> audioSpeech(req, res)
             else -> when {
                 req.method == "GET" && req.path.startsWith("/v1/models/") -> getModel(req.path.removePrefix("/v1/models/"), res)
                 req.path in KNOWN_PATHS -> throw HttpError(405, "method ${req.method} not allowed on ${req.path}")
@@ -298,9 +305,9 @@ class ApiRoutes(
         else -> "stop"
     }
 
-    private suspend fun chatCompletions(req: HttpRequest, res: HttpResponder) {
-        val cr = parseChat(req, ollama = false)
-        prepare(cr)
+    private suspend fun chatCompletions(req: HttpRequest, res: HttpResponder) = withImages(parseChat(req, ollama = false)) { cr -> chatCompletions(cr, res) }
+
+    private suspend fun chatCompletions(cr: ChatRequest, res: HttpResponder) {
         val id = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "").take(24)
         val created = System.currentTimeMillis() / 1000
         val modelId = engine.readyModel?.fileName ?: "local"
@@ -365,9 +372,9 @@ class ApiRoutes(
         put("prompt_tokens", p); put("completion_tokens", c); put("total_tokens", p + c)
     }
 
-    private suspend fun ollamaChat(req: HttpRequest, res: HttpResponder) {
-        val cr = parseChat(req, ollama = true)
-        prepare(cr)
+    private suspend fun ollamaChat(req: HttpRequest, res: HttpResponder) = withImages(parseChat(req, ollama = true)) { cr -> ollamaChat(cr, res) }
+
+    private suspend fun ollamaChat(cr: ChatRequest, res: HttpResponder) {
         val modelId = engine.readyModel?.fileName ?: "local"
         fun line(content: String, thinking: String, done: Boolean, ev: GenEvent.Done? = null) = buildJsonObject {
             put("model", modelId)
@@ -397,5 +404,111 @@ class ApiRoutes(
             val c = ApiKeepAlive.run(res) { collectWithContinuation(cr) } ?: return
             res.finishJson(200, line(c.answer, c.reasoning, true, c.done))
         }
+    }
+
+    // ---- 2.6.4: multimodal ----
+
+    /**
+     * Loads the model ([prepare]), then turns the newest user message's image URLs into scaled files
+     * for the vision model (as the app's chat does), runs [block] and deletes the files.
+     */
+    private suspend fun withImages(raw: ChatRequest, block: suspend (ChatRequest) -> Unit) {
+        prepare(raw)
+        val msgs = ApiImages.keepNewest(raw.messages)
+        if (!ApiImages.hasImages(msgs)) return block(raw.copy(messages = msgs))
+        val details = engine.readyDetails
+        if (details?.supportsVision != true) {
+            throw HttpError(400, "the loaded model '${engine.readyModel?.fileName ?: "-"}' cannot read images; load a vision model (GGUF with its mmproj, or a VL model)")
+        }
+        val root = imageDir ?: throw HttpError(501, "images are not supported by this server")
+        val dir = java.io.File(root, UUID.randomUUID().toString()).apply { mkdirs() }
+        try {
+            val side = com.iris.localai.util.VisionPrompt.maxSide(details.visionMaxSide, settings.current.visionSide)
+            val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                msgs.map { m ->
+                    if (m.images.isEmpty()) m else m.copy(images = m.images.mapIndexed { i, url ->
+                        val bytes = if (ApiImages.isRemote(url)) fetchImage(url) else ApiImages.decode(url)
+                        val f = java.io.File(dir, "img$i.${ApiImages.sniff(bytes) ?: "bin"}").apply { writeBytes(bytes) }
+                        com.iris.localai.util.Attachments.visionCopy(f.path, side)
+                    })
+                }
+            }
+            block(raw.copy(messages = out))
+        } finally {
+            runCatching { dir.deleteRecursively() }
+        }
+    }
+
+    /** http(s) image, at most [ApiImages.MAX_BYTES], 15 s per read. */
+    private fun fetchImage(url: String): ByteArray {
+        val conn = try {
+            (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 15_000; readTimeout = 15_000; instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "IRIDIS-LocalAPI")
+            }
+        } catch (e: Exception) {
+            throw HttpError(400, "bad image URL: ${e.message}")
+        }
+        try {
+            val code = runCatching { conn.responseCode }.getOrElse { throw HttpError(502, "could not fetch image: ${it.message}") }
+            if (code !in 200..299) throw HttpError(502, "could not fetch image: HTTP $code")
+            if (conn.contentLengthLong > ApiImages.MAX_BYTES) throw HttpError(413, "image larger than ${ApiImages.MAX_BYTES / (1024 * 1024)} MB")
+            val buf = java.io.ByteArrayOutputStream()
+            conn.inputStream.use { input ->
+                val chunk = ByteArray(64 * 1024)
+                while (true) {
+                    val n = input.read(chunk)
+                    if (n < 0) break
+                    buf.write(chunk, 0, n)
+                    if (buf.size() > ApiImages.MAX_BYTES) throw HttpError(413, "image larger than ${ApiImages.MAX_BYTES / (1024 * 1024)} MB")
+                }
+            }
+            return buf.toByteArray().also(ApiImages::check)
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    private fun bodyObject(req: HttpRequest): JsonObject =
+        runCatching { json.parseToJsonElement(req.bodyText) as JsonObject }.getOrElse { throw HttpError(400, "body must be a JSON object") }
+
+    /** OpenAI images API on the 生图 runtime: PNGs as b64_json (or as data: URIs for response_format url). */
+    private suspend fun imageGenerations(req: HttpRequest, res: HttpResponder) {
+        val m = media ?: throw HttpError(501, "image generation is not available")
+        val p = ApiImages.parseImageGen(bodyObject(req))
+        val names = m.imageModels()
+        if (names.isEmpty()) throw HttpError(503, "no image model; download one under 生图 in the app")
+        if (p.model != null && names.none { it == p.model }) throw HttpError(404, "image model '${p.model}' not found; available: ${names.joinToString()}")
+        if (engine.busy.value != null) throw HttpError(503, "the engine is busy with another request; retry later")
+        val created = System.currentTimeMillis() / 1000
+        val pngs = ApiKeepAlive.run(res) {
+            (1..p.n).map { k ->
+                val seed = if (p.seed >= 0) p.seed + k - 1 else -1L
+                m.generateImage(p.copy(seed = seed), p.model).getOrElse { e -> throw HttpError(500, "image generation failed: ${e.message ?: e.javaClass.simpleName}") }
+            }
+        } ?: return
+        val body = buildJsonObject {
+            put("created", created)
+            putJsonArray("data") {
+                pngs.forEach { png ->
+                    val b64 = java.util.Base64.getEncoder().encodeToString(png)
+                    add(buildJsonObject {
+                        if (p.format == "url") put("url", "data:image/png;base64,$b64") else put("b64_json", b64)
+                        put("revised_prompt", p.prompt)
+                    })
+                }
+            }
+        }
+        res.finishJson(200, body.toString())
+    }
+
+    /** OpenAI speech API on the app's 朗读 voice (the voice set in 设置 › 语音; `voice` / `model` are ignored). */
+    private suspend fun audioSpeech(req: HttpRequest, res: HttpResponder) {
+        val m = media ?: throw HttpError(501, "speech is not available")
+        val p = ApiImages.parseSpeech(bodyObject(req))
+        if (!m.speechAvailable()) throw HttpError(503, "no voice; download a voice under 设置 › 语音 in the app")
+        val (pcm, rate) = m.speech(p.input, p.speed).getOrElse { e -> throw HttpError(500, "speech failed: ${e.message ?: e.javaClass.simpleName}") }
+        if (p.format == "pcm") res.bytes(200, "audio/pcm;rate=$rate", ApiImages.pcm16(pcm))
+        else res.bytes(200, "audio/wav", ApiImages.wav(pcm, rate))
     }
 }

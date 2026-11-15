@@ -172,8 +172,7 @@ private fun TrackTopBarScroll(state: ScrollState) {
 
 /** Scrolling column body of a subpage (large title first), keyboard- and nav-bar-aware. */
 @Composable
-fun ScrollBody(content: @Composable ColumnScope.() -> Unit) {
-    val scroll = rememberScrollState()
+fun ScrollBody(scroll: ScrollState = rememberScrollState(), content: @Composable ColumnScope.() -> Unit) {
     TrackTopBarScroll(scroll)
     Column(
         Modifier

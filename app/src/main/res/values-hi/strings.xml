@@ -2223,4 +2223,6 @@
     <string name="ex263_share">साझा करें</string>
     <string name="ex263_failed">निर्यात विफल</string>
     <string name="ex263_txt">सादा पाठ (.txt)</string>
+    <string name="models264_guide_link">इन शब्दों का अर्थ ›</string>
+    <string name="api264_more">यह भी: चैट में चित्र (image_url), /v1/images/generations, /v1/audio/speech</string>
 </resources>

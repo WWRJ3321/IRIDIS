@@ -61,7 +61,9 @@ class ApiService : LifecycleService() {
         val lan = s.apiAllowLan && s.apiKey.isNotBlank()
         // 2.1.3: IPv4 127.0.0.1 (not the IPv6 ::1 loopback) unless LAN is on.
         val bind = InetAddress.getByName(ApiPolicy.bindHost(lan))
-        val routes = ApiRoutes(c.engine, c.models, c.settings)
+        // 2.6.4: 识图 (image_url) + /v1/images/generations + /v1/audio/speech.
+        val imgDir = java.io.File(cacheDir, "api-images").apply { deleteRecursively(); mkdirs() }
+        val routes = ApiRoutes(c.engine, c.models, c.settings, media = AppApiMedia(applicationContext, c), imageDir = imgDir)
         // Not reference counted: with a timed acquire per request, the timeout's own release could
         // drop another request's count and the next release() threw "WakeLock under-locked".
         val srv = HttpServer(bind, s.apiPort) { req, res ->

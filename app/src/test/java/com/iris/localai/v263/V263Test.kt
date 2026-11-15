@@ -19,10 +19,10 @@ class V263Test {
     private val utc = TimeZone.getTimeZone("UTC")
 
     @Test fun version() {
-        assertEquals("2.6.3", UpdateNotes.RELEASES.first().version)
+        // 2.6.4: later versions keep this green (2.6.3 stays in the list, versionCode only grows).
+        assertNotNull(UpdateNotes.find("2.6.3"))
         val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.3\""))
-        assertTrue(g.contains("versionCode = 262"))
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 262)
         assertTrue(src("CHANGELOG.md").contains("## 2.6.3（"))
     }
 

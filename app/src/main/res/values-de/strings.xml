@@ -2223,4 +2223,6 @@
     <string name="ex263_share">Teilen</string>
     <string name="ex263_failed">Export fehlgeschlagen</string>
     <string name="ex263_txt">Text (.txt)</string>
+    <string name="models264_guide_link">Was bedeuten die Begriffe? ›</string>
+    <string name="api264_more">Außerdem: Bilder im Chat (image_url), /v1/images/generations, /v1/audio/speech</string>
 </resources>

@@ -2224,4 +2224,6 @@
     <string name="ex263_share">分享</string>
     <string name="ex263_failed">导出失败</string>
     <string name="ex263_txt">纯文本 (.txt)</string>
+    <string name="models264_guide_link">看懂这些术语 ›</string>
+    <string name="api264_more">也支持：识图（image_url）、生图 /v1/images/generations、朗读 /v1/audio/speech</string>
 </resources>

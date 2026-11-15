@@ -2223,4 +2223,6 @@
     <string name="ex263_share">共有</string>
     <string name="ex263_failed">エクスポートに失敗しました</string>
     <string name="ex263_txt">テキスト (.txt)</string>
+    <string name="models264_guide_link">用語の意味を見る ›</string>
+    <string name="api264_more">対応：画像入力（image_url）、/v1/images/generations、/v1/audio/speech</string>
 </resources>

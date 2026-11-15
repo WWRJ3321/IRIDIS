@@ -57,7 +57,12 @@ internal object ChatRequestParser {
                 "assistant" -> PromptMessage.ASSISTANT
                 else -> return@mapNotNull null // tool / function messages are not supported
             }
-            PromptMessage(role, contentText(o["content"]))
+            // 2.6.4: image_url parts (OpenAI) / `images` (Ollama) ride on the message as raw URLs;
+            // ApiRoutes turns them into files for the vision model.
+            val text = contentText(o["content"])
+            val imgs = if (role == PromptMessage.USER) contentImages(o["content"]) + ollamaImages(o["images"]) else emptyList()
+            if (imgs.size > ApiImages.MAX_IMAGES) throw HttpError(400, "at most ${ApiImages.MAX_IMAGES} images per message")
+            PromptMessage(role, text, imgs)
         }
         if (messages.none { it.role == PromptMessage.USER }) throw HttpError(400, "at least one user message is required")
         // `null` objects (stream_options: null, options: null) are common in SDK output: treat as absent.
@@ -85,7 +90,7 @@ internal object ChatRequestParser {
 
     private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 
-    /** OpenAI content may be a string or an array of typed parts; only text is supported. */
+    /** OpenAI content may be a string or an array of typed parts: the text parts joined (2.6.4: image parts are taken by [contentImages]). */
     fun contentText(el: JsonElement?): String = when (el) {
         null, JsonNull -> ""
         is JsonPrimitive -> el.contentOrNull.orEmpty()
@@ -93,10 +98,41 @@ internal object ChatRequestParser {
             val o = part as? JsonObject ?: throw HttpError(400, "content parts must be objects")
             when (o.str("type")) {
                 "text", "input_text" -> o.str("text").orEmpty()
-                else -> throw HttpError(400, "only text content parts are supported")
+                "image_url", "input_image", "image" -> ""
+                else -> throw HttpError(400, "only text and image_url content parts are supported")
             }
         }
         else -> throw HttpError(400, "unsupported content")
+    }
+
+    /**
+     * 2.6.4: the image URLs of a content array — `{"type":"image_url","image_url":{"url":…}}`,
+     * `"image_url":"…"` or Responses-style `{"type":"input_image","image_url":"…"}`. Only data URIs,
+     * bare base64 and http(s) URLs; anything else is a 400.
+     */
+    fun contentImages(el: JsonElement?): List<String> {
+        val arr = el as? JsonArray ?: return emptyList()
+        return arr.mapNotNull { part ->
+            val o = part as? JsonObject ?: return@mapNotNull null
+            if (o.str("type") !in setOf("image_url", "input_image", "image")) return@mapNotNull null
+            val v = o["image_url"] ?: o["url"] ?: o["image"]
+            val url = when (v) {
+                is JsonObject -> v.str("url")
+                is JsonPrimitive -> v.contentOrNull
+                else -> null
+            }?.trim()?.takeIf { it.isNotEmpty() } ?: throw HttpError(400, "image_url.url is required")
+            if (!ApiImages.isRemote(url) && !url.startsWith("data:", true)) {
+                throw HttpError(400, "image_url must be a data URI (data:image/png;base64,…) or an http(s) URL")
+            }
+            url
+        }
+    }
+
+    /** 2.6.4: Ollama `"images": ["<base64>", …]` on a message. */
+    fun ollamaImages(el: JsonElement?): List<String> = when (el) {
+        null, JsonNull -> emptyList()
+        is JsonArray -> el.map { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.trim()?.takeIf { s -> s.isNotEmpty() } ?: throw HttpError(400, "'images' must be base64 strings") }
+        else -> throw HttpError(400, "'images' must be an array of base64 strings")
     }
 
     /** `"stop": "x"` or `["x","y"]` (null / missing = none). Empty strings are dropped. */

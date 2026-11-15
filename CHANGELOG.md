@@ -2,6 +2,15 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.4（未真机测试）
+**本版未在真机测试。**
+
+- 模型页「看懂模型」重排：顶部目录点击跳到对应小节；「怎么读模型名」用拆解示例（Qwen3.5 | 9B | Instruct | Q4_K_M | .gguf）；末尾新增术语表（A→Z）；文案缩短。GGUF / MNN / 量化 / MoE / 无审查 / 内存档位等条目带「看推荐」直达下载页对应卡片；对话类推荐卡片详情加「看懂这些术语」跳回科普页对应小节（MoE 卡 → MoE，GGUF → 量化，其余 → 格式）。中英文内容，其余语言用英文。
+- 本地 API 识图：/v1/chat/completions 的 content 支持 image_url（data URI / base64 / http(s) 链接，单张 ≤10 MB，每条消息 ≤4 张），Ollama /api/chat 支持 messages[].images；图片按「识图清晰度」缩放后交给已加载的识图模型（与应用内聊天相同：只看最新一条带图消息）。模型不能识图时返回 400。请求体上限 8 → 16 MB。
+- 本地 API 新增 POST /v1/images/generations：走生图（模型取 设置 › 智能体 › 生图，可用 model 指定 id；size、n≤4、seed、steps、negative_prompt、cfg_scale），返回 b64_json（response_format=url 时给 data URI）；内存不够时按「先卸文本模型」设置处理。
+- 本地 API 新增 POST /v1/audio/speech：走应用当前朗读音色（voice 参数忽略），speed 0.25–4（实际限 0.5–2），输出 WAV 或 PCM。
+- API 设置页示例下方注明以上端点。
+
 ## 2.6.3（未真机测试）
 **本版未在真机测试。**
 

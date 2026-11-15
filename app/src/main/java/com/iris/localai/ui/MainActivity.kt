@@ -296,6 +296,7 @@ private fun tourStack(screen: com.iris.localai.ui.tour.TourScreen): List<Route> 
 @Composable
 private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel, push: (Route) -> Unit, pop: () -> Unit, home: () -> Unit = {}) {
     com.iris.localai.ui.models.DownloadNav.opener = { push(Route.DOWNLOAD_MODELS) } // 2.6.2
+    com.iris.localai.ui.models.ModelGuideNav.opener = { push(Route.MODEL_GUIDE) } // 2.6.4
     when (r) {
         Route.CHAT -> ChatScreen(
             vm = chat,

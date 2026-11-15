@@ -614,6 +614,12 @@ private fun RecDetailSheet(
                 if (onTry == null) Text(DownloadText.TRY_HINT, style = IrisType.caption, color = c.textTertiary)
             }
         }
+        if (item.section == RecommendedCatalog.Section.CHAT || item.section == RecommendedCatalog.Section.FEATURED) {
+            // 2.6.4: 科普页互链 — 看懂这张卡片上的术语（GGUF/量化/MoE）。
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models264_guide_link), style = IrisType.caption, color = c.accent,
+                modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space4)
+                    .clickable { val key = ModelGuideNav.sectionFor(item); onDismiss(); ModelGuideNav.open(key) }.padding(vertical = IrisDimens.space4))
+        }
         Column(Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
             DownloadBlock(s, onPause = actions::pause, onRetry = { actions.retry(item) }, onCancel = { actions.cancel(item) }, onImport = actions::import, onDiscard = actions::discard)
             if (s == RecStatus.Blocked) Text(DownloadText.ONE_AT_A_TIME, style = IrisType.caption, color = c.warning)

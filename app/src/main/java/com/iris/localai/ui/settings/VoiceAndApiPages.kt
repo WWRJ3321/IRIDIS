@@ -478,6 +478,9 @@ fun ApiPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     Row(Modifier.padding(start = IrisDimens.space8, top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                         IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d8a8a4), { clipboard.setText(AnnotatedString(example)) }, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.ContentCopy)
                     }
+                    // 2.6.4: 多模态端点
+                    Text(com.iris.localai.I18n.s(com.iris.localai.R.string.api264_more), style = com.iris.localai.ui.theme.IrisType.caption, color = c.textTertiary,
+                        modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4))
                 }
             }
         }

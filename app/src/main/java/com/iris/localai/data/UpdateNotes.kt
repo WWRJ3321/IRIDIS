@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.4", listOf(
+            f("「看懂模型」重排：目录可跳转、模型名拆解示例、术语表；条目可直达推荐卡片，卡片详情也能跳回来。"),
+            f("本地 API 支持识图：/v1/chat/completions 的 image_url（base64 / data URI / http 链接），需加载识图模型。"),
+            f("本地 API 新增 /v1/images/generations（走生图）和 /v1/audio/speech（走朗读，输出 WAV）。"),
+        )),
         Release("2.6.3", listOf(
             f("聊天记录可搜消息内容：命中片段高亮，点一下跳到那条消息。"),
             f("会话长按多选后可分享：Markdown / TXT / JSON。"),
