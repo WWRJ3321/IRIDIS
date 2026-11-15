@@ -121,9 +121,23 @@ internal fun ThinkPill(
                 }
             },
         )
-        if (open) {
+        // 2.6.1: same pop as IrisMenu (加模型 / 加角色 menus): fade + scale from the pill-side corner, Snappy in, Quick out.
+        val shown = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+        shown.targetState = open
+        if (shown.currentState || shown.targetState) {
+            val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
             val dy = with(density) { (ThinkLevelBar.HEIGHT_DP + ThinkLevelBar.GAP_DP).dp.roundToPx() }
+            val origin = androidx.compose.ui.graphics.TransformOrigin(0.15f, 1f)
             Popup(alignment = Alignment.TopStart, offset = IntOffset(0, -dy)) {
+              androidx.compose.animation.AnimatedVisibility(
+                visibleState = shown,
+                enter = if (reduce) androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.IrisMotion.Quick.float())
+                else androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeIn)) +
+                    androidx.compose.animation.scaleIn(com.iris.localai.ui.motion.IrisMotion.Snappy.float(), initialScale = 0.86f, transformOrigin = origin),
+                exit = if (reduce) androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.IrisMotion.Quick.float())
+                else androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeOut)) +
+                    androidx.compose.animation.scaleOut(com.iris.localai.ui.motion.IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
+              ) {
                 val c = Iris.colors
                 Row(
                     Modifier
@@ -145,6 +159,7 @@ internal fun ThinkPill(
                         }
                     }
                 }
+              }
             }
         }
     }
