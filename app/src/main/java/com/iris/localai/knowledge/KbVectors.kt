@@ -102,7 +102,11 @@ object KbVectors {
         val fused = rrf(listOf(bmList, cosList))
         val gated = fused.filter { (i, _) ->
             val c = if (i < cos.size) cos[i] else Double.NaN
-            if (!c.isNaN()) c >= minCos else bmHits[i]?.let { KbChat.relevant(it) } == true
+            // 2.6.1: union — a chunk passes on meaning (cos ≥ minCos) OR on words (BM25 hit that passes KbChat.relevant).
+            // Before, a chunk with a vector was judged on cosine alone, so a Q4 / short Chinese query below the gate
+            // dropped every keyword hit too and nothing was cited.
+            val byCos = !c.isNaN() && c >= minCos
+            byCos || bmHits[i]?.let { KbChat.relevant(it) } == true
         }
         val top = gated.values.maxOrNull() ?: return emptyList()
         return gated.entries.filter { it.value >= top * KbChat.REL_SCORE }
