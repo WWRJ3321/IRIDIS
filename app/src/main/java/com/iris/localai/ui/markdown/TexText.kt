@@ -29,12 +29,24 @@ object TexText {
         "{" to "{", "}" to "}", "%" to "%", "$" to "$", "&" to "&", "#" to "#", "_" to "_", "|" to "‖",
         "lim" to "lim", "sin" to "sin", "cos" to "cos", "tan" to "tan", "log" to "log", "ln" to "ln", "exp" to "exp",
         "max" to "max", "min" to "min", "det" to "det", "arg" to "arg", "deg" to "deg",
+        "gcd" to "gcd", "lcm" to "lcm", "bmod" to " mod ", "pmod" to " mod ", "mid" to "∣", "nmid" to "∤", "sqrt" to "√",
     )
     private val BB = mapOf('R' to "ℝ", 'N' to "ℕ", 'Z' to "ℤ", 'Q' to "ℚ", 'C' to "ℂ", 'P' to "ℙ")
     private const val SUP_SRC = "0123456789+-=()niabcdefghjklmoprstuvwxyzABDEGHIJKLMNOPRTUVW"
     private const val SUP_DST = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᵃᵇᶜᵈᵉᶠᵍʰʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻᴬᴮᴰᴱᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾᴿᵀᵁⱽᵂ"
     private const val SUB_SRC = "0123456789+-=()aehijklmnoprstuvx"
     private const val SUB_DST = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ"
+
+    /**
+     * 2.5.9: 模型常把公式写进反引号（`2^{2m} + 3^m`、`\gcd(a,b)=1`）。像数学且不像代码时按公式渲染。
+     */
+    private val TEX_CMD = Regex("\\\\[a-zA-Z]+")
+    private val POWER = Regex("[\\w)}]\\^[\\w{(]|[\\w)}]_\\{")
+    private val CODE_MARK = Regex(";|\"|'|==|=>|->|::|//|&&|\\|\\||\\b(def|return|print|import|function|const|let|var|val|fun|class|if|for|while)\\b|[A-Za-z_]\\.[A-Za-z_]|\\*\\*|\\[|]")
+    fun looksMath(s: String): Boolean {
+        if (s.length > 160 || CODE_MARK.containsMatchIn(s)) return false
+        return TEX_CMD.containsMatchIn(s) || POWER.containsMatchIn(s)
+    }
 
     fun render(tex: String): String = runCatching { Reader(tex.trim()).all().replace(Regex(" {3,}"), "  ").trim() }.getOrDefault(tex)
 

@@ -2196,4 +2196,6 @@
     <string name="st258_held">%1$s 正在使用，先卸载模型再移动</string>
     <string name="md258_unfold">展开全部 %1$d 行</string>
     <string name="md258_fold">收起</string>
+    <string name="pf259_temp">温度 %1$s °C</string>
+    <string name="v259_lfm_purpose">24B MoE 只算 2B，快；无审查，2 位量化有损，需 12 GB</string>
 </resources>

@@ -101,6 +101,7 @@ object RecommendedCatalog {
         quant = "i1-$quant", licence = "Gemma",
     )
 
+    const val LFM_REPO = "abenzerps/LFM2.5-24B-A2B-Uncensored-GSQ-RCO-GGUF"
     const val NANBEIGE_REPO = "bartowski/Nanbeige_Nanbeige4.2-3B-GGUF"
     const val CODER_REPO = "ccore/Qwen3.5-4B-3D-Coder"
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
@@ -167,6 +168,11 @@ object RecommendedCatalog {
         // 2.5.1: Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
         reap(REAP_IQ3, "IQ3_XXS", 8_311_270_560L),
         reap(REAP_Q4, "Q4_0", 10_647_317_152L),
+        // 2.5.9: LFM2.5 24B-A2B 无审查版（lfm2moe，激活 2B），用户指定 IQ2_XS；大小来自 HF tree API 2026-11-15。
+        Item(
+            LFM_REPO, Section.CHAT, "LFM2.5 24B-A2B 无审查（IQ2_XS）", com.iris.localai.I18n.s(com.iris.localai.R.string.v259_lfm_purpose), 8_516_829_600L, Engine.GGUF,
+            Kind.Gguf(LFM_REPO, "LFM2.5-24B-A2B-GSQ-RCO-IQ2_XS.gguf", 8_516_829_600L), quant = "IQ2_XS", licence = "LFM Open License",
+        ),
         // ---- 特色模型 ----
         Item(
             CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", com.iris.localai.I18n.s(com.iris.localai.R.string.data_c2d28e),

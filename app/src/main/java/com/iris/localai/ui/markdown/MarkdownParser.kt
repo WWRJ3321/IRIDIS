@@ -241,7 +241,7 @@ object InlineParser {
             if (m.range.first > last) out += MdInline.Text(text.substring(last, m.range.first))
             val g = m.groupValues
             out += when {
-                g[1].isNotEmpty() -> MdInline.Code(g[1])
+                g[1].isNotEmpty() -> if (TexText.looksMath(g[1])) MdInline.Math(g[1]) else MdInline.Code(g[1])
                 g[2].isNotEmpty() -> MdInline.Bold(parse(g[2]))
                 g[3].isNotEmpty() -> MdInline.Bold(parse(g[3]))
                 g[4].isNotEmpty() -> MdInline.Strike(parse(g[4]))

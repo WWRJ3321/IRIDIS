@@ -2195,4 +2195,6 @@
     <string name="st258_held">%1$s 使用中。先にモデルをアンロードしてください</string>
     <string name="md258_unfold">全 %1$d 行を表示</string>
     <string name="md258_fold">閉じる</string>
+    <string name="pf259_temp">温度 %1$s °C</string>
+    <string name="v259_lfm_purpose">24B MoE・2B動作・無検閲、12 GB以上</string>
 </resources>

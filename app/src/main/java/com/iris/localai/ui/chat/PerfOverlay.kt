@@ -62,6 +62,9 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
         Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4485a1) + (speed?.let { String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_292451), it) } ?: "—"), style = style, color = c.text)
         Text("CPU " + (r?.cpuPercent?.let { String.format(Locale.US, "%.0f%%", it) } ?: "—"), style = style, color = c.textSecondary)
         Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bcf4c8) + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
+        // 2.5.9: 电池温度（系统广播，约每次变化 0.1 °C 时更新）
+        val temp = com.iris.localai.engine.ThermalGovernor.tempC
+        if (!temp.isNaN()) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.pf259_temp, String.format(Locale.US, "%.1f", temp)), style = style, color = if (temp >= 42f) c.danger else c.textSecondary)
         r?.gpuPercent?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4cb9bb, it), style = style, color = c.textSecondary) }
     }
 }

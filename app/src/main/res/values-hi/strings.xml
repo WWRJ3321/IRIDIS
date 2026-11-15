@@ -2195,4 +2195,6 @@
     <string name="st258_held">%1$s उपयोग में; पहले मॉडल अनलोड करें</string>
     <string name="md258_unfold">सभी %1$d पंक्तियाँ दिखाएँ</string>
     <string name="md258_fold">छिपाएँ</string>
+    <string name="pf259_temp">तापमान %1$s °C</string>
+    <string name="v259_lfm_purpose">24B MoE, 2B सक्रिय, अनसेंसर्ड; 12 GB RAM</string>
 </resources>

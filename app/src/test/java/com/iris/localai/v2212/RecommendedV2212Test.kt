@@ -13,7 +13,7 @@ class RecommendedV2212Test {
         val all = com.iris.localai.data.RecommendedCatalog.ITEMS
         assertEquals(all.size, all.map { it.id }.toSet().size)
         assertTrue(all.any { it.id == "taobao-mnn/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-MNN" })
-        assertFalse(all.any { it.id.contains("LFM", true) || it.id.contains("9B-Claude") })
+        assertFalse(all.any { (it.id.contains("LFM", true) && it.id != com.iris.localai.data.RecommendedCatalog.LFM_REPO) || it.id.contains("9B-Claude") }) // 2.5.9: 用户指定加 LFM2.5 24B
         for (r in all) {
             val k = r.kind
             if (k is com.iris.localai.data.RecommendedCatalog.Kind.Image) assertTrue(ImageCatalog.byId(k.modelId) != null)

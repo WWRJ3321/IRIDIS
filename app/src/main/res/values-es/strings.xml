@@ -2195,4 +2195,6 @@
     <string name="st258_held">%1$s en uso; descarga el modelo antes de mover</string>
     <string name="md258_unfold">Mostrar las %1$d líneas</string>
     <string name="md258_fold">Contraer</string>
+    <string name="pf259_temp">Temp. %1$s °C</string>
+    <string name="v259_lfm_purpose">MoE 24B, 2B activos, sin censura; 12 GB</string>
 </resources>

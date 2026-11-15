@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.5.9", listOf(
+            f("开发者性能浮窗显示温度（电池温度，42 °C 起标红）。"),
+            f("下载推荐新增 LFM2.5 24B-A2B 无审查版（IQ2_XS，8.5 GB）。"),
+            b("模型把公式写在反引号里（如 `2^{2m}`、`\\gcd(a,b)=1`）时显示成原始 LaTeX；现在按公式渲染。"),
+        )),
         Release("2.5.8", listOf(
             f("模型与加载 › 看懂模型：模型名、格式、参数量、量化、稠密/MoE、手机能跑多大。"),
             f("对话里的公式（$…$、$$…$$、\\(…\\)、\\[…\\]）显示成可读符号，不再是一串 LaTeX。"),

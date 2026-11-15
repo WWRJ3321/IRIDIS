@@ -2195,4 +2195,6 @@
     <string name="st258_held">%1$s in use; unload the model first, then move</string>
     <string name="md258_unfold">Show all %1$d lines</string>
     <string name="md258_fold">Collapse</string>
+    <string name="pf259_temp">Temp %1$s °C</string>
+    <string name="v259_lfm_purpose">24B MoE, 2B active, uncensored; 12 GB+</string>
 </resources>
