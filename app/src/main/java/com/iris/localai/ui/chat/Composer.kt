@@ -193,6 +193,8 @@ fun Composer(
     onPickFiles: () -> Unit = {},
     onRemoveAttachment: (com.iris.localai.data.Attachment) -> Unit = {},
     onMoveAttachment: (from: Int, to: Int) -> Unit = { _, _ -> },
+    /** 2.6.2: a picture edited in the viewer (crop / rotate / doodle) replaces the attachment. */
+    onReplaceAttachment: ((old: com.iris.localai.data.Attachment, new: com.iris.localai.data.Attachment) -> Unit)? = null,
     /** 2.2: slide up while holding the capsule → the dictation is thrown away. */
     onHoldToTalkCancel: () -> Unit = {},
     /** 2.2 「技能」: what the sheet lists (read when it opens), and adding / removing a reference. */
@@ -301,7 +303,7 @@ fun Composer(
             enter = fadeIn(IrisMotion.enter()),
             exit = fadeOut(IrisMotion.standard()),
         ) {
-            AttachmentStrip(state.attachments, onRemove = onRemoveAttachment, onMove = onMoveAttachment, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.XS, top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS))
+            AttachmentStrip(state.attachments, onRemove = onRemoveAttachment, onMove = onMoveAttachment, onReplace = onReplaceAttachment, modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.XS, top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS))
         }
         AnimatedVisibility(
             visible = state.refs.isNotEmpty(),

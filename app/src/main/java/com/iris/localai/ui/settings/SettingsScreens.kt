@@ -615,8 +615,9 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}, onOpenLicenses: 
                     Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(26.dp).width(134.dp))
                     androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(26.dp).width(134.dp))
                 }
-                Spacer(Modifier.height(IrisDimens.space2))
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), style = IrisType.caption, color = c.textTertiary)
+                Spacer(Modifier.height(IrisDimens.space6))
+                // 2.6.2: version a size up (was caption, too small under the wordmark).
+                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_45020f, BuildConfig.VERSION_NAME), style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.height(IrisDimens.space16))
                 Text(
                     ABOUT_PRIVACY,
@@ -648,9 +649,8 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}, onOpenLicenses: 
     }
 }
 
-internal val ABOUT_PRIVACY: String get() =
-    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1586eb) +
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2ae972)
+// 2.6.2: one short paragraph (what stays on the phone, the three cases that go online).
+internal val ABOUT_PRIVACY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.about262_privacy)
 
 /** 1.14.7: every bundled / downloadable third-party component with its license. */
 internal val OPEN_SOURCE = listOf(
@@ -661,6 +661,7 @@ internal val OPEN_SOURCE = listOf(
     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4e0e80) to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_887484),
     "sherpa-onnx" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_53cc9e),
     "ONNX Runtime" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c46311),
+    "Bergamot Translator" to com.iris.localai.I18n.s(com.iris.localai.R.string.about262_bergamot),
     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0bc708) to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_14990b),
     "AndroidX / Jetpack Compose" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc1c39),
     "Kotlin / kotlinx" to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_77baf4),

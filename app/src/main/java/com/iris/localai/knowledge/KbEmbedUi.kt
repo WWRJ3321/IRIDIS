@@ -65,7 +65,12 @@ fun KbEmbedRow(kb: KnowledgeBase, inGroup: Boolean = false) {
                 CheckRow(I18n.s(R.string.kb251_embed_auto), chosen == null) { choose(null) }
                 KbEmbedModels.ALL.forEach { m ->
                     val have = installed.any { it.id == m.id }
-                    CheckRow(m.name, chosen == m.id, subtitle = if (have) null else I18n.s(R.string.kb251_embed_not_downloaded)) { if (have) choose(m.id) }
+                    // 2.6.2: a model not downloaded yet opens its card in 下载模型 (download button there).
+                    val dl = com.iris.localai.ui.models.DownloadNav.opener
+                    CheckRow(m.name, chosen == m.id, subtitle = if (have) null else I18n.s(if (dl != null) R.string.kb262_embed_tap_dl else R.string.kb251_embed_not_downloaded)) {
+                        if (have) choose(m.id)
+                        else if (dl != null) { picking = false; com.iris.localai.ui.models.DownloadNav.open(m.repo) }
+                    }
                 }
                 CheckRow(I18n.s(R.string.kb251_embed_off_choice), chosen == KbEmbedModels.OFF) { choose(KbEmbedModels.OFF) }
                 if (progress.running) CheckRow(I18n.s(R.string.kb251_embed_stop), false) { sem.cancel(); picking = false }

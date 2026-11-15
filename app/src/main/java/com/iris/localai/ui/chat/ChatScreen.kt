@@ -663,6 +663,7 @@ fun ChatScreen(
                     onPickFiles = { pickFiles.launch(arrayOf("*/*")) },
                     onRemoveAttachment = { a -> pending = pending - a; vm.discardAttachments(listOf(a)) },
                     onMoveAttachment = { from, to -> pending = AttachmentOrder.move(pending, from, to) },
+                    onReplaceAttachment = { old, new -> pending = pending.map { if (it.path == old.path) new else it }; vm.discardAttachments(listOf(old)) },
                     onToggleAgent = {
                         val on = !agentSettings.agentMode
                         // 2.3.5: skills / tools need the agent — turning it off drops the references.

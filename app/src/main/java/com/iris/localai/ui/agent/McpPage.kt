@@ -123,11 +123,12 @@ fun McpPage(onBack: () -> Unit) {
                                 IrisButton(McpText.ALL_ON, { mcp.setAllTools(s.id, true) }, style = IrisButtonStyle.Tonal, compact = true, enabled = s.enabled, modifier = Modifier.weight(1f))
                                 IrisButton(McpText.ALL_OFF, { mcp.setAllTools(s.id, false) }, style = IrisButtonStyle.Tonal, compact = true, enabled = s.enabled, modifier = Modifier.weight(1f))
                             }
-                            s.tools.forEach { t ->
-                                androidx.compose.runtime.key(t.name) {
+                            // 2.6.2: rows past ~#20 took no taps — the card's clip hit-test (IrisCard now clips drawing only).
+                            s.tools.forEachIndexed { i, t ->
+                                androidx.compose.runtime.key(t.name, i) {
                                     Divider()
                                     SwitchRow(t.name, t.name !in s.disabledTools, subtitle = descs[t.name], enabled = s.enabled) { on ->
-                                        mcp.update(s.id) { it.copy(disabledTools = if (on) it.disabledTools - t.name else it.disabledTools + t.name) }
+                                        mcp.update(s.id) { com.iris.localai.agent.mcp.McpToggle.set(it, t.name, on) }
                                     }
                                 }
                             }

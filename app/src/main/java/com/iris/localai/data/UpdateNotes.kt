@@ -16,6 +16,13 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.2", listOf(
+            f("图片查看页改成沉浸式，可双指缩放；输入框里的图片能裁剪、旋转、涂鸦。"),
+            f("知识库没下载的嵌入模型，点一下直接去下载。"),
+            f("关于页：版本号放大、隐私说明精简、开源组件版本更新。"),
+            f("生图等待色更鲜艳，结果图和等待框一样大。"),
+            b("MCP 工具多时，第 20 个之后的开关点了没反应。"),
+        )),
         Release("2.6.1", listOf(
             f("思考：短按开/关，长按选 低 / 中 / 高。"),
             f("思考档位胶囊加弹出动画。"),
@@ -24,7 +31,7 @@ object UpdateNotes {
             b("知识库页两张卡片贴在一起。"),
         )),
         Release("2.6.0", listOf(
-            x("引擎升级到 llama.cpp 1.0（测试版）。"),
+            x("引擎升级到 llama.cpp 1.0。"),
             f("长按「思考」选档位：关 / 低 / 中 / 高，滑动选择、松手生效。"),
             b("Qwen3.5 2B 等小模型开思考没反应。"),
         )),

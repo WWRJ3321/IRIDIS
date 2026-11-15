@@ -49,6 +49,7 @@ import com.iris.localai.ui.theme.IrisElevation
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.theme.softShadow
+import com.iris.localai.ui.theme.clipDraw
 
 /*
  * 2.2.4 design kit (Kimi-like): floating round buttons and pills with one soft shadow, 20 dp
@@ -130,8 +131,11 @@ fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
         modifier
             .fillMaxWidth()
             .softShadow(if (c.isDark || soft) IrisElevation.none else IrisElevation.card, IrisRadius.largeShape, c.isDark)
-            .clip(IrisRadius.largeShape)
-            .background(c.surfaceElevated)
+            // 2.6.2: clip drawing only. A real clip makes Compose hit-test every touch against the
+            // continuous-corner path (Path.op with a 0.01 px probe); past ~8192 px down a tall card
+            // that probe vanishes in float precision and taps are dropped (MCP tools after #20).
+            .background(c.surfaceElevated, IrisRadius.largeShape)
+            .clipDraw(IrisRadius.largeShape)
             .then(if (soft) Modifier.border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(c.isDark), IrisRadius.largeShape) else Modifier),
         content = content,
     )

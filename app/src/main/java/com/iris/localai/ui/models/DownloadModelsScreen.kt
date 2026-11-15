@@ -171,6 +171,8 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     var query by rememberSaveable { mutableStateOf(search.query) }
     var expanded by remember { mutableStateOf(emptySet<Section>()) }
     var detailId by rememberSaveable { mutableStateOf<String?>(null) }
+    // 2.6.2: opened from elsewhere for one catalog card (知识库 › 嵌入模型 not downloaded).
+    androidx.compose.runtime.LaunchedEffect(Unit) { DownloadNav.take()?.let { detailId = it } }
 
     // models from elsewhere: the existing import, its progress shows on 模型与加载
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.import(it); onBack() } }
@@ -403,6 +405,17 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
         )
     }
     if (search.repo != null) GgufRepoSheet(vm, hub.active)
+}
+
+/**
+ * 2.6.2: open 下载模型 from another page with one catalog card's detail sheet shown.
+ * MainActivity sets [opener] (push the route); [open] stores the card id the screen takes once.
+ */
+object DownloadNav {
+    var opener: (() -> Unit)? = null
+    @Volatile private var pending: String? = null
+    fun open(itemId: String) { pending = itemId; opener?.invoke() }
+    fun take(): String? = pending.also { pending = null }
 }
 
 private interface RecActions {

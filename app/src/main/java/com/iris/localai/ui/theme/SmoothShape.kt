@@ -1,6 +1,8 @@
 package com.iris.localai.ui.theme
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
@@ -136,3 +138,19 @@ class SmoothRoundedShape(
 /** Continuous-corner shape whose radius is the same on every corner. */
 fun smoothShape(radius: Dp, smoothing: Float = IrisRadius.SMOOTHING): Shape =
     if (radius <= 0.dp) androidx.compose.ui.graphics.RectangleShape else SmoothRoundedShape(radius, smoothing)
+
+/**
+ * 2.6.2: clips what is drawn to [shape] but not hit-testing. Modifier.clip with an
+ * [Outline.Generic] shape (our continuous corners) hit-tests each touch with Path.op against a
+ * 0.01 px square; Skia's path ops lose that square to float precision ~8192 px from the top of
+ * the clipped node, so rows far down a tall card stopped taking taps. Use this on tall containers.
+ */
+fun androidx.compose.ui.Modifier.clipDraw(shape: Shape): androidx.compose.ui.Modifier =
+    this.drawWithCache {
+        val path = when (val o = shape.createOutline(size, layoutDirection, this)) {
+            is Outline.Generic -> o.path
+            is Outline.Rounded -> Path().apply { addRoundRect(o.roundRect) }
+            is Outline.Rectangle -> Path().apply { addRect(o.rect) }
+        }
+        onDrawWithContent { clipPath(path) { this@onDrawWithContent.drawContent() } }
+    }

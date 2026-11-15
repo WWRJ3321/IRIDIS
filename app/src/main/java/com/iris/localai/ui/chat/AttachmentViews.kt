@@ -51,6 +51,7 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.util.Attachments
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -65,6 +66,7 @@ fun AttachmentStrip(
     onRemove: ((Attachment) -> Unit)? = null,
     modifier: Modifier = Modifier,
     onMove: ((from: Int, to: Int) -> Unit)? = null,
+    onReplace: ((old: Attachment, new: Attachment) -> Unit)? = null,
 ) {
     if (list.isEmpty()) return
     val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
@@ -76,7 +78,20 @@ fun AttachmentStrip(
     var viewing by remember { mutableStateOf<Int?>(null) }
     viewing?.let { start ->
         val pics = list.filter { it.kind == AttachmentKind.IMAGE }
-        com.iris.localai.ui.markdown.ChatImageViewer(pics.map { com.iris.localai.ui.markdown.ImageSource.LocalFile(it.path) to it.name }, start) { viewing = null }
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        com.iris.localai.ui.markdown.ChatImageViewer(
+            pics.map { com.iris.localai.ui.markdown.ImageSource.LocalFile(it.path) to it.name }, start, onDismiss = { viewing = null },
+            // 2.6.2: 编辑 only where the attachment can still change (the composer).
+            onEdit = onReplace?.let { replace -> { i: Int, edited: android.graphics.Bitmap ->
+                val old = pics.getOrNull(i)
+                if (old != null) scope.launch {
+                    val new = withContext(Dispatchers.IO) { ImageEditSave.save(ctx, old, edited) }
+                    if (new != null) { replace(old, new); viewing = null }
+                    else android.widget.Toast.makeText(ctx, com.iris.localai.I18n.s(com.iris.localai.R.string.img262_save_failed), android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } },
+        )
     }
     var dragDx by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val latest = androidx.compose.runtime.rememberUpdatedState(list)
@@ -149,6 +164,16 @@ fun AttachmentStrip(
             }
         }
     }
+}
+
+/** 2.6.2: writes an edited picture next to the attachments and returns the replacing attachment. */
+internal object ImageEditSave {
+    fun save(context: android.content.Context, old: Attachment, edited: android.graphics.Bitmap): Attachment? = runCatching {
+        val (name, format) = ImageEditMath.outName(old.name)
+        val out = java.io.File(com.iris.localai.util.Attachments.dir(context), java.util.UUID.randomUUID().toString().take(8) + "-" + name)
+        if (!ImageEditOps.write(edited, out, format)) { out.delete(); return null }
+        old.copy(name = name, path = out.path, mime = if (format == android.graphics.Bitmap.CompressFormat.PNG) "image/png" else "image/jpeg", sizeBytes = out.length())
+    }.getOrNull()
 }
 
 /** 1.13.0: pure reorder used by the composer's drag (kept separate for tests). */

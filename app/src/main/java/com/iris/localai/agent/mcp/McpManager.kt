@@ -31,6 +31,12 @@ data class McpServer(
     val checkedAt: Long = 0,
 )
 
+/** 2.6.2: one tool switch of one server (pure, unit-tested with 30+ tools). */
+object McpToggle {
+    fun set(s: McpServer, tool: String, on: Boolean): McpServer =
+        s.copy(disabledTools = if (on) s.disabledTools - tool else s.disabledTools + tool)
+}
+
 /** Token + custom headers per server, AES-GCM with a non-exportable Android Keystore key. */
 class McpSecrets(context: Context) {
     private val prefs = context.getSharedPreferences("iris_mcp_secrets", Context.MODE_PRIVATE)

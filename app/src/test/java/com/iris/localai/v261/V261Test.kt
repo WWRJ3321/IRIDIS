@@ -15,8 +15,8 @@ class V261Test {
     private fun src(p: String) = listOf("app/$p", p).map { File(it) }.first { it.exists() }.readText()
 
     @Test fun version() {
-        assertEquals("2.6.1", UpdateNotes.RELEASES.first().version)
-        assertTrue(src("build.gradle.kts").contains("versionName = \"2.6.1-beta\""))
+        // 2.6.2: no longer the newest release.
+        assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.1" })
         assertTrue(src("CHANGELOG.md").contains("## 2.6.1 Beta"))
     }
 

@@ -108,6 +108,7 @@ internal object RichText {
     val COPIED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab)
     val CLOSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91)
     val SAVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_a3c86e)
+    val EDIT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.img262_edit)
     val SHARE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48)
     val SAVED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c1a317)
     val SAVE_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6de920)
@@ -439,8 +440,13 @@ private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) = 
  * right through the pictures of one message like the 生成历史 viewer; 保存到相册 and 分享.
  */
 @Composable
-internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int, onDismiss: () -> Unit) {
-    val c = Iris.colors
+internal fun ChatImageViewer(
+    items: List<Pair<ImageSource, String>>,
+    start: Int,
+    onDismiss: () -> Unit,
+    /** 2.6.2: given (composer attachments) = 编辑 in the toolbar; the edited picture replaces item [index]. */
+    onEdit: ((index: Int, edited: Bitmap) -> Unit)? = null,
+) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var index by remember { mutableIntStateOf(start.coerceIn(0, (items.size - 1).coerceAtLeast(0))) }
@@ -449,6 +455,12 @@ internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int,
     var scale by remember(index) { mutableFloatStateOf(1f) }
     var offset by remember(index) { mutableStateOf(Offset.Zero) }
     var box by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    // 2.6.2: immersive — black, bars float over the picture; one tap hides / shows them.
+    var chrome by remember { mutableStateOf(true) }
+    val chromeA by androidx.compose.animation.core.animateFloatAsState(if (chrome) 1f else 0f, label = "viewerChrome")
+    var editing by remember { mutableStateOf<Bitmap?>(null) }
+    val white = androidx.compose.ui.graphics.Color.White
+    val black = androidx.compose.ui.graphics.Color.Black
     fun withBytes(block: (ByteArray) -> Boolean, failed: String, done: String?) {
         scope.launch {
             val bytes = withContext(Dispatchers.IO) { ChatImageLoader.bytes(ctx, src) }
@@ -457,8 +469,15 @@ internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int,
             if (msg != null) Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
         }
     }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().enterOnce().background(androidx.compose.ui.graphics.Color.Black).onSizeChanged { box = it }) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        editing?.let { full ->
+            com.iris.localai.ui.chat.ImageEditor(full, onCancel = { editing = null }) { out ->
+                editing = null
+                onEdit?.invoke(index, out)
+            }
+            return@Dialog
+        }
+        Box(Modifier.fillMaxSize().enterOnce().background(black).onSizeChanged { box = it }) {
             bitmap?.let { b ->
                 val img = remember(b) { b.asImageBitmap() }
                 Image(
@@ -471,39 +490,61 @@ internal fun ChatImageViewer(items: List<Pair<ImageSource, String>>, start: Int,
                             }
                         }
                         .pointerInput(index) {
-                            detectTapGestures(onDoubleTap = { at ->
-                                if (scale > 1f) { scale = 1f; offset = Offset.Zero }
-                                else {
-                                    scale = ZoomMath.DOUBLE_TAP
-                                    // zoom towards the tapped point
-                                    val center = Offset(box.width / 2f, box.height / 2f)
-                                    offset = ZoomMath.clamp((center - at) * (ZoomMath.DOUBLE_TAP - 1f), scale, box.width.toFloat(), box.height.toFloat())
-                                }
-                            })
+                            detectTapGestures(
+                                onTap = { chrome = !chrome },
+                                onDoubleTap = { at ->
+                                    if (scale > 1f) { scale = 1f; offset = Offset.Zero }
+                                    else {
+                                        scale = ZoomMath.DOUBLE_TAP
+                                        // zoom towards the tapped point
+                                        val center = Offset(box.width / 2f, box.height / 2f)
+                                        offset = ZoomMath.clamp((center - at) * (ZoomMath.DOUBLE_TAP - 1f), scale, box.width.toFloat(), box.height.toFloat())
+                                    }
+                                },
+                            )
                         }
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                 )
-            } ?: Icon(IrisIcons.Image, null, tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.Center).size(IrisDimens.space32))
-            if (items.size > 1 && scale <= 1f) {
-                if (index > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) {
-                    PressableIcon(IrisIcons.ChevronLeft, RichText.OPEN_IMAGE, tint = androidx.compose.ui.graphics.Color.White, background = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)) { index-- }
+            } ?: Icon(IrisIcons.Image, null, tint = white.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.Center).size(IrisDimens.space32))
+            if (items.size > 1 && scale <= 1f && chromeA > 0f) {
+                if (index > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8).graphicsLayer { alpha = chromeA }) {
+                    PressableIcon(IrisIcons.ChevronLeft, RichText.OPEN_IMAGE, tint = white, background = black.copy(alpha = 0.35f), enabled = chrome) { index-- }
                 }
-                if (index < items.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) {
-                    PressableIcon(IrisIcons.ChevronRight, RichText.OPEN_IMAGE, tint = androidx.compose.ui.graphics.Color.White, background = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)) { index++ }
+                if (index < items.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8).graphicsLayer { alpha = chromeA }) {
+                    PressableIcon(IrisIcons.ChevronRight, RichText.OPEN_IMAGE, tint = white, background = black.copy(alpha = 0.35f), enabled = chrome) { index++ }
                 }
             }
-            Row(
-                Modifier.fillMaxWidth().systemBarsPadding().background(c.background.copy(alpha = 0.7f)).padding(horizontal = IrisDimens.space4),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
-                if (items.size > 1) Text("${index + 1} / ${items.size}", color = c.textSecondary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, modifier = Modifier.padding(start = IrisDimens.space4))
-                Spacer(Modifier.weight(1f))
-                CardAction(IrisIcons.Download, RichText.SAVE) { withBytes({ ChatImageLoader.saveToGallery(ctx, it) }, RichText.SAVE_FAILED, RichText.SAVED) }
-                CardAction(IrisIcons.Share, RichText.SHARE) {
-                    scope.launch {
-                        val bytes = withContext(Dispatchers.IO) { ChatImageLoader.bytes(ctx, src) }
-                        if (bytes == null || !ChatImageLoader.share(ctx, bytes)) Toast.makeText(ctx, RichText.SHARE_FAILED, Toast.LENGTH_SHORT).show()
+            if (chromeA > 0f) {
+                // Top: close + counter over a soft fade.
+                Row(
+                    Modifier.fillMaxWidth().graphicsLayer { alpha = chromeA }
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(black.copy(alpha = 0.6f), androidx.compose.ui.graphics.Color.Transparent)))
+                        .systemBarsPadding().padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space4),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = white, enabled = chrome, onClick = onDismiss)
+                    Spacer(Modifier.weight(1f))
+                    if (items.size > 1) Text("${index + 1} / ${items.size}", color = white.copy(alpha = 0.85f), fontSize = com.iris.localai.ui.theme.IrisFontSize.S, modifier = Modifier.padding(end = IrisDimens.space16))
+                }
+                // Bottom toolbar: 编辑 · 保存 · 分享.
+                Row(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().graphicsLayer { alpha = chromeA }
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, black.copy(alpha = 0.6f))))
+                        .systemBarsPadding().padding(vertical = IrisDimens.space8),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    if (onEdit != null) com.iris.localai.ui.chat.ToolButton(IrisIcons.Edit, RichText.EDIT, false, enabled = chrome && bitmap != null) {
+                        scope.launch {
+                            val full = withContext(Dispatchers.IO) { ChatImageLoader.load(ctx, src, 4096) }
+                            if (full != null) editing = full else Toast.makeText(ctx, RichText.LOAD_FAILED, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    com.iris.localai.ui.chat.ToolButton(IrisIcons.Download, RichText.SAVE, false, enabled = chrome) { withBytes({ ChatImageLoader.saveToGallery(ctx, it) }, RichText.SAVE_FAILED, RichText.SAVED) }
+                    com.iris.localai.ui.chat.ToolButton(IrisIcons.Share, RichText.SHARE, false, enabled = chrome) {
+                        scope.launch {
+                            val bytes = withContext(Dispatchers.IO) { ChatImageLoader.bytes(ctx, src) }
+                            if (bytes == null || !ChatImageLoader.share(ctx, bytes)) Toast.makeText(ctx, RichText.SHARE_FAILED, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
