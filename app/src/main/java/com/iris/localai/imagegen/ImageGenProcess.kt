@@ -52,14 +52,14 @@ object ImageGenIpc {
         putString("prompt", req.prompt); putString("negative", req.negative)
         putInt("width", req.width); putInt("height", req.height); putInt("steps", req.steps)
         putFloat("cfg", req.cfg); putLong("seed", req.seed); putString("init", req.initImagePath)
-        putFloat("strength", req.strength); putString("model", modelId); putBoolean("force", forceOnce)
+        putFloat("strength", req.strength); putString("model", modelId); putBoolean("force", forceOnce); putBoolean("lowMem", req.lowMem)
     }
 
     fun requestOf(b: Bundle) = ImageRequest(
         prompt = b.getString("prompt").orEmpty(), negative = b.getString("negative").orEmpty(),
         width = b.getInt("width"), height = b.getInt("height"), steps = b.getInt("steps"),
         cfg = b.getFloat("cfg"), seed = b.getLong("seed"), initImagePath = b.getString("init"),
-        strength = b.getFloat("strength"),
+        strength = b.getFloat("strength"), lowMem = b.getBoolean("lowMem", false),
     )
 }
 

@@ -96,6 +96,12 @@ class ToolEnv(
     val imageModelId: String = "",
     /** 2.5.7: free the chat model's memory first when the image model would not fit. */
     val imageMakeRoom: Boolean = true,
+    /** 2.6.8: 生图低内存模式（总是先卸文本模型、尺寸上限、用完即放）。 */
+    val imageLowMem: Boolean = false,
+    /** 2.6.8: 提示词扩写（智能体里模型自己写提示词，这里只补质量词）。 */
+    val imageExpand: Boolean = true,
+    /** 2.6.8: 生图提示词标签库（内置 + 用户自定义）。 */
+    val imageTags: () -> List<com.iris.localai.imagegen.PromptTag> = { com.iris.localai.imagegen.PromptTags.BUILTIN },
     /** 2.1.9: the GUI agent for `screen` (null = not available). */
     val gui: GuiTaskBackend? = null,
 )
@@ -338,6 +344,8 @@ interface ImageGenBackend {
      * it back; null = nothing done (enough memory, or nothing loaded).
      */
     suspend fun makeRoom(model: com.iris.localai.imagegen.ImageModel): (suspend () -> Unit)? = null
+    /** 2.6.8 低内存模式：不看内存，直接卸载文本模型；返回装回的动作。 */
+    suspend fun makeRoomAlways(): (suspend () -> Unit)? = null
     /** 2.5.7: frees the image model right away (before the chat model is loaded back). */
     fun releaseNow() {}
 }
@@ -367,7 +375,7 @@ object GenerateImageTool : SuspendTool {
     override val label = "生图"
     override val description = "用本机模型生成或修改图片（约 1 分钟），保存到工作区 images/"
     // 2.1.7: negative_prompt, seed, strength, width, height, steps, cfg are accepted but not advertised (prompt budget).
-    override val promptLine = "generate_image(prompt, image?): on-device picture; omit image for a new picture; image ONLY to edit an existing file the user attached or named"
+    override val promptLine = "generate_image(prompt, image?): on-device picture; omit image for a new picture; image ONLY to edit an existing file the user attached or named; list_tags=true returns the prompt tag library"
     /** 2.3.2 角色卡: the card's image style, put in front of the prompt in that card's chats ("" = none). */
     @Volatile var imageStyle: String = ""
     fun withStyle(p: Parsed, style: String): Parsed =
@@ -424,15 +432,32 @@ object GenerateImageTool : SuspendTool {
     fun resolveImage(path: String, env: ToolEnv): File = env.sandbox.resolve(path)
 
     /** Builds the normalized request for [model] (model defaults where the call left a value out). */
-    fun request(p: Parsed, model: com.iris.localai.imagegen.ImageModel, initImage: String?): com.iris.localai.imagegen.ImageRequest =
-        com.iris.localai.imagegen.ImageRequest(
+    fun request(p: Parsed, model: com.iris.localai.imagegen.ImageModel, initImage: String?, lowMem: Boolean = false): com.iris.localai.imagegen.ImageRequest =
+        com.iris.localai.imagegen.ImageRequest(lowMem = lowMem,
             prompt = p.prompt, negative = p.negative,
             width = p.width ?: model.fixedSize ?: 512, height = p.height ?: model.fixedSize ?: 512,
             steps = p.steps ?: model.defaultSteps, cfg = p.cfg ?: model.defaultCfg, seed = p.seed,
             initImagePath = initImage, strength = p.strength,
         ).normalize(model)
 
+    /** 2.6.8: list_tags=true（或 prompt 为空且要标签）→ 返回标签库，供模型挑选。 */
+    fun wantsTags(args: JsonObject): Boolean =
+        Args.str(args, "list_tags", "tags")?.trim()?.lowercase() in setOf("true", "1", "yes", "list")
+
+    /** 2.6.8: 扩写开时，短提示词补质量词（标签风格模型用 Danbooru 写法）。 */
+    fun expand(p: Parsed, model: com.iris.localai.imagegen.ImageModel, on: Boolean): Parsed {
+        if (!on || !com.iris.localai.imagegen.PromptExpand.needed(p.prompt)) return p
+        return p.copy(prompt = com.iris.localai.imagegen.PromptExpand.rules(p.prompt, model.tagStyle),
+            negative = com.iris.localai.imagegen.PromptExpand.negative(p.negative, model.tagStyle))
+    }
+
     override suspend fun runSuspend(args: JsonObject, env: ToolEnv, progress: (String) -> Unit): ToolResult {
+        if (wantsTags(args) && Args.str(args, "prompt", "text", "description", "query").isNullOrBlank()) {
+            val models = env.imageGen?.runnableModels().orEmpty()
+            val tagStyle = pickModel(models, env.imageModelId, false)?.tagStyle == true
+            val text = com.iris.localai.imagegen.PromptTags.forModel(env.imageTags(), tagStyle)
+            return ToolResult(true, "Prompt tags (pick a few, join with commas" + (if (tagStyle) ", Danbooru style" else "") + "):\n$text", "已读取标签库")
+        }
         val p = parse(args)
         val init: File? = p.image?.let { path ->
             val f = resolveImage(path, env)
@@ -448,9 +473,11 @@ object GenerateImageTool : SuspendTool {
         val model = pickModel(models, env.imageModelId, init != null)
             ?: return ToolResult(false, "Error: the available image model cannot edit a picture; call without image", "该模型暂不支持参考图")
         val backend = env.imageGen!!
-        val req = request(withStyle(p, imageStyle), model, init?.path)
+        val req = request(expand(withStyle(p, imageStyle), model, env.imageExpand), model, init?.path, env.imageLowMem)
         // 2.5.7: not enough memory next to the chat model → unload it, generate, free the image model, load it back.
-        val restore = if (env.imageMakeRoom) runCatching { backend.makeRoom(model) }.getOrNull() else null
+        // 2.6.8: 低内存模式总是先卸。
+        val restore = if (env.imageLowMem) runCatching { backend.makeRoomAlways() }.getOrNull()
+            else if (env.imageMakeRoom) runCatching { backend.makeRoom(model) }.getOrNull() else null
         if (restore != null) progress(YIELDED)
         // 2.2.14: the model in use is always named.
         progress("${model.name} 生成中…")

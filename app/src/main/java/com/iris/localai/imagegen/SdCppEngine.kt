@@ -157,14 +157,15 @@ class SdCppEngine(
         val files = model.sdFiles ?: return Result.failure(IllegalStateException("no sd.cpp files for ${model.id}"))
         val root = rootOf(model) ?: return Result.failure(IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28f942)))
         cancelled = false
-        val order = if (model.sdq) listOf(SdRules.htpBackend(totalMb())) else SdRules.backends(gpuCrashedBefore, preferCpu())
+        // 2.6.8 低内存模式：VAE 也放 CPU（mmap），生成完立即释放。
+        val order = if (model.sdq) listOf(SdRules.htpBackend(totalMb())) else SdRules.backends(gpuCrashedBefore, preferCpu()).map { ImageLowMem.backend(it, req.lowMem) }
         // 2.4.1: check free RAM before starting (a GPU run that does not fit froze the phone / got killed).
         run {
             val first = order.first()
-            val gpu = first == SdRules.GPU || model.sdq
+            val gpu = first == SdRules.GPU || first == ImageLowMem.GPU || model.sdq
             val need = if (model.sdq) SdRules.neededMbHtp(File(root, files.diffusion).length(), File(root, files.llm).length(),
                 File(root, files.vae).length(), first == SdRules.HTP_LOWMEM, req.width, req.height)
-            else SdRules.neededMb(gpu, File(root, files.diffusion).length(), File(root, files.vae).length(), req.width, req.height)
+            else SdRules.neededMb(gpu, File(root, files.diffusion).length(), if (req.lowMem) 0L else File(root, files.vae).length(), req.width, req.height)
             val loadedHere = handle != 0L && loadedKey?.startsWith("$first|") == true
             // 2.4.3: 「仍然生成」 skips the check once (MemAvailable leaves out apps Android can still kill).
             val force = forceOnce.also { forceOnce = false }
@@ -181,7 +182,7 @@ class SdCppEngine(
                 if (want !== api) { freeLocked(); api = want }
                 var lastErr: String? = null
                 for (backend in order) {
-                    val gpu = backend == SdRules.GPU
+                    val gpu = backend == SdRules.GPU || backend == ImageLowMem.GPU
                     val htp = model.sdq
                     val mark = if (htp) htpMarker else marker
                     if (gpu || htp) runCatching { stateDir.mkdirs(); mark.writeText(System.currentTimeMillis().toString()) }
@@ -204,6 +205,7 @@ class SdCppEngine(
                             freeLocked()
                             continue
                         }
+                        if (req.lowMem) freeLocked()
                         return Result.success(png(rgb, req.width, req.height))
                     } finally {
                         running = 0L

@@ -53,6 +53,10 @@ data class AgentSettings(
     val imageMakeRoom: Boolean = true,
     /** 2.6.7 先问清楚：任务/生图信息不足时先追问 1–2 句再动手。默认开。 */
     val askFirst: Boolean = true,
+    /** 2.6.8 生图低内存模式：先卸文本模型、长边 ≤768、VAE 放 CPU、用完即放。默认关。 */
+    val imageLowMem: Boolean = false,
+    /** 2.6.8 提示词扩写：短描述自动补全（生图页用已加载文本模型，没有就用规则模板）。默认开。 */
+    val imagePromptExpand: Boolean = true,
 ) {
     val search: SearchProvider get() = SearchProvider.parse(searchProvider)
     val workspaceLocation: WorkspaceLocation get() = WorkspaceLocation.parse(workspace)
@@ -418,6 +422,9 @@ class AgentContainer(context: Context) {
         imageGen = imageGen,
         imageModelId = settings.current.imageModel,
         imageMakeRoom = settings.current.imageMakeRoom,
+        imageLowMem = settings.current.imageLowMem,
+        imageExpand = settings.current.imagePromptExpand,
+        imageTags = { com.iris.localai.imagegen.TagLibrary.tags(appContextForTools) },
         gui = gui,
     )
 

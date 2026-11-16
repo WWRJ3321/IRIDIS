@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -145,6 +146,26 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             onDismiss = { confirmDelete = null },
         )
     }
+    // 2.6.8: 非商用许可模型首次下载前确认
+    s.licenseAsk?.let { id ->
+        val m = com.iris.localai.imagegen.ImageCatalog.byId(id)
+        if (m != null) ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_license_title),
+            message = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_license_msg, m.name, m.licenseUrl),
+            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_agree),
+            onConfirm = { vm.acceptLicense(true) }, onDismiss = { vm.acceptLicense(false) }, destructive = false,
+        )
+    }
+    // 2.6.8: 标签库——添加 / 删除
+    var addingTag by remember { mutableStateOf(false) }
+    var removingTag by remember { mutableStateOf<com.iris.localai.imagegen.PromptTag?>(null) }
+    if (addingTag) TagAddDialog(s.tagCat, onAdd = { zh, en -> vm.addTag(s.tagCat, zh, en) }, onDismiss = { addingTag = false })
+    removingTag?.let { t ->
+        ConfirmDialog(
+            title = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_del_tag, tagLabel(t)), message = t.text(s.model.tagStyle),
+            confirmText = ImageGenText.DELETE, onConfirm = { vm.removeTag(t) }, onDismiss = { removingTag = null },
+        )
+    }
     val pickRef = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::pickReference) }
 
     SubpageScaffold(ImageGenText.TITLE, onBack, scrollUnder = false) {
@@ -176,6 +197,11 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 SettingsGroup {
                     Field(s.prompt, ImageGenText.PROMPT, minLines = 3) { v -> vm.edit { it.copy(prompt = v) } }
                     Field(s.negative, ImageGenText.NEGATIVE, minLines = 2) { v -> vm.edit { it.copy(negative = v) } }
+                    // 2.6.8 标签库：分类 → 点标签追加，长按删除，「+」添加
+                    TagRow(s, onCat = { c -> vm.edit { it.copy(tagCat = c) } }, onTag = vm::useTag, onLong = { removingTag = it },
+                        onAdd = { addingTag = true }, onReset = vm::resetTags)
+                    com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand), s.expand,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
                 }
             }
 
@@ -215,6 +241,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
                         }
                     }
+                    if (fixed == null) com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem), s.lowMemMode,
+                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
                     SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
                     SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
                     // 2.5.2: empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
@@ -239,6 +267,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         style = IrisType.caption, color = Iris.colors.accent,
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
+                    if (s.expanding) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expanding), style = IrisType.caption, color = Iris.colors.textSecondary,
+                        modifier = Modifier.padding(bottom = IrisDimens.space6))
                     // 2.4.1: sd.cpp models — GPU or CPU for the next image, 「重试 GPU」 after a crash, 「改用 CPU」.
                     // 2.4.3: NPU models — only 「重试 NPU」 after the app died during an NPU run.
                     if (s.model.sdq && s.sdHtpCrashed && !s.running) {
@@ -309,6 +339,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onSendToChat(path) })
                         }
                         Text(ImageGenFiles.IMAGES_SUB + "/" + File(path).name, style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space6))
+                        s.usedPrompt?.let { up -> Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_used, up), style = IrisType.caption, color = Iris.colors.textTertiary, maxLines = 4) }
                         // 2.5.2: the seed this image used (the seed field keeps what the user typed); 「固定此种子」 copies it in.
                         s.lastSeed?.let { used ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -400,6 +431,12 @@ private fun ModelChip(
         Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary)
         Text(m.name, style = IrisType.labelSmall, color = fg, maxLines = 2)
         if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary, maxLines = 2)
+        // 2.6.8: 许可摘要 + 原文链接
+        if (m.licenseNote.isNotEmpty()) {
+            val uri = androidx.compose.ui.platform.LocalUriHandler.current
+            Text(m.licenseNote + " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_license_view), style = IrisType.micro, color = c.warning, maxLines = 2,
+                modifier = Modifier.clickable { runCatching { uri.openUri(m.licenseUrl) } })
+        }
         Spacer(Modifier.height(IrisDimens.space4))
         Spacer(Modifier.weight(1f))
         Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
@@ -468,6 +505,57 @@ private fun SelfCheckCard(report: String?, onRun: () -> Unit) {
                 Spacer(Modifier.height(IrisDimens.space8))
                 Text(report, style = IrisType.monoSmall, color = Iris.colors.text)
             }
+        }
+    }
+}
+
+/** 2.6.8: 标签名（中文界面用中文名，其它语言用英文值）。 */
+private fun tagLabel(t: com.iris.localai.imagegen.PromptTag): String =
+    if (com.iris.localai.I18n.uiLang().startsWith("zh")) t.zh else t.en
+
+private fun catLabel(c: com.iris.localai.imagegen.TagCat): String =
+    if (com.iris.localai.I18n.uiLang().startsWith("zh")) c.zh else c.en
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun TagRow(
+    s: ImageGenUi, onCat: (com.iris.localai.imagegen.TagCat) -> Unit, onTag: (com.iris.localai.imagegen.PromptTag) -> Unit,
+    onLong: (com.iris.localai.imagegen.PromptTag) -> Unit, onAdd: () -> Unit, onReset: () -> Unit,
+) {
+    val c = Iris.colors
+    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space6)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+            for (cat in com.iris.localai.imagegen.TagCat.entries) Pill(catLabel(cat), selected = cat == s.tagCat) { onCat(cat) }
+        }
+        Spacer(Modifier.height(IrisDimens.space6))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+            for (t in s.tags.filter { it.cat == s.tagCat }) {
+                Box(
+                    Modifier.clip(IrisRadius.pillShape).border(1.dp, c.outline, IrisRadius.pillShape)
+                        .combinedClickable(onClick = { onTag(t) }, onLongClick = { onLong(t) })
+                        .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
+                ) { Text(tagLabel(t), style = IrisType.labelSmall, color = if (t.custom) c.accent else c.textSecondary) }
+            }
+            Pill("+", selected = false, onClick = onAdd)
+            Pill(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_reset_tags), selected = false, onClick = onReset)
+        }
+    }
+}
+
+@Composable
+private fun TagAddDialog(cat: com.iris.localai.imagegen.TagCat, onAdd: (String, String) -> Unit, onDismiss: () -> Unit) {
+    var zh by remember { mutableStateOf("") }
+    var en by remember { mutableStateOf("") }
+    com.iris.localai.ui.components.IrisDialog(
+        onDismiss = onDismiss, title = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_add_tag) + " · " + catLabel(cat),
+        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_add_tag), confirmEnabled = en.isNotBlank(),
+        onConfirm = { onAdd(zh, en); onDismiss() },
+    ) {
+        Column {
+            OutlinedTextField(en, { en = it.take(80) }, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_tag_en)) }, singleLine = true,
+                shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(zh, { zh = it.take(20) }, label = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_tag_zh)) }, singleLine = true,
+                shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth())
         }
     }
 }

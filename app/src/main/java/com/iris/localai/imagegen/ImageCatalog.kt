@@ -59,6 +59,11 @@ data class ImageModel(
     val sdFiles: SdFiles? = null,
     /** 2.4.3: runs on the Hexagon NPU through libiris_sdq.so (sd.cpp Qualcomm branch, HTP v79+), FP8 DiT. */
     val sdq: Boolean = false,
+    /** 2.6.8: Danbooru 标签风格的模型（Anima / Anything）：提示词扩写与标签库用逗号标签写法。 */
+    val tagStyle: Boolean = false,
+    /** 2.6.8: 非 Apache/MIT 许可的模型：卡片上的一行摘要 + 原文链接，首次下载前要用户确认。 */
+    val licenseNote: String = "",
+    val licenseUrl: String = "",
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
     val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }
@@ -169,7 +174,7 @@ object ImageCatalog {
             fixedSize = 512, defaultSteps = 20, defaultCfg = 7f,
             hfRepo = LD_REPO,
             defaultPrompt = ANYTHING_PROMPT, defaultNegative = ANYTHING_NEGATIVE,
-            vaeInScale = 1f / 0.18215f, vaeOutSigned = true, minHtpArch = 75,
+            vaeInScale = 1f / 0.18215f, vaeOutSigned = true, minHtpArch = 75, tagStyle = true,
             note = "动漫风格 · 512×512 · NPU（骁龙 8 Gen 3 及以上）",
         )
     }
@@ -300,8 +305,41 @@ object ImageCatalog {
         sdq = true,
     )
 
+    /**
+     * 2.6.8 Anima Turbo v1.1（实验）：CircleStone Labs 的 2B 动漫 DiT（Cosmos 架构），upstream sd.cpp 3e92bf9 已支持
+     * （docs/anima.md：--diffusion-model + --llm Qwen3-0.6B-Base + --vae qwen_image_vae）。三件套全部指向原仓库，不自建镜像：
+     * 主模型 vanes430/Anima-Turbo-V1.1-GGUF Q4_0（8 步、CFG 1、Euler）、文本编码器 mradermacher/Qwen3-0.6B-Base-GGUF Q8_0、
+     * VAE circlestone-labs/Anima split_files/vae。listing 2026-11-17 读取。许可：CircleStone Labs Non-Commercial License v1.2
+     * （模型仅限非商用，生成的图片可商用）；下载前确认。vanes430/Anima-2.9B-GGUF 是坏转换（量化张量存的是 bf16），不要用。
+     */
+    const val ANIMA_ID = "anima-turbo"
+    const val ANIMA_LICENSE_URL = "https://huggingface.co/circlestone-labs/Anima/blob/main/LICENSE.md"
+    private val QWEN3_06B_BASE = RemoteFile(
+        hf("mradermacher/Qwen3-0.6B-Base-GGUF", "b8b11a6dbbb14c739e25018f3f77abac860c28f4", "Qwen3-0.6B-Base.Q8_0.gguf"),
+        639_447_232L, "$SHARED_DIR/Qwen3-0.6B-Base.Q8_0.gguf",
+    )
+    val ANIMA_TURBO = ImageModel(
+        id = ANIMA_ID, tier = Tier.MID, name = "Anima Turbo", backend = Backend.SDCPP,
+        files = listOf(
+            RemoteFile(hf("vanes430/Anima-Turbo-V1.1-GGUF", "efdf070de980a52fc03027d2f6ed543cc1d87a8f", "anima-turbo-v1.1-Q4_0.gguf"),
+                1_235_394_688L, "$ANIMA_ID/anima-turbo-v1.1-Q4_0.gguf"),
+            QWEN3_06B_BASE,
+            SD_LIB,
+            RemoteFile(hf("circlestone-labs/Anima", "6e0b2da2112573380abfb6a1435a60a994b254f2", "split_files/vae/qwen_image_vae.safetensors"),
+                253_806_246L, "$ANIMA_ID/qwen_image_vae.safetensors"),
+        ),
+        fixedSize = null, defaultSteps = 8, defaultCfg = 1f,
+        hfRepo = "vanes430/Anima-Turbo-V1.1-GGUF",
+        defaultPrompt = "masterpiece, best quality, newest, 1girl, solo, smile, looking at viewer, outdoors, cherry blossoms",
+        note = "实验 · 动漫 · 8 步 · GPU（Vulkan），约 2.2 GB",
+        sdFiles = SdFiles("$ANIMA_ID/anima-turbo-v1.1-Q4_0.gguf", QWEN3_06B_BASE.path, "$ANIMA_ID/qwen_image_vae.safetensors"),
+        tagStyle = true,
+        licenseNote = "仅限非商用，生成的图片可商用",
+        licenseUrl = ANIMA_LICENSE_URL,
+    )
+
     /** Every model the app knows (downloaded ones are found by id even on another phone). */
-    val known: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
+    val known: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, ANIMA_TURBO, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
 
     /**
      * 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer).

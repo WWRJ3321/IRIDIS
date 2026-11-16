@@ -2,6 +2,15 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.8（未真机测试）
+**本版未在真机测试。**
+
+- 新增生图「扩写提示词」（生图页提示词下方，默认开；与智能体共用设置）：提示词较短时（少于约 40 个词、未含质量词）自动扩写。生图页先用已加载的文本模型改写（不思考、最多 256 token、45 秒超时，在卸载文本模型之前完成），失败/超时/没加载模型时用规则模板补质量词；用户没填负面词时补默认负面词（CFG>1 才生效）。结果下方显示实际用的提示词。标签风格模型（Anima、Anything V5）按 Danbooru 逗号标签扩写。调研结论见 docs/roadmap/imagegen-prompt.md。
+- 新增生图提示词标签库：主体 / 风格 / 光线 / 构图 / 画质 / 负面六类内置标签（中文名 + 英文 + Danbooru 写法），点一下追加到提示词（负面类追加到负面词）；「+」添加自定义标签，长按删除（内置的是隐藏，「恢复内置」找回）；存在 filesDir/imagegen/tags.json。智能体 generate_image 可用 list_tags=true 读取标签库挑词。
+- 新增生图「低内存模式」（生图页参数里，默认关；智能体与本地 API 生图同样生效）：长边限 768（等比缩、16 对齐）、sd.cpp 的 VAE 也放 CPU（权重留在 mmap，不复制进 Vulkan 缓冲）、每张生成完立即释放全部权重、生成前总是先卸载文本模型。借鉴 Local Dream 的思路，未使用其代码。更彻底的原生层做法（params_backend=disk 分阶段丢弃文本编码器、max_vram 预算）需要改 JNI 并重新托管 libiris_sd.so，记入交接。
+- 实验：新增 Anima Turbo v1.1（CircleStone Labs Anima 的 Turbo 版，2B 动漫 DiT）。用现有 libiris_sd.so（stable-diffusion.cpp 3e92bf9，已含 Anima 支持，无需重编）走「主模型 + 文本编码器 + VAE」三件套：vanes430/Anima-Turbo-V1.1-GGUF Q4_0（1.24 GB）+ mradermacher/Qwen3-0.6B-Base-GGUF Q8_0（0.64 GB）+ circlestone-labs/Anima qwen_image_vae（0.25 GB），全部从原仓库下载，不自建镜像。8 步、CFG 1。卡片注明「仅限非商用，生成的图片可商用」并可点开许可原文；首次下载前弹窗确认。vanes430/Anima-2.9B-GGUF 是坏转换，未采用。
+- Edge0-8B-A1B：评估后不接入（8B 是 Ling 3.0 / bailing_moe_v3 架构，与 35B 完全不同，上游 edge0-infer 尚未支持），结论见 docs/roadmap/edge0-eval.md。
+
 ## 2.6.7（未真机测试）
 **本版未在真机测试。**
 

@@ -18,3 +18,9 @@
 - 资产转换：/workspace/work/edge0-assets（src = 原始权重，edge0-35b = 资产目录），上传脚本 upload.py，README 在 hf/README.md。
 - 未真机测试。作者数据不当实测写。
 - 资产已转换并上传（2026-11-16 15:20）：https://huggingface.co/WWRJ-2025/Edge0-35B-IRIDIS（公开，Apache-2.0，中文 README），9 个资产文件合计 21,950,687,475 B（base.gguf 21.75 GB），官方 check 两次 passed，HF 上大小/LFS sha256 与 assets.tsv 一致。本地 /workspace/work/edge0-assets/edge0-35b。注：make_assets 末段被 20 分钟限时打断，用 finish.py 按原顺序补完 write_catalog/check/rename。
+
+## Edge0-8B-A1B 评估（2026-11-17，2.6.8）——结论：不接，等上游
+- 上游现状：edge0-infer（2026-11-04）只支持 edge0-35b；README 写明 8B「native-engine support is planned」。
+- 架构差异大，不是换个配置：8B 是 Ling 3.0 混合架构（bailing_moe_v3：MLA 注意力 + MoE，24 层、128 路由专家 + 1 共享专家、top-8、sigmoid + 分组 top-k n_group=8/topk_group=4/routed_scaling=2.5），35B 是 Qwen3.6-35B-A3B（qwen35moe）。edge0-infer 的图构建、prerouter（8B 是 16 头、owner 层 7..22、1–6 层用原路由）、Recover-LoRA 挂载、资产转换脚本（tools/assets/edge0_35b）都按 35B 写死。
+- 自行适配需要：① 在 edge0-infer 里新写 bailing_moe_v3 前向（MLA 的 KV 压缩/解压、分组 sigmoid 路由）；② 改 prerouter 层映射与专家流式调度；③ 新写 8B 的 safetensors→GGUF 资产转换（4-bit affine group64 反量化再量化）；④ 主机逐层数值对比（需要能跑参考实现的 Python 环境 + 16 GB 以上内存，本沙箱 7 GB）；⑤ 手机验证。估计 3–5 天工作量，1 小时内不可能接通，也写不出有意义的单测。
+- 替代：Ling 2.x 在 llama.cpp 有 bailingmoe2；若 llama.cpp 上游加了 bailing_moe_v3，可以直接走普通 GGUF（不带 prerouter/流式），比改 edge0-infer 便宜。等上游 edge0-infer 支持 8B 后，按 2.6.5 的方式（独立 .so + 转换资产上传 WWRJ-2025/Edge0-8B-A1B-IRIDIS）接入，约半天。

@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">मौजूदा जवाब पूरा न करें</string>
     <string name="cool267_wait">ठंडा हो रहा %1$s°C, %2$d°C पर जारी</string>
     <string name="cool267_short">ठंडा हो रहा</string>
+    <string name="ig268_expand">प्रॉम्प्ट बढ़ाएँ</string>
+    <string name="ig268_expand_sub">छोटे विवरण से ब्योरे जोड़ता है</string>
+    <string name="ig268_lowmem">कम मेमोरी मोड</string>
+    <string name="ig268_lowmem_sub">लंबी भुजा ≤768, हर चित्र के बाद मेमोरी खाली, थोड़ा धीमा</string>
+    <string name="ig268_add_tag">टैग जोड़ें</string>
+    <string name="ig268_tag_en">प्रॉम्प्ट पाठ (अंग्रेज़ी)</string>
+    <string name="ig268_tag_zh">लेबल (वैकल्पिक)</string>
+    <string name="ig268_del_tag">टैग “%1$s” हटाएँ?</string>
+    <string name="ig268_reset_tags">डिफ़ॉल्ट वापस लाएँ</string>
+    <string name="ig268_expanding">प्रॉम्प्ट बढ़ाया जा रहा है…</string>
+    <string name="ig268_used">उपयोग किया गया प्रॉम्प्ट: %1$s</string>
+    <string name="ig268_license_title">लाइसेंस</string>
+    <string name="ig268_license_msg">%1$s: केवल गैर-व्यावसायिक; बनाए गए चित्र व्यावसायिक रूप से उपयोग हो सकते हैं।\nलाइसेंस: %2$s\nडाउनलोड करना सहमति है।</string>
+    <string name="ig268_agree">सहमत, डाउनलोड करें</string>
+    <string name="ig268_license_view">लाइसेंस</string>
 </resources>

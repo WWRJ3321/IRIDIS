@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">Sin terminar la respuesta</string>
     <string name="cool267_wait">Enfriando %1$s°C, sigue a %2$d°C</string>
     <string name="cool267_short">enfriando</string>
+    <string name="ig268_expand">Ampliar prompt</string>
+    <string name="ig268_expand_sub">Completa detalles a partir de una idea breve</string>
+    <string name="ig268_lowmem">Modo de poca memoria</string>
+    <string name="ig268_lowmem_sub">Lado largo ≤768, libera memoria tras cada imagen, algo más lento</string>
+    <string name="ig268_add_tag">Añadir etiqueta</string>
+    <string name="ig268_tag_en">Texto del prompt (inglés)</string>
+    <string name="ig268_tag_zh">Nombre (opcional)</string>
+    <string name="ig268_del_tag">¿Eliminar la etiqueta «%1$s»?</string>
+    <string name="ig268_reset_tags">Restaurar integradas</string>
+    <string name="ig268_expanding">Ampliando prompt…</string>
+    <string name="ig268_used">Prompt usado: %1$s</string>
+    <string name="ig268_license_title">Licencia</string>
+    <string name="ig268_license_msg">%1$s: solo uso no comercial; las imágenes generadas pueden usarse comercialmente.\nLicencia: %2$s\nAl descargar, aceptas.</string>
+    <string name="ig268_agree">Aceptar y descargar</string>
+    <string name="ig268_license_view">Licencia</string>
 </resources>

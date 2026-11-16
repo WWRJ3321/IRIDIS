@@ -96,6 +96,17 @@ data class ImageGenUi(
     val lowMem: Boolean = false,
     /** Model id -> running / failed download (from [ImageGenDownloader.states]). */
     val downloads: Map<String, ImageDl> = emptyMap(),
+    /** 2.6.8: 低内存模式 / 提示词扩写（存在智能体设置里，与 generate_image 共用）。 */
+    val lowMemMode: Boolean = false,
+    val expand: Boolean = true,
+    /** 2.6.8: 标签库（内置 + 自定义）与当前分类。 */
+    val tags: List<com.iris.localai.imagegen.PromptTag> = com.iris.localai.imagegen.PromptTags.BUILTIN,
+    val tagCat: com.iris.localai.imagegen.TagCat = com.iris.localai.imagegen.TagCat.SUBJECT,
+    /** 2.6.8: 正在扩写；上一张实际用的（扩写后）提示词。 */
+    val expanding: Boolean = false,
+    val usedPrompt: String? = null,
+    /** 2.6.8: 等待用户确认许可的模型（首次下载前）。 */
+    val licenseAsk: String? = null,
 ) {
     val model: ImageModel get() = ImageCatalog.byId(modelId) ?: ImageCatalog.SD15_QNN
     /** Reference image + 重绘强度 work everywhere except the fixed-size QNN context binary (txt2img only). */
@@ -106,7 +117,7 @@ data class ImageGenUi(
         prompt = prompt, negative = negative, width = width, height = height, steps = steps, cfg = cfg,
         // 2.5.2: empty field = a new random seed on every call (one call per generation); a typed seed stays fixed.
         seed = com.iris.localai.imagegen.ImageSeed.pick(seed),
-        initImagePath = initImage?.takeIf { img2imgSupported }, strength = strength,
+        initImagePath = initImage?.takeIf { img2imgSupported }, strength = strength, lowMem = lowMemMode,
     ).normalize(model)
 }
 
@@ -123,8 +134,18 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     private val container = (app as com.iris.localai.IrisApp).container
     private val downloader = container.imageGenDownloader
 
+    private val agentSettings = container.agent.settings
+    private val prefs = app.getSharedPreferences("iris_imagegen", android.content.Context.MODE_PRIVATE)
+
     init {
         refresh()
+        viewModelScope.launch {
+            agentSettings.settings.collect { a -> _ui.update { it.copy(lowMemMode = a.imageLowMem, expand = a.imagePromptExpand) } }
+        }
+        viewModelScope.launch {
+            val t = withContext(Dispatchers.IO) { com.iris.localai.imagegen.TagLibrary.tags(app) }
+            _ui.update { it.copy(tags = t) }
+        }
         viewModelScope.launch {
             var before: Map<String, ImageDl> = emptyMap()
             downloader.states.collect { st ->
@@ -139,6 +160,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     /** Starts (or resumes) [m]'s download in the app scope with the 下载源 from 设置. */
     fun download(m: ImageModel) {
         if (m.files.isEmpty()) return
+        // 2.6.8: 非商用许可的模型，首次下载前先确认
+        if (m.licenseUrl.isNotEmpty() && !prefs.getBoolean("license:" + m.id, false)) { _ui.update { it.copy(licenseAsk = m.id) }; return }
         // 2.2.16: after a failure the button is 「换源重试」 (the source that failed goes last; .part files resume)
         val failed = downloader.states.value[m.id] is com.iris.localai.imagegen.ImageDl.Failed
         downloader.clearError(m.id)
@@ -187,6 +210,66 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun edit(f: (ImageGenUi) -> ImageGenUi) = _ui.update(f)
 
+    /** 2.6.8: 许可确认（同意后开始下载，之后不再问）。 */
+    fun acceptLicense(accept: Boolean) {
+        val id = _ui.value.licenseAsk ?: return
+        _ui.update { it.copy(licenseAsk = null) }
+        if (!accept) return
+        prefs.edit().putBoolean("license:$id", true).apply()
+        ImageCatalog.byId(id)?.let(::download)
+    }
+
+    fun setLowMem(on: Boolean) = agentSettings.update { it.copy(imageLowMem = on) }
+    fun setExpand(on: Boolean) = agentSettings.update { it.copy(imagePromptExpand = on) }
+
+    /** 2.6.8 标签库：点标签追加到提示词（负面类追加到负面词）。 */
+    fun useTag(t: com.iris.localai.imagegen.PromptTag) = _ui.update {
+        val text = t.text(it.model.tagStyle)
+        if (t.cat == com.iris.localai.imagegen.TagCat.NEGATIVE) it.copy(negative = com.iris.localai.imagegen.PromptTags.append(it.negative, text))
+        else it.copy(prompt = com.iris.localai.imagegen.PromptTags.append(it.prompt, text))
+    }
+
+    fun addTag(cat: com.iris.localai.imagegen.TagCat, zh: String, en: String) = changeTags { com.iris.localai.imagegen.TagStore.add(it, cat, zh, en) }
+    fun removeTag(t: com.iris.localai.imagegen.PromptTag) = changeTags { com.iris.localai.imagegen.TagStore.remove(it, t) }
+    /** 恢复内置标签（清掉隐藏，保留自定义）。 */
+    fun resetTags() = changeTags { it.copy(hidden = emptySet()) }
+
+    private fun changeTags(f: (com.iris.localai.imagegen.TagStore.Data) -> com.iris.localai.imagegen.TagStore.Data) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val t = withContext(Dispatchers.IO) {
+                val d = f(com.iris.localai.imagegen.TagLibrary.load(app))
+                com.iris.localai.imagegen.TagLibrary.save(app, d)
+                com.iris.localai.imagegen.PromptTags.merged(d.custom, d.hidden)
+            }
+            _ui.update { it.copy(tags = t) }
+        }
+    }
+
+    /**
+     * 2.6.8 提示词扩写：有已加载的文本模型就让它改写（最多 45 秒、256 token、不思考），失败/超时/没加载用规则模板。
+     */
+    private suspend fun expandPrompt(prompt: String, model: ImageModel): String {
+        val ex = com.iris.localai.imagegen.PromptExpand
+        if (!ex.needed(prompt)) return prompt
+        val eng = container.engine
+        if (eng.readyModel != null && eng.busy.value == null) {
+            val out = runCatching {
+                kotlinx.coroutines.withTimeoutOrNull(45_000L) {
+                    val sb = StringBuilder()
+                    val sampling = eng.samplingFor(true).copy(maxNewTokens = 256, contextShift = false)
+                    eng.generate(listOf(com.iris.localai.engine.PromptMessage(com.iris.localai.engine.PromptMessage.SYSTEM, ex.system(model.tagStyle)),
+                        com.iris.localai.engine.PromptMessage(com.iris.localai.engine.PromptMessage.USER, prompt)), sampling, com.iris.localai.engine.Requester.CHAT).collect { ev ->
+                        if (ev is com.iris.localai.engine.GenEvent.Piece) sb.append(ev.text)
+                    }
+                    sb.toString()
+                }
+            }.getOrNull()
+            out?.let { ex.clean(it, prompt) }?.let { return it }
+        }
+        return ex.rules(prompt, model.tagStyle)
+    }
+
     fun selectModel(m: ImageModel) {
         _ui.update {
             val old = it.model
@@ -219,13 +302,20 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         val s = _ui.value
         if (!s.canGenerate) return
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
-        val req = s.request()
+        val req0 = s.request()
         val model = s.model
         // 2.5.6: 关了风险提示弹窗 = 跳过内存预检，直接生成
         if (!container.settings.current.warnPopups) engines.sdEngine().forceOnce = true
-        _ui.update { it.copy(running = true, step = 0, total = req.steps, error = null, lowMem = false, lastSeed = null,
+        _ui.update { it.copy(running = true, step = 0, total = req0.steps, error = null, lowMem = false, lastSeed = null, usedPrompt = null,
             progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {
+            // 2.6.8: 扩写在卸载文本模型之前（要用它）。
+            val req = if (s.expand && req0.initImagePath == null) {
+                _ui.update { it.copy(expanding = true) }
+                val p = expandPrompt(req0.prompt, model)
+                _ui.update { it.copy(expanding = false, usedPrompt = p.takeIf { x -> x != req0.prompt }) }
+                req0.copy(prompt = p, negative = com.iris.localai.imagegen.PromptExpand.negative(req0.negative, model.tagStyle))
+            } else req0
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
             if (model.backend == com.iris.localai.imagegen.Backend.QNN || model.backend == com.iris.localai.imagegen.Backend.SDCPP) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
             val r = withContext(Dispatchers.Default) {
@@ -250,7 +340,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         engine.cancel()
         job?.cancel()
         job = null
-        _ui.update { it.copy(running = false, error = ImageGenText.CANCELLED) }
+        _ui.update { it.copy(running = false, expanding = false, error = ImageGenText.CANCELLED) }
     }
 
     /** 2.4.2: recent sd.cpp log lines for a bug report (copied by the page). */

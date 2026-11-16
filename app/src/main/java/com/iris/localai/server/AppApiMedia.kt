@@ -22,8 +22,9 @@ class AppApiMedia(private val context: android.content.Context, private val c: A
         val m = GenerateImageTool.pickModel(backend.runnableModels(), model ?: a.imageModel, withRef = false)
             ?: throw IllegalStateException("no image model")
         val parsed = GenerateImageTool.Parsed(p.prompt, p.negative, p.width, p.height, p.steps, p.cfg, p.seed, null, 0.75f)
-        val req = GenerateImageTool.request(parsed, m, null)
-        val restore = if (a.imageMakeRoom) runCatching { backend.makeRoom(m) }.getOrNull() else null
+        val req = GenerateImageTool.request(parsed, m, null, a.imageLowMem)
+        val restore = if (a.imageLowMem) runCatching { backend.makeRoomAlways() }.getOrNull()
+            else if (a.imageMakeRoom) runCatching { backend.makeRoom(m) }.getOrNull() else null
         try {
             backend.generate(req, m) { _, _ -> }.getOrThrow()
         } catch (e: kotlinx.coroutines.CancellationException) {

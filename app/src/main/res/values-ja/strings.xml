@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">回答の途中でも止める</string>
     <string name="cool267_wait">冷却中 %1$s°C、%2$d°Cで再開</string>
     <string name="cool267_short">冷却中</string>
+    <string name="ig268_expand">プロンプト拡張</string>
+    <string name="ig268_expand_sub">短い説明から詳細を補完</string>
+    <string name="ig268_lowmem">省メモリモード</string>
+    <string name="ig268_lowmem_sub">長辺≤768、毎回解放、やや遅い</string>
+    <string name="ig268_add_tag">タグを追加</string>
+    <string name="ig268_tag_en">プロンプト（英語）</string>
+    <string name="ig268_tag_zh">表示名（任意）</string>
+    <string name="ig268_del_tag">タグ「%1$s」を削除しますか？</string>
+    <string name="ig268_reset_tags">標準に戻す</string>
+    <string name="ig268_expanding">プロンプトを拡張中…</string>
+    <string name="ig268_used">使用したプロンプト：%1$s</string>
+    <string name="ig268_license_title">ライセンス確認</string>
+    <string name="ig268_license_msg">%1$s：非商用のみ。生成画像は商用利用可。\nライセンス：%2$s\nダウンロードで同意したものとみなします。</string>
+    <string name="ig268_agree">同意してダウンロード</string>
+    <string name="ig268_license_view">ライセンス</string>
 </resources>

@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">不等這則說完</string>
     <string name="cool267_wait">降溫中 %1$s°C，降到 %2$d°C 自動繼續</string>
     <string name="cool267_short">降溫中</string>
+    <string name="ig268_expand">擴寫提示詞</string>
+    <string name="ig268_expand_sub">幾句描述自動補全細節</string>
+    <string name="ig268_lowmem">低記憶體模式</string>
+    <string name="ig268_lowmem_sub">長邊≤768，用完即釋放，稍慢</string>
+    <string name="ig268_add_tag">新增標籤</string>
+    <string name="ig268_tag_en">提示詞（英文）</string>
+    <string name="ig268_tag_zh">顯示名稱（選填）</string>
+    <string name="ig268_del_tag">刪除標籤「%1$s」？</string>
+    <string name="ig268_reset_tags">恢復內建</string>
+    <string name="ig268_expanding">正在擴寫提示詞…</string>
+    <string name="ig268_used">實際提示詞：%1$s</string>
+    <string name="ig268_license_title">授權確認</string>
+    <string name="ig268_license_msg">%1$s：僅限非商用，生成的圖片可商用。\n授權原文：%2$s\n繼續下載即表示同意。</string>
+    <string name="ig268_agree">同意並下載</string>
+    <string name="ig268_license_view">授權</string>
 </resources>

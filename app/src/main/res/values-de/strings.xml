@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">Antwort nicht zu Ende schreiben</string>
     <string name="cool267_wait">Abkühlen %1$s°C, weiter bei %2$d°C</string>
     <string name="cool267_short">kühlt</string>
+    <string name="ig268_expand">Prompt erweitern</string>
+    <string name="ig268_expand_sub">Ergänzt Details zu kurzen Ideen</string>
+    <string name="ig268_lowmem">Wenig-Speicher-Modus</string>
+    <string name="ig268_lowmem_sub">Lange Seite ≤768, gibt Speicher sofort frei, etwas langsamer</string>
+    <string name="ig268_add_tag">Tag hinzufügen</string>
+    <string name="ig268_tag_en">Prompt-Text (Englisch)</string>
+    <string name="ig268_tag_zh">Bezeichnung (optional)</string>
+    <string name="ig268_del_tag">Tag „%1$s“ löschen?</string>
+    <string name="ig268_reset_tags">Standard wiederherstellen</string>
+    <string name="ig268_expanding">Prompt wird erweitert…</string>
+    <string name="ig268_used">Verwendeter Prompt: %1$s</string>
+    <string name="ig268_license_title">Lizenz</string>
+    <string name="ig268_license_msg">%1$s: nur nicht-kommerziell; erzeugte Bilder dürfen kommerziell genutzt werden.\nLizenz: %2$s\nMit dem Download stimmen Sie zu.</string>
+    <string name="ig268_agree">Zustimmen &amp; laden</string>
+    <string name="ig268_license_view">Lizenz</string>
 </resources>

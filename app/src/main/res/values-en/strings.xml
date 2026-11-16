@@ -2250,4 +2250,19 @@
     <string name="cool267_stop_sub">Don\'t finish the current reply</string>
     <string name="cool267_wait">Cooling down %1$s°C, resumes at %2$d°C</string>
     <string name="cool267_short">cooling</string>
+    <string name="ig268_expand">Expand prompt</string>
+    <string name="ig268_expand_sub">Fills in details from a short idea</string>
+    <string name="ig268_lowmem">Low-memory mode</string>
+    <string name="ig268_lowmem_sub">Long side ≤768, frees memory after each image, a bit slower</string>
+    <string name="ig268_add_tag">Add tag</string>
+    <string name="ig268_tag_en">Prompt text (English)</string>
+    <string name="ig268_tag_zh">Label (optional)</string>
+    <string name="ig268_del_tag">Delete tag “%1$s”?</string>
+    <string name="ig268_reset_tags">Restore built-in</string>
+    <string name="ig268_expanding">Expanding prompt…</string>
+    <string name="ig268_used">Prompt used: %1$s</string>
+    <string name="ig268_license_title">License</string>
+    <string name="ig268_license_msg">%1$s: non-commercial use only; images you generate may be used commercially.\nLicense: %2$s\nDownloading means you agree.</string>
+    <string name="ig268_agree">Agree &amp; download</string>
+    <string name="ig268_license_view">License</string>
 </resources>

@@ -190,6 +190,8 @@ class RepositoryImageGenBackend(
         return y.yieldModel()
     }
 
+    override suspend fun makeRoomAlways(): (suspend () -> Unit)? = yielder()?.yieldModel()
+
     override fun releaseNow() { (engine as? ImageGenEngines)?.release() }
 
     override fun runnableModels(): List<ImageModel> {
