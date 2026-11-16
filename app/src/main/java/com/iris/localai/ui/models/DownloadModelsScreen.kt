@@ -223,7 +223,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     }
     fun size(item: RecommendedCatalog.Item): Long = (item.kind as? RecommendedCatalog.Kind.Voice)?.let { k -> VoicePack.byId(k.packId)?.let(vm::voiceBytes) } ?: item.sizeBytes
     fun ramHint(item: RecommendedCatalog.Item): String? =
-        if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(item.sizeBytes, ram) else null
+        if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(RecommendedCatalog.runBytes(item), ram) else null // 2.6.6: Edge0 按运行内存
     val actions = object : RecActions {
         override fun primary(item: RecommendedCatalog.Item, s: RecStatus, withVision: Boolean) {
             when (s) {
@@ -349,10 +349,16 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     val open = sec in expanded
                     val shown = RecommendedCatalog.visible(sec, open)
                     item(key = "sec-" + sec.name, contentType = "title") { SectionTitle(sec.title) }
-                    items(shown, key = { it.id }, contentType = { "rec" }) { item ->
+                    // 2.6.6: sorted series → size; a run of ≥ 2 same-series cards gets a light series sub-title.
+                    com.iris.localai.data.ModelSort.runs(shown) { it.name }.forEach { (series, run) ->
+                    if (run.size >= 2 && sec in RecommendedCatalog.SERIES_TITLED) item(key = "ser-" + sec.name + "-" + run.first().id, contentType = "series") {
+                        Text(series, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(start = IrisDimens.pageGutter + IrisDimens.space4, top = IrisDimens.space8, bottom = IrisDimens.space2))
+                    }
+                    items(run, key = { it.id }, contentType = { "rec" }) { item ->
                         val s = status(item)
                         // 2.5.3: switching category / filter fades cards in and out instead of swapping at once.
                         androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item)) }
+                    }
                     }
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
                         item(key = "more-" + sec.name, contentType = "more") {

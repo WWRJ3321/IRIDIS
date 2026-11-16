@@ -229,7 +229,25 @@ object RecommendedCatalog {
         Item("translate:" + p.id, Section.TRANSLATE, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8df05e, p.title), com.iris.localai.I18n.s(com.iris.localai.R.string.data_4b65d4, p.blurb), p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
     }
 
-    fun section(s: Section): List<Item> = ITEMS.filter { it.section == s && (it.onlySoc == null || it.onlySoc == deviceSoc) }
+    /**
+     * 2.6.6: model sections (对话 / 特色 / 生图) sort by series name → download size ([ModelSort]); 语音 / 翻译 /
+     * 嵌入 keep their own order (grouped by kind, same as their settings pages).
+     */
+    fun section(s: Section): List<Item> {
+        val list = ITEMS.filter { it.section == s && (it.onlySoc == null || it.onlySoc == deviceSoc) }
+        return if (s in SORTED) ModelSort.sort(list, { it.name }, { it.sizeBytes }) else list
+    }
+    private val SORTED = setOf(Section.CHAT, Section.FEATURED, Section.IMAGE)
+    val SERIES_TITLED = SORTED
+
+    /**
+     * 2.6.6: memory the model needs while running, for the 「内存可能不够」 hint. Equals the download size,
+     * except Edge0-35B: its experts stream from storage per token (only the dense trunk + router + a small
+     * expert cache stay resident), so the author's figure is ~3 GB of RAM for the 21.95 GB asset folder
+     * (Edge0 README, not measured on our devices). Only Edge0 is special-cased.
+     */
+    fun runBytes(item: Item): Long = if (item.engine == Engine.EDGE0) EDGE0_RUN_BYTES else item.sizeBytes
+    const val EDGE0_RUN_BYTES = 3_000_000_000L
     fun byId(id: String): Item? = ITEMS.firstOrNull { it.id == id }
     fun byRepo(repoId: String): Item? = ITEMS.firstOrNull { it.repoId == repoId }
 

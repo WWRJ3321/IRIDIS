@@ -19,7 +19,7 @@ class RecommendedV2212Test {
             if (k is com.iris.localai.data.RecommendedCatalog.Kind.Image) assertTrue(ImageCatalog.byId(k.modelId) != null)
             r.repoId?.let { assertTrue(it.count { ch -> ch == '/' } == 1) }
         }
-        assertEquals("litert-community/gemma-4-E2B-it-litert-lm", com.iris.localai.data.RecommendedCatalog.section(com.iris.localai.data.RecommendedCatalog.Section.CHAT).first().id)
+        assertEquals("litert-community/gemma-4-E2B-it-litert-lm", com.iris.localai.data.RecommendedCatalog.visible(com.iris.localai.data.RecommendedCatalog.Section.CHAT, false).first().id) // 2.6.6: 按系列名→大小排序，折叠视图首位仍是 Gemma 4 E2B
     }
 
     @Test fun ggufPick() {

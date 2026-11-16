@@ -16,6 +16,10 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.6", listOf(
+            f("推荐列表按模型系列名排序，同系列从小到大；同系列多张卡片加系列小标题。"),
+            b("Edge0-35B 卡片误提示「内存可能不够」：改按运行内存（约 3 GB）判断。"),
+        )),
         Release("2.6.5", listOf(
             x("Edge0-35B（实验）：35B MoE，专家从存储流式读取，仅 CPU；需 i8mm（骁龙 8 Gen 2 / 天玑 9200 及以后）。推荐列表可下载，也可「导入文件夹」导入资产目录。"),
         )),
