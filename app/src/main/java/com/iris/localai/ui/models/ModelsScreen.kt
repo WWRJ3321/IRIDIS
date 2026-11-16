@@ -745,6 +745,7 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
                                 com.iris.localai.data.ModelFormat.LITERT -> com.iris.localai.util.VisionModels.litertMayHaveVision(m.fileName)
                                 com.iris.localai.data.ModelFormat.MNN -> java.io.File(m.path, "visual.mnn").isFile
                                 com.iris.localai.data.ModelFormat.QAIRT -> com.iris.localai.engine.geniex.QairtBundle.isVision(java.io.File(m.path).list().orEmpty().toSet())
+                                com.iris.localai.data.ModelFormat.EDGE0 -> false
                             }
                         }.getOrDefault(false)
                     }

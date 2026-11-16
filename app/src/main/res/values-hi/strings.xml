@@ -2225,4 +2225,15 @@
     <string name="ex263_txt">सादा पाठ (.txt)</string>
     <string name="models264_guide_link">इन शब्दों का अर्थ ›</string>
     <string name="api264_more">यह भी: चैट में चित्र (image_url), /v1/images/generations, /v1/audio/speech</string>
+    <string name="e265_unsupported">Edge0 के लिए i8mm वाला arm64 CPU चाहिए (Snapdragon 8 Gen 2 / Dimensity 9200 या नया)</string>
+    <string name="e265_lib_missing">Edge0 इंजन लोड नहीं हुआ</string>
+    <string name="e265_bad_assets">Edge0 एसेट फ़ोल्डर अमान्य: %1$s</string>
+    <string name="e265_load_failed">Edge0 लोड विफल: %1$s</string>
+    <string name="e265_experimental">प्रायोगिक</string>
+    <string name="e265_not_loaded">मॉडल लोड नहीं है</string>
+    <string name="e265_cpu_only">Edge0 केवल CPU</string>
+    <string name="e265_no_shift">Edge0 में कॉन्टेक्स्ट शिफ्ट नहीं</string>
+    <string name="e265_full_only">Edge0 के लिए full संस्करण चाहिए</string>
+    <string name="e265_purpose">35B MoE, एक्सपर्ट स्ट्रीमिंग, केवल CPU</string>
+    <string name="e265_files">पूरा एसेट फ़ोल्डर (या फ़ोल्डर आयात करें)</string>
 </resources>

@@ -64,3 +64,7 @@
 
 # 2.3.0 ③ 本地翻译: JNI entry points of libiris_bergamot.so
 -keep class com.iris.localai.translate.BergamotNative { native <methods>; *; }
+# 2.6.5: Edge0 (libiris_edge0.so) JNI + its stream callback (called by name from native code).
+-keep class com.iris.localai.engine.edge0.Edge0Native { native <methods>; *; }
+-keep interface com.iris.localai.engine.edge0.Edge0Native$Events { *; }
+-keepclassmembers class * implements com.iris.localai.engine.edge0.Edge0Native$Events { void onEvent(int, int, byte[]); }

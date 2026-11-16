@@ -87,7 +87,7 @@ object TierReloadPolicy {
                 if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
             }
             // 2.2.0: GenieX QAIRT bundles take no thread / core setting; only a backend change matters.
-            ModelFormat.QAIRT -> if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+            ModelFormat.QAIRT, ModelFormat.EDGE0 -> if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
         }
         return TierReloadDecision(changed.isNotEmpty(), changed)
     }

@@ -2225,4 +2225,15 @@
     <string name="ex263_txt">Texto (.txt)</string>
     <string name="models264_guide_link">¿Qué significan estos términos? ›</string>
     <string name="api264_more">También: imágenes en el chat (image_url), /v1/images/generations, /v1/audio/speech</string>
+    <string name="e265_unsupported">Edge0 requiere una CPU arm64 con i8mm (Snapdragon 8 Gen 2 / Dimensity 9200 o posterior)</string>
+    <string name="e265_lib_missing">No se pudo cargar el motor Edge0</string>
+    <string name="e265_bad_assets">Carpeta de recursos Edge0 no válida: %1$s</string>
+    <string name="e265_load_failed">Edge0 no se pudo cargar: %1$s</string>
+    <string name="e265_experimental">experimental</string>
+    <string name="e265_not_loaded">Modelo no cargado</string>
+    <string name="e265_cpu_only">Edge0 solo usa CPU</string>
+    <string name="e265_no_shift">Edge0 no admite desplazamiento de contexto</string>
+    <string name="e265_full_only">Edge0 requiere la versión full</string>
+    <string name="e265_purpose">MoE 35B, expertos en streaming, solo CPU</string>
+    <string name="e265_files">Toda la carpeta de recursos (o Importar carpeta)</string>
 </resources>

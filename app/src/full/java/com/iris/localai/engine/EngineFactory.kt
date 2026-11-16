@@ -15,7 +15,7 @@ import com.iris.localai.engine.mnn.MnnEngine
  * for GGUF (when chosen per model / as the default GGUF engine) and AI Hub QAIRT bundle folders.
  */
 object EngineFactory {
-    val supportedFormats: Set<ModelFormat> = setOf(ModelFormat.GGUF, ModelFormat.LITERT, ModelFormat.MNN, ModelFormat.QAIRT)
+    val supportedFormats: Set<ModelFormat> = setOf(ModelFormat.GGUF, ModelFormat.LITERT, ModelFormat.MNN, ModelFormat.QAIRT, ModelFormat.EDGE0)
 
     fun npu(context: Context): NpuSupport =
         // 2.4.4 (Issue #6): Dimensity phones get the MediaTek NeuroPilot runtime, everything else the Qualcomm one.
@@ -30,5 +30,6 @@ object EngineFactory {
         ModelFormat.LITERT -> LiteRtEngine(context)
         ModelFormat.MNN -> MnnEngine(context)
         ModelFormat.QAIRT -> GenieXEngine(context)
+        ModelFormat.EDGE0 -> com.iris.localai.engine.edge0.Edge0Engine()
     }
 }

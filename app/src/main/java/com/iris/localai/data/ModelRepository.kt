@@ -90,6 +90,8 @@ class ModelRepository(private val context: Context) {
 
     /** 2.3.5: a GGUF model folder (main .gguf + optional mmproj*.gguf) lists its main(s); everything else as [entryOf]. */
     private fun entriesOf(f: File, mnn: Boolean): List<LocalModel> {
+        // 2.6.5: an Edge0 asset folder holds .gguf files too — never list them as GGUF models.
+        if (f.isDirectory && !f.name.endsWith(PART_SUFFIX) && com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(f)) return listOfNotNull(entryOf(f, mnn))
         if (f.isDirectory && !f.name.endsWith(PART_SUFFIX) && !f.name.startsWith(".") && ModelFormat.GGUF in EngineFactory.supportedFormats) {
             val names = f.list().orEmpty().toList()
             if (!(mnn && MnnModels.isModelDir(f))) {
@@ -109,6 +111,8 @@ class ModelRepository(private val context: Context) {
         if (f.name.endsWith(PART_SUFFIX) || f.name.startsWith(".")) return null
         if (f.isDirectory) {
             if (mnn && MnnModels.isModelDir(f)) return LocalModel(f.name, f.absolutePath, MnnModels.folderSize(f), ModelFormat.MNN)
+            if (ModelFormat.EDGE0 in EngineFactory.supportedFormats && com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(f))
+                return LocalModel(f.name, f.absolutePath, MnnModels.folderSize(f), ModelFormat.EDGE0)
             // 2.2.0: Qualcomm AI Hub QAIRT bundle folders (GenieX, full flavour).
             if (ModelFormat.QAIRT in EngineFactory.supportedFormats &&
                 com.iris.localai.engine.geniex.QairtBundle.isFileSet(f.list().orEmpty().toSet())
@@ -345,8 +349,12 @@ class ModelRepository(private val context: Context) {
         }
         walk(rootId, "", 0)
         val topNames = entries.filter { '/' !in it.rel }.map { it.rel }.toSet()
+        // 2.6.5: 导入 Edge0 资产目录（整个文件夹原样复制）。
+        val edge0 = com.iris.localai.engine.edge0.Edge0Assets.isFileSet(topNames)
+        if (edge0 && ModelFormat.EDGE0 !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_full_only))
+        if (edge0 && !com.iris.localai.engine.edge0.Edge0Support.deviceOk()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_unsupported))
         // 2.3.5 (#8): a folder of GGUF files (main + mmproj) → flat GGUF imports, projector linked.
-        if (!MnnModels.isModelFileSet(topNames) && topNames.any { GgufFolder.isGguf(it) }) {
+        if (!edge0 && !MnnModels.isModelFileSet(topNames) && topNames.any { GgufFolder.isGguf(it) }) {
             val ggufEntries = entries.filter { '/' !in it.rel && GgufFolder.isGguf(it.rel) }
             val sniffed = ggufEntries.filter { !isProjectorFile(it.rel) }.filter { e ->
                 runCatching {
@@ -410,8 +418,9 @@ class ModelRepository(private val context: Context) {
             val main = File(modelsDir, plan.mains.first())
             return@withContext LocalModel(main.name, main.absolutePath, main.length(), ModelFormat.GGUF)
         }
-        if (ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c1bcc7))
+        if (!edge0 && ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c1bcc7))
         val folderFormat = when {
+            edge0 -> ModelFormat.EDGE0
             MnnModels.isModelFileSet(topNames) -> ModelFormat.MNN
             qairt && com.iris.localai.engine.geniex.QairtBundle.isFileSet(topNames) -> ModelFormat.QAIRT
             else -> throw IOException(

@@ -2225,4 +2225,15 @@
     <string name="ex263_txt">テキスト (.txt)</string>
     <string name="models264_guide_link">用語の意味を見る ›</string>
     <string name="api264_more">対応：画像入力（image_url）、/v1/images/generations、/v1/audio/speech</string>
+    <string name="e265_unsupported">Edge0 には i8mm 対応の arm64 CPU が必要です（Snapdragon 8 Gen 2 / Dimensity 9200 以降）</string>
+    <string name="e265_lib_missing">Edge0 エンジンを読み込めません</string>
+    <string name="e265_bad_assets">Edge0 アセットフォルダが無効です：%1$s</string>
+    <string name="e265_load_failed">Edge0 の読み込みに失敗：%1$s</string>
+    <string name="e265_experimental">実験的</string>
+    <string name="e265_not_loaded">モデル未読み込み</string>
+    <string name="e265_cpu_only">Edge0 は CPU のみ</string>
+    <string name="e265_no_shift">Edge0 はコンテキストシフト非対応</string>
+    <string name="e265_full_only">Edge0 は full 版が必要です</string>
+    <string name="e265_purpose">35B MoE・専門家を逐次読込・CPUのみ</string>
+    <string name="e265_files">アセットフォルダ全体（「フォルダを読み込む」も可）</string>
 </resources>

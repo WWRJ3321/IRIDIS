@@ -127,6 +127,7 @@ object DownloadText {
         is RecommendedCatalog.Kind.Hub -> when (item.engine) {
             RecommendedCatalog.Engine.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_ddd4f5)
             RecommendedCatalog.Engine.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_b351da)
+            RecommendedCatalog.Engine.EDGE0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.e265_files)
             else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_89d8e3)
         }
         is RecommendedCatalog.Kind.Image -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_aa40ac)

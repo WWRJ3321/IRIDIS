@@ -10,6 +10,7 @@
 | nlohmann/json, cpp-httplib 等 llama.cpp vendor 库 | 随 llama.cpp | MIT | 同上（见 third_party/llama.cpp/licenses） |
 | MNN (alibaba) | master @ 9f097c5，经 scripts/mnn-port-patch.py 修改 | Apache-2.0 | 附许可证；按 Apache-2.0 第 4(b) 条，补丁脚本在每个被修改的文件首行写入 `// Modified by IRIDIS: <改动说明>`（涉及 OpenCLRuntime.cpp、llm.hpp、llm.cpp、omni.cpp、MoEModule.cpp、PipelineModule.cpp） |
 | LiteRT-LM (Google) | 0.18.0 (Maven) | Apache-2.0 | 附许可证与 NOTICE |
+| edge0-infer (Edge0) + 其自带 ggml 0.24.0、nlohmann/json | 0.2.0（2.6.5，libiris_edge0.so） | Apache-2.0 / MIT / MIT | JNI 改编自其 Android 示例 |
 | sherpa-onnx (k2-fsa) | 1.13.8 AAR | Apache-2.0 | 附许可证 |
 | ONNX Runtime（静态链接于 sherpa-onnx） | — | MIT | 保留声明 |
 | Khronos OpenCL 头文件 | app/src/main/cpp/opencl | Apache-2.0 | 保留 CL/LICENSE |

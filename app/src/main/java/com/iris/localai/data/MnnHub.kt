@@ -79,20 +79,23 @@ class MnnHub(private val repo: ModelRepository) {
                 repo.releasePart(partName)
                 return@withContext downloadSingle(order, repoId, hit.path, hit.size)
             }
+            // 2.6.5: an Edge0 asset repo — the whole folder (each file chunked + sha256), only on i8mm phones.
+            val edge0 = com.iris.localai.engine.edge0.Edge0Assets.isFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())
+            if (edge0 && !com.iris.localai.engine.edge0.Edge0Support.deviceOk()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_unsupported))
             // 1.12.1: a LiteRT-LM repo (litert-community/…) — download its one generic .litertlm file.
-            pickLiteRtFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
+            if (!edge0) pickLiteRtFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
                 repo.releasePart(partName)
                 return@withContext downloadSingle(order, repoId, path, size)
             }
             // 2.2.12: a GGUF repo (no MNN set) — download its one Q4 .gguf file.
-            if (!MnnModels.isModelFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())) {
+            if (!edge0 && !MnnModels.isModelFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())) {
                 pickGgufFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
                     repo.releasePart(partName)
                     return@withContext downloadSingle(order, repoId, path, size)
                 }
             }
             val files = all.filter { it.type == "file" && MnnModels.shouldCopy(it.path) }
-            if (!MnnModels.isModelFileSet(files.filter { '/' !in it.path }.map { it.path }.toSet())) {
+            if (!edge0 && !MnnModels.isModelFileSet(files.filter { '/' !in it.path }.map { it.path }.toSet())) {
                 throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_5f9c4b, repoId))
             }
             val total = files.sumOf { it.size }
@@ -122,7 +125,8 @@ class MnnHub(private val repo: ModelRepository) {
             repo.releasePart(partName)
         }
         repo.refresh()
-        LocalModel(target.name, target.absolutePath, MnnModels.folderSize(target), ModelFormat.MNN)
+        LocalModel(target.name, target.absolutePath, MnnModels.folderSize(target),
+            if (com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(target)) ModelFormat.EDGE0 else ModelFormat.MNN)
     }
 
     /** One .litertlm file into models/ (resumable through its .part), listed only when complete. */

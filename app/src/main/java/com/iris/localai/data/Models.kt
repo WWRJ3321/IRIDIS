@@ -161,7 +161,9 @@ enum class ModelFormat(val label: String, val extensions: Set<String>) {
     /** A folder (taobao-mnn layout: config.json + llm.mnn + llm.mnn.weight + tokenizer.txt …). */
     MNN("MNN", emptySet()),
     /** 2.2.0: a Qualcomm AI Hub (QAIRT / Genie) bundle folder: genie_config.json + *.bin + tokenizer.json. Run by GenieX, NPU only. */
-    QAIRT("GenieX · QAIRT", emptySet());
+    QAIRT("GenieX · QAIRT", emptySet()),
+    /** 2.6.5 (实验): an Edge0 asset folder (model.json + base/lora/prerouter.gguf + assets.tsv), run by edge0-infer, CPU only. */
+    EDGE0("Edge0", emptySet());
 
     companion object {
         fun fromFileName(name: String): ModelFormat? {
@@ -185,10 +187,11 @@ data class LocalModel(
     val fileDisplayName: String get() = when (format) {
         ModelFormat.MNN -> ModelNames.displayMnn(fileName)
         ModelFormat.QAIRT -> com.iris.localai.engine.geniex.QairtBundle.displayName(fileName)
+        ModelFormat.EDGE0 -> if (fileName.startsWith("Edge0-35B", ignoreCase = true)) "Edge0-35B" else fileName
         else -> ModelNames.display(fileName)
     }
     val quantization: String? get() = if (isFolder) null else ModelNames.quantization(fileName)
-    val isFolder: Boolean get() = format == ModelFormat.MNN || format == ModelFormat.QAIRT
+    val isFolder: Boolean get() = format == ModelFormat.MNN || format == ModelFormat.QAIRT || format == ModelFormat.EDGE0
 }
 
 @Serializable

@@ -16,6 +16,9 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.5", listOf(
+            x("Edge0-35B（实验）：35B MoE，专家从存储流式读取，仅 CPU；需 i8mm（骁龙 8 Gen 2 / 天玑 9200 及以后）。推荐列表可下载，也可「导入文件夹」导入资产目录。"),
+        )),
         Release("2.6.4", listOf(
             f("「看懂模型」重排：目录可跳转、模型名拆解示例、术语表；条目可直达推荐卡片，卡片详情也能跳回来。"),
             f("本地 API 支持识图：/v1/chat/completions 的 image_url（base64 / data URI / http 链接），需加载识图模型。"),

@@ -151,6 +151,11 @@ object BackendCapabilities {
                 )
             }
             ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieXRules.qairtOptions(env)
+            ModelFormat.EDGE0 -> listOf(
+                BackendOption(Backend.CPU, true, detail = "armv8.6-a · i8mm"),
+                BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.e265_cpu_only)),
+                BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.e265_cpu_only)),
+            )
         }
     }
 
@@ -166,6 +171,7 @@ object BackendCapabilities {
         )
         ModelFormat.MNN -> EngineFeatures(mmap = true)
         ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieXRules.QAIRT_FEATURES
+        ModelFormat.EDGE0 -> EngineFeatures(minP = false, repeatPenalty = false)
     }
 
     /** Reason context shift is unavailable for this engine, or null when it is supported. */
@@ -174,6 +180,7 @@ object BackendCapabilities {
         ModelFormat.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee01f1)
         ModelFormat.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4d508e)
         ModelFormat.QAIRT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c7c233)
+        ModelFormat.EDGE0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.e265_no_shift)
     }
 
     /**

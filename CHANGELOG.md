@@ -2,6 +2,14 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.5（未真机测试）
+**本版未在真机测试。**
+
+- 实验功能：接入 Edge0-35B（Edge0 团队，Apache-2.0；Qwen3.6-35B-A3B 底座 + int4 + Recover-LoRA + prerouter，专家从存储按需流式读取）。引擎 edge0-infer（自带 ggml 0.24.0）编成独立的 libiris_edge0.so（约 3 MB），除 JNI 入口外全部符号隐藏，与 libiris_llama 的 ggml 互不干扰；仅 arm64 且 CPU 支持 i8mm/bf16/dotprod/fp16 的机型（骁龙 8 Gen 2 / 天玑 9200 及以后）才加载，其它机型下载、导入、加载时都提示「本机不支持」。
+- JNI 封装 open_runtime / load_model / create_session / generate：流式输出回答、思考（转成 <think>，沿用折叠显示）与原生工具调用（转成 <tool_call>，智能体可读）；支持停止、重置会话、卸载。
+- 推荐列表「对话」新增「Edge0-35B（实验）」：整个资产目录下载（约 22 GB，HuggingFace WWRJ-2025/Edge0-35B-IRIDIS，hf-mirror 同步；分块下载 + sha256）。也可用「导入文件夹」选已转换好的资产目录（含 model.json、assets.tsv、base/lora/prerouter.gguf）。资产由官方 make_assets.py 从 Edge0/Edge0-35B-A3B-preview 原始权重转换并通过 check 校验。
+- 作者公开的骁龙 8 Elite 数据不是我们的实测，未列入应用。
+
 ## 2.6.4（未真机测试）
 **本版未在真机测试。**
 

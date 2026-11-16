@@ -1,0 +1,6 @@
+{
+  global:
+    Java_com_iris_localai_engine_edge0_Edge0Native_*;
+  local:
+    *;
+};

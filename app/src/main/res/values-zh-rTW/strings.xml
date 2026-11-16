@@ -2225,4 +2225,15 @@
     <string name="ex263_txt">純文字 (.txt)</string>
     <string name="models264_guide_link">看懂這些術語 ›</string>
     <string name="api264_more">也支援：識圖（image_url）、生圖 /v1/images/generations、朗讀 /v1/audio/speech</string>
+    <string name="e265_unsupported">本機不支援 Edge0：需要 arm64 且 CPU 支援 i8mm（驍龍 8 Gen 2 / 天璣 9200 及以後）</string>
+    <string name="e265_lib_missing">Edge0 引擎庫載入失敗</string>
+    <string name="e265_bad_assets">Edge0 資產目錄無效：%1$s</string>
+    <string name="e265_load_failed">Edge0 載入失敗：%1$s</string>
+    <string name="e265_experimental">實驗</string>
+    <string name="e265_not_loaded">模型未載入</string>
+    <string name="e265_cpu_only">Edge0 只用 CPU</string>
+    <string name="e265_no_shift">Edge0 不支援上下文滑動</string>
+    <string name="e265_full_only">Edge0 需安裝 full 版本</string>
+    <string name="e265_purpose">35B MoE，專家從儲存串流讀取，僅 CPU；實驗</string>
+    <string name="e265_files">整個資產目錄（也可「匯入資料夾」）</string>
 </resources>

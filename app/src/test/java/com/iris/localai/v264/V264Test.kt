@@ -26,10 +26,10 @@ class V264Test {
     private val pngUri = "data:image/png;base64," + Base64.getEncoder().encodeToString(png)
 
     @Test fun version() {
-        assertEquals("2.6.4", UpdateNotes.RELEASES.first().version)
+        // 2.6.5: later versions keep this green (2.6.4 stays in the list, versionCode only grows).
+        assertNotNull(UpdateNotes.find("2.6.4"))
         val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.4\""))
-        assertTrue(g.contains("versionCode = 263"))
+        assertTrue(Regex("versionCode = (\\d+)").find(g)!!.groupValues[1].toInt() >= 263)
         assertTrue(src("CHANGELOG.md").contains("## 2.6.4（"))
     }
 

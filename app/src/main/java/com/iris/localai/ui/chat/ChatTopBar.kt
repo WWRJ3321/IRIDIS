@@ -135,6 +135,7 @@ internal fun engineTag(m: LocalModel): String = when (m.format) {
     ModelFormat.GGUF -> "GGUF"
     ModelFormat.MNN -> "MNN"
     ModelFormat.QAIRT -> "GenieX"
+    ModelFormat.EDGE0 -> "Edge0"
     ModelFormat.LITERT -> "LiteRT"
 }
 

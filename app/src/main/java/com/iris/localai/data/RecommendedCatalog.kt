@@ -8,7 +8,7 @@ package com.iris.localai.data
  */
 object RecommendedCatalog {
     enum class Section(val title: String) { CHAT(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)), FEATURED(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6284d9)), IMAGE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)), SPEECH(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)), TRANSLATE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)), EMBED(com.iris.localai.I18n.s(com.iris.localai.R.string.kb251_embed_section)) }
-    enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot") }
+    enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot"), EDGE0("Edge0") }
 
     sealed interface Kind {
         /** Whole-repo download through MnnHub.start (MNN folder / LiteRT file / Q4 GGUF picked automatically); 2.4.4: [file] = that one file instead. */
@@ -101,6 +101,8 @@ object RecommendedCatalog {
         quant = "i1-$quant", licence = "Gemma",
     )
 
+    /** 2.6.5: Edge0-35B 资产目录总大小（转换产物 assets.tsv 合计）。 */
+    const val EDGE0_BYTES = 22_000_000_000L
     const val LFM_REPO = "abenzerps/LFM2.5-24B-A2B-Uncensored-GSQ-RCO-GGUF"
     const val NANBEIGE_REPO = "bartowski/Nanbeige_Nanbeige4.2-3B-GGUF"
     const val CODER_REPO = "ccore/Qwen3.5-4B-3D-Coder"
@@ -172,6 +174,12 @@ object RecommendedCatalog {
         Item(
             LFM_REPO, Section.CHAT, "LFM2.5 24B-A2B 无审查（IQ2_XS）", com.iris.localai.I18n.s(com.iris.localai.R.string.v259_lfm_purpose), 8_516_829_600L, Engine.GGUF,
             Kind.Gguf(LFM_REPO, "LFM2.5-24B-A2B-GSQ-RCO-IQ2_XS.gguf", 8_516_829_600L), quant = "IQ2_XS", licence = "LFM Open License",
+        ),
+        // 2.6.5 (实验): Edge0-35B（Qwen3.6-35B-A3B 底座 + LoRA + prerouter，SSD 流式专家，仅 CPU / i8mm）。
+        // 资产由我们用官方 make_assets.py 从 Edge0/Edge0-35B-A3B-preview 转换，托管在 HF（hf-mirror 同步）。
+        Item(
+            com.iris.localai.engine.edge0.Edge0Assets.REPO, Section.CHAT, "Edge0-35B（实验）", com.iris.localai.I18n.s(com.iris.localai.R.string.e265_purpose),
+            EDGE0_BYTES, Engine.EDGE0, Kind.Hub(com.iris.localai.engine.edge0.Edge0Assets.REPO), quant = "int4", licence = APACHE,
         ),
         // ---- 特色模型 ----
         Item(

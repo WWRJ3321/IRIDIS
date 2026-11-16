@@ -25,5 +25,6 @@ object EngineFactory {
         ModelFormat.LITERT -> throw EngineException("此版本仅支持 GGUF 模型。LiteRT-LM (.litertlm) 需安装 full 版本。")
         ModelFormat.MNN -> throw EngineException("此版本仅支持 GGUF 模型。MNN 模型需安装 full 版本。")
         ModelFormat.QAIRT -> throw EngineException("此版本仅支持 GGUF 模型。GenieX / AI Hub QAIRT 包需安装 full 版本。")
+        ModelFormat.EDGE0 -> throw EngineException("此版本仅支持 GGUF 模型。Edge0 需安装 full 版本。")
     }
 }
