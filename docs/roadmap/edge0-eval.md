@@ -17,3 +17,4 @@
 - 来源：推荐「对话」加 Edge0-35B（实验），Kind.Hub(WWRJ-2025/Edge0-35B-IRIDIS) 整目录下载（MnnHub，自动含 hf-mirror，分块 + sha256）；「导入文件夹」识别资产目录。不支持的机型下载/导入/加载都提示。
 - 资产转换：/workspace/work/edge0-assets（src = 原始权重，edge0-35b = 资产目录），上传脚本 upload.py，README 在 hf/README.md。
 - 未真机测试。作者数据不当实测写。
+- 资产已转换并上传（2026-11-16 15:20）：https://huggingface.co/WWRJ-2025/Edge0-35B-IRIDIS（公开，Apache-2.0，中文 README），9 个资产文件合计 21,950,687,475 B（base.gguf 21.75 GB），官方 check 两次 passed，HF 上大小/LFS sha256 与 assets.tsv 一致。本地 /workspace/work/edge0-assets/edge0-35b。注：make_assets 末段被 20 分钟限时打断，用 finish.py 按原顺序补完 write_catalog/check/rename。
