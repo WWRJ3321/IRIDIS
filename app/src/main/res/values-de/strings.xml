@@ -2236,4 +2236,18 @@
     <string name="e265_full_only">Edge0 braucht die Full-Version</string>
     <string name="e265_purpose">35B-MoE, Experten gestreamt, nur CPU</string>
     <string name="e265_files">Ganzer Asset-Ordner (oder Ordner importieren)</string>
+    <string name="dl267_speed">Speedtest</string>
+    <string name="s267_fold">Denken automatisch einklappen</string>
+    <string name="s267_fold_sub">Einklappen, sobald die Antwort beginnt</string>
+    <string name="s267_ask">Erst nachfragen</string>
+    <string name="s267_ask_sub">Fragt fehlende Details zuerst nach</string>
+    <string name="cool267_title">Pause bei Hitze</string>
+    <string name="cool267_off">Aus</string>
+    <string name="cool267_on">Bei %1$d°C nach der Antwort pausieren, ab %2$d°C weiter</string>
+    <string name="cool267_limit">Temperaturgrenze</string>
+    <string name="cool267_note">Kühlt durch Pausen und weniger Rechnen, nicht durch Drosseln; nahe der Grenze werden Denken und Antworten kürzer</string>
+    <string name="cool267_stop">Sofort stoppen</string>
+    <string name="cool267_stop_sub">Antwort nicht zu Ende schreiben</string>
+    <string name="cool267_wait">Abkühlen %1$s°C, weiter bei %2$d°C</string>
+    <string name="cool267_short">kühlt</string>
 </resources>

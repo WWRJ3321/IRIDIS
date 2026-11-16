@@ -2236,4 +2236,18 @@
     <string name="e265_full_only">Edge0 requiere la versión full</string>
     <string name="e265_purpose">MoE 35B, expertos en streaming, solo CPU</string>
     <string name="e265_files">Toda la carpeta de recursos (o Importar carpeta)</string>
+    <string name="dl267_speed">Prueba</string>
+    <string name="s267_fold">Plegar razonamiento</string>
+    <string name="s267_fold_sub">Al empezar la respuesta</string>
+    <string name="s267_ask">Preguntar antes</string>
+    <string name="s267_ask_sub">Pide los detalles que faltan</string>
+    <string name="cool267_title">Pausa por calor</string>
+    <string name="cool267_off">Desactivado</string>
+    <string name="cool267_on">A %1$d°C pausa tras la respuesta; sigue a %2$d°C</string>
+    <string name="cool267_limit">Límite</string>
+    <string name="cool267_note">Enfría pausando y calculando menos, no frenando; cerca del límite piensa y responde más corto</string>
+    <string name="cool267_stop">Parar al instante</string>
+    <string name="cool267_stop_sub">Sin terminar la respuesta</string>
+    <string name="cool267_wait">Enfriando %1$s°C, sigue a %2$d°C</string>
+    <string name="cool267_short">enfriando</string>
 </resources>

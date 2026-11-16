@@ -45,7 +45,7 @@ object ThermalGovernor {
 
     fun setLimit(c: Int) { limitC = sanitize(c); refresh() }
 
-    fun onTemperature(c: Float) { tempC = c; refresh() }
+    fun onTemperature(c: Float) { tempC = c; refresh(); CoolDown.onTemperature(c) }
 
     private fun refresh() {
         val iv = intervalMs(tempC, limitC, engaged)

@@ -62,11 +62,38 @@ object ModelDirs {
      * 2.5.2: true when the app's storage root (AgentContainer.appRoot: `Download/IRIDIS` for 工作区位置 下载 /
      * 自定义, `filesDir/iridis` for 应用私有目录) is `Download/IRIDIS`. Pure (paths only).
      */
-    fun followsStorage(storageRoot: File?, downloadsDir: File?): Boolean {
-        if (storageRoot == null || downloadsDir == null) return false
-        fun norm(f: File) = f.absoluteFile.normalize().path.trimEnd('/')
-        return norm(storageRoot) == norm(File(downloadsDir, WorkspaceResolver.FOLDER))
+    fun followsStorage(storageRoot: File?, downloadsDir: File?, requestedShared: Boolean = false): Boolean {
+        if (downloadsDir == null) return false
+        // 2.6.7: 设置里选的是 下载/自定义 就跟随 Download/IRIDIS——不再看工作区「当时」解析到哪。
+        // 之前启动时存储没就绪/探测失败一次，工作区退回私有目录，模型页就一直提示「更改位置」。
+        if (requestedShared) return true
+        if (storageRoot == null) return false
+        return samePath(storageRoot, File(downloadsDir, WorkspaceResolver.FOLDER))
     }
+
+    /**
+     * 2.6.7: 路径比较——规范化、去尾斜杠，并把 /sdcard、/storage/self/primary、/mnt/user/0/primary 等别名
+     * 统一成 /storage/emulated/0（软链接在 FUSE 上不一定能 canonical 出来）。Pure.
+     */
+    fun samePath(a: File, b: File): Boolean = norm(a) == norm(b)
+
+    fun norm(f: File): String {
+        var p = f.absoluteFile.normalize().path.trimEnd('/')
+        for ((alias, real) in ALIASES) if (p == alias || p.startsWith("$alias/")) { p = real + p.removePrefix(alias); break }
+        return p
+    }
+
+    private val ALIASES = listOf(
+        "/sdcard" to "/storage/emulated/0",
+        "/storage/self/primary" to "/storage/emulated/0",
+        "/mnt/sdcard" to "/storage/emulated/0",
+        "/mnt/user/0/primary" to "/storage/emulated/0",
+        "/data/media/0" to "/storage/emulated/0",
+    )
+
+    /** 2.6.7: the folder is the shared `Download/IRIDIS/<sub>` (by path, aliases included). Pure. */
+    fun isShared(dir: File, downloadsDir: File?, sub: String = SUB): Boolean =
+        downloadsDir != null && samePath(dir, sharedDir(downloadsDir, sub))
 
     /** Keeps gallery / music apps from scanning multi-GB weights. */
     fun ensureNoMedia(dir: File) {

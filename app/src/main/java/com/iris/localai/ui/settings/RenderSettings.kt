@@ -24,5 +24,8 @@ fun RenderSettingsSection(s: AppSettings, update: ((AppSettings) -> AppSettings)
         SwitchRow(RenderSettingsText.HTML, s.renderHtml, subtitle = RenderSettingsText.HTML_SUB, icon = IrisIcons.Code) { on -> update { it.copy(renderHtml = on) } }
         Divider()
         SwitchRow(RenderSettingsText.IMAGES, s.loadNetworkImages, subtitle = RenderSettingsText.IMAGES_SUB, icon = IrisIcons.Image) { on -> update { it.copy(loadNetworkImages = on) } }
+        Divider()
+        // 2.6.7: 思考自动收起
+        SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.s267_fold), s.autoFoldThinking, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.s267_fold_sub), icon = IrisIcons.Think) { on -> update { it.copy(autoFoldThinking = on) } }
     }
 }

@@ -175,6 +175,10 @@ class MnnHub(private val repo: ModelRepository) {
         }
         val lat = results.associate { (s, ms0, r) -> s to (if (r.isSuccess && r.getOrThrow().isNotEmpty()) ms0 else null) }
         val ranked = if (chosen == DownloadSource.AUTO && demote == null) DownloadSources.rank(order, lat) else order
+        // 2.6.7: 列目录本身就是测速——记下来，后面同仓库的文件不再另测；详情里显示「测速 …」
+        lat.forEach { (s, m) -> DownloadSources.remember(s, repoId, m) }
+        DownloadSources.log(DownloadSources.SPEED, "$repoId " + DownloadSources.speedLine(order, lat))
+        if (order.size > 1) _state.value = _state.value.copy(notice = DownloadSources.speedLine(order, lat))
         val first = ranked.firstNotNullOfOrNull { s -> results.first { it.first == s }.third.getOrNull()?.takeIf { it.isNotEmpty() } }
             ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_d66ab7, repoId) + results.joinToString("\n") { (s, _, r) ->
                 com.iris.localai.I18n.s(com.iris.localai.R.string.data_a4f150, s.label) + (r.exceptionOrNull()?.let { DownloadSources.describe(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_e67a89))
@@ -287,7 +291,9 @@ class MnnHub(private val repo: ModelRepository) {
                 val before = done - (HttpDownload.partFile(out).takeIf { it.exists() }?.length() ?: 0L)
                 _state.value = _state.value.copy(file = name)
                 try {
-                    fetch(GgufSearch.urls(hit, path, source, demote), out, size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
+                    val cands = GgufSearch.urls(hit, path, source, demote)
+                    DownloadSources.lastSpeed?.takeIf { source == DownloadSource.AUTO && demote == null }?.let { _state.value = _state.value.copy(notice = it) }
+                    fetch(cands, out, size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
                 } catch (e: DownloadSources.NotFound) {
                     throw IOException(GATED)
                 }

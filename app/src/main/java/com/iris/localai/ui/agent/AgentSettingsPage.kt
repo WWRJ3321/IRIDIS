@@ -213,6 +213,9 @@ fun AgentSettingsPage(
                 ) { v -> agent.settings.update { it.copy(maxSteps = v.toInt()) } }
                 // 2.0.x: the less-used switches fold away.
                 Divider()
+                // 2.6.7: 先问清楚（默认开）
+                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.s267_ask), s.askFirst, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.s267_ask_sub)) { on -> agent.settings.update { it.copy(askFirst = on) } }
+                Divider()
                 com.iris.localai.ui.components.AdvancedFold("agent-mode") {
                     SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_97de54), s.planFirst, subtitle = AgentText.PLAN_FIRST) { on -> agent.settings.update { it.copy(planFirst = on) } }
                     Divider()

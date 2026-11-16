@@ -61,6 +61,9 @@ object AgentPrompt {
         val n = modelName.orEmpty().lowercase()
         return if (QWEN_HINTS.any { n.contains(it) }) CallStyle.QWEN else CallStyle.FENCE
     }
+    /** 2.6.7: the 先问清楚 rule (one line; only when the switch is on). */
+    const val ASK_FIRST = "- Task or image request missing key details (what, style, size, which file…)? Ask 1–2 short questions first and wait; don't guess. Clear requests: just do it."
+
     private val QWEN_HINTS = listOf("qwen", "agents-a1", "agents_a1", "hermes", "qwq", "minicpm4", "internlm3")
 
     /**
@@ -86,6 +89,8 @@ object AgentPrompt {
         planFirst: Boolean = false,
         /** 2.3: the frozen long-term-memory block (last: semi-stable, after the user's instructions). */
         memory: String = "",
+        /** 2.6.7 先问清楚: vague task / image request → ask 1–2 short questions first. */
+        askFirst: Boolean = false,
     ): String = buildString {
         // 2.3: fixed tool order whatever the caller passes (byte-identical prefix for the KV cache).
         val tools = tools.distinct().sortedBy { t -> TOOL_ORDER.indexOf(t.name).let { if (it < 0) Int.MAX_VALUE else it } }
@@ -96,7 +101,9 @@ object AgentPrompt {
         append("- Chat/simple questions: plain text with NO tool block (\"system\" is not a tool).\n")
         // 2.1.7: "then report their findings" was lost in the 2.1.6 trim ("When done, answer briefly
         // with what you did"): small models ended a news search with "已搜索" or nothing at all.
-        append("- Use tools only if needed, then report their findings; fix a failed one once or say so.\n\n")
+        append("- Use tools only if needed, then report their findings; fix a failed one once or say so.\n")
+        if (askFirst) append(ASK_FIRST).append('\n')
+        append('\n')
 
         append("# Tool calls\n")
         append("Call a tool with ONLY this, then stop and wait:\n")

@@ -63,13 +63,14 @@ object HttpDownload {
                 conn.inputStream.use { ins ->
                     val buf = ByteArray(BUFFER)
                     var lastReport = written
+                    val throttle = com.iris.localai.util.io.ProgressThrottle()
                     while (true) {
                         currentCoroutineContext().ensureActive()
                         val n = ins.read(buf)
                         if (n < 0) break
                         raf.write(buf, 0, n)
                         written += n
-                        if (written - lastReport >= REPORT_EVERY) { lastReport = written; onBytes(written) }
+                        if (written - lastReport >= REPORT_EVERY && throttle.ready()) { lastReport = written; onBytes(written) }
                     }
                 }
                 if (written != expected) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, written, expected, target.name))

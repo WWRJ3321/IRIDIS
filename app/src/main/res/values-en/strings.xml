@@ -2236,4 +2236,18 @@
     <string name="e265_full_only">Edge0 needs the full build</string>
     <string name="e265_purpose">35B MoE, experts streamed, CPU only</string>
     <string name="e265_files">The whole asset folder (or use Import folder)</string>
+    <string name="dl267_speed">Speed test</string>
+    <string name="s267_fold">Auto-fold thinking</string>
+    <string name="s267_fold_sub">Fold it when the answer starts</string>
+    <string name="s267_ask">Ask first</string>
+    <string name="s267_ask_sub">Asks for missing details before acting</string>
+    <string name="cool267_title">Pause when hot</string>
+    <string name="cool267_off">Off</string>
+    <string name="cool267_on">At %1$d°C, pause after this reply; resume at %2$d°C</string>
+    <string name="cool267_limit">Temperature limit</string>
+    <string name="cool267_note">Cools by pausing and computing less, not by slowing down; near the limit thinking and replies get shorter</string>
+    <string name="cool267_stop">Stop at once</string>
+    <string name="cool267_stop_sub">Don\'t finish the current reply</string>
+    <string name="cool267_wait">Cooling down %1$s°C, resumes at %2$d°C</string>
+    <string name="cool267_short">cooling</string>
 </resources>

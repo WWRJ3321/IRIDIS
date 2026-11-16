@@ -1017,7 +1017,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         // 2.3: no plan here any more (it rides on the newest user turn, see AgentPrompt.withPlanNote).
         return com.iris.localai.agent.AgentPrompt.build(
             tools, withLang(userSystem), com.iris.localai.agent.AgentPrompt.styleFor(modelFile), skillsFor(tools),
-            lazy = ag.lazyTools, planFirst = ag.planFirst, memory = memory,
+            lazy = ag.lazyTools, planFirst = ag.planFirst, memory = memory, askFirst = ag.askFirst,
         )
     }
 

@@ -2236,4 +2236,18 @@
     <string name="e265_full_only">Edge0 के लिए full संस्करण चाहिए</string>
     <string name="e265_purpose">35B MoE, एक्सपर्ट स्ट्रीमिंग, केवल CPU</string>
     <string name="e265_files">पूरा एसेट फ़ोल्डर (या फ़ोल्डर आयात करें)</string>
+    <string name="dl267_speed">स्पीड टेस्ट</string>
+    <string name="s267_fold">सोच अपने-आप समेटें</string>
+    <string name="s267_fold_sub">जवाब शुरू होते ही समेटें</string>
+    <string name="s267_ask">पहले पूछें</string>
+    <string name="s267_ask_sub">कमी हो तो पहले पूछे</string>
+    <string name="cool267_title">गर्म होने पर रुकें</string>
+    <string name="cool267_off">बंद</string>
+    <string name="cool267_on">%1$d°C पर जवाब के बाद रुकें, %2$d°C पर फिर चलें</string>
+    <string name="cool267_limit">तापमान सीमा</string>
+    <string name="cool267_note">धीमा करके नहीं, रुककर और कम गणना करके ठंडा करता है; सीमा के पास सोच और जवाब छोटे होते हैं</string>
+    <string name="cool267_stop">तुरंत रोकें</string>
+    <string name="cool267_stop_sub">मौजूदा जवाब पूरा न करें</string>
+    <string name="cool267_wait">ठंडा हो रहा %1$s°C, %2$d°C पर जारी</string>
+    <string name="cool267_short">ठंडा हो रहा</string>
 </resources>

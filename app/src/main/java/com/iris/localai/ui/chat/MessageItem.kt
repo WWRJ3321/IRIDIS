@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -202,6 +203,7 @@ fun AssistantMessage(
                 inProgress = { streaming && (parts.value.thinkingOpen || (!parts.value.hasThinking && parts.value.answer.isEmpty())) },
                 streaming = streaming,
                 elapsedMs = message.thinkingMs,
+                answerStarted = hasAnswer,
             )
         }
         when {
@@ -392,9 +394,16 @@ private fun ActionRow(
 }
 
 @Composable
-private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streaming: Boolean, elapsedMs: Long, initiallyExpanded: Boolean = true) {
+private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streaming: Boolean, elapsedMs: Long, initiallyExpanded: Boolean = true, answerStarted: Boolean = false) {
     val c = Iris.colors
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    // 2.6.7 思考自动收起：本条正在生成、正文刚开始输出时收起一次（之后用户再点开不再干预）
+    if (streaming) {
+        val autoFold = rememberAutoFoldThinking()
+        androidx.compose.runtime.LaunchedEffect(answerStarted, autoFold) {
+            if (ThinkFold.shouldFold(autoFold, streaming, answerStarted)) expanded = false
+        }
+    }
     val reduce = LocalReduceMotion.current
     val arrow by animateFloatAsState(if (expanded) 180f else 0f, if (reduce) snap() else IrisMotion.standard(), label = "thinkArrow")
     val thinking by remember(inProgress) { derivedStateOf { inProgress() } }
@@ -617,4 +626,16 @@ private fun KbSourceChips(sources: List<String>) {
             }
         }
     }
+}
+
+/** 2.6.7 思考自动收起：何时收起。纯函数，单测覆盖。 */
+internal object ThinkFold {
+    fun shouldFold(enabled: Boolean, streaming: Boolean, answerStarted: Boolean): Boolean = enabled && streaming && answerStarted
+}
+
+@Composable
+private fun rememberAutoFoldThinking(): Boolean {
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as? com.iris.localai.IrisApp ?: return false
+    val s by app.container.settings.settings.collectAsStateWithLifecycle()
+    return s.autoFoldThinking
 }

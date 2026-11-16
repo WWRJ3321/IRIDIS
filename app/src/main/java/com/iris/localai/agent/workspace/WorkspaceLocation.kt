@@ -134,7 +134,8 @@ object WorkspaceResolver {
     fun probe(dir: File): Boolean = runCatching {
         dir.mkdirs()
         if (!dir.isDirectory) return false
-        val f = File(dir, ".iris-probe")
+        // 2.6.7: 每次用新文件名——旧安装留下的 .iris-probe 属于别的 uid，重装后写不进去会被误判为不可用。
+        val f = File(dir, ".iris-probe-" + System.nanoTime() + "-" + (0..9999).random())
         f.writeText("ok")
         val ok = f.readText() == "ok"
         f.delete()

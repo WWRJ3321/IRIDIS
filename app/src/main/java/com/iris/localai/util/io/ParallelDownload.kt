@@ -81,6 +81,7 @@ object ParallelDownload {
         }
         val progress = AtomicLong(offset + plan.sumOf { r -> segFile(target, r.first).takeIf { it.exists() }?.length()?.coerceAtMost(r.last - r.first + 1) ?: 0L })
         val lastReport = AtomicLong(progress.get())
+        val throttle = com.iris.localai.util.io.ProgressThrottle()
         onBytes(progress.get())
         val done = BooleanArray(plan.size)
         var nextAppend = 0
@@ -131,7 +132,7 @@ object ParallelDownload {
                                     raf.write(buf, 0, n)
                                     written += n
                                     val p = progress.addAndGet(n.toLong())
-                                    if (p - lastReport.get() >= REPORT_EVERY) { lastReport.set(p); onBytes(p) }
+                                    if (p - lastReport.get() >= REPORT_EVERY && throttle.ready()) { lastReport.set(p); onBytes(p) }
                                 }
                             }
                             if (written != len) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, written, len, seg.name))

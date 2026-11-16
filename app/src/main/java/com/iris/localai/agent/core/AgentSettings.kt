@@ -51,6 +51,8 @@ data class AgentSettings(
     val imageModel: String = "",
     /** 2.5.7: 内存不够时先卸载文本模型，生完再装回。 */
     val imageMakeRoom: Boolean = true,
+    /** 2.6.7 先问清楚：任务/生图信息不足时先追问 1–2 句再动手。默认开。 */
+    val askFirst: Boolean = true,
 ) {
     val search: SearchProvider get() = SearchProvider.parse(searchProvider)
     val workspaceLocation: WorkspaceLocation get() = WorkspaceLocation.parse(workspace)

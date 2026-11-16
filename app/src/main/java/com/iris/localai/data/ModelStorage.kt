@@ -12,6 +12,8 @@ import java.io.File
 object ModelStorage {
     /** The app's storage root (AgentContainer.appRoot); set by AppContainer. Null = unknown (2.1.0 rule). */
     @Volatile var storageRoot: () -> File? = { null }
+    /** 2.6.7: 设置 › 工作区位置 是 下载 / 自定义（模型跟 Download/IRIDIS 走）；set by AppContainer. */
+    @Volatile var requestedShared: () -> Boolean = { false }
 
     fun location(privateDir: File, sub: String = ModelDirs.SUB): ModelDirs.Location {
         val downloads = runCatching { android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS) }.getOrNull()
@@ -21,7 +23,7 @@ object ModelStorage {
             downloadsDir = downloads,
             privateDir = privateDir,
             sub = sub,
-            followStorage = ModelDirs.followsStorage(runCatching { storageRoot() }.getOrNull(), downloads),
+            followStorage = ModelDirs.followsStorage(runCatching { storageRoot() }.getOrNull(), downloads, runCatching { requestedShared() }.getOrDefault(false)),
         )
     }
 }

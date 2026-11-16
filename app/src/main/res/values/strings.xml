@@ -2237,4 +2237,18 @@
     <string name="e265_full_only">Edge0 需安装 full 版本</string>
     <string name="e265_purpose">35B MoE，专家从存储流式读取，仅 CPU；实验</string>
     <string name="e265_files">整个资产目录（也可「导入文件夹」）</string>
+    <string name="dl267_speed">测速</string>
+    <string name="s267_fold">思考自动收起</string>
+    <string name="s267_fold_sub">正文开始时收起思考</string>
+    <string name="s267_ask">先问清楚</string>
+    <string name="s267_ask_sub">信息不够时先追问再动手</string>
+    <string name="cool267_title">过热暂停</string>
+    <string name="cool267_off">已关</string>
+    <string name="cool267_on">%1$d°C 说完这条后暂停，降到 %2$d°C 继续</string>
+    <string name="cool267_limit">温度上限</string>
+    <string name="cool267_note">降温靠暂停和少算，不靠降速；接近上限时思考和回答会变短</string>
+    <string name="cool267_stop">到上限立即停止</string>
+    <string name="cool267_stop_sub">不等这条说完</string>
+    <string name="cool267_wait">降温中 %1$s°C，降到 %2$d°C 自动继续</string>
+    <string name="cool267_short">降温中</string>
 </resources>

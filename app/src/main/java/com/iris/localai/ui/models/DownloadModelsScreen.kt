@@ -189,6 +189,15 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     LaunchedEffect(imageStates.keys) { vm.refreshImageModels() }
 
     val loadedPath = (engine as? EngineState.Ready)?.model?.path
+    // 2.6.7: 下载卡顿——这些要读磁盘，之前每次进度刷新在主线程逐卡重算；改为 IO 线程、只在列表/下载状态变化时算。
+    val embedDone by androidx.compose.runtime.produceState(emptySet<String>(), models, hub.active, hub.repoId) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.iris.localai.knowledge.KbEmbedModels.installed().map { it.repo }.toSet() }.getOrDefault(emptySet())
+        }
+    }
+    val voiceSizes by androidx.compose.runtime.produceState(emptyMap<VoicePack, Long>(), voiceStates) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { VoicePack.entries.associateWith(vm::voiceBytes) }
+    }
     fun local(item: RecommendedCatalog.Item): LocalModel? = vm.localFor(item, models)
     /** 2.5.0-beta9: the installed GGUF behind a card (its header decides the 「MTP」 badge). */
     fun ggufPath(item: RecommendedCatalog.Item): String? =
@@ -196,7 +205,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     fun status(item: RecommendedCatalog.Item): RecStatus = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Hub, is RecommendedCatalog.Kind.Gguf -> {
             val l = local(item)
-            RecStatus.forHub(item.repoId!!, hub, l != null || com.iris.localai.knowledge.KbEmbedModels.isDownloaded(item.repoId!!), l != null && l.path == loadedPath)
+            RecStatus.forHub(item.repoId!!, hub, l != null || item.repoId in embedDone, l != null && l.path == loadedPath)
         }
         is RecommendedCatalog.Kind.Image -> when (val s = imageStates[k.modelId]) {
             is ImageDl.Downloading -> RecStatus.Downloading(s.done, s.total, s.source, pausable = false)
@@ -221,7 +230,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             else -> RecStatus.Idle
         }
     }
-    fun size(item: RecommendedCatalog.Item): Long = (item.kind as? RecommendedCatalog.Kind.Voice)?.let { k -> VoicePack.byId(k.packId)?.let(vm::voiceBytes) } ?: item.sizeBytes
+    fun size(item: RecommendedCatalog.Item): Long = (item.kind as? RecommendedCatalog.Kind.Voice)?.let { k -> VoicePack.byId(k.packId)?.let { voiceSizes[it] }?.takeIf { it > 0 } } ?: item.sizeBytes
     fun ramHint(item: RecommendedCatalog.Item): String? =
         if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(RecommendedCatalog.runBytes(item), ram) else null // 2.6.6: Edge0 按运行内存
     val actions = object : RecActions {

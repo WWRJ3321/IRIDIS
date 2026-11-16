@@ -200,6 +200,17 @@ extern "C" JNIEXPORT jstring JNICALL FN(nativeGenerate)(JNIEnv* env, jclass, jlo
         o["ttft"] = g.request_summary.first_token_seconds.value_or(-1);
         o["tps"] = g.request_summary.decode_tokens_per_second.value_or(-1);
         if (g.error) o["error"] = g.error->message;
+        // 2.6.7: 专家缓存命中 + 预取统计（确认没有无谓重复读取）
+        const auto& wa = g.weight_activity;
+        if (wa.applicable) {
+            o["experts"] = {{"demand", wa.decode.demand}, {"hits", wa.decode.hits}, {"loads", wa.decode.loads}, {"bytes", wa.decode.bytes},
+                            {"prefill_loads", wa.prefill.loads}, {"prefill_bytes", wa.prefill.bytes}};
+            o["prefetch"] = {{"initiated", wa.prefetch.initiated}, {"late", wa.prefetch.late}, {"bytes", wa.prefetch.bytes}, {"discarded", wa.prefetch.discarded}};
+            __android_log_print(ANDROID_LOG_INFO, "IrisEdge0",
+                "experts decode demand=%zu hits=%zu (%.1f%%) loads=%zu read=%.1fMB | prefill loads=%zu read=%.1fMB | prefetch initiated=%zu late=%zu discarded=%zu read=%.1fMB",
+                wa.decode.demand, wa.decode.hits, wa.decode.demand ? 100.0 * wa.decode.hits / wa.decode.demand : 0.0, wa.decode.loads, wa.decode.bytes / 1048576.0,
+                wa.prefill.loads, wa.prefill.bytes / 1048576.0, wa.prefetch.initiated, wa.prefetch.late, wa.prefetch.discarded, wa.prefetch.bytes / 1048576.0);
+        }
         return jstr(env, o.dump());
     } catch (const std::exception& e) {
         { std::lock_guard<std::mutex> lock(engine(handle).cancel_mutex); engine(handle).cancel.reset(); }

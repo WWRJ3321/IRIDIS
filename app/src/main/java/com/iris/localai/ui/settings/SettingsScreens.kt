@@ -546,6 +546,25 @@ fun PerformancePage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (Settings
                     ) { v -> vm.update { it.copy(thermalLimitC = v.toInt().coerceIn(35, 50)) } }
                 }
                 Divider()
+                // 2.6.7 过热暂停：到上限说完这条再暂停，降 3°C 自动继续；接近上限时少算。不降速。
+                SwitchRow(
+                    com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_title), s.coolPauseC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Gauge,
+                    subtitle = if (s.coolPauseC == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_off)
+                    else com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_on, s.coolPauseC, s.coolPauseC - com.iris.localai.engine.CoolDown.HYST_C.toInt()),
+                ) { on -> vm.update { it.copy(coolPauseC = if (on) com.iris.localai.engine.CoolDown.DEFAULT_C else 0) } }
+                com.iris.localai.ui.components.Fold(s.coolPauseC > 0) {
+                    Column {
+                        SliderRow(
+                            com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_limit), s.coolPauseC.toFloat(),
+                            com.iris.localai.engine.CoolDown.MIN_C.toFloat()..com.iris.localai.engine.CoolDown.MAX_C.toFloat(),
+                            "${s.coolPauseC}°C",
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_note),
+                            steps = com.iris.localai.engine.CoolDown.MAX_C - com.iris.localai.engine.CoolDown.MIN_C - 1,
+                        ) { v -> vm.update { it.copy(coolPauseC = com.iris.localai.engine.CoolDown.sanitize(kotlin.math.round(v).toInt())) } }
+                        SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_stop), s.coolStopNow, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_stop_sub)) { on -> vm.update { it.copy(coolStopNow = on) } }
+                    }
+                }
+                Divider()
                 // 2.2.10: 终止温度 — hard stop + unload everything (no auto reload).
                 SwitchRow(
                     com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f5c6c), s.thermalCutoffC > 0, icon = com.iris.localai.ui.icons.IrisIcons.Power,

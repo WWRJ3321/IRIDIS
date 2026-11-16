@@ -731,9 +731,10 @@ class EngineManager(
             topK = cfg.topK,
             minP = cfg.minP,
             repeatPenalty = cfg.repeatPenalty,
-            maxNewTokens = com.iris.localai.data.TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF),
+            // 2.6.7 少算: close to the cool-down limit → shorter replies and 低 reasoning effort.
+            maxNewTokens = CoolDown.maxNew(com.iris.localai.data.TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF), CoolDown.hotNow()),
             disableThinking = disableThinking,
-            thinkEffort = if (disableThinking) 0 else ThinkLevel.effort(settings.current.thinkLevel, readyDetails?.thinkEffort.orEmpty()),
+            thinkEffort = if (disableThinking) 0 else CoolDown.effort(ThinkLevel.effort(settings.current.thinkLevel, readyDetails?.thinkEffort.orEmpty()), !readyDetails?.thinkEffort.isNullOrEmpty(), CoolDown.hotNow()),
             threads = plan.threads,
             repeatLastN = cfg.repeatLastN,
             presencePenalty = cfg.presencePenalty,
@@ -769,6 +770,8 @@ class EngineManager(
         owner: GenOwner = GenOwner(requester.name),
     ): Flow<GenEvent> = flow {
         ThermalCutoff.startOrRefuse()?.let { msg -> emit(GenEvent.Done(StopReason.ERROR, null, msg)); return@flow }
+        // 2.6.7 过热断续: over the limit → wait here (before any work) until cooled; cancellable.
+        CoolDown.awaitCool { msg -> Log.i(GEN_TAG, "cool-down wait ($requester): $msg"); _notices.tryEmit(msg) }
         gate.request(onWaiting = { w ->
             if (w) Log.i(RES_TAG, "request ($requester) queued: tier reload in progress, starts when it ends")
             else Log.i(RES_TAG, "request ($requester) released: tier reload finished, state=${state.value.javaClass.simpleName}")
@@ -776,7 +779,17 @@ class EngineManager(
             recoverAfterFailedReload(requester)
             var cpuRetried = false
             while (true) {
-                val retryOnCpu = generateOnce(history, params, requester, owner, allowCpuRetry = !cpuRetried) { emit(it) }
+                var stopped = false
+                val retryOnCpu = generateOnce(history, params, requester, owner, allowCpuRetry = !cpuRetried) { ev ->
+                    // 2.6.7 立即停止 (option): over the limit mid-reply → ask the engine to stop (keeps what was said).
+                    if (!stopped && ev is GenEvent.Piece && CoolDown.stopNowHit()) {
+                        stopped = true
+                        Log.i(GEN_TAG, "cool-down: stop now at ${ThermalGovernor.tempC}°C")
+                        _notices.tryEmit(CoolDown.waitingText())
+                        runCatching { engine?.cancel() }
+                    }
+                    emit(ev)
+                }
                 if (!retryOnCpu) break
                 cpuRetried = true
                 val m = readyModel

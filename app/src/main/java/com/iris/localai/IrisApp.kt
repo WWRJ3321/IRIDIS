@@ -33,7 +33,10 @@ class AppContainer(app: Application) {
     /** 1.9.0: 智能体 settings, the app-private workspace (filesDir/workspace) and its undo history. */
     val agent = com.iris.localai.agent.AgentContainer(app)
     /** 2.5.2: model downloads and imports follow the storage location (Download/IRIDIS when 工作区位置 is 下载). */
-    init { com.iris.localai.data.ModelStorage.storageRoot = { agent.appRoot } }
+    init {
+        com.iris.localai.data.ModelStorage.storageRoot = { agent.appRoot }
+        com.iris.localai.data.ModelStorage.requestedShared = { agent.settings.current.workspaceLocation != com.iris.localai.agent.WorkspaceLocation.PRIVATE }
+    }
     /** 2.5.1 知识库向量检索: embedding models live in the model folders; vectors beside the index (filesDir/knowledge). */
     init { com.iris.localai.knowledge.KbEmbedModels.dirs = { models.location().listDirs }; agent.knowledge.semantic = com.iris.localai.knowledge.KbSemantic(app, agent.knowledge, File(app.filesDir, "knowledge/" + com.iris.localai.knowledge.KbVecStore.FILE), scope) }
     /** 2.2: GUI 智能体（形态 A，无障碍）第一阶段的运行器。 */
@@ -124,6 +127,10 @@ class IrisApp : Application() {
             }
             registerReceiver(r, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))?.let { r.onReceive(this, it) }
         }
+        com.iris.localai.engine.CoolDown.poll = {
+            runCatching { registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE) }
+                .getOrNull()?.takeIf { it != Int.MIN_VALUE }?.let { it / 10f } ?: Float.NaN
+        }
         // 2.2.16: remember the download source that last worked (自动 tries it first).
         com.iris.localai.data.DownloadSources.lastGood = com.iris.localai.data.DownloadSource.byName(container.settings.current.lastGoodSource)
         com.iris.localai.data.DownloadSources.onLastGood = { src -> container.settings.update { it.copy(lastGoodSource = src.name) } }
@@ -131,6 +138,7 @@ class IrisApp : Application() {
             container.settings.settings.collect {
                 com.iris.localai.engine.ThermalGovernor.setLimit(it.thermalLimitC)
                 com.iris.localai.engine.ThermalCutoff.setCutoff(it.thermalCutoffC)
+                com.iris.localai.engine.CoolDown.setLimit(it.coolPauseC, it.coolStopNow)
             }
         }
         // 2.2.10 终止温度: battery broadcasts can be sparse, so also poll (cheap: sticky intent +

@@ -359,6 +359,15 @@ data class AppSettings(
     val thinkingBudget: Int = 2048,
     /** 2.6.0: 思考档位 chosen by long-pressing 思考. 0 = not chosen (use [thinkingBudget]), 1 低, 2 中, 3 高. */
     val thinkLevel: Int = 0,
+    /** 2.6.7: 思考自动收起——正文开始输出时把思考块收起。默认关（保持现状）。 */
+    val autoFoldThinking: Boolean = false,
+    /**
+     * 2.6.7 过热断续（Edge0 + llama 通用）：电池温度到这个值（°C，38–55；0 = 关）后，当前回答照常说完，
+     * 之后新的生成先「降温中」等待，降到 [coolPauseC] − 3 °C 自动继续。降温靠暂停和少算，不靠降速。
+     */
+    val coolPauseC: Int = 45,
+    /** 2.6.7: 到温度上限时立即停止当前回答（默认否：说完再停）。 */
+    val coolStopNow: Boolean = false,
 
     // ---- 2.1.0 ----
     /** 触感反馈: haptics for sends, steps, long-press, sliders… (ui/feedback/IrisFeedback). */

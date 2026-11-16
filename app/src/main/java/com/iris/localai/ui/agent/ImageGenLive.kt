@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.iris.localai.ui.components.IrisProgressBar
@@ -45,18 +46,33 @@ object ImageGenLive {
         val b = m.groupValues[2].toIntOrNull() ?: return null
         return if (b <= 0) null else (a.toFloat() / b).coerceIn(0f, 1f)
     }
+
+    /**
+     * 2.6.7: 循环调色板上的连续取色（t∈[0,1)，首尾相接）。之前光斑颜色按 (phase*4).toInt() 整格跳，
+     * 每 1 秒突变一次 = 闪烁；现在相邻颜色线性插值，t 走一圈回到原色。纯函数，单测覆盖。
+     */
+    fun cyclicArgb(palette: List<Int>, t: Float): Int {
+        if (palette.isEmpty()) return 0
+        if (palette.size == 1) return palette[0]
+        val n = palette.size
+        val x = ((t % 1f) + 1f) % 1f * n
+        val i = x.toInt() % n
+        val f = x - x.toInt()
+        val a = palette[i]; val b = palette[(i + 1) % n]
+        fun ch(c: Int, sh: Int) = (c ushr sh) and 0xFF
+        fun mix(sh: Int) = (ch(a, sh) + (ch(b, sh) - ch(a, sh)) * f).toInt().coerceIn(0, 255)
+        return (mix(24) shl 24) or (mix(16) shl 16) or (mix(8) shl 8) or mix(0)
+    }
 }
 
 @Composable
 fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
     val c = Iris.colors
     val t = rememberInfiniteTransition(label = "imggen")
-    val phase by t.animateFloat(0f, 1f, infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart), label = "phase")
-    val drift by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse), label = "drift")
-    // 柔和马卡龙色，跟随主题强调色
+    // 2.6.7: 一个连续相位驱动全部（无 Reverse 折返、无整格换色），颜色平滑过渡、不闪
+    val phase by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "phase")
     val palette = remember(c.accent) {
-        // 2.6.2: 加深饱和度（原马卡龙色太淡，混出来发灰）
-        listOf(c.accent, Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF06B6D4), Color(0xFFF59E0B), c.accent)
+        listOf(c.accent, Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF06B6D4), Color(0xFFF59E0B)).map { it.toArgb() }
     }
     val target = ImageGenLive.progressOf(line)
     val shown by animateFloatAsState(target ?: 0f, label = "p")
@@ -64,16 +80,18 @@ fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
         Canvas(Modifier.size(168.dp).clip(IrisRadius.mediumShape)) {
             val w = size.width
             val h = size.height
-            val angle = phase * 2f * Math.PI.toFloat()
-            val cx = w / 2 + kotlin.math.cos(angle) * w * 0.6f
-            val cy = h / 2 + kotlin.math.sin(angle) * h * 0.6f
-            drawRect(Brush.linearGradient(palette, start = Offset(cx, cy), end = Offset(w - cx, h - cy)))
-            // 第二层径向光斑，让颜色“混”起来
-            val r = w * (0.45f + 0.2f * drift)
-            drawRect(Brush.radialGradient(listOf(palette[(1 + (phase * 4).toInt()) % 5].copy(alpha = 0.7f), Color.Transparent),
-                center = Offset(w * (0.25f + 0.5f * drift), h * (0.75f - 0.5f * drift)), radius = r))
-            drawRect(Brush.radialGradient(listOf(palette[(3 + (phase * 4).toInt()) % 5].copy(alpha = 0.6f), Color.Transparent),
-                center = Offset(w * (0.75f - 0.5f * drift), h * (0.25f + 0.5f * drift)), radius = w * (0.4f + 0.15f * (1f - drift))))
+            val tau = 2f * Math.PI.toFloat()
+            fun col(off: Float) = Color(ImageGenLive.cyclicArgb(palette, phase + off))
+            // 底色：整块填满（不留透明边，避免露出方框）
+            drawRect(col(0f))
+            // 三个大光斑沿圆周慢慢转，颜色连续变化；淡出到同色透明（不是黑色透明，边缘不发灰）
+            for (k in 0 until 3) {
+                val a = (phase + k / 3f) * tau
+                val center = Offset(w / 2 + kotlin.math.cos(a) * w * 0.32f, h / 2 + kotlin.math.sin(a * 1f) * h * 0.32f)
+                val cc = col(0.25f + k * 0.25f)
+                drawCircle(Brush.radialGradient(listOf(cc.copy(alpha = 0.85f), cc.copy(alpha = 0f)), center = center, radius = w * 0.62f),
+                    radius = w * 0.62f, center = center)
+            }
         }
         Spacer(Modifier.padding(top = IrisDimens.space6))
         IrisProgressBar(target, Modifier.width(168.dp), height = 4.dp, track = c.outline)

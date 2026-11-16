@@ -149,9 +149,75 @@ object DownloadSources {
     @Volatile var lastGood: DownloadSource? = null
     @Volatile var onLastGood: (DownloadSource) -> Unit = {}
 
-    private class Probe(val at: Long, val ms: Long?)
+    /**
+     * 2.6.7 测速收敛：按「源 + 仓库」只测一次，同一时间多个文件/分块共享同一次测速（进行中的也共享）。
+     * 通的结果本次 App 运行期一直复用；不通的 10 分钟后才重测（之前不通的每个文件都重测，HF 在国内必超时，
+     * 于是「下载链接不多却访问一大堆链接」）。
+     */
+    private class Probe(val at: Long, val result: kotlinx.coroutines.CompletableDeferred<Long?>) {
+        @Volatile var done = false
+        @Volatile var ms: Long? = null
+        val failed: Boolean get() = done && ms == null
+    }
     private val probes = HashMap<String, Probe>()
-    private const val PROBE_TTL = 10 * 60_000L
+    const val FAIL_TTL = 10 * 60_000L
+    /** Probes actually sent this run (tests / 日志). */
+    @Volatile var probesSent = 0; private set
+    /** 2.6.7: lines like 「测速 hf-mirror 320 ms」/「下载 hf-mirror …」 for logcat and the download detail. */
+    private val events = ArrayDeque<String>()
+    fun log(kind: String, line: String) {
+        synchronized(events) { events.addLast("$kind $line"); while (events.size > 50) events.removeFirst() }
+        runCatching { android.util.Log.i("IrisDl", "$kind $line") }
+    }
+    fun recentLog(): List<String> = synchronized(events) { events.toList() }
+    fun clearProbes() { synchronized(probes) { probes.clear() }; probesSent = 0 }
+
+    private fun probeKey(source: DownloadSource, repo: String) = source.name + "|" + repo
+    private fun repoOf(url: String) = parseHf(url)?.repo ?: url.substringBefore("/resolve/")
+
+    /** A latency measured elsewhere (MNN 列目录同时就是测速) — reused instead of a second probe. */
+    fun remember(source: DownloadSource, repo: String, ms: Long?, now: Long = System.currentTimeMillis()) {
+        synchronized(probes) {
+            val k = probeKey(source, repo)
+            val old = probes[k]
+            if (old == null || old.failed)
+                probes[k] = Probe(now, kotlinx.coroutines.CompletableDeferred(ms)).also { it.done = true; it.ms = ms }
+        }
+    }
+
+    /** Latency of [c]'s source for its repo: cached, shared while in flight, else one probe. */
+    suspend fun latency(c: SourceUrl, probe: (String) -> Long?, now: Long = System.currentTimeMillis(), repo: String = repoOf(c.url)): Long? {
+        val src = c.source ?: return null
+        val key = probeKey(src, repo)
+        var mine: Probe? = null
+        val d = synchronized(probes) {
+            val p = probes[key]
+            val stale = p != null && p.failed && now - p.at >= FAIL_TTL
+            if (p != null && !stale) p.result
+            else Probe(now, kotlinx.coroutines.CompletableDeferred()).also { mine = it; probes[key] = it }.result
+        }
+        mine?.let { m ->
+            probesSent++
+            val ms = try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { withTimeoutOrNull(PROBE_MS + 500L) { probe(c.url) } }
+            } catch (e: CancellationException) {
+                synchronized(probes) { if (probes[key] === m) probes.remove(key) }
+                m.done = true; m.result.complete(null); throw e
+            }
+            m.ms = ms; m.done = true
+            m.result.complete(ms)
+            log(SPEED, "${src.short} ${ms?.let { "$it ms" } ?: "×"}")
+        }
+        return d.await()
+    }
+
+    const val SPEED = "测速"
+    const val GET = "下载"
+
+    /** 「测速 魔搭 120 ms · hf-mirror 380 ms · HuggingFace ×」 for the download detail. Pure. */
+    fun speedLine(order: List<DownloadSource>, lat: Map<DownloadSource, Long?>): String =
+        com.iris.localai.I18n.s(com.iris.localai.R.string.dl267_speed) + " " +
+            order.joinToString(" · ") { s -> s.short + " " + (lat[s]?.let { "$it ms" } ?: "×") }
 
     /** Plain-language reason for a failed attempt (shown with the source name). */
     fun describe(e: Throwable): String = when (e) {
@@ -174,25 +240,22 @@ object DownloadSources {
         } catch (_: Exception) { null }
     }
 
-    /** Orders [cands] for 自动 by probing them in parallel (cached 10 min per source + repo). */
+    /** Orders [cands] for 自动 by probing them in parallel (2.6.7: once per source + repo per app run, see [latency]). */
     suspend fun probeOrder(cands: List<SourceUrl>, probe: (String) -> Long? = ::probeOnce): List<SourceUrl> {
         val hf = cands.filter { it.source != null }
         if (hf.size < 2) return cands
-        val now = System.currentTimeMillis()
         val lat = coroutineScope {
-            hf.map { c ->
-                async(kotlinx.coroutines.Dispatchers.IO) {
-                    val key = c.source!!.name + "|" + (parseHf(c.url)?.repo ?: c.url.substringBefore("/resolve/"))
-                    val cached = synchronized(probes) { probes[key]?.takeIf { now - it.at < PROBE_TTL } }
-                    val ms = cached?.ms ?: withTimeoutOrNull(PROBE_MS + 500L) { probe(c.url) }
-                    if (cached == null) synchronized(probes) { probes[key] = Probe(now, ms) }
-                    c.source to ms
-                }
-            }.awaitAll().toMap()
+            // key = the HF repo id for every source (a ModelScope url has its own path; MNN listings remember by HF id)
+            val repo = hf.firstNotNullOfOrNull { parseHf(it.url)?.repo }
+            hf.map { c -> async { c.source!! to latency(c, probe, repo = repo ?: repoOf(c.url)) } }.awaitAll().toMap()
         }
+        lastSpeed = speedLine(hf.map { it.source!! }, lat)
         val ranked = rank(hf.map { it.source!! }, lat)
         return ranked.map { s -> hf.first { it.source == s } }
     }
+
+    /** The last speed test's line (shown under the download until a source switch replaces it). */
+    @Volatile var lastSpeed: String? = null
 
     /**
      * Fetches one file trying [cands] in order. The `.part` file is kept between sources,
@@ -221,6 +284,7 @@ object DownloadSources {
         val part = HttpDownload.partFile(target)
         for ((i, c) in cands.withIndex()) {
             onSource(c)
+            log(GET, "${c.source?.short ?: c.label} ${target.name}")
             var last: Throwable? = null
             var stuck = 0 // failed tries in a row without progress
             var total = 0 // failed tries on this source

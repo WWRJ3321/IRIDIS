@@ -409,7 +409,8 @@ internal suspend fun ChatViewModel.runReply(requester: Requester, reply: ChatMes
         var plan: com.iris.localai.util.ContextPlan? = null
         // 1.7.8: reasoning budget on top of the answer's limit (0 = shared limit, ≤ 1.7.7).
         val eff0 = c.engine.effective()
-        val budget = if (!disableThinking && details?.supportsThinking == true) com.iris.localai.engine.ThinkLevel.budget(s.thinkLevel, s.thinkingBudget, details.thinkEffort) else 0
+        val budget = if (!disableThinking && details?.supportsThinking == true) com.iris.localai.engine.ThinkLevel.budget(s.thinkLevel, s.thinkingBudget, details.thinkEffort)
+            .let { b -> if (details.thinkEffort.isEmpty()) com.iris.localai.engine.CoolDown.thinkBudget(b, com.iris.localai.engine.CoolDown.hotNow()) else b } else 0 // 2.6.7 少算
         var thinkBudgetHit = false
 
         /**

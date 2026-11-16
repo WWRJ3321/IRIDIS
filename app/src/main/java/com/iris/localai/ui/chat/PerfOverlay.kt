@@ -64,7 +64,25 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
         Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bcf4c8) + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
         // 2.5.9: 电池温度（系统广播，约每次变化 0.1 °C 时更新）
         val temp = com.iris.localai.engine.ThermalGovernor.tempC
-        if (!temp.isNaN()) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.pf259_temp, String.format(Locale.US, "%.1f", temp)), style = style, color = if (temp >= 42f) c.danger else c.textSecondary)
+        // 2.6.7: 按「过热暂停」上限标色：接近（少算）橙、到上限红；降温中加标记
+        if (!temp.isNaN()) {
+            val lim = com.iris.localai.engine.CoolDown.limitC
+            val tone = PerfTone.of(temp, lim)
+            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.pf259_temp, String.format(Locale.US, "%.1f", temp)) +
+                (if (com.iris.localai.engine.CoolDown.cooling) " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_short) else ""),
+                style = style, color = when (tone) { 2 -> c.danger; 1 -> c.warning; else -> c.textSecondary })
+        }
         r?.gpuPercent?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4cb9bb, it), style = style, color = c.textSecondary) }
+    }
+}
+
+/** 2.6.7: 温度标色 0 正常 / 1 接近上限（已在少算）/ 2 到上限。上限关时沿用 42 °C 标红。纯函数。 */
+internal object PerfTone {
+    fun of(tempC: Float, limitC: Int): Int = when {
+        tempC.isNaN() -> 0
+        limitC <= 0 -> if (tempC >= 42f) 2 else 0
+        tempC >= limitC -> 2
+        com.iris.localai.engine.CoolDown.hot(tempC, limitC) -> 1
+        else -> 0
     }
 }

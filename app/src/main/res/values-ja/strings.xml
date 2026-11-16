@@ -2236,4 +2236,18 @@
     <string name="e265_full_only">Edge0 は full 版が必要です</string>
     <string name="e265_purpose">35B MoE・専門家を逐次読込・CPUのみ</string>
     <string name="e265_files">アセットフォルダ全体（「フォルダを読み込む」も可）</string>
+    <string name="dl267_speed">速度測定</string>
+    <string name="s267_fold">思考を自動で折りたたむ</string>
+    <string name="s267_fold_sub">回答が始まったら折りたたむ</string>
+    <string name="s267_ask">先に確認</string>
+    <string name="s267_ask_sub">情報不足なら先に質問</string>
+    <string name="cool267_title">高温で一時停止</string>
+    <string name="cool267_off">オフ</string>
+    <string name="cool267_on">%1$d°Cで回答後に停止、%2$d°Cで再開</string>
+    <string name="cool267_limit">温度上限</string>
+    <string name="cool267_note">減速ではなく停止と計算削減で冷却。上限付近では思考と回答が短くなります</string>
+    <string name="cool267_stop">上限で即停止</string>
+    <string name="cool267_stop_sub">回答の途中でも止める</string>
+    <string name="cool267_wait">冷却中 %1$s°C、%2$d°Cで再開</string>
+    <string name="cool267_short">冷却中</string>
 </resources>
