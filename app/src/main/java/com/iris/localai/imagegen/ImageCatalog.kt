@@ -200,13 +200,13 @@ object ImageCatalog {
     private fun hf(repo: String, rev: String, file: String) = "https://huggingface.co/$repo/resolve/$rev/$file"
 
     /**
-     * 2.4.0: libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI, CI build of native.yml) is not in the APK; it is
+     * 2.4.0: libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI; 2.7.0 adds nativeLoadEx, built by scripts/build-sd-native-arm64host.sh) is not in the APK; it is
      * downloaded with the first sd.cpp model and only loaded after its SHA-256 matches [SD_LIB_SHA256] (SdNative).
      */
-    const val SD_LIB_SHA256 = "1e5b7a0afc68a8c230ff883a78a43223955ab31166526e8a4429256fef221297"
+    const val SD_LIB_SHA256 = "eaabba922f7f15b4137f05dc2056026371e586159205096c2e994fe4787f7e9d"
     val SD_LIB = RemoteFile(
-        "https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-3e92bf9/prebuilt-native/arm64-v8a/libiris_sd.so",
-        63_630_040L, "$SHARED_DIR/libiris_sd-3e92bf9.so",
+        "https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-3e92bf9-b/prebuilt-native/arm64-v8a/libiris_sd.so",
+        70_842_296L, "$SHARED_DIR/libiris_sd-3e92bf9-b.so",
     )
 
     /**

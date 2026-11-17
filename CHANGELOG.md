@@ -2,6 +2,14 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.7.0 Beta（未真机测试）
+**本版未在真机测试。**
+
+- 通用导入：导入对话框去掉按模型牌子列的架构按钮，改为一次多选全部文件；读文件头（safetensors JSON 头 / GGUF 元数据与张量表）判断每个文件是单文件模型、扩散模型、LLM / T5 / CLIP-L / CLIP-G 编码器还是 VAE，NPU 包按文件名识别。默认步数 / CFG 按识别结果填，可改；导入前粗估内存，放不下直接提示。
+- libiris_sd.so 新增 nativeLoadEx（model / clip_l / clip_g / t5xxl 路径），SD1.x、SDXL 单文件与 SD3.5、FLUX.1、Chroma 等可导入；sd.cpp 仍为 3e92bf9。arm64 主机用 scripts/build-sd-native-arm64host.sh（clang-19 + NDK r27c sysroot）编译。新库需上传到 tag sdlib-3e92bf9-b。
+- 生图页：提示词下面直接是尺寸，负面提示词、扩写、步数、CFG、种子、低内存、参考图收进「高级」；生图自检折叠；没有模型时提示先下载或导入。已导入模型卡片不再标注架构名。
+- 修复：Qwen 分词器正则用了 Android 不支持的 UNICODE_CHARACTER_CLASS，类初始化失败，NPU 包生图报「b3.i0」（混淆后的类名）。
+
 ## 2.6.12 Beta（未真机测试）
 **本版未在真机测试。**
 

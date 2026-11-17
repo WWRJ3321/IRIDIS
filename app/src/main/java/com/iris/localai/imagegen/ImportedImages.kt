@@ -33,7 +33,15 @@ data class ImportedImage(
     val vae: String,
     val steps: Int,
     val cfg: Float,
+    /** 2.7.0 通用导入（arch = [AUTO]）：单文件模型与 CLIP / T5 编码器，均为相对路径，可空。 */
+    val model: String = "",
+    val clipL: String = "",
+    val clipG: String = "",
+    val t5: String = "",
+    val tagStyle: Boolean = false,
 ) {
+    val sdFiles: SdFiles get() = SdFiles(diffusion, llm, vae, model, clipL, clipG, t5)
+
     val archOrNull: ImportArch? get() = ImportArch.entries.firstOrNull { it.name == arch }
 
     fun toModel(): ImageModel {
@@ -41,15 +49,15 @@ data class ImportedImage(
         if (a?.npuPack == true) return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.QNN,
             files = emptyList(), fixedSize = null, defaultSteps = steps, defaultCfg = 1f,
-            note = a.label, minHtpArch = 79, tagStyle = true, imported = true, animaQnn = true,
+            note = "NPU", minHtpArch = 79, tagStyle = true, imported = true, animaQnn = true,
         )
         return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.SDCPP,
             files = listOf(ImageCatalog.SD_LIB), // 只有引擎库需要下载；权重是用户的文件
             fixedSize = null, defaultSteps = steps, defaultCfg = cfg,
-            note = (a?.label ?: arch),
-            sdFiles = SdFiles(diffusion, llm, vae),
-            tagStyle = a?.tagStyle == true,
+            note = "", // 2.7.0: 导入的模型不按牌子标注
+            sdFiles = sdFiles,
+            tagStyle = a?.tagStyle == true || tagStyle,
             imported = true,
         )
     }
@@ -57,6 +65,8 @@ data class ImportedImage(
 
 object ImportedImages {
     const val PREFIX = "imp-"
+    /** 2.7.0: 通用导入的 arch 字段值（不按牌子分）。 */
+    const val AUTO = "AUTO"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     @Volatile private var file: File? = null
@@ -105,7 +115,7 @@ object ImportedImages {
     fun encode(l: List<ImportedImage>): String = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(ImportedImage.serializer()), l)
     fun decode(s: String): List<ImportedImage> =
         json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(ImportedImage.serializer()), s)
-            .filter { isImported(it.id) && safeRel(it.diffusion) && safeRel(it.llm) && safeRel(it.vae) }
+            .filter { e -> isImported(e.id) && e.sdFiles.paths().all(::safeRel) && (e.diffusion.isNotEmpty() || e.model.isNotEmpty() || e.archOrNull?.npuPack == true) }
 
     fun newId(seed: Long = System.nanoTime()): String = PREFIX + java.lang.Long.toHexString(seed and 0xFFFFFFFFL).padStart(8, '0')
 

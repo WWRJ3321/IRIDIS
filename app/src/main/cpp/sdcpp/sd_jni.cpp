@@ -132,6 +132,41 @@ JNI_FN(nativeLoad)(JNIEnv *env, jclass, jstring diffusion, jstring llm, jstring 
     return (jlong) (intptr_t) ctx;
 }
 
+#ifndef IRIS_SDQ
+/**
+ * 2.7.0: general import. Any path may be empty. [model] is a single-file checkpoint (SD1.x/SDXL, or SD3.5/FLUX.1
+ * with separate encoders); [clipL]/[clipG]/[t5] are the CLIP/T5 encoders; [diffusion]/[llm]/[vae] as in nativeLoad.
+ * sd.cpp detects the architecture from the tensor names.
+ */
+JNIEXPORT jlong JNICALL
+JNI_FN(nativeLoadEx)(JNIEnv *env, jclass, jstring model, jstring clip_l, jstring clip_g, jstring t5,
+                     jstring diffusion, jstring llm, jstring vae, jstring backend, jint threads, jboolean flash_attn) {
+    init_once();
+    set_error("");
+    JStr m(env, model), cl(env, clip_l), cg(env, clip_g), t(env, t5), d(env, diffusion), l(env, llm), v(env, vae), b(env, backend);
+    sd_ctx_params_t p;
+    sd_ctx_params_init(&p);
+    p.model_path = m.get();
+    p.clip_l_path = cl.get();
+    p.clip_g_path = cg.get();
+    p.t5xxl_path = t.get();
+    p.diffusion_model_path = d.get();
+    p.llm_path = l.get();
+    p.vae_path = v.get();
+    p.backend = b.get();
+    p.n_threads = threads > 0 ? threads : sd_get_num_physical_cores();
+    p.enable_mmap = true;
+    p.flash_attn = flash_attn;
+    p.diffusion_flash_attn = flash_attn;
+    sd_ctx_t *ctx = new_sd_ctx(&p);
+    if (!ctx) {
+        std::lock_guard<std::mutex> lk(g_err_mu);
+        if (g_last_error.empty()) g_last_error = "new_sd_ctx failed";
+    }
+    return (jlong) (intptr_t) ctx;
+}
+#endif
+
 JNIEXPORT void JNICALL
 JNI_FN(nativeFree)(JNIEnv *, jclass, jlong h) {
     if (h) free_sd_ctx((sd_ctx_t *) (intptr_t) h);

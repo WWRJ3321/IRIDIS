@@ -2171,4 +2171,14 @@
     <string name="ig270_files">包內檔案</string>
     <string name="ig270_files_val">已選 %1$d 個</string>
     <string name="ig270_npu_missing">缺檔案：%1$s</string>
+    <string name="ig27_hint">選模型檔案（可多選）：主模型、文字編碼器、VAE 一起選；NPU 包選包裡的全部檔案</string>
+    <string name="ig27_files">已選檔案</string>
+    <string name="ig27_clear">清空</string>
+    <string name="ig27_npu">NPU 包</string>
+    <string name="ig27_unknown">無法識別：%1$s</string>
+    <string name="ig27_no_main">沒有主模型</string>
+    <string name="ig27_two_main">選了不只一個主模型</string>
+    <string name="ig27_too_big">模型太大（約 %1$s GB），這台手機記憶體放不下</string>
+    <string name="ig27_start">先下載一個模型，或點最後的「匯入模型」用自己的檔案</string>
+    <string name="st27_embed">知識庫檢索模型</string>
 </resources>

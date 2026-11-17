@@ -2171,4 +2171,14 @@
     <string name="ig270_files">Pack files</string>
     <string name="ig270_files_val">%1$d selected</string>
     <string name="ig270_npu_missing">Missing: %1$s</string>
+    <string name="ig27_hint">Pick the model files (multi-select): main model, text encoder and VAE together; for an NPU pack, all its files</string>
+    <string name="ig27_files">Files</string>
+    <string name="ig27_clear">Clear</string>
+    <string name="ig27_npu">NPU pack</string>
+    <string name="ig27_unknown">Unrecognized: %1$s</string>
+    <string name="ig27_no_main">No main model</string>
+    <string name="ig27_two_main">More than one main model</string>
+    <string name="ig27_too_big">Model too large (about %1$s GB) for this phone\'s memory</string>
+    <string name="ig27_start">Download a model first, or tap “Import model” at the end to use your own files</string>
+    <string name="st27_embed">Knowledge base search model</string>
 </resources>

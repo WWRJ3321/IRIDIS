@@ -92,7 +92,7 @@ object StorageUsage {
 
     // ---------------------------------------------------------------- 2.3.1 leftovers in the models dirs
 
-    enum class LeftoverKind { PARTIAL, PROJECTOR, UNKNOWN }
+    enum class LeftoverKind { PARTIAL, PROJECTOR, EMBED, UNKNOWN }
 
     /**
      * One file / folder in a models dir that is not a model and not paired with one.
@@ -156,6 +156,7 @@ object StorageUsage {
                 val kind = when {
                     isPartialName(f.name) -> LeftoverKind.PARTIAL
                     com.iris.localai.data.isProjectorFile(f.name) -> LeftoverKind.PROJECTOR
+                    com.iris.localai.knowledge.KbEmbedModels.isEmbedName(f.name) -> LeftoverKind.EMBED // 2.7.0: 知识库嵌入模型不是「无法识别」
                     else -> LeftoverKind.UNKNOWN
                 }
                 Leftover(f, sizeOf(f), kind, active = kind == LeftoverKind.PARTIAL && f.name in protectedParts, shared = shared)

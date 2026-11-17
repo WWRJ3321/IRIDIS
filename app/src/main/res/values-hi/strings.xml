@@ -2171,4 +2171,14 @@
     <string name="ig270_files">पैक फ़ाइलें</string>
     <string name="ig270_files_val">%1$d चुनी गईं</string>
     <string name="ig270_npu_missing">नहीं मिली: %1$s</string>
+    <string name="ig27_hint">मॉडल फ़ाइलें चुनें (एक से अधिक): मुख्य मॉडल, टेक्स्ट एन्कोडर और VAE एक साथ; NPU पैक के लिए उसकी सभी फ़ाइलें</string>
+    <string name="ig27_files">फ़ाइलें</string>
+    <string name="ig27_clear">साफ़ करें</string>
+    <string name="ig27_npu">NPU पैक</string>
+    <string name="ig27_unknown">पहचान नहीं हुई: %1$s</string>
+    <string name="ig27_no_main">मुख्य मॉडल नहीं है</string>
+    <string name="ig27_two_main">एक से अधिक मुख्य मॉडल</string>
+    <string name="ig27_too_big">मॉडल बहुत बड़ा है (लगभग %1$s GB), इस फ़ोन की मेमोरी में नहीं आएगा</string>
+    <string name="ig27_start">पहले एक मॉडल डाउनलोड करें, या अपनी फ़ाइलों के लिए आख़िर में “मॉडल इम्पोर्ट करें” दबाएँ</string>
+    <string name="st27_embed">नॉलेज बेस खोज मॉडल</string>
 </resources>

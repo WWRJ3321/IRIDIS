@@ -70,6 +70,9 @@ object KbEmbedModels {
     /** A model file (or its folder) that is one of [ALL]: never listed as a chat model. */
     fun isEmbedFile(name: String): Boolean = ALL.any { it.file.equals(name, ignoreCase = true) }
 
+    /** 2.7.0: the file or its catalog folder (存储空间 classifies loose entries by name). */
+    fun isEmbedName(name: String): Boolean = isEmbedFile(name) || ALL.any { folderOf(it).equals(name, ignoreCase = true) }
+
     /** The folder MnnHub.downloadGguf writes a catalog GGUF into (GgufFolder.folderFor). */
     fun folderOf(m: Model): String = m.file.removeSuffix(".gguf")
 

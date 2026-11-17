@@ -12,6 +12,7 @@ import com.iris.localai.imagegen.ImageGenEngine
 import com.iris.localai.imagegen.ImageGenRepository
 import com.iris.localai.imagegen.ImageModel
 import com.iris.localai.imagegen.ImageRequest
+import com.iris.localai.imagegen.FileRole as FR
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -290,12 +291,6 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     /** Copies the picked reference image into the cache (the Uri grant does not outlive the picker). */
     // ---- 2.6.9: 导入生图模型（用户自备文件，App 不托管） ----
 
-    /** 该架构的文本编码器 / VAE 是否已在写入根目录里（可复用）。 */
-    suspend fun reusable(arch: com.iris.localai.imagegen.ImportArch): Pair<Boolean, Boolean> = withContext(Dispatchers.IO) {
-        val root = repo.modelsLocation().dir
-        File(root, arch.llmPath).isFile to File(root, arch.vaePath).isFile
-    }
-
     /** 文件显示名（选完文件后在对话框里显示）。 */
     suspend fun displayName(uri: Uri): String = withContext(Dispatchers.IO) { nameOf(uri) }
 
@@ -311,8 +306,55 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.getOrNull() ?: -1L
 
-    fun importModel(arch: com.iris.localai.imagegen.ImportArch, name: String, main: Uri, llm: Uri?, vae: Uri?, steps: Int, cfg: Float) {
-        if (_ui.value.importing != null) return
+    /** 2.7.0: 选中的一批文件读头后的识别结果（对话框显示每个文件的用途，并填默认步数 / CFG）。 */
+    data class ImportPlan(
+        val files: List<Triple<Uri, String, com.iris.localai.imagegen.FileRole>>,
+        val npu: Boolean = false,
+        val main: Uri? = null,
+        val family: com.iris.localai.imagegen.Family = com.iris.localai.imagegen.Family.DIT,
+        val defaults: com.iris.localai.imagegen.Defaults = com.iris.localai.imagegen.Defaults(20, 7f, false),
+        /** 复用已下载的文本编码器 / VAE（相对路径，空 = 不复用）。 */
+        val reuseLlm: String = "",
+        val reuseVae: String = "",
+        val error: String? = null,
+    )
+
+    suspend fun inspect(uris: List<Uri>): ImportPlan = withContext(Dispatchers.IO) {
+        val det = com.iris.localai.imagegen.ImportDetect
+        val app = getApplication<Application>()
+        val heads = HashMap<Uri, com.iris.localai.imagegen.FileHead?>()
+        val files = uris.distinct().map { u ->
+            val n = nameOf(u)
+            val h = if (det.isNpuFile(n)) null else runCatching { app.contentResolver.openInputStream(u)?.use { det.readHead(n, it.buffered(1 shl 16)) } }.getOrNull()
+            heads[u] = h
+            Triple(u, n, det.role(n, h))
+        }
+        if (files.any { it.third == com.iris.localai.imagegen.FileRole.NPU }) return@withContext ImportPlan(files, npu = true, defaults = com.iris.localai.imagegen.Defaults(8, 1f, true))
+        fun s(id: Int, vararg a: Any) = com.iris.localai.I18n.s(id, *a)
+        files.firstOrNull { it.third == com.iris.localai.imagegen.FileRole.UNKNOWN }?.let { return@withContext ImportPlan(files, error = s(com.iris.localai.R.string.ig27_unknown, it.second)) }
+        val mains = files.filter { it.third == com.iris.localai.imagegen.FileRole.CHECKPOINT || it.third == com.iris.localai.imagegen.FileRole.DIFFUSION }
+        if (mains.size != 1) return@withContext ImportPlan(files, error = s(if (mains.isEmpty()) com.iris.localai.R.string.ig27_no_main else com.iris.localai.R.string.ig27_two_main))
+        val m = mains[0]
+        val fam = det.family(m.third, heads[m.first])
+        val root = repo.modelsLocation().dir
+        val (rl, rv) = det.reusePaths(fam)
+        val roles = files.map { it.third }.toSet()
+        val enc = roles.any { it == com.iris.localai.imagegen.FileRole.LLM || it == com.iris.localai.imagegen.FileRole.T5 || it == com.iris.localai.imagegen.FileRole.CLIP_L || it == com.iris.localai.imagegen.FileRole.CLIP_G }
+        val reuseLlm = if (!enc && rl.isNotEmpty() && File(root, rl).isFile) rl else ""
+        val reuseVae = if (com.iris.localai.imagegen.FileRole.VAE !in roles && rv.isNotEmpty() && File(root, rv).isFile) rv else ""
+        var err: String? = null
+        if (m.third == com.iris.localai.imagegen.FileRole.DIFFUSION && ((!enc && reuseLlm.isEmpty()) || (com.iris.localai.imagegen.FileRole.VAE !in roles && reuseVae.isEmpty())))
+            err = s(com.iris.localai.R.string.ig269_need_parts)
+        val total = files.sumOf { sizeOf(it.first).coerceAtLeast(0L) } + listOf(reuseLlm, reuseVae).filter { it.isNotEmpty() }.sumOf { File(root, it).length() }
+        val mem = runCatching { android.app.ActivityManager.MemoryInfo().also { (app.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }.totalMem }.getOrDefault(0L)
+        if (err == null && det.tooBig(total, mem)) err = s(com.iris.localai.R.string.ig27_too_big, String.format(java.util.Locale.US, "%.1f", total / 1e9))
+        ImportPlan(files, main = m.first, family = fam, defaults = det.defaults(fam, m.second), reuseLlm = reuseLlm, reuseVae = reuseVae, error = err)
+    }
+
+    /** 2.7.0: 按 [inspect] 的识别结果复制文件并登记（不按牌子分）。 */
+    fun importAuto(plan: ImportPlan, name: String, steps: Int, cfg: Float) {
+        if (plan.npu) { importNpuPack(name, plan.files.map { it.first }, steps); return }
+        if (_ui.value.importing != null || plan.error != null || plan.main == null) return
         val imp = com.iris.localai.imagegen.ImportedImages
         viewModelScope.launch {
             val id = imp.newId()
@@ -320,28 +362,22 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             val dir = File(root, id)
             val err = withContext(Dispatchers.IO) {
                 runCatching {
-                    val parts = listOfNotNull(main, llm, vae)
-                    val total = parts.sumOf { sizeOf(it).coerceAtLeast(0L) }.coerceAtLeast(1L)
+                    val total = plan.files.sumOf { sizeOf(it.first).coerceAtLeast(0L) }.coerceAtLeast(1L)
                     var done = 0L
-                    fun copy(uri: Uri): String {
-                        val fn = imp.safeFileName(nameOf(uri))
+                    fun copy(uri: Uri, fn0: String, idx: Int): String {
+                        val fn = imp.safeFileName(fn0)
                         if (!imp.acceptable(fn)) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_ext, fn))
                         dir.mkdirs()
-                        val out = File(dir, fn).let { if (it.exists()) File(dir, "${parts.indexOf(uri)}-$fn") else it }
+                        val out = File(dir, fn).let { if (it.exists()) File(dir, "$idx-$fn") else it }
                         val part = File(dir, out.name + ".part")
                         _ui.update { it.copy(importFile = fn) }
                         getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
                             part.outputStream().use { os ->
                                 val buf = ByteArray(1 shl 20)
-                                var first = true
                                 var last = 0L
                                 while (true) {
                                     val n = ins.read(buf)
                                     if (n < 0) break
-                                    if (first) {
-                                        if (!imp.headerOk(fn, buf.copyOf(n.coerceAtMost(16)))) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
-                                        first = false
-                                    }
                                     os.write(buf, 0, n); done += n
                                     val now = System.currentTimeMillis()
                                     if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
@@ -352,12 +388,17 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                         return "$id/${out.name}"
                     }
                     _ui.update { it.copy(importing = 0f) }
-                    val d = copy(main)
-                    val l = llm?.let(::copy) ?: arch.llmPath
-                    val v = vae?.let(::copy) ?: arch.vaePath
-                    if (!File(root, l).isFile || !File(root, v).isFile) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_need_parts))
-                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, imp.nameFromFile(d.substringAfterLast('/'))), arch.name, d, l, v,
-                        steps.coerceIn(1, 100), cfg.coerceIn(0f, 30f)))
+                    val rel = HashMap<com.iris.localai.imagegen.FileRole, String>()
+                    plan.files.forEachIndexed { i, (u, n, r) -> rel[r] = copy(u, n, i) }
+                    val mainRel = rel[FR.CHECKPOINT] ?: rel[FR.DIFFUSION]!!
+                    val isCkpt = rel.containsKey(FR.CHECKPOINT)
+                    imp.put(com.iris.localai.imagegen.ImportedImage(
+                        id = id, name = imp.cleanName(name, imp.nameFromFile(mainRel.substringAfterLast('/'))), arch = imp.AUTO,
+                        diffusion = if (isCkpt) "" else mainRel, llm = rel[FR.LLM] ?: plan.reuseLlm, vae = rel[FR.VAE] ?: plan.reuseVae,
+                        steps = steps.coerceIn(1, 100), cfg = cfg.coerceIn(0f, 30f),
+                        model = if (isCkpt) mainRel else "", clipL = rel[FR.CLIP_L] ?: "", clipG = rel[FR.CLIP_G] ?: "", t5 = rel[FR.T5] ?: "",
+                        tagStyle = plan.defaults.tagStyle,
+                    ))
                     null
                 }.exceptionOrNull()
             }
@@ -408,7 +449,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                     val miss = com.iris.localai.imagegen.AnimaQnnFiles(dir).missing()
                     if (miss.isNotEmpty()) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_missing, miss.joinToString()))
                     val a = com.iris.localai.imagegen.ImportArch.ANIMA_NPU
-                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, a.label), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
+                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, com.iris.localai.I18n.s(com.iris.localai.R.string.ig27_npu)), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
                     null
                 }.exceptionOrNull()
             }

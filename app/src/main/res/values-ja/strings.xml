@@ -2171,4 +2171,14 @@
     <string name="ig270_files">パックのファイル</string>
     <string name="ig270_files_val">%1$d 個選択</string>
     <string name="ig270_npu_missing">不足：%1$s</string>
+    <string name="ig27_hint">モデルファイルを選択（複数可）：メインモデル・テキストエンコーダー・VAE をまとめて。NPU パックはすべてのファイル</string>
+    <string name="ig27_files">ファイル</string>
+    <string name="ig27_clear">クリア</string>
+    <string name="ig27_npu">NPU パック</string>
+    <string name="ig27_unknown">認識できません：%1$s</string>
+    <string name="ig27_no_main">メインモデルがありません</string>
+    <string name="ig27_two_main">メインモデルが複数あります</string>
+    <string name="ig27_too_big">モデルが大きすぎます（約 %1$s GB）。この端末のメモリに収まりません</string>
+    <string name="ig27_start">まずモデルをダウンロードするか、最後の「モデルをインポート」で自分のファイルを使います</string>
+    <string name="st27_embed">ナレッジベース検索モデル</string>
 </resources>

@@ -7,7 +7,14 @@ import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
 /** 2.4.0: which files of a stable-diffusion.cpp model play which part (paths relative to the imagegen root). */
-data class SdFiles(val diffusion: String, val llm: String, val vae: String)
+data class SdFiles(
+    val diffusion: String, val llm: String, val vae: String,
+    /** 2.7.0: 单文件模型（SD1.x/SDXL 等）与 CLIP / T5 编码器，空串 = 不用。 */
+    val model: String = "", val clipL: String = "", val clipG: String = "", val t5: String = "",
+) {
+    fun paths(): List<String> = listOf(diffusion, llm, vae, model, clipL, clipG, t5).filter { it.isNotEmpty() }
+    val extended: Boolean get() = model.isNotEmpty() || clipL.isNotEmpty() || clipG.isNotEmpty() || t5.isNotEmpty()
+}
 
 /**
  * Pure rules of the sd.cpp engine (unit-tested): the backend to try and when a Vulkan crash forces CPU.
@@ -222,10 +229,12 @@ class SdCppEngine(
     }
 
     private fun ensureLoaded(root: File, f: SdFiles, backend: String): Long? {
-        val key = "$backend|${File(root, f.diffusion).path}"
+        val key = "$backend|${f.paths().joinToString("|")}"
         if (handle != 0L && loadedKey == key) return handle
         freeLocked()
-        val h = api.load(File(root, f.diffusion).path, File(root, f.llm).path, File(root, f.vae).path, backend, sdThreads, true)
+        fun p(rel: String) = if (rel.isEmpty()) "" else File(root, rel).path
+        val h = if (f.extended) api.loadEx(p(f.model), p(f.clipL), p(f.clipG), p(f.t5), p(f.diffusion), p(f.llm), p(f.vae), backend, sdThreads, true)
+            else api.load(p(f.diffusion), p(f.llm), p(f.vae), backend, sdThreads, true)
         if (h == 0L) return null
         handle = h; loadedKey = key
         return h
