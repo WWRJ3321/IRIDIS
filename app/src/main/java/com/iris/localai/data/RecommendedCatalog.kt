@@ -208,11 +208,10 @@ object RecommendedCatalog {
         ),
         // ---- 生图 ----
         Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
-        Item("anything-v5-qnn", Section.IMAGE, "Anything V5.0", com.iris.localai.I18n.s(com.iris.localai.R.string.data_479b48), gb(0.86), Engine.NPU, Kind.Image("anything-v5-qnn"), top = true),
     ) + voiceItems() + translateItems() + com.iris.localai.knowledge.KbEmbedModels.catalogItems() // 2.5.1 知识库嵌入模型
 
     /** 语音: every downloadable voice pack (识别 / 朗读 / 音色克隆), same order as the 语音 page. */
-    private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.map { p ->
+    private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.filter { !it.delisted }.map { p ->
         val kind = when (p.kind) {
             com.iris.localai.voice.VoiceKind.ASR -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c306e)
             com.iris.localai.voice.VoiceKind.TTS -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f)

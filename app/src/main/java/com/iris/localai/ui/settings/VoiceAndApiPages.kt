@@ -188,7 +188,7 @@ fun VoicePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 val customSel = remember(s.ttsPack, customList) { vm.activeCustomTts() }
                 val customOn = kind == VoiceKind.TTS && customSel != null
                 SettingsGroup {
-                    VoicePack.entries.filter { it.kind == kind }.forEachIndexed { i, pack ->
+                    VoicePack.entries.filter { it.kind == kind && (!it.delisted || packs[it] == PackState.Installed) }.forEachIndexed { i, pack ->
                         if (i > 0) Divider()
                         PackRow(
                             pack, packs[pack] ?: PackState.NotInstalled, vm.packBytes(pack), selected = pack == active && !customOn && !(kind == VoiceKind.TTS && cloneOn),

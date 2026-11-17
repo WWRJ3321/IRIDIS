@@ -42,6 +42,10 @@ interface QnnGraph : Closeable {
 /** Opens context binaries (native: [NativeQnnGraphLoader]; tests: a fake). */
 fun interface QnnGraphLoader {
     fun open(bin: File): QnnGraph
+    /** 2.6.12: 多图文件按名字挑一个（空名 = 第一个）。 */
+    fun open(bin: File, graph: String): QnnGraph = open(bin)
+    /** 2.6.12: 文件里所有图的名字。 */
+    fun graphNames(bin: File): List<String> = emptyList()
 }
 
 /** Parsed `nativeProbe` result. */
@@ -112,6 +116,8 @@ object QnnNative {
 
     @JvmStatic external fun nativeProbe(runtimeDir: String): String
     @JvmStatic external fun nativeOpen(runtimeDir: String, binPath: String): Long
+    @JvmStatic external fun nativeOpenGraph(runtimeDir: String, binPath: String, graph: String): Long
+    @JvmStatic external fun nativeGraphNames(runtimeDir: String, binPath: String): String?
     @JvmStatic external fun nativeLastError(): String?
     @JvmStatic external fun nativeInfo(handle: Long): String?
     @JvmStatic external fun nativeExecute(handle: Long, inputs: Array<ByteBuffer>, outputs: Array<ByteBuffer>): String?
@@ -170,9 +176,9 @@ class NativeQnnGraph private constructor(private var handle: Long) : QnnGraph {
     }
 
     companion object {
-        fun open(runtimeDir: File, bin: File): NativeQnnGraph {
+        fun open(runtimeDir: File, bin: File, graph: String = ""): NativeQnnGraph {
             QnnNative.loadError?.let { throw IllegalStateException("无法加载 libiris_imagegen：$it") }
-            val h = QnnNative.nativeOpen(runtimeDir.path, bin.path)
+            val h = if (graph.isEmpty()) QnnNative.nativeOpen(runtimeDir.path, bin.path) else QnnNative.nativeOpenGraph(runtimeDir.path, bin.path, graph)
             if (h == 0L) throw IllegalStateException("${bin.name}：${QnnNative.nativeLastError() ?: "QNN 打开失败"}")
             return NativeQnnGraph(h)
         }
@@ -181,4 +187,11 @@ class NativeQnnGraph private constructor(private var handle: Long) : QnnGraph {
 
 class NativeQnnGraphLoader(private val runtimeDir: File) : QnnGraphLoader {
     override fun open(bin: File): QnnGraph = NativeQnnGraph.open(runtimeDir, bin)
+    override fun open(bin: File, graph: String): QnnGraph = NativeQnnGraph.open(runtimeDir, bin, graph)
+    override fun graphNames(bin: File): List<String> {
+        QnnNative.loadError?.let { throw IllegalStateException("无法加载 libiris_imagegen：$it") }
+        val s = QnnNative.nativeGraphNames(runtimeDir.path, bin.path)
+            ?: throw IllegalStateException("${bin.name}：${QnnNative.nativeLastError() ?: "读取失败"}")
+        return s.split('\n').filter { it.isNotEmpty() }
+    }
 }

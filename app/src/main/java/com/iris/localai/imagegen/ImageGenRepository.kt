@@ -39,6 +39,8 @@ object ImageGenFiles {
      * Models waiting for the Hexagon runtime have no files yet, so never count as downloaded.
      */
     fun isDownloaded(imagegenRoot: File, model: ImageModel): Boolean {
+        // 2.6.12: 导入的 NPU 包 = 文件夹里该有的文件都在
+        if (model.imported && model.animaQnn) return AnimaQnnFiles(modelDir(imagegenRoot, model)).missing().isEmpty()
         // 2.6.9: 导入的模型 = 三个文件都在（大小不定）+ 引擎库已下载
         if (model.imported) return model.sdFiles?.let { f -> listOf(f.diffusion, f.llm, f.vae).all { File(imagegenRoot, it).isFile } } == true &&
             File(imagegenRoot, ImageCatalog.SD_LIB.path).let { it.isFile && it.length() == ImageCatalog.SD_LIB.size }
@@ -112,7 +114,11 @@ object ImageGenFiles {
 
 /** 生图 state on disk: catalog, which models are downloaded, results and their history. */
 class ImageGenRepository(internal val context: Context) {
-    val catalog: List<ImageModel> get() = ImageCatalog.all
+    val catalog: List<ImageModel> get() = ImageCatalog.all.let { a ->
+        val roots = modelsLocation().listDirs
+        val old = ImageCatalog.legacy.filter { m -> roots.any { ImageGenFiles.isDownloaded(it, m) } }
+        if (old.isEmpty()) a else a + old
+    }
 
     private val privateModels: File by lazy {
         File(context.getExternalFilesDir(ModelDirs.SUB) ?: File(context.filesDir, ModelDirs.SUB), "imagegen")
@@ -227,6 +233,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     private val repo by lazy { ImageGenRepository(context) }
     private val stub = StubEngine()
     @Volatile private var qnn: QnnSdEngine? = null
+    @Volatile private var anima: AnimaQnnEngine? = null
     @Volatile private var active: ImageGenEngine? = null
 
     @Volatile private var sd: SdCppEngine? = null
@@ -259,6 +266,8 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
             return sdEngine()
         }
         if (model.backend != Backend.QNN) return stub
+        if (model.animaQnn) return animaEngine()
+        anima?.release()
         qnn?.let { return it }
         val probe = DeviceProbe.nativeProbe(context)
         val dir = DeviceProbe.qnnRuntimeDir(context.filesDir, probe.htpArch ?: DeviceProbe.htpArch(DeviceProbe.socModel()))
@@ -305,7 +314,27 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     val busy: Boolean get() = active != null || remote?.busy == true
 
     /** Frees the NPU graphs (≈1.1 GB) now, until the next generation. */
-    fun release() { remote?.release(); qnn?.release(); sd?.release() }
+    fun release() { remote?.release(); qnn?.release(); anima?.release(); sd?.release() }
+
+    /**
+     * 2.6.12: Anima NPU 包只认 HTP v79；包按 QAIRT 2.50.40 编译，优先用 GenieX 运行库（同版本），没有再用 QNN 运行库。
+     * libiris_imagegen 的运行库全进程只有一份，切过来前先放掉 SD1.5 的图。
+     */
+    private fun animaEngine(): ImageGenEngine {
+        anima?.let { return it }
+        val arch = DeviceProbe.htpArch(DeviceProbe.socModel())
+        if (arch != 79) return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_chip))
+        val gx = File(context.filesDir, "geniex").listFiles().orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("rt-") && it.name.endsWith("-v79") }
+            .firstOrNull { d -> listOf("libQnnHtp.so", "libQnnSystem.so", "libQnnHtpV79Stub.so", "libQnnHtpV79Skel.so").all { File(d, it).isFile } }
+        val dir = gx ?: DeviceProbe.qnnRuntimeDir(context.filesDir, 79)
+            ?: return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_runtime))
+        QnnNative.loadError?.let { return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6b0e80, it)) }
+        return synchronized(this) {
+            qnn?.release()
+            anima ?: AnimaQnnEngine(modelDir = { repo.downloadedDir(it) }, loader = NativeQnnGraphLoader(dir), perf = NativeHtpPerf).also { anima = it }
+        }
+    }
 
     /** Leaving the 生图 page: free the NPU graphs now, or as soon as a running generation ends. */
     fun releaseWhenIdle() { remote?.releaseWhenIdle(); idle.releaseWhenIdle() }

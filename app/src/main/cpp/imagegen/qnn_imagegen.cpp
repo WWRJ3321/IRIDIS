@@ -1,715 +1,693 @@
-// libiris_imagegen.so — thin QNN (Qualcomm AI Engine Direct) runner for AI Hub context binaries.
+// libiris_imagegen.so — IRIDIS 的 QNN context binary 运行器（2.6.12 全新编写，Apache-2.0）。
 //
-// Native only loads QNN and executes the graphs of a context binary; the diffusion loop
-// (tokenizer, scheduler, CFG, quantisation) lives in Kotlin (imagegen/QnnSdEngine.kt).
+// 只依赖 Qualcomm 公开的 QNN C API 头文件（third_party/qnn-api，不提交进仓库）。运行库
+// libQnnHtp.so / libQnnSystem.so / libQnnHtpV*Stub.so 由用户下载到 App 私有目录，这里按完整路径 dlopen，
+// 不链接任何高通库，所以在所有 arm64 设备上都能加载。
 //
-// Nothing Qualcomm-specific is linked: libQnnHtp / libQnnSystem / libcdsprpc are opened with
-// dlopen and every entry point is resolved with dlsym, so this library loads (and reports
-// "unsupported") on any arm64 device.
+// JNI（com.iris.localai.imagegen.QnnNative）：
+//   nativeProbe(dir)                -> JSON {backendOk, deviceOk, error?, cdsp:{present, unsignedPd, arch}}
+//   nativeOpen(dir, bin)            -> 句柄（文件里的第一个图），0 = 失败（nativeLastError）
+//   nativeOpenGraph(dir, bin, name) -> 句柄（按名字挑图；空名 = 第一个）
+//   nativeGraphNames(dir, bin)      -> 图名，'\n' 分隔；失败为 null
+//   nativeInfo(h)                   -> JSON {graph, inputs:[{name,dims,dtype,bytes,scale?,offset?}], outputs:[…]}
+//   nativeExecute(h, ins, outs)     -> null = 成功，否则错误信息（缓冲区为 direct ByteBuffer）
+//   nativeClose(h)
+//   nativeSetPerf(burst)            -> null = 已投票，否则原因
 //
-// JNI surface (com.iris.localai.imagegen.QnnNative):
-//   nativeProbe(runtimeDir) -> JSON {backendOk, deviceOk, error, cdsp:{present, unsignedPd, arch}}
-//   nativeOpen(runtimeDir, binPath) -> handle (0 on failure; nativeLastError() says why)
-//   nativeInfo(handle) -> JSON {graph, inputs:[…], outputs:[…]} (name, dims, dtype, bytes, scale, offset)
-//   nativeExecute(handle, ByteBuffer[] inputs, ByteBuffer[] outputs) -> null or error string
-//   nativeClose(handle)
-//   nativeSetPerf(burst) -> null or error string (HTP DCVS v3 vote: burst before a generation, relax after)
+// 运行库全进程一份：没有打开的图时可以换目录（先整个卸载再加载新的）。
 
 #include <jni.h>
-#include <android/log.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <dirent.h>
+#include <android/log.h>
 
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <vector>
+#include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "QnnInterface.h"
 #include "QnnTypes.h"
-#include "System/QnnSystemInterface.h"
-#include "System/QnnSystemContext.h"
+#include "HTP/QnnHtpCommon.h"
 #include "HTP/QnnHtpDevice.h"
 #include "HTP/QnnHtpPerfInfrastructure.h"
+#include "System/QnnSystemInterface.h"
 
 #define TAG "iris_imagegen"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+
+// 不依赖 C++ 标准库（只用 bionic），所以这里有一点点自己的容器。
+void* operator new(size_t n) { void* p = malloc(n ? n : 1); if (!p) abort(); return p; }
+void operator delete(void* p) noexcept { free(p); }
+void operator delete(void* p, size_t) noexcept { free(p); }
+inline void* operator new(size_t, void* p) noexcept { return p; }
 
 namespace {
 
-// ---------------------------------------------------------------- small helpers
+class Str {
+public:
+    Str() { set("", 0); }
+    Str(const char* c) { set(c ? c : "", c ? strlen(c) : 0); }
+    Str(const Str& o) { set(o.p_, o.n_); }
+    Str& operator=(const Str& o) { if (this != &o) { free(p_); set(o.p_, o.n_); } return *this; }
+    ~Str() { free(p_); }
+    const char* c_str() const { return p_; }
+    size_t size() const { return n_; }
+    bool empty() const { return n_ == 0; }
+    bool operator==(const Str& o) const { return n_ == o.n_ && memcmp(p_, o.p_, n_) == 0; }
+    bool operator!=(const Str& o) const { return !(*this == o); }
+    Str& append(const char* c, size_t k) {
+        if (n_ + k + 1 > cap_) { cap_ = (n_ + k + 1) * 2; p_ = (char*) realloc(p_, cap_); if (!p_) abort(); }
+        memcpy(p_ + n_, c, k); n_ += k; p_[n_] = 0; return *this;
+    }
+    Str& operator+=(const Str& o) { return append(o.p_, o.n_); }
+    Str& operator+=(const char* c) { return append(c, strlen(c)); }
+    Str& operator+=(char c) { return append(&c, 1); }
+private:
+    void set(const char* c, size_t k) { cap_ = k + 1; p_ = (char*) malloc(cap_); if (!p_) abort(); memcpy(p_, c, k); p_[k] = 0; n_ = k; }
+    char* p_ = nullptr; size_t n_ = 0, cap_ = 0;
+};
+inline Str operator+(Str a, const Str& b) { a += b; return a; }
+inline Str operator+(Str a, const char* b) { a += b; return a; }
+inline Str operator+(const char* a, const Str& b) { Str r(a); r += b; return r; }
 
-std::string fmt(const char* f, ...) {
-    char buf[512];
-    va_list ap;
-    va_start(ap, f);
-    vsnprintf(buf, sizeof buf, f, ap);
-    va_end(ap);
+Str toStr(long long v) { char b[32]; snprintf(b, sizeof b, "%lld", v); return Str(b); }
+
+template <typename T>
+class Vec {
+public:
+    Vec() = default;
+    Vec(const Vec& o) { for (size_t i = 0; i < o.n_; i++) push_back(o.p_[i]); }
+    Vec& operator=(const Vec& o) { if (this != &o) { clear(); for (size_t i = 0; i < o.n_; i++) push_back(o.p_[i]); } return *this; }
+    ~Vec() { clear(); free(p_); }
+    void push_back(const T& v) {
+        if (n_ == cap_) {
+            size_t nc = cap_ ? cap_ * 2 : 4;
+            T* np = (T*) malloc(nc * sizeof(T)); if (!np) abort();
+            for (size_t i = 0; i < n_; i++) { new (&np[i]) T(p_[i]); p_[i].~T(); }
+            free(p_); p_ = np; cap_ = nc;
+        }
+        new (&p_[n_++]) T(v);
+    }
+    void clear() { for (size_t i = 0; i < n_; i++) p_[i].~T(); n_ = 0; }
+    size_t size() const { return n_; }
+    bool empty() const { return n_ == 0; }
+    T& operator[](size_t i) { return p_[i]; }
+    const T& operator[](size_t i) const { return p_[i]; }
+    T* data() { return p_; }
+    const T* data() const { return p_; }
+    T* begin() { return p_; } T* end() { return p_ + n_; }
+    const T* begin() const { return p_; } const T* end() const { return p_ + n_; }
+    T* rbeginPtr() { return n_ ? p_ + n_ - 1 : nullptr; }
+private:
+    T* p_ = nullptr; size_t n_ = 0, cap_ = 0;
+};
+
+pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
+struct Lock { Lock() { pthread_mutex_lock(&g_mu); } ~Lock() { pthread_mutex_unlock(&g_mu); } };
+
+}  // namespace
+
+namespace {
+
+Str g_lastError;
+
+void setError(const Str& e) {
+    g_lastError = e;
+    LOGW("%s", e.c_str());
+}
+
+Str errStr(const char* what, Qnn_ErrorHandle_t e) {
+    char buf[160];
+    snprintf(buf, sizeof buf, "%s 失败（QNN 错误 %llu）", what, (unsigned long long) e);
     return buf;
 }
 
-std::string jsonEscape(const std::string& s) {
-    std::string o;
-    o.reserve(s.size() + 2);
-    for (char c : s) {
-        switch (c) {
-            case '"': o += "\\\""; break;
-            case '\\': o += "\\\\"; break;
-            case '\n': o += "\\n"; break;
-            case '\r': o += "\\r"; break;
-            case '\t': o += "\\t"; break;
-            default:
-                if ((unsigned char) c < 0x20) o += fmt("\\u%04x", c);
-                else o += c;
-        }
-    }
-    return o;
+bool fileExists(const Str& p) {
+    struct stat st{};
+    return stat(p.c_str(), &st) == 0 && S_ISREG(st.st_mode);
 }
 
-std::string jstr(JNIEnv* env, jstring s) {
-    if (!s) return {};
-    const char* c = env->GetStringUTFChars(s, nullptr);
-    std::string r = c ? c : "";
-    if (c) env->ReleaseStringUTFChars(s, c);
+// ---------------------------------------------------------------- runtime
+
+struct Runtime {
+    Str dir;
+    Vec<void*> libs;  // 按加载顺序，卸载时倒序
+    const QNN_INTERFACE_VER_TYPE* qnn = nullptr;
+    const QNN_SYSTEM_INTERFACE_VER_TYPE* sys = nullptr;
+    Qnn_BackendHandle_t backend = nullptr;
+    Qnn_DeviceHandle_t device = nullptr;
+    bool deviceOk = false;
+    int openGraphs = 0;
+    uint32_t powerId = 0;
+    bool havePowerId = false;
+};
+
+Runtime* g_rt = nullptr;
+
+void teardown() {
+    if (!g_rt) return;
+    Runtime* r = g_rt;
+    if (r->qnn) {
+        if (r->device && r->qnn->deviceFree) r->qnn->deviceFree(r->device);
+        if (r->backend && r->qnn->backendFree) r->qnn->backendFree(r->backend);
+    }
+    for (size_t i = r->libs.size(); i > 0; i--) dlclose(r->libs[i - 1]);
+    delete r;
+    g_rt = nullptr;
+}
+
+void* openLib(Runtime* r, const Str& path, bool required, Str& err) {
+    void* h = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
+    if (!h && required) {
+        const char* e = dlerror();
+        const char* base = strrchr(path.c_str(), '/');
+        err = Str("无法加载 ") + (base ? base + 1 : path.c_str()) + "：" + (e ? e : "?");
+    }
+    if (h) r->libs.push_back(h);
+    return h;
+}
+
+// 只在持有 g_mu 时调用。成功返回 g_rt；失败返回 nullptr 并设 g_lastError。
+Runtime* ensureRuntime(const Str& dir) {
+    if (g_rt && g_rt->dir == dir) return g_rt;
+    if (g_rt) {
+        if (g_rt->openGraphs > 0) {
+            setError("NPU 运行库正被另一个模型占用，请先释放后再试");
+            return nullptr;
+        }
+        teardown();
+    }
+    if (!fileExists(dir + "/libQnnHtp.so") || !fileExists(dir + "/libQnnSystem.so")) {
+        setError("缺少 NPU 运行库（" + dir + "）");
+        return nullptr;
+    }
+    // DSP 侧的 skel 从 ADSP_LIBRARY_PATH 里找，先放运行库目录
+    Str adsp = dir + ";/vendor/dsp/cdsp;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp";
+    setenv("ADSP_LIBRARY_PATH", adsp.c_str(), 1);
+
+    auto* r = new Runtime();
+    r->dir = dir;
+    g_rt = r;
+    Str err;
+    // 先按完整路径加载各架构的 stub：libQnnHtp 之后按库名 dlopen 时直接命中已加载的
+    static const char* const kArch[] = {"68", "69", "73", "75", "79", "81", "85"};
+    for (const char* v : kArch) {
+        Str p = dir + "/libQnnHtpV" + v + "Stub.so";
+        if (fileExists(p)) openLib(r, p, false, err);
+    }
+    void* sysLib = openLib(r, dir + "/libQnnSystem.so", true, err);
+    void* htpLib = sysLib ? openLib(r, dir + "/libQnnHtp.so", true, err) : nullptr;
+    if (!htpLib) { setError(err); teardown(); return nullptr; }
+
+    using GetProviders = Qnn_ErrorHandle_t (*)(const QnnInterface_t***, uint32_t*);
+    using GetSysProviders = Qnn_ErrorHandle_t (*)(const QnnSystemInterface_t***, uint32_t*);
+    auto getP = reinterpret_cast<GetProviders>(dlsym(htpLib, "QnnInterface_getProviders"));
+    auto getS = reinterpret_cast<GetSysProviders>(dlsym(sysLib, "QnnSystemInterface_getProviders"));
+    if (!getP || !getS) { setError("NPU 运行库缺少入口函数"); teardown(); return nullptr; }
+
+    const QnnInterface_t** prov = nullptr;
+    uint32_t n = 0;
+    if (getP(&prov, &n) != QNN_SUCCESS || !prov) { setError("读取 QNN 接口失败"); teardown(); return nullptr; }
+    for (uint32_t i = 0; i < n; i++) {
+        const QnnInterface_t* p = prov[i];
+        if (p && p->apiVersion.coreApiVersion.major == QNN_API_VERSION_MAJOR &&
+            p->apiVersion.coreApiVersion.minor >= QNN_API_VERSION_MINOR) {
+            r->qnn = &p->QNN_INTERFACE_VER_NAME;
+            break;
+        }
+    }
+    const QnnSystemInterface_t** sprov = nullptr;
+    uint32_t sn = 0;
+    if (getS(&sprov, &sn) == QNN_SUCCESS && sprov) {
+        for (uint32_t i = 0; i < sn; i++) {
+            const QnnSystemInterface_t* p = sprov[i];
+            if (p && p->systemApiVersion.major == QNN_SYSTEM_API_VERSION_MAJOR &&
+                p->systemApiVersion.minor >= QNN_SYSTEM_API_VERSION_MINOR) {
+                r->sys = &p->QNN_SYSTEM_INTERFACE_VER_NAME;
+                break;
+            }
+        }
+    }
+    if (!r->qnn || !r->sys) { setError("NPU 运行库版本不兼容"); teardown(); return nullptr; }
+
+    Qnn_ErrorHandle_t e = r->qnn->backendCreate(nullptr, nullptr, &r->backend);
+    if (e != QNN_SUCCESS) { setError(errStr("创建 HTP 后端", e)); teardown(); return nullptr; }
+    if (r->qnn->deviceCreate) {
+        e = r->qnn->deviceCreate(nullptr, nullptr, &r->device);
+        if (e != QNN_SUCCESS) { setError(errStr("创建 HTP 设备", e)); r->device = nullptr; }
+        else r->deviceOk = true;
+    }
     return r;
 }
 
-/** Bits of a QNN data type: the low byte holds the width as two decimal digits in hex (0x32 = 32). */
-size_t dtypeBytes(Qnn_DataType_t t) {
-    unsigned low = (unsigned) t & 0xFFu;
-    unsigned bits = (low >> 4) * 10 + (low & 0xFu);
-    return bits >= 8 ? bits / 8 : 1;
+// ---------------------------------------------------------------- binary info
+
+struct TensorDesc {
+    uint32_t id = 0;
+    Str name;
+    Qnn_TensorType_t type = QNN_TENSOR_TYPE_APP_WRITE;
+    Qnn_TensorDataFormat_t format{};
+    Qnn_DataType_t dtype = QNN_DATATYPE_UNDEFINED;
+    bool scaleOffset = false;
+    float scale = 0.f;
+    int32_t offset = 0;
+    Vec<uint32_t> dims;
+};
+
+struct GraphDesc {
+    Str name;
+    Vec<TensorDesc> inputs, outputs;
+};
+
+TensorDesc describe(const Qnn_Tensor_t& t) {
+    TensorDesc d;
+    const char* nm = nullptr;
+    const Qnn_QuantizeParams_t* q = nullptr;
+    uint32_t rank = 0;
+    const uint32_t* dims = nullptr;
+    if (t.version == QNN_TENSOR_VERSION_2) {
+        d.id = t.v2.id; nm = t.v2.name; d.type = t.v2.type; d.format = t.v2.dataFormat; d.dtype = t.v2.dataType;
+        q = &t.v2.quantizeParams; rank = t.v2.rank; dims = t.v2.dimensions;
+    } else {
+        d.id = t.v1.id; nm = t.v1.name; d.type = t.v1.type; d.format = t.v1.dataFormat; d.dtype = t.v1.dataType;
+        q = &t.v1.quantizeParams; rank = t.v1.rank; dims = t.v1.dimensions;
+    }
+    d.name = nm ? nm : "";
+    for (uint32_t i = 0; dims && i < rank; i++) d.dims.push_back(dims[i]);
+    if (q && q->encodingDefinition == QNN_DEFINITION_DEFINED &&
+        q->quantizationEncoding == QNN_QUANTIZATION_ENCODING_SCALE_OFFSET) {
+        d.scaleOffset = true;
+        d.scale = q->scaleOffsetEncoding.scale;
+        d.offset = q->scaleOffsetEncoding.offset;
+    }
+    return d;
 }
+
+template <typename G>
+GraphDesc graphFrom(const G& g) {
+    GraphDesc out;
+    out.name = g.graphName ? g.graphName : "";
+    for (uint32_t i = 0; i < g.numGraphInputs; i++) out.inputs.push_back(describe(g.graphInputs[i]));
+    for (uint32_t i = 0; i < g.numGraphOutputs; i++) out.outputs.push_back(describe(g.graphOutputs[i]));
+    return out;
+}
+
+bool readGraphs(Runtime* r, const void* buf, uint64_t size, Vec<GraphDesc>& out) {
+    QnnSystemContext_Handle_t sc = nullptr;
+    if (r->sys->systemContextCreate(&sc) != QNN_SUCCESS || !sc) { setError("创建 QNN 系统上下文失败"); return false; }
+    const QnnSystemContext_BinaryInfo_t* info = nullptr;
+    Qnn_ContextBinarySize_t infoSize = 0;
+    Qnn_ErrorHandle_t e = r->sys->systemContextGetBinaryInfo(sc, const_cast<void*>(buf), size, &info, &infoSize);
+    bool ok = e == QNN_SUCCESS && info;
+    if (!ok) setError(errStr("读取模型信息", e));
+    else {
+        uint32_t n = 0;
+        const QnnSystemContext_GraphInfo_t* gs = nullptr;
+        switch (info->version) {
+            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_1: n = info->contextBinaryInfoV1.numGraphs; gs = info->contextBinaryInfoV1.graphs; break;
+            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_2: n = info->contextBinaryInfoV2.numGraphs; gs = info->contextBinaryInfoV2.graphs; break;
+            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_3: n = info->contextBinaryInfoV3.numGraphs; gs = info->contextBinaryInfoV3.graphs; break;
+            default: break;
+        }
+        for (uint32_t i = 0; gs && i < n; i++) {
+            const auto& g = gs[i];
+            switch (g.version) {
+                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_1: out.push_back(graphFrom(g.graphInfoV1)); break;
+                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_2: out.push_back(graphFrom(g.graphInfoV2)); break;
+                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_3: out.push_back(graphFrom(g.graphInfoV3)); break;
+                default: break;
+            }
+        }
+        if (out.empty()) { setError("模型文件里没有图"); ok = false; }
+    }
+    r->sys->systemContextFree(sc);
+    return ok;
+}
+
+// 只读映射整个文件
+struct Mapped {
+    void* p = MAP_FAILED;
+    size_t n = 0;
+    ~Mapped() { if (p != MAP_FAILED) munmap(p, n); }
+    bool open(const Str& path) {
+        int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (fd < 0) { setError("打不开 " + path); return false; }
+        struct stat st{};
+        if (fstat(fd, &st) != 0 || st.st_size <= 0) { ::close(fd); setError("文件为空：" + path); return false; }
+        n = (size_t) st.st_size;
+        p = mmap(nullptr, n, PROT_READ, MAP_PRIVATE, fd, 0);
+        ::close(fd);
+        if (p == MAP_FAILED) { setError("映射文件失败：" + path); return false; }
+        return true;
+    }
+};
+
+// ---------------------------------------------------------------- graphs
+
+struct Graph {
+    Qnn_ContextHandle_t ctx = nullptr;
+    Qnn_GraphHandle_t graph = nullptr;
+    GraphDesc desc;
+};
 
 const char* dtypeName(Qnn_DataType_t t) {
     switch (t) {
-        case QNN_DATATYPE_INT_8: return "int8";
-        case QNN_DATATYPE_INT_16: return "int16";
-        case QNN_DATATYPE_INT_32: return "int32";
-        case QNN_DATATYPE_INT_64: return "int64";
-        case QNN_DATATYPE_UINT_8: return "uint8";
-        case QNN_DATATYPE_UINT_16: return "uint16";
-        case QNN_DATATYPE_UINT_32: return "uint32";
-        case QNN_DATATYPE_UINT_64: return "uint64";
-        case QNN_DATATYPE_FLOAT_16: return "float16";
         case QNN_DATATYPE_FLOAT_32: return "float32";
-        case QNN_DATATYPE_SFIXED_POINT_8: return "sfixed8";
-        case QNN_DATATYPE_SFIXED_POINT_16: return "sfixed16";
-        case QNN_DATATYPE_SFIXED_POINT_32: return "sfixed32";
-        case QNN_DATATYPE_UFIXED_POINT_8: return "ufixed8";
+        case QNN_DATATYPE_FLOAT_16: return "float16";
         case QNN_DATATYPE_UFIXED_POINT_16: return "ufixed16";
-        case QNN_DATATYPE_UFIXED_POINT_32: return "ufixed32";
+        case QNN_DATATYPE_UFIXED_POINT_8: return "ufixed8";
+        case QNN_DATATYPE_SFIXED_POINT_16: return "sfixed16";
+        case QNN_DATATYPE_SFIXED_POINT_8: return "sfixed8";
+        case QNN_DATATYPE_UINT_16: return "uint16";
+        case QNN_DATATYPE_UINT_8: return "uint8";
+        case QNN_DATATYPE_INT_32: return "int32";
+        case QNN_DATATYPE_UINT_32: return "uint32";
+        case QNN_DATATYPE_INT_16: return "int16";
+        case QNN_DATATYPE_INT_8: return "int8";
+        case QNN_DATATYPE_INT_64: return "int64";
         case QNN_DATATYPE_BOOL_8: return "bool8";
         default: return "unknown";
     }
 }
 
-// --------------------------------------------------------------- tensor accessors (v1 / v2 share a prefix)
+uint64_t dtypeBytes(Qnn_DataType_t t) {
+    switch (t) {
+        case QNN_DATATYPE_FLOAT_64: case QNN_DATATYPE_INT_64: case QNN_DATATYPE_UINT_64: return 8;
+        case QNN_DATATYPE_FLOAT_32: case QNN_DATATYPE_INT_32: case QNN_DATATYPE_UINT_32:
+        case QNN_DATATYPE_SFIXED_POINT_32: case QNN_DATATYPE_UFIXED_POINT_32: return 4;
+        case QNN_DATATYPE_FLOAT_16: case QNN_DATATYPE_BFLOAT_16: case QNN_DATATYPE_INT_16: case QNN_DATATYPE_UINT_16:
+        case QNN_DATATYPE_SFIXED_POINT_16: case QNN_DATATYPE_UFIXED_POINT_16: return 2;
+        default: return 1;
+    }
+}
 
-struct TensorView {
-    Qnn_Tensor_t* t;
-    bool v2() const { return t->version == QNN_TENSOR_VERSION_2; }
-    const char* name() const { return v2() ? t->v2.name : t->v1.name; }
-    Qnn_DataType_t dtype() const { return v2() ? t->v2.dataType : t->v1.dataType; }
-    const Qnn_QuantizeParams_t& quant() const { return v2() ? t->v2.quantizeParams : t->v1.quantizeParams; }
-    uint32_t rank() const { return v2() ? t->v2.rank : t->v1.rank; }
-    uint32_t* dims() const { return v2() ? t->v2.dimensions : t->v1.dimensions; }
-    void setDims(uint32_t* d) { if (v2()) t->v2.dimensions = d; else t->v1.dimensions = d; }
-    void setName(const char* n) { if (v2()) t->v2.name = n; else t->v1.name = n; }
-    void setRaw(void* data, uint32_t size) {
-        if (v2()) {
-            t->v2.memType = QNN_TENSORMEMTYPE_RAW;
-            t->v2.clientBuf.data = data;
-            t->v2.clientBuf.dataSize = size;
-            t->v2.isDynamicDimensions = nullptr;
-        } else {
-            t->v1.memType = QNN_TENSORMEMTYPE_RAW;
-            t->v1.clientBuf.data = data;
-            t->v1.clientBuf.dataSize = size;
+uint64_t tensorBytes(const TensorDesc& d) {
+    uint64_t n = dtypeBytes(d.dtype);
+    for (uint32_t v : d.dims) n *= v;
+    return n;
+}
+
+Str jsonEscape(const Str& s) {
+    Str o;
+    for (size_t i = 0; i < s.size(); i++) { char c = s.c_str()[i];
+        if (c == '"' || c == '\\') { o += '\\'; o += c; }
+        else if ((unsigned char) c < 0x20) { char b[8]; snprintf(b, sizeof b, "\\u%04x", c); o += b; }
+        else o += c;
+    }
+    return o;
+}
+
+void appendTensors(Str& js, const Vec<TensorDesc>& ts) {
+    js += '[';
+    for (size_t i = 0; i < ts.size(); i++) {
+        const auto& t = ts[i];
+        if (i) js += ',';
+        js += "{\"name\":\"" + jsonEscape(t.name) + "\",\"dims\":[";
+        for (size_t k = 0; k < t.dims.size(); k++) { if (k) js += ','; js += toStr(t.dims[k]); }
+        js += "],\"dtype\":\"";
+        js += dtypeName(t.dtype);
+        js += "\",\"bytes\":" + toStr(tensorBytes(t));
+        if (t.scaleOffset) {
+            char b[64];
+            snprintf(b, sizeof b, ",\"scale\":%.9g,\"offset\":%d", (double) t.scale, (int) t.offset);
+            js += b;
+        }
+        js += '}';
+    }
+    js += ']';
+}
+
+Qnn_Tensor_t toQnn(const TensorDesc& d, void* data, uint32_t size) {
+    Qnn_Tensor_t t = QNN_TENSOR_INIT;
+    t.version = QNN_TENSOR_VERSION_1;
+    t.v1.id = d.id;
+    t.v1.name = d.name.c_str();
+    t.v1.type = d.type;
+    t.v1.dataFormat = d.format;
+    t.v1.dataType = d.dtype;
+    if (d.scaleOffset) {
+        t.v1.quantizeParams.encodingDefinition = QNN_DEFINITION_DEFINED;
+        t.v1.quantizeParams.quantizationEncoding = QNN_QUANTIZATION_ENCODING_SCALE_OFFSET;
+        t.v1.quantizeParams.scaleOffsetEncoding.scale = d.scale;
+        t.v1.quantizeParams.scaleOffsetEncoding.offset = d.offset;
+    }
+    t.v1.rank = (uint32_t) d.dims.size();
+    t.v1.dimensions = const_cast<uint32_t*>(d.dims.data());
+    t.v1.memType = QNN_TENSORMEMTYPE_RAW;
+    t.v1.clientBuf.data = data;
+    t.v1.clientBuf.dataSize = size;
+    return t;
+}
+
+Graph* openGraph(const Str& dir, const Str& bin, const Str& wanted) {
+    Lock lk;
+    Runtime* r = ensureRuntime(dir);
+    if (!r) return nullptr;
+    Mapped m;
+    if (!m.open(bin)) return nullptr;
+    Vec<GraphDesc> graphs;
+    if (!readGraphs(r, m.p, m.n, graphs)) return nullptr;
+    const GraphDesc* pick = &graphs[0];
+    if (!wanted.empty()) {
+        pick = nullptr;
+        for (const auto& g : graphs) if (g.name == wanted) { pick = &g; break; }
+        if (!pick) { setError("模型文件里没有图 " + wanted); return nullptr; }
+    }
+    auto* g = new Graph();
+    g->desc = *pick;
+    Qnn_ErrorHandle_t e = r->qnn->contextCreateFromBinary(r->backend, r->device, nullptr, m.p, m.n, &g->ctx, nullptr);
+    if (e != QNN_SUCCESS || !g->ctx) { setError(errStr("加载模型到 NPU", e)); delete g; return nullptr; }
+    e = r->qnn->graphRetrieve(g->ctx, g->desc.name.c_str(), &g->graph);
+    if (e != QNN_SUCCESS || !g->graph) {
+        setError(errStr("取出图", e));
+        r->qnn->contextFree(g->ctx, nullptr);
+        delete g;
+        return nullptr;
+    }
+    r->openGraphs++;
+    return g;
+}
+
+// ---------------------------------------------------------------- cdsp facts (best effort)
+
+struct DspCapability { uint32_t domain; uint32_t attribute; uint32_t capability; };
+
+bool unsignedPdSupported() {
+    void* h = dlopen("libcdsprpc.so", RTLD_NOW | RTLD_LOCAL);
+    if (!h) return false;
+    using Ctl = int (*)(uint32_t, void*, uint32_t);
+    auto ctl = reinterpret_cast<Ctl>(dlsym(h, "remote_handle_control"));
+    bool ok = false;
+    if (ctl) {
+        DspCapability c{3 /* CDSP */, 1 /* UNSIGNED_PD_SUPPORT */, 0};
+        ok = ctl(2 /* DSPRPC_GET_DSP_INFO */, &c, sizeof c) == 0 && c.capability != 0;
+    }
+    dlclose(h);
+    return ok;
+}
+
+bool cdspPresent() {
+    return access("/dev/cdsprpc-smd", F_OK) == 0 || access("/dev/fastrpc-cdsp", F_OK) == 0 ||
+           access("/vendor/lib64/libcdsprpc.so", F_OK) == 0;
+}
+
+int htpArch(Runtime* r) {
+    if (!r || !r->qnn || !r->qnn->deviceGetPlatformInfo) return 0;
+    const QnnDevice_PlatformInfo_t* info = nullptr;
+    if (r->qnn->deviceGetPlatformInfo(nullptr, &info) != QNN_SUCCESS || !info) return 0;
+    int arch = 0;
+    if (info->version == QNN_DEVICE_PLATFORM_INFO_VERSION_1 && info->v1.numHwDevices > 0 && info->v1.hwDevices) {
+        const auto& hw = info->v1.hwDevices[0];
+        if (hw.version == QNN_DEVICE_HARDWARE_DEVICE_INFO_VERSION_1 && hw.v1.deviceInfoExtension) {
+            const auto* ext = reinterpret_cast<const QnnHtpDevice_DeviceInfoExtension_t*>(hw.v1.deviceInfoExtension);
+            if (ext->devType == QNN_HTP_DEVICE_TYPE_ON_CHIP) arch = (int) ext->onChipDevice.arch;
         }
     }
-};
-
-/** A graph input/output: a private copy of the descriptor from the binary info, with owned name/dims. */
-struct IoTensor {
-    std::string name;
-    std::vector<uint32_t> dims;
-    Qnn_Tensor_t desc{};
-    Qnn_DataType_t dtype = QNN_DATATYPE_UNDEFINED;
-    size_t bytes = 0;
-    bool hasScale = false;
-    float scale = 0.f;
-    int32_t offset = 0;
-};
-
-IoTensor copyTensor(const Qnn_Tensor_t& src) {
-    IoTensor io;
-    io.desc = src;
-    TensorView v{&io.desc};
-    io.name = v.name() ? v.name() : "";
-    io.dims.assign(v.dims(), v.dims() + v.rank());
-    io.dtype = v.dtype();
-    size_t n = 1;
-    for (uint32_t d : io.dims) n *= d;
-    io.bytes = n * dtypeBytes(io.dtype);
-    const Qnn_QuantizeParams_t& q = v.quant();
-    if (q.encodingDefinition == QNN_DEFINITION_DEFINED &&
-        q.quantizationEncoding == QNN_QUANTIZATION_ENCODING_SCALE_OFFSET) {
-        io.hasScale = true;
-        io.scale = q.scaleOffsetEncoding.scale;
-        io.offset = q.scaleOffsetEncoding.offset;
-    }
-    if (v.v2()) {
-        io.desc.v2.isDynamicDimensions = nullptr;
-        io.desc.v2.isProduced = 0;
-    }
-    return io;
+    if (r->qnn->deviceFreePlatformInfo) r->qnn->deviceFreePlatformInfo(nullptr, info);
+    return arch;
 }
 
-// Pointers inside IoTensor::desc must point at the IoTensor's own storage (fixed after the vector stops growing).
-void fixPointers(IoTensor& io) {
-    TensorView v{&io.desc};
-    v.setName(io.name.c_str());
-    v.setDims(io.dims.data());
-}
+// ---------------------------------------------------------------- perf vote
 
-// ---------------------------------------------------------------- QNN runtime (one per process)
-
-typedef Qnn_ErrorHandle_t (*GetProvidersFn)(const QnnInterface_t*** list, uint32_t* n);
-typedef Qnn_ErrorHandle_t (*GetSysProvidersFn)(const QnnSystemInterface_t*** list, uint32_t* n);
-
-void qnnLog(const char* f, QnnLog_Level_t level, uint64_t, va_list args) {
-    int prio = level == QNN_LOG_LEVEL_ERROR ? ANDROID_LOG_ERROR
-             : level == QNN_LOG_LEVEL_WARN ? ANDROID_LOG_WARN : ANDROID_LOG_DEBUG;
-    __android_log_vprint(prio, "iris_qnn", f, args);
-}
-
-struct Runtime {
-    std::string dir;
-    void* htpLib = nullptr;
-    void* sysLib = nullptr;
-    std::vector<void*> preloaded;
-    QNN_INTERFACE_VER_TYPE qnn{};
-    QNN_SYSTEM_INTERFACE_VER_TYPE sys{};
-    Qnn_LogHandle_t log = nullptr;
-    Qnn_BackendHandle_t backend = nullptr;
-    Qnn_DeviceHandle_t device = nullptr;
-    // HTP perf infrastructure (null / 0 when the backend does not offer it; never fatal)
-    const QnnHtpDevice_PerfInfrastructure_t* perf = nullptr;
-    uint32_t powerConfigId = 0;
-    bool hasPowerConfig = false;
-    bool burst = false;
-    int refs = 0;
-};
-
-std::mutex gMu;          // guards gRt + its refcount
-Runtime* gRt = nullptr;
-thread_local std::string gLastError;
-
-// ---------------------------------------------------------------- HTP performance votes (DCVS v3)
-//
-// Same recipe as the QNN SDK sample app / AI Hub runners: "burst" turns DCVS off and pins bus + core
-// voltage corners at max with a short sleep latency and RPC polling; "relax" hands control back to DCVS in
-// power-saver mode. Every failure is logged and ignored: the graphs still run at the default clocks.
-
-constexpr uint32_t kBurstSleepLatencyUs = 40;     // QNN sample: 40 µs for burst
-constexpr uint32_t kRelaxSleepLatencyUs = 1000;   // 1 ms: lets the DSP sleep between requests
-constexpr uint32_t kBurstRpcControlLatencyUs = 100;
-
-void initPerf(Runtime* rt) {
-    if (!rt->qnn.deviceGetInfrastructure) { LOGI("HTP perf: deviceGetInfrastructure missing (no perf votes)"); return; }
+Str setPerf(bool burst) {
+    Lock lk;
+    Runtime* r = g_rt;
+    if (!r || !r->qnn || !r->qnn->deviceGetInfrastructure) return "运行库未加载";
     QnnDevice_Infrastructure_t infra = nullptr;
-    Qnn_ErrorHandle_t e = rt->qnn.deviceGetInfrastructure(&infra);
-    if (e != QNN_SUCCESS || !infra) { LOGE("HTP perf: deviceGetInfrastructure failed (%lu)", (unsigned long) e); return; }
+    if (r->qnn->deviceGetInfrastructure(&infra) != QNN_SUCCESS || !infra) return "取不到 HTP 性能接口";
     auto* htp = reinterpret_cast<QnnHtpDevice_Infrastructure_t*>(infra);
-    if (htp->infraType != QNN_HTP_DEVICE_INFRASTRUCTURE_TYPE_PERF) { LOGE("HTP perf: unexpected infra type %d", (int) htp->infraType); return; }
-    const QnnHtpDevice_PerfInfrastructure_t* perf = &htp->perfInfra;
-    if (!perf->createPowerConfigId || !perf->setPowerConfig) { LOGE("HTP perf: createPowerConfigId/setPowerConfig missing"); return; }
-    uint32_t id = 0;
-    e = perf->createPowerConfigId(/*deviceId*/ 0, /*coreId*/ 0, &id);
-    if (e != QNN_SUCCESS) { LOGE("HTP perf: createPowerConfigId failed (%lu)", (unsigned long) e); return; }
-    rt->perf = perf;
-    rt->powerConfigId = id;
-    rt->hasPowerConfig = true;
-    LOGI("HTP perf: power config id %u", id);
-}
-
-QnnHtpPerfInfrastructure_PowerConfig_t dcvsConfig(uint32_t id, bool burst) {
-    QnnHtpPerfInfrastructure_PowerConfig_t c;
-    memset(&c, 0, sizeof c);
+    if (htp->infraType != QNN_HTP_DEVICE_INFRASTRUCTURE_TYPE_PERF) return "HTP 性能接口类型不对";
+    auto& perf = htp->perfInfra;
+    if (!r->havePowerId) {
+        if (perf.createPowerConfigId(0, 0, &r->powerId) != QNN_SUCCESS) return "创建电源配置失败";
+        r->havePowerId = true;
+    }
+    QnnHtpPerfInfrastructure_PowerConfig_t c{};
     c.option = QNN_HTP_PERF_INFRASTRUCTURE_POWER_CONFIGOPTION_DCVS_V3;
-    QnnHtpPerfInfrastructure_DcvsV3_t& d = c.dcvsV3Config;
-    d.contextId = id;
+    auto& d = c.dcvsV3Config;
+    d.contextId = r->powerId;
     d.setDcvsEnable = 1;
     d.dcvsEnable = burst ? 0 : 1;
     d.powerMode = burst ? QNN_HTP_PERF_INFRASTRUCTURE_POWERMODE_PERFORMANCE_MODE
                         : QNN_HTP_PERF_INFRASTRUCTURE_POWERMODE_POWER_SAVER_MODE;
     d.setSleepLatency = 1;
-    d.sleepLatency = burst ? kBurstSleepLatencyUs : kRelaxSleepLatencyUs;
+    d.sleepLatency = burst ? 40 : 1000;
     d.setSleepDisable = 1;
-    d.sleepDisable = 0;
+    d.sleepDisable = burst ? 1 : 0;
+    auto hi = DCVS_VOLTAGE_VCORNER_MAX_VOLTAGE_CORNER;
+    auto lo = DCVS_VOLTAGE_VCORNER_NOM;
     d.setBusParams = 1;
+    d.busVoltageCornerMin = burst ? hi : lo;
+    d.busVoltageCornerTarget = burst ? hi : lo;
+    d.busVoltageCornerMax = hi;
     d.setCoreParams = 1;
-    if (burst) {
-        d.busVoltageCornerMin = d.busVoltageCornerTarget = d.busVoltageCornerMax = DCVS_VOLTAGE_VCORNER_MAX_VOLTAGE_CORNER;
-        d.coreVoltageCornerMin = d.coreVoltageCornerTarget = d.coreVoltageCornerMax = DCVS_VOLTAGE_VCORNER_MAX_VOLTAGE_CORNER;
-    } else {
-        d.busVoltageCornerMin = d.coreVoltageCornerMin = DCVS_VOLTAGE_VCORNER_MIN_VOLTAGE_CORNER;
-        d.busVoltageCornerTarget = d.coreVoltageCornerTarget = DCVS_VOLTAGE_VCORNER_SVS;
-        d.busVoltageCornerMax = d.coreVoltageCornerMax = DCVS_VOLTAGE_VCORNER_NOM;
-    }
-    return c;
+    d.coreVoltageCornerMin = burst ? hi : lo;
+    d.coreVoltageCornerTarget = burst ? hi : lo;
+    d.coreVoltageCornerMax = hi;
+    const QnnHtpPerfInfrastructure_PowerConfig_t* list[] = {&c, nullptr};
+    Qnn_ErrorHandle_t e = perf.setPowerConfig(r->powerId, list);
+    return e == QNN_SUCCESS ? Str() : errStr("HTP 调频", e);
 }
 
-/** Votes burst / relax on [rt]. Returns an empty string on success. Caller holds gMu. */
-std::string setPerfLocked(Runtime* rt, bool burst) {
-    if (!rt) return "no QNN runtime";
-    if (!rt->hasPowerConfig || !rt->perf || !rt->perf->setPowerConfig) return "HTP perf infrastructure unavailable";
-    QnnHtpPerfInfrastructure_PowerConfig_t dcvs = dcvsConfig(rt->powerConfigId, burst);
-    QnnHtpPerfInfrastructure_PowerConfig_t latency;
-    memset(&latency, 0, sizeof latency);
-    latency.option = QNN_HTP_PERF_INFRASTRUCTURE_POWER_CONFIGOPTION_RPC_CONTROL_LATENCY;
-    latency.rpcControlLatencyConfig = burst ? kBurstRpcControlLatencyUs : 0;
-    QnnHtpPerfInfrastructure_PowerConfig_t polling;
-    memset(&polling, 0, sizeof polling);
-    polling.option = QNN_HTP_PERF_INFRASTRUCTURE_POWER_CONFIGOPTION_RPC_POLLING_TIME;
-    polling.rpcPollingTimeConfig = burst ? QNN_HTP_PERF_INFRASTRUCTURE_POWER_CONFIG_MAX_RPC_POLLING_TIME : 0;
-
-    // DCVS first and on its own: older backends reject unknown options in a batch.
-    const QnnHtpPerfInfrastructure_PowerConfig_t* only[] = {&dcvs, nullptr};
-    Qnn_ErrorHandle_t e = rt->perf->setPowerConfig(rt->powerConfigId, only);
-    if (e != QNN_SUCCESS) {
-        std::string err = fmt("setPowerConfig(DCVS v3, %s) failed (%lu)", burst ? "burst" : "relax", (unsigned long) e);
-        LOGE("HTP perf: %s", err.c_str());
-        return err;
-    }
-    const QnnHtpPerfInfrastructure_PowerConfig_t* rpc[] = {&latency, &polling, nullptr};
-    e = rt->perf->setPowerConfig(rt->powerConfigId, rpc);
-    if (e != QNN_SUCCESS) LOGI("HTP perf: RPC latency/polling not applied (%lu)", (unsigned long) e); // DCVS vote stands
-    rt->burst = burst;
-    LOGI("HTP perf: %s", burst ? "burst" : "relax");
-    return {};
-}
-
-void freeRuntime(Runtime* rt) {
-    if (!rt) return;
-    if (rt->hasPowerConfig && rt->perf) {
-        if (rt->burst) setPerfLocked(rt, false);
-        if (rt->perf->destroyPowerConfigId) rt->perf->destroyPowerConfigId(rt->powerConfigId);
-        rt->hasPowerConfig = false;
-    }
-    if (rt->device && rt->qnn.deviceFree) rt->qnn.deviceFree(rt->device);
-    if (rt->backend && rt->qnn.backendFree) rt->qnn.backendFree(rt->backend);
-    if (rt->log && rt->qnn.logFree) rt->qnn.logFree(rt->log);
-    // The QNN libraries stay loaded: unloading libQnnHtp while FastRPC threads linger is a known crash source.
-    delete rt;
-}
-
-void* openIn(const std::string& dir, const char* name, int flags, std::string& err) {
-    std::string path = dir + "/" + name;
-    void* h = dlopen(path.c_str(), flags);
-    if (!h) {
-        const char* e = dlerror();
-        err = fmt("dlopen %s: %s", name, e ? e : "?");
-    }
-    return h;
-}
-
-/**
- * Loads the QNN HTP backend from [dir] and creates the backend + HTP device.
- * stage: 0 none, 1 libraries + interfaces, 2 backend, 3 device. Returns nullptr with err set on failure.
- */
-Runtime* createRuntime(const std::string& dir, std::string& err, int* stage, bool withPerf) {
-    *stage = 0;
-    // The DSP side (libQnnHtpV<arch>Skel.so) is found by FastRPC through ADSP_LIBRARY_PATH.
-    std::string adsp = dir + ";/vendor/dsp/cdsp;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp";
-    setenv("ADSP_LIBRARY_PATH", adsp.c_str(), 1);
-
-    auto rt = std::make_unique<Runtime>();
-    rt->dir = dir;
-
-    // libQnnHtp dlopens its stub by soname; preloading it by absolute path makes the linker
-    // resolve that soname to the already-loaded copy (the app-private dir is not on the search path).
-    if (DIR* d = opendir(dir.c_str())) {
-        while (dirent* e = readdir(d)) {
-            std::string n = e->d_name;
-            if (n.rfind("libQnnHtpV", 0) == 0 && n.size() > 7 && n.compare(n.size() - 7, 7, "Stub.so") == 0) {
-                std::string ignore;
-                if (void* h = openIn(dir, n.c_str(), RTLD_NOW | RTLD_GLOBAL, ignore)) rt->preloaded.push_back(h);
-            }
-        }
-        closedir(d);
-    }
-
-    rt->sysLib = openIn(dir, "libQnnSystem.so", RTLD_NOW | RTLD_LOCAL, err);
-    if (!rt->sysLib) return nullptr;
-    rt->htpLib = openIn(dir, "libQnnHtp.so", RTLD_NOW | RTLD_GLOBAL, err);
-    if (!rt->htpLib) return nullptr;
-
-    auto getProviders = (GetProvidersFn) dlsym(rt->htpLib, "QnnInterface_getProviders");
-    auto getSysProviders = (GetSysProvidersFn) dlsym(rt->sysLib, "QnnSystemInterface_getProviders");
-    if (!getProviders || !getSysProviders) { err = "QNN getProviders symbol missing"; return nullptr; }
-
-    const QnnInterface_t** providers = nullptr;
-    uint32_t n = 0;
-    if (getProviders(&providers, &n) != QNN_SUCCESS || !providers || n == 0) { err = "QnnInterface_getProviders failed"; return nullptr; }
-    const QnnInterface_t* best = nullptr;
-    for (uint32_t i = 0; i < n; i++) {
-        const QnnInterface_t* p = providers[i];
-        if (!p || p->apiVersion.coreApiVersion.major != QNN_API_VERSION_MAJOR) continue;
-        if (!best || p->apiVersion.coreApiVersion.minor > best->apiVersion.coreApiVersion.minor) best = p;
-    }
-    if (!best) {
-        err = fmt("no QNN provider with core API %d.x (first: %u.%u)", QNN_API_VERSION_MAJOR,
-                  providers[0]->apiVersion.coreApiVersion.major, providers[0]->apiVersion.coreApiVersion.minor);
-        return nullptr;
-    }
-    rt->qnn = best->QNN_INTERFACE_VER_NAME;
-    LOGI("QNN provider %s core API %u.%u.%u (headers %d.%d)", best->providerName ? best->providerName : "?",
-         best->apiVersion.coreApiVersion.major, best->apiVersion.coreApiVersion.minor,
-         best->apiVersion.coreApiVersion.patch, QNN_API_VERSION_MAJOR, QNN_API_VERSION_MINOR);
-
-    const QnnSystemInterface_t** sysProviders = nullptr;
-    n = 0;
-    if (getSysProviders(&sysProviders, &n) != QNN_SUCCESS || !sysProviders || n == 0) { err = "QnnSystemInterface_getProviders failed"; return nullptr; }
-    const QnnSystemInterface_t* bestSys = nullptr;
-    for (uint32_t i = 0; i < n; i++) {
-        const QnnSystemInterface_t* p = sysProviders[i];
-        if (!p || p->systemApiVersion.major != QNN_SYSTEM_API_VERSION_MAJOR) continue;
-        if (!bestSys || p->systemApiVersion.minor > bestSys->systemApiVersion.minor) bestSys = p;
-    }
-    if (!bestSys) { err = "no QNN System provider with a matching API version"; return nullptr; }
-    rt->sys = bestSys->QNN_SYSTEM_INTERFACE_VER_NAME;
-    *stage = 1;
-
-    if (rt->qnn.logCreate) rt->qnn.logCreate(qnnLog, QNN_LOG_LEVEL_WARN, &rt->log);
-    if (!rt->qnn.backendCreate) { err = "backendCreate missing"; return nullptr; }
-    Qnn_ErrorHandle_t e = rt->qnn.backendCreate(rt->log, nullptr, &rt->backend);
-    if (e != QNN_SUCCESS || !rt->backend) { err = fmt("backendCreate failed (%lu)", (unsigned long) e); freeRuntime(rt.release()); return nullptr; }
-    *stage = 2;
-    if (rt->qnn.deviceCreate) {
-        e = rt->qnn.deviceCreate(rt->log, nullptr, &rt->device);
-        if (e != QNN_SUCCESS) { err = fmt("deviceCreate failed (%lu)", (unsigned long) e); freeRuntime(rt.release()); return nullptr; }
-    }
-    *stage = 3;
-    if (withPerf) initPerf(rt.get()); // non-fatal: logs and leaves hasPowerConfig false
-    return rt.release();
-}
-
-Runtime* acquireRuntime(const std::string& dir, std::string& err) {
-    std::lock_guard<std::mutex> lk(gMu);
-    if (gRt) {
-        if (gRt->dir != dir) { err = "QNN runtime already loaded from " + gRt->dir; return nullptr; }
-        gRt->refs++;
-        return gRt;
-    }
-    int stage = 0;
-    gRt = createRuntime(dir, err, &stage, /*withPerf*/ true);
-    if (gRt) gRt->refs = 1;
-    return gRt;
-}
-
-void releaseRuntime(Runtime* rt) {
-    std::lock_guard<std::mutex> lk(gMu);
-    if (rt != gRt || --gRt->refs > 0) return;
-    freeRuntime(gRt);
-    gRt = nullptr;
-}
-
-// ---------------------------------------------------------------- one context binary = one model
-
-struct Model {
-    Runtime* rt = nullptr;
-    Qnn_ContextHandle_t ctx = nullptr;
-    Qnn_GraphHandle_t graph = nullptr;
-    std::string graphName;
-    std::vector<IoTensor> inputs, outputs;
-    std::mutex mu;
-};
-
-struct Mapped {
-    void* p = MAP_FAILED;
-    size_t n = 0;
-    ~Mapped() { if (p != MAP_FAILED) munmap(p, n); }
-};
-
-bool mapFile(const std::string& path, Mapped& m, std::string& err) {
-    int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
-    if (fd < 0) { err = fmt("open %s: %s", path.c_str(), strerror(errno)); return false; }
-    struct stat st{};
-    if (fstat(fd, &st) != 0 || st.st_size <= 0) { close(fd); err = "empty context binary"; return false; }
-    m.n = (size_t) st.st_size;
-    m.p = mmap(nullptr, m.n, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-    if (m.p == MAP_FAILED) { err = fmt("mmap: %s", strerror(errno)); return false; }
-    return true;
-}
-
-template <typename G>
-void takeGraph(const G& g, Model& m) {
-    m.graphName = g.graphName ? g.graphName : "";
-    for (uint32_t i = 0; i < g.numGraphInputs; i++) m.inputs.push_back(copyTensor(g.graphInputs[i]));
-    for (uint32_t i = 0; i < g.numGraphOutputs; i++) m.outputs.push_back(copyTensor(g.graphOutputs[i]));
-}
-
-bool readBinaryInfo(Runtime* rt, Mapped& bin, Model& m, std::string& err) {
-    if (!rt->sys.systemContextCreate || !rt->sys.systemContextGetBinaryInfo || !rt->sys.systemContextFree) {
-        err = "QNN System context API missing"; return false;
-    }
-    QnnSystemContext_Handle_t sc = nullptr;
-    if (rt->sys.systemContextCreate(&sc) != QNN_SUCCESS || !sc) { err = "systemContextCreate failed"; return false; }
-    const QnnSystemContext_BinaryInfo_t* info = nullptr;
-    Qnn_ContextBinarySize_t infoSize = 0;
-    Qnn_ErrorHandle_t e = rt->sys.systemContextGetBinaryInfo(sc, bin.p, bin.n, &info, &infoSize);
-    bool ok = false;
-    if (e != QNN_SUCCESS || !info) {
-        err = fmt("getBinaryInfo failed (%lu)", (unsigned long) e);
-    } else {
-        uint32_t numGraphs = 0;
-        QnnSystemContext_GraphInfo_t* graphs = nullptr;
-        switch (info->version) {
-            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_1: numGraphs = info->contextBinaryInfoV1.numGraphs; graphs = info->contextBinaryInfoV1.graphs; break;
-            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_2: numGraphs = info->contextBinaryInfoV2.numGraphs; graphs = info->contextBinaryInfoV2.graphs; break;
-            case QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_3: numGraphs = info->contextBinaryInfoV3.numGraphs; graphs = info->contextBinaryInfoV3.graphs; break;
-            default: break;
-        }
-        if (numGraphs == 0 || !graphs) {
-            err = fmt("context binary has no graphs (info version %d)", (int) info->version);
-        } else {
-            if (numGraphs > 1) LOGI("context binary has %u graphs; using the first", numGraphs);
-            const QnnSystemContext_GraphInfo_t& g = graphs[0];
-            switch (g.version) {
-                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_1: takeGraph(g.graphInfoV1, m); ok = true; break;
-                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_2: takeGraph(g.graphInfoV2, m); ok = true; break;
-                case QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_3: takeGraph(g.graphInfoV3, m); ok = true; break;
-                default: err = fmt("unknown graph info version %d", (int) g.version);
-            }
-        }
-    }
-    // Names/dims were deep-copied; nothing below keeps pointers into the system context.
-    for (auto& t : m.inputs) fixPointers(t);
-    for (auto& t : m.outputs) fixPointers(t);
-    rt->sys.systemContextFree(sc);
-    return ok;
-}
-
-Model* openModel(const std::string& dir, const std::string& binPath, std::string& err) {
-    Runtime* rt = acquireRuntime(dir, err);
-    if (!rt) return nullptr;
-    auto m = std::make_unique<Model>();
-    m->rt = rt;
-    {
-        Mapped bin;
-        if (!mapFile(binPath, bin, err) || !readBinaryInfo(rt, bin, *m, err)) { releaseRuntime(rt); return nullptr; }
-        if (!rt->qnn.contextCreateFromBinary || !rt->qnn.graphRetrieve || !rt->qnn.graphExecute) {
-            err = "QNN context/graph API missing"; releaseRuntime(rt); return nullptr;
-        }
-        Qnn_ErrorHandle_t e = rt->qnn.contextCreateFromBinary(rt->backend, rt->device, nullptr, bin.p,
-                                                               (Qnn_ContextBinarySize_t) bin.n, &m->ctx, nullptr);
-        if (e != QNN_SUCCESS || !m->ctx) {
-            err = fmt("contextCreateFromBinary failed (%lu)", (unsigned long) e);
-            releaseRuntime(rt);
-            return nullptr;
-        }
-    } // the binary is unmapped here: QNN keeps its own copy of what it needs
-    Qnn_ErrorHandle_t e = rt->qnn.graphRetrieve(m->ctx, m->graphName.c_str(), &m->graph);
-    if (e != QNN_SUCCESS || !m->graph) {
-        err = fmt("graphRetrieve(%s) failed (%lu)", m->graphName.c_str(), (unsigned long) e);
-        if (rt->qnn.contextFree) rt->qnn.contextFree(m->ctx, nullptr);
-        releaseRuntime(rt);
-        return nullptr;
-    }
-    LOGI("opened %s: graph %s, %zu inputs, %zu outputs", binPath.c_str(), m->graphName.c_str(), m->inputs.size(), m->outputs.size());
-    return m.release();
-}
-
-void closeModel(Model* m) {
-    if (!m) return;
-    {
-        std::lock_guard<std::mutex> lk(m->mu);
-        if (m->ctx && m->rt->qnn.contextFree) m->rt->qnn.contextFree(m->ctx, nullptr);
-        m->ctx = nullptr;
-    }
-    releaseRuntime(m->rt);
-    delete m;
-}
-
-void appendTensors(std::string& o, const std::vector<IoTensor>& ts) {
-    o += "[";
-    for (size_t i = 0; i < ts.size(); i++) {
-        const IoTensor& t = ts[i];
-        if (i) o += ",";
-        o += "{\"name\":\"" + jsonEscape(t.name) + "\",\"dims\":[";
-        for (size_t d = 0; d < t.dims.size(); d++) o += (d ? "," : "") + std::to_string(t.dims[d]);
-        o += "],\"dtype\":\"";
-        o += dtypeName(t.dtype);
-        o += "\",\"bytes\":" + std::to_string(t.bytes);
-        if (t.hasScale) o += fmt(",\"scale\":%.9g,\"offset\":%d", t.scale, t.offset);
-        o += "}";
-    }
-    o += "]";
-}
-
-std::string modelInfo(Model* m) {
-    std::string o = "{\"graph\":\"" + jsonEscape(m->graphName) + "\",\"inputs\":";
-    appendTensors(o, m->inputs);
-    o += ",\"outputs\":";
-    appendTensors(o, m->outputs);
-    o += "}";
+Str jstr(JNIEnv* env, jstring s) {
+    if (!s) return Str();
+    const char* c = env->GetStringUTFChars(s, nullptr);
+    Str o = c ? c : "";
+    if (c) env->ReleaseStringUTFChars(s, c);
     return o;
 }
 
-// ---------------------------------------------------------------- CDSP facts via FastRPC (libcdsprpc.so)
-
-// From the Hexagon SDK's remote.h (public FastRPC ABI); checked 2026-10-22 against quic/fastrpc inc/remote.h:
-// enum handle_control_req_id {RESERVED, CONTROL_LATENCY, GET_DSP_INFO=2, …}, enum remote_dsp_attributes
-// {DOMAIN_SUPPORT, UNSIGNED_PD_SUPPORT=1, HVX_64B, HVX_128B, VTCM_PAGE, VTCM_COUNT, ARCH_VER=6, …},
-// CDSP_DOMAIN_ID 3, struct remote_dsp_capability {domain, attribute_ID, capability} (3 × uint32).
-constexpr uint32_t kDsprpcGetDspInfo = 2;   // handle_control_req_id DSPRPC_GET_DSP_INFO
-constexpr uint32_t kAttrUnsignedPd = 1;     // remote_dsp_attributes UNSIGNED_PD_SUPPORT
-constexpr uint32_t kAttrArchVer = 6;        // remote_dsp_attributes ARCH_VER
-constexpr uint32_t kCdspDomain = 3;         // CDSP_DOMAIN_ID
-struct DspCapability { uint32_t domain; uint32_t attribute_ID; uint32_t capability; };
-typedef int (*RemoteHandleControlFn)(uint32_t req, void* data, uint32_t len);
-
-struct CdspInfo { bool present = false; bool unsignedPd = false; int arch = 0; std::string error; };
-
-CdspInfo queryCdsp() {
-    CdspInfo r;
-    void* h = dlopen("libcdsprpc.so", RTLD_NOW | RTLD_LOCAL);
-    if (!h) { const char* e = dlerror(); r.error = fmt("libcdsprpc.so: %s", e ? e : "not found"); return r; }
-    auto ctl = (RemoteHandleControlFn) dlsym(h, "remote_handle_control");
-    if (!ctl) { r.error = "remote_handle_control missing"; return r; } // keep the library loaded
-    r.present = true;
-    DspCapability cap{kCdspDomain, kAttrArchVer, 0};
-    int err = ctl(kDsprpcGetDspInfo, &cap, sizeof cap);
-    if (err == 0) {
-        uint32_t v = cap.capability & 0xFFu;   // 0x79 -> v79
-        r.arch = (int) ((v >> 4) * 10 + (v & 0xFu));
-    } else {
-        r.error = fmt("ARCH_VER query failed (%d)", err);
-    }
-    cap = DspCapability{kCdspDomain, kAttrUnsignedPd, 0};
-    err = ctl(kDsprpcGetDspInfo, &cap, sizeof cap);
-    if (err == 0) r.unsignedPd = cap.capability != 0;
-    else if (r.error.empty()) r.error = fmt("UNSIGNED_PD query failed (%d)", err);
-    return r;
-}
-
-std::string probe(const std::string& dir) {
-    CdspInfo c = queryCdsp();
-    bool backendOk = false, deviceOk = false;
-    std::string err;
-    {
-        std::lock_guard<std::mutex> lk(gMu);
-        if (gRt) {
-            backendOk = gRt->backend != nullptr;
-            deviceOk = true;
-        } else {
-            int stage = 0;
-            Runtime* rt = createRuntime(dir, err, &stage, /*withPerf*/ false);
-            backendOk = stage >= 2;
-            deviceOk = stage >= 3;
-            freeRuntime(rt);
-        }
-    }
-    std::string o = "{\"backendOk\":";
-    o += backendOk ? "true" : "false";
-    o += ",\"deviceOk\":";
-    o += deviceOk ? "true" : "false";
-    o += ",\"error\":";
-    o += err.empty() ? "null" : "\"" + jsonEscape(err) + "\"";
-    o += fmt(",\"cdsp\":{\"present\":%s,\"unsignedPd\":%s,\"arch\":%d", c.present ? "true" : "false",
-             c.unsignedPd ? "true" : "false", c.arch);
-    o += ",\"error\":";
-    o += c.error.empty() ? "null" : "\"" + jsonEscape(c.error) + "\"";
-    o += "}}";
-    return o;
-}
-
-std::string execute(JNIEnv* env, Model* m, jobjectArray ins, jobjectArray outs) {
-    std::lock_guard<std::mutex> lk(m->mu);
-    if (!m->ctx) return "model closed";
-    jsize ni = ins ? env->GetArrayLength(ins) : 0, no = outs ? env->GetArrayLength(outs) : 0;
-    if ((size_t) ni != m->inputs.size()) return fmt("expected %zu inputs, got %d", m->inputs.size(), ni);
-    if ((size_t) no != m->outputs.size()) return fmt("expected %zu outputs, got %d", m->outputs.size(), no);
-    std::vector<Qnn_Tensor_t> qi(ni), qo(no);
-    auto bind = [&](jobjectArray arr, jsize i, const IoTensor& io, Qnn_Tensor_t& dst) -> std::string {
-        jobject buf = env->GetObjectArrayElement(arr, i);
-        void* p = buf ? env->GetDirectBufferAddress(buf) : nullptr;
-        jlong cap = buf ? env->GetDirectBufferCapacity(buf) : -1;
-        if (buf) env->DeleteLocalRef(buf);
-        if (!p) return io.name + ": not a direct ByteBuffer";
-        if ((size_t) cap < io.bytes) return fmt("%s: buffer %lld < %zu bytes", io.name.c_str(), (long long) cap, io.bytes);
-        dst = io.desc;
-        TensorView{&dst}.setRaw(p, (uint32_t) io.bytes);
-        return {};
-    };
-    for (jsize i = 0; i < ni; i++) { std::string e = bind(ins, i, m->inputs[i], qi[i]); if (!e.empty()) return e; }
-    for (jsize i = 0; i < no; i++) { std::string e = bind(outs, i, m->outputs[i], qo[i]); if (!e.empty()) return e; }
-    Qnn_ErrorHandle_t e = m->rt->qnn.graphExecute(m->graph, qi.data(), (uint32_t) ni, qo.data(), (uint32_t) no, nullptr, nullptr);
-    if (e != QNN_SUCCESS) return fmt("graphExecute(%s) failed (%lu)", m->graphName.c_str(), (unsigned long) e);
-    return {};
-}
-
-std::string setPerf(bool burst) {
-    std::lock_guard<std::mutex> lk(gMu);
-    return setPerfLocked(gRt, burst);
-}
-
-} // namespace
+}  // namespace
 
 // ---------------------------------------------------------------- JNI
 
-#define JNI_FN(name) Java_com_iris_localai_imagegen_QnnNative_##name
-
 extern "C" {
 
-JNIEXPORT jstring JNICALL JNI_FN(nativeProbe)(JNIEnv* env, jobject, jstring runtimeDir) {
-    return env->NewStringUTF(probe(jstr(env, runtimeDir)).c_str());
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeProbe(JNIEnv* env, jclass, jstring jdir) {
+    Str dir = jstr(env, jdir);
+    bool backendOk = false, deviceOk = false;
+    int arch = 0;
+    Str err;
+    {
+        Lock lk;
+        Runtime* r = ensureRuntime(dir);
+        if (r) {
+            backendOk = r->backend != nullptr;
+            deviceOk = r->deviceOk;
+            arch = htpArch(r);
+            if (r->openGraphs == 0) teardown();  // 只是探测：不常驻
+        } else err = g_lastError;
+    }
+    Str js = "{\"backendOk\":";
+    js += backendOk ? "true" : "false";
+    js += ",\"deviceOk\":";
+    js += deviceOk ? "true" : "false";
+    if (!err.empty()) js += ",\"error\":\"" + jsonEscape(err) + "\"";
+    js += ",\"cdsp\":{\"present\":";
+    js += cdspPresent() ? "true" : "false";
+    js += ",\"unsignedPd\":";
+    js += unsignedPdSupported() ? "true" : "false";
+    js += ",\"arch\":" + toStr(arch) + "}}";
+    return env->NewStringUTF(js.c_str());
 }
 
-JNIEXPORT jlong JNICALL JNI_FN(nativeOpen)(JNIEnv* env, jobject, jstring runtimeDir, jstring binPath) {
-    std::string err;
-    Model* m = openModel(jstr(env, runtimeDir), jstr(env, binPath), err);
-    if (!m) { gLastError = err; LOGE("open failed: %s", err.c_str()); return 0; }
-    gLastError.clear();
-    return (jlong) (intptr_t) m;
+JNIEXPORT jlong JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeOpen(JNIEnv* env, jclass, jstring dir, jstring bin) {
+    return (jlong) (intptr_t) openGraph(jstr(env, dir), jstr(env, bin), "");
 }
 
-JNIEXPORT jstring JNICALL JNI_FN(nativeLastError)(JNIEnv* env, jobject) {
-    return gLastError.empty() ? nullptr : env->NewStringUTF(gLastError.c_str());
+JNIEXPORT jlong JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeOpenGraph(JNIEnv* env, jclass, jstring dir, jstring bin, jstring name) {
+    return (jlong) (intptr_t) openGraph(jstr(env, dir), jstr(env, bin), jstr(env, name));
 }
 
-JNIEXPORT jstring JNICALL JNI_FN(nativeInfo)(JNIEnv* env, jobject, jlong handle) {
-    auto* m = (Model*) (intptr_t) handle;
-    if (!m) return nullptr;
-    return env->NewStringUTF(modelInfo(m).c_str());
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeGraphNames(JNIEnv* env, jclass, jstring jdir, jstring jbin) {
+    Lock lk;
+    Runtime* r = ensureRuntime(jstr(env, jdir));
+    if (!r) return nullptr;
+    Mapped m;
+    if (!m.open(jstr(env, jbin))) return nullptr;
+    Vec<GraphDesc> graphs;
+    if (!readGraphs(r, m.p, m.n, graphs)) return nullptr;
+    Str out;
+    for (size_t i = 0; i < graphs.size(); i++) { if (i) out += '\n'; out += graphs[i].name; }
+    return env->NewStringUTF(out.c_str());
 }
 
-JNIEXPORT jstring JNICALL JNI_FN(nativeExecute)(JNIEnv* env, jobject, jlong handle, jobjectArray inputs, jobjectArray outputs) {
-    auto* m = (Model*) (intptr_t) handle;
-    if (!m) return env->NewStringUTF("invalid handle");
-    std::string e = execute(env, m, inputs, outputs);
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeLastError(JNIEnv* env, jclass) {
+    Lock lk;
+    return g_lastError.empty() ? nullptr : env->NewStringUTF(g_lastError.c_str());
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeInfo(JNIEnv* env, jclass, jlong h) {
+    auto* g = reinterpret_cast<Graph*>((intptr_t) h);
+    if (!g) return nullptr;
+    Str js = "{\"graph\":\"" + jsonEscape(g->desc.name) + "\",\"inputs\":";
+    appendTensors(js, g->desc.inputs);
+    js += ",\"outputs\":";
+    appendTensors(js, g->desc.outputs);
+    js += '}';
+    return env->NewStringUTF(js.c_str());
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeExecute(JNIEnv* env, jclass, jlong h, jobjectArray ins, jobjectArray outs) {
+    auto* g = reinterpret_cast<Graph*>((intptr_t) h);
+    if (!g) return env->NewStringUTF("图已关闭");
+    auto collect = [&](jobjectArray arr, const Vec<TensorDesc>& ds, Vec<Qnn_Tensor_t>& ts) -> Str {
+        jsize n = arr ? env->GetArrayLength(arr) : 0;
+        if ((size_t) n != ds.size()) return "张量个数不符";
+        for (jsize i = 0; i < n; i++) {
+            jobject b = env->GetObjectArrayElement(arr, i);
+            void* p = b ? env->GetDirectBufferAddress(b) : nullptr;
+            jlong cap = b ? env->GetDirectBufferCapacity(b) : -1;
+            if (b) env->DeleteLocalRef(b);
+            uint64_t need = tensorBytes(ds[i]);
+            if (!p || cap < 0 || (uint64_t) cap < need) return ds[i].name + "：缓冲区太小或不是 direct";
+            ts.push_back(toQnn(ds[i], p, (uint32_t) need));
+        }
+        return Str();
+    };
+    Vec<Qnn_Tensor_t> ti, to;
+    Str e = collect(ins, g->desc.inputs, ti);
+    if (e.empty()) e = collect(outs, g->desc.outputs, to);
+    if (!e.empty()) return env->NewStringUTF(e.c_str());
+    const QNN_INTERFACE_VER_TYPE* qnn;
+    {
+        Lock lk;
+        if (!g_rt) return env->NewStringUTF("运行库未加载");
+        qnn = g_rt->qnn;
+    }
+    Qnn_ErrorHandle_t r = qnn->graphExecute(g->graph, ti.data(), (uint32_t) ti.size(), to.data(), (uint32_t) to.size(), nullptr, nullptr);
+    if (r != QNN_SUCCESS) return env->NewStringUTF(errStr("NPU 推理", r).c_str());
+    return nullptr;
+}
+
+JNIEXPORT void JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeClose(JNIEnv*, jclass, jlong h) {
+    auto* g = reinterpret_cast<Graph*>((intptr_t) h);
+    if (!g) return;
+    Lock lk;
+    if (g_rt) {
+        if (g->ctx) g_rt->qnn->contextFree(g->ctx, nullptr);
+        if (g_rt->openGraphs > 0) g_rt->openGraphs--;
+    }
+    delete g;
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_iris_localai_imagegen_QnnNative_nativeSetPerf(JNIEnv* env, jclass, jboolean burst) {
+    Str e = setPerf(burst == JNI_TRUE);
     return e.empty() ? nullptr : env->NewStringUTF(e.c_str());
 }
 
-JNIEXPORT jstring JNICALL JNI_FN(nativeSetPerf)(JNIEnv* env, jobject, jboolean burst) {
-    std::string e = setPerf(burst == JNI_TRUE);
-    return e.empty() ? nullptr : env->NewStringUTF(e.c_str());
-}
-
-JNIEXPORT void JNICALL JNI_FN(nativeClose)(JNIEnv*, jobject, jlong handle) {
-    closeModel((Model*) (intptr_t) handle);
-}
-
-} // extern "C"
+}  // extern "C"

@@ -372,6 +372,53 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** 2.6.12: 导入 Anima NPU 包：多选的文件里只收包内约定的文件名，复制进 `<id>/`。 */
+    fun importNpuPack(name: String, uris: List<Uri>, steps: Int) {
+        if (_ui.value.importing != null) return
+        val imp = com.iris.localai.imagegen.ImportedImages
+        viewModelScope.launch {
+            val id = imp.newId()
+            val root = withContext(Dispatchers.IO) { repo.modelsLocation().dir }
+            val dir = File(root, id)
+            val err = withContext(Dispatchers.IO) {
+                runCatching {
+                    val picked = uris.map { it to nameOf(it) }.filter { it.second in com.iris.localai.imagegen.AnimaQnnFiles.NAMES }.distinctBy { it.second }
+                    val total = picked.sumOf { sizeOf(it.first).coerceAtLeast(0L) }.coerceAtLeast(1L)
+                    var done = 0L
+                    dir.mkdirs()
+                    _ui.update { it.copy(importing = 0f) }
+                    for ((uri, fn) in picked) {
+                        val part = File(dir, "$fn.part")
+                        _ui.update { it.copy(importFile = fn) }
+                        getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
+                            part.outputStream().use { os ->
+                                val buf = ByteArray(1 shl 20)
+                                var last = 0L
+                                while (true) {
+                                    val n = ins.read(buf)
+                                    if (n < 0) break
+                                    os.write(buf, 0, n); done += n
+                                    val now = System.currentTimeMillis()
+                                    if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
+                                }
+                            }
+                        } ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                        if (!part.renameTo(File(dir, fn))) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                    }
+                    val miss = com.iris.localai.imagegen.AnimaQnnFiles(dir).missing()
+                    if (miss.isNotEmpty()) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_missing, miss.joinToString()))
+                    val a = com.iris.localai.imagegen.ImportArch.ANIMA_NPU
+                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, a.label), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
+                    null
+                }.exceptionOrNull()
+            }
+            if (err != null) withContext(Dispatchers.IO) { dir.deleteRecursively() }
+            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> e.message ?: e.toString() }) }
+            refresh()
+            if (err == null) imp.get(id)?.toModel()?.let { selectModel(it) }
+        }
+    }
+
     fun renameImported(m: ImageModel, name: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { com.iris.localai.imagegen.ImportedImages.rename(m.id, name) }

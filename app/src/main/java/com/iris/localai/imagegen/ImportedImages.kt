@@ -14,10 +14,12 @@ import java.io.File
  * 文件复制到生图模型根目录下的 `<id>/`；文本编码器 / VAE 可复用同一根目录里已下载的文件（相对路径）。
  * 清单存 filesDir/imagegen/imported.json，主进程与 :imagegen 进程都读它（IrisApp 里 [init]）。
  */
-enum class ImportArch(val label: String, val llmPath: String, val vaePath: String, val steps: Int, val cfg: Float, val tagStyle: Boolean) {
+enum class ImportArch(val label: String, val llmPath: String, val vaePath: String, val steps: Int, val cfg: Float, val tagStyle: Boolean, val npuPack: Boolean = false) {
     ANIMA("Anima", "${ImageCatalog.SHARED_DIR}/Qwen3-0.6B-Base.Q8_0.gguf", "${ImageCatalog.ANIMA_OLD_ID}/qwen_image_vae.safetensors", 30, 4f, true),
     Z_IMAGE("Z-Image", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "z-image-turbo/ae.safetensors", 8, 1f, false),
     FLUX2_4B("FLUX.2 Klein 4B", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "flux2-klein-4b/flux2-vae.safetensors", 4, 1f, false),
+    /** 2.6.12: Anima 的 NPU 包（一整个文件夹的 QNN 文件，只在 HTP v79 上跑）。 */
+    ANIMA_NPU("Anima NPU", "", "", 8, 1f, true, npuPack = true),
 }
 
 @Serializable
@@ -36,6 +38,11 @@ data class ImportedImage(
 
     fun toModel(): ImageModel {
         val a = archOrNull
+        if (a?.npuPack == true) return ImageModel(
+            id = id, tier = Tier.MID, name = name, backend = Backend.QNN,
+            files = emptyList(), fixedSize = null, defaultSteps = steps, defaultCfg = 1f,
+            note = a.label, minHtpArch = 79, tagStyle = true, imported = true, animaQnn = true,
+        )
         return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.SDCPP,
             files = listOf(ImageCatalog.SD_LIB), // 只有引擎库需要下载；权重是用户的文件

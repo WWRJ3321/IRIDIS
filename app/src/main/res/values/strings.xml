@@ -2166,4 +2166,10 @@
     <string name="mtk244_unsupported">此芯片（%1$s）暂无联发科 NPU 模型。目前只有天玑 9300 / 9400 / 9500 有官方 NPU 版</string>
     <string name="mtk244_not_mtk">这是联发科 NPU 专用模型（%1$s），本机是 %2$s，无法运行。请改用通用 .litertlm 版本</string>
     <string name="engine_d792e1">模型这次没有输出任何内容。已清空缓存，再点一次重新生成试试；仍然没有就换 GPU 后端。</string>
+    <string name="ig270_npu_chip">这个 NPU 包只能在骁龙 8 Elite 上运行</string>
+    <string name="ig270_npu_runtime">缺 NPU 运行库，请先在设置里下载</string>
+    <string name="ig270_npu_hint">选 NPU 包里的全部文件（可多选）</string>
+    <string name="ig270_files">包内文件</string>
+    <string name="ig270_files_val">已选 %1$d 个</string>
+    <string name="ig270_npu_missing">缺文件：%1$s</string>
 </resources>

@@ -38,7 +38,7 @@ class AnythingV5V2212Test {
             assertTrue(m.defaultPrompt.startsWith("masterpiece") && m.defaultNegative.startsWith("lowres"))
             assertEquals(75, m.minHtpArch)
         }
-        assertTrue(ImageCatalog.all.any { it.id == ImageCatalog.ANYTHING_V5_ID })
+        assertTrue(ImageCatalog.legacy.any { it.id == ImageCatalog.ANYTHING_V5_ID }) // 2.6.12: 不再列出，旧下载仍可用
         assertEquals(ImageCatalog.SD15_QNN, ImageCatalog.all.first())
     }
 

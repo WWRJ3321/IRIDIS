@@ -16,8 +16,8 @@ class V269Test {
     @Test fun version() {
         assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.9" })
         val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.11\""))
-        assertTrue(g.contains("versionCode = 270"))
+        assertTrue(g.contains("versionName = \"2.6.12-beta\""))
+        assertTrue(g.contains("versionCode = 271"))
         assertTrue(root("CHANGELOG.md").readText().contains("## 2.6.9（"))
     }
 

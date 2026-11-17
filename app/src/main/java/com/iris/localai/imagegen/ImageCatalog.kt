@@ -66,6 +66,8 @@ data class ImageModel(
     val licenseUrl: String = "",
     /** 2.6.9: 用户导入的模型（[ImportedImages]），可改名，删除时连清单一起删。 */
     val imported: Boolean = false,
+    /** 2.6.12: 导入的 Anima NPU 包（QNN context binary，[AnimaQnnEngine]）。 */
+    val animaQnn: Boolean = false,
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
     val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }
@@ -322,8 +324,12 @@ object ImageCatalog {
      */
     private val builtInListed: List<ImageModel> by lazy {
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
-        builtIn.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }
+        builtIn.filter { ImageRules.listed(it) && it.id !in LEGACY_IDS && (!it.sdq || ImageRules.sdqListed(arch)) }
     }
+
+    /** 2.6.12: 不再提供下载的模型（非商用转换包）；旧版下载过的仍可用、可删除。 */
+    val LEGACY_IDS = setOf(ANYTHING_V5_ID)
+    val legacy: List<ImageModel> get() = builtIn.filter { it.id in LEGACY_IDS }
 
     /** 2.6.9: 内置 + 用户导入的（导入清单变了就跟着变）。 */
     val known: List<ImageModel> get() = builtIn + ImportedImages.models()

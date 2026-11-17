@@ -17,7 +17,7 @@ class V268Test {
     private fun root(p: String) = listOf(p, "../$p").map { File(it) }.first { it.exists() }
 
     @Test fun version() {
-        assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.8" && it.of(UpdateNotes.Tag.EXPERIMENTAL).isNotEmpty() })
+        assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.8" && it.of(UpdateNotes.Tag.FEATURE).isNotEmpty() /* 2.6.12: Anima 实验条已删 */ })
         assertTrue(root("CHANGELOG.md").readText().contains("## 2.6.8（"))
     }
 

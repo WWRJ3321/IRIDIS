@@ -2,6 +2,16 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.12 Beta（未真机测试）
+**本版未在真机测试。**
+
+- 新增导入「Anima NPU」：骁龙 8 Elite（HTP v79）上用 NPU 跑 Anima Turbo。导入时多选 NPU 包里的文件（text.bin、part0–3.bin、dec.bin、qwen/t5 词表 .raw、两个 tokenizer.json），复制进模型目录；App 不内置、不下载。
+- 新引擎 AnimaQnnEngine（Kotlin，基于现有 libiris_imagegen QNN 运行器）：Qwen BPE + T5 Unigram 分词（ComfyUI 权重语法）、CPU 查词表 → text.bin → 四段扩散 × 步数（Euler，shift 3 simple）→ dec.bin。CFG 固定 1，负面提示词不生效；单尺寸包固定 512×512，多尺寸包（ms/）按宽高比挑最近的尺寸。
+- 运行库优先用 GenieX 的 QNN 2.50.40（与包同版本），没有再用 QNN 运行库。
+- libiris_imagegen.so 全新编写（只依赖 QNN 公开头文件，不再含第三方非商用代码）：新增按名字打开多图文件；没有打开的图时可切换运行库目录；不依赖 C++ 标准库。arm64 主机用 scripts/build-imagegen-arm64host.sh 编译。
+- 许可清理：不再提供非商用资源的下载（Anything V5 NPU 版、Matcha 标贝、Piper 小雅、ZipVoice 音色克隆）；已下载的照常可用、可删除。
+- 更新历史文案精简。
+
 ## 2.6.11（未真机测试）
 **本版未在真机测试。**
 

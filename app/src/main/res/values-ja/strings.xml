@@ -2165,4 +2165,10 @@
     <string name="mtk244_unsupported">This chip (%1$s) has no MediaTek NPU models yet. Only Dimensity 9300 / 9400 / 9500 have official NPU builds</string>
     <string name="mtk244_not_mtk">This model is built for a MediaTek NPU (%1$s); this phone is %2$s, so it can’t run here. Use the generic .litertlm instead</string>
     <string name="engine_d792e1">モデルは今回何も出力しませんでした。キャッシュをクリアしたので、もう一度タップして再生成してください。それでも出ない場合は GPU バックエンドに切り替えてください。</string>
+    <string name="ig270_npu_chip">この NPU パックは Snapdragon 8 Elite 専用です</string>
+    <string name="ig270_npu_runtime">NPU ランタイムがありません。先に設定からダウンロードしてください</string>
+    <string name="ig270_npu_hint">NPU パックのファイルをすべて選択（複数可）</string>
+    <string name="ig270_files">パックのファイル</string>
+    <string name="ig270_files_val">%1$d 個選択</string>
+    <string name="ig270_npu_missing">不足：%1$s</string>
 </resources>

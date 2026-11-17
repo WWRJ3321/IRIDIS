@@ -113,36 +113,46 @@ internal fun ImportDialog(vm: ImageGenViewModel, onDismiss: () -> Unit) {
         }
     }
     fun open(t: Int) { target = t; runCatching { pick.launch(arrayOf("*/*")) } }
+    // 2.6.12: NPU 包 = 多选一批文件
+    var pack by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val pickMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) pack = (pack + uris).distinct()
+    }
     val llmOk = llm != null || have.first
     val vaeOk = vae != null || have.second
     val mainOk = main?.second?.let(ImportedImages::acceptable) == true
     IrisDialog(
         onDismiss = onDismiss, title = I18n.s(R.string.ig269_import),
-        confirmText = I18n.s(R.string.ig269_do_import), confirmEnabled = mainOk && llmOk && vaeOk,
+        confirmText = I18n.s(R.string.ig269_do_import), confirmEnabled = if (arch.npuPack) pack.isNotEmpty() else mainOk && llmOk && vaeOk,
         onConfirm = {
-            main?.let { m -> vm.importModel(arch, name, m.first, llm?.first, vae?.first, steps.toIntOrNull() ?: arch.steps, cfg.toFloatOrNull() ?: arch.cfg) }
+            if (arch.npuPack) vm.importNpuPack(name, pack, steps.toIntOrNull() ?: arch.steps)
+            else main?.let { m -> vm.importModel(arch, name, m.first, llm?.first, vae?.first, steps.toIntOrNull() ?: arch.steps, cfg.toFloatOrNull() ?: arch.cfg) }
             onDismiss()
         },
     ) {
         Column {
-            Text(I18n.s(R.string.ig269_hint), style = IrisType.caption, color = c.textTertiary)
+            Text(I18n.s(if (arch.npuPack) R.string.ig270_npu_hint else R.string.ig269_hint), style = IrisType.caption, color = c.textTertiary)
             Spacer(Modifier.height(IrisDimens.space8))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                 for (a in ImportArch.entries) ArchPill(a.label, a == arch) { arch = a; llm = null; vae = null }
             }
             Spacer(Modifier.height(IrisDimens.space8))
+            if (arch.npuPack) PickRow(I18n.s(R.string.ig270_files), if (pack.isEmpty()) I18n.s(R.string.ig269_none) else I18n.s(R.string.ig270_files_val, pack.size),
+                pack.isNotEmpty(), I18n.s(R.string.ig269_pick), onPick = { runCatching { pickMany.launch(arrayOf("*/*")) } })
+            else {
             PickRow(I18n.s(R.string.ig269_main), main?.second ?: I18n.s(R.string.ig269_none), mainOk, I18n.s(R.string.ig269_pick), onPick = { open(0) })
             PickRow(I18n.s(R.string.ig269_te), llm?.second ?: if (have.first) I18n.s(R.string.ig269_downloaded, arch.llmPath.substringAfterLast('/')) else I18n.s(R.string.ig269_none),
                 llmOk, I18n.s(R.string.ig269_pick), onPick = { open(1) }, onClear = if (llm != null && have.first) { { llm = null } } else null)
             PickRow(I18n.s(R.string.ig269_vae), vae?.second ?: if (have.second) I18n.s(R.string.ig269_downloaded, arch.vaePath.substringAfterLast('/')) else I18n.s(R.string.ig269_none),
                 vaeOk, I18n.s(R.string.ig269_pick), onPick = { open(2) }, onClear = if (vae != null && have.second) { { vae = null } } else null)
+            }
             OutlinedTextField(name, { name = it.take(40) }, label = { Text(I18n.s(R.string.ig269_name)) }, singleLine = true,
                 shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 OutlinedTextField(steps, { steps = it.filter(Char::isDigit).take(3) }, label = { Text(ImageGenText.STEPS) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.weight(1f))
-                OutlinedTextField(cfg, { cfg = it.filter { ch -> ch.isDigit() || ch == '.' }.take(4) }, label = { Text(ImageGenText.CFG) }, singleLine = true,
+                if (!arch.npuPack) OutlinedTextField(cfg, { cfg = it.filter { ch -> ch.isDigit() || ch == '.' }.take(4) }, label = { Text(ImageGenText.CFG) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.weight(1f))
             }

@@ -93,6 +93,7 @@ internal fun CloneVoiceSection(vm: SettingsViewModel) {
     val pack = VoicePack.CLONE_ZIPVOICE
     val state = packs[pack] ?: PackState.NotInstalled
     val installed = state == PackState.Installed
+    if (pack.delisted && !installed) return
     var creating by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<ClonedVoice?>(null) }
     // 2.5.0 Beta5: selected = the voice the synthesizer really uses (a deleted voice id no longer shows as chosen).

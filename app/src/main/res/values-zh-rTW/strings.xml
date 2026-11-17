@@ -2165,4 +2165,10 @@
     <string name="mtk244_unsupported">此晶片（%1$s）暫無聯發科 NPU 模型。目前只有天璣 9300 / 9400 / 9500 有官方 NPU 版</string>
     <string name="mtk244_not_mtk">這是聯發科 NPU 專用模型（%1$s），本機是 %2$s，無法執行。請改用通用 .litertlm 版本</string>
     <string name="engine_d792e1">模型這次沒有輸出任何內容。已清空快取，再點一次重新生成試試；仍然沒有就換 GPU 後端。</string>
+    <string name="ig270_npu_chip">這個 NPU 包只能在驍龍 8 Elite 上執行</string>
+    <string name="ig270_npu_runtime">缺 NPU 執行庫，請先在設定裡下載</string>
+    <string name="ig270_npu_hint">選 NPU 包裡的全部檔案（可多選）</string>
+    <string name="ig270_files">包內檔案</string>
+    <string name="ig270_files_val">已選 %1$d 個</string>
+    <string name="ig270_npu_missing">缺檔案：%1$s</string>
 </resources>

@@ -34,6 +34,9 @@ enum class VoicePack(val id: String, val kind: VoiceKind, val title: String, val
     TTS_MATCHA_BAKER("matcha-icefall-zh-baker", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_522e83), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_39a7d1)),
     CLONE_ZIPVOICE("zipvoice-distill-int8-zh-en", VoiceKind.CLONE, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c767d0), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c92641));
 
+    /** 2.6.12: 非商用许可的语音包不再提供下载；已装的照常可用、可删除。 */
+    val delisted: Boolean get() = this == TTS_PIPER_XIAOYA || this == TTS_MATCHA_BAKER || this == CLONE_ZIPVOICE
+
     /** Single-voice packs: the speaker id is ignored. */
     val singleSpeaker: Boolean get() = this != TTS_KOKORO && this != TTS_KOKORO_HQ
 
