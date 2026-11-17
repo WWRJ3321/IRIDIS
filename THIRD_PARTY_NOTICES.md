@@ -21,7 +21,7 @@
 | bergamot-translator (browsermt) | 9271618 + 本项目补丁，编译为 libiris_bergamot.so（full 版，scripts/build-bergamot.sh） | MPL-2.0 | 附许可证全文（assets/licenses/mpl-2.0-bergamot.txt）；修改（构建补丁）见 scripts/build-bergamot.sh，修改后的 MPL 文件按 MPL-2.0 以源码形式提供 |
 | Marian NMT（browsermt 分支）/ ruy / SentencePiece / ssplit-cpp / PCRE2 / yaml-cpp / zlib（bergamot 依赖，静态链接） | 随 bergamot | MIT / Apache-2.0 / Apache-2.0 / Apache-2.0 / BSD-3-Clause / MIT / Zlib | 保留各自声明（assets/licenses/mit-marian.txt、bsd-pcre2.txt、mit-yaml-cpp.txt、zlib-notice.txt） |
 | llama.cpp Hexagon 运行库（libiris-hexagon.so、libiris-htp-v73…v85.so） | 取自 llama.cpp 官方 release b12032 android-arm64-snapdragon 包，改名（patchelf / soname 替换），作为 full 版 assets | MIT | 同 llama.cpp |
-| Local Dream (xororz/local-dream) | libiris_imagegen.so 的生图 NPU 管线部分源自其代码；Anything V5 的 NPU 模型文件由用户运行时从其 HF 仓库下载 | **CC BY-NC 4.0（非商业）** | ⚠ 署名；**不得用于商业用途**；许可证全文 assets/licenses/cc-by-nc-4.0-local-dream.txt |
+| Local Dream (xororz/local-dream) | 2.6.12 起 libiris_imagegen.so 已全新编写，不再包含其代码；Anything V5 NPU 包不再提供下载（旧版已下载的仍可用） | CC BY-NC 4.0 | 已移除 |
 | three.js | r170（HTML 预览内置，assets） | MIT | 保留版权声明（assets/licenses/mit-three.js.txt） |
 | Mika (wangzan101/Mika) | GUI 智能体的部分思路与代码（ScreenDiagnosis、StuckAdvice 等，已修改） | Apache-2.0 | 附许可证；修改说明见 assets/licenses/notice-mika.txt |
 | Haze (chrisbanes) | 1.2.2 | Apache-2.0 | 附许可证 |
@@ -38,7 +38,7 @@
 | 模型 | 来源 | 许可证 |
 |---|---|---|
 | Stable Diffusion v1.5（QNN） | Qualcomm AI Hub | CreativeML OpenRAIL-M |
-| Anything V5.0（NPU 版） | Local Dream HF xororz/sd-qnn | CreativeML OpenRAIL-M（NPU 转换包遵循 Local Dream 的 CC BY-NC 4.0） |
+| Anything V5.0（NPU 版） | Local Dream HF xororz/sd-qnn | CreativeML OpenRAIL-M（NPU 转换包遵循 Local Dream 的 CC BY-NC 4.0）（2.6.12 起不再提供下载） |
 | Firefox Translations zh↔en（Bergamot/Marian） | Mozilla，经 HF TiberiuCristianLeon/Bergamot@18008da9 下载 | Mozilla 以 MPL-2.0 发布（HF 副本标注 CC-BY-4.0）；未修改 |
 
 ## 未使用
@@ -53,9 +53,9 @@
 | 语音包 | 上游 | 许可证 | 备注 |
 |---|---|---|---|
 | Kokoro v1.1 多语言 | hexgrad/Kokoro → csukuangfj 转换 | Apache-2.0 | |
-| Matcha zh-baker | csukuangfj/matcha-icefall-zh-baker | 训练数据标贝 Databaker（BZNSYP）：**仅限非商业** | ⚠ 非商用 |
-| ZipVoice distill zh-en (Emilia) | k2-fsa/ZipVoice | 代码 Apache-2.0；蒸馏权重在 Emilia 数据集（CC BY-NC 4.0）上训练 → **权重仅限非商业** | ⚠ 非商用 |
-| VITS Piper zh_CN xiao_ya | rhasspy/piper-voices → csukuangfj 转换 | 模型卡：从零训练，数据集 openspeech/BZNSYP（标贝），**仅限非商业**（https://huggingface.co/rhasspy/piper-voices/blob/main/zh/zh_CN/xiao_ya/medium/MODEL_CARD） | ⚠ 非商用 |
+| Matcha zh-baker | csukuangfj/matcha-icefall-zh-baker | 训练数据标贝 Databaker（BZNSYP）：**仅限非商业** | ⚠ 非商用（2.6.12 起不再提供下载） |
+| ZipVoice distill zh-en (Emilia) | k2-fsa/ZipVoice | 代码 Apache-2.0；蒸馏权重在 Emilia 数据集（CC BY-NC 4.0）上训练 → **权重仅限非商业** | ⚠ 非商用（2.6.12 起不再提供下载） |
+| VITS Piper zh_CN xiao_ya | rhasspy/piper-voices → csukuangfj 转换 | 模型卡：从零训练，数据集 openspeech/BZNSYP（标贝），**仅限非商业**（https://huggingface.co/rhasspy/piper-voices/blob/main/zh/zh_CN/xiao_ya/medium/MODEL_CARD） | ⚠ 非商用（2.6.12 起不再提供下载） |
 | VITS MeloTTS zh_en | myshell-ai/MeloTTS | MIT | |
 | SenseVoice / Paraformer | FunASR (阿里达摩院) | FunASR 模型许可（要求署名） | 使用时保留署名 |
 | Qwen3-ASR 0.6B | Qwen | Apache-2.0 | |
