@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.9", listOf(
+            f("生图「导入模型」：Anima / Z-Image / FLUX.2 Klein 可导入自己的模型文件（如 Anima 系列微调），文本编码器和 VAE 可复用已下载的；可改名、删除。文件和许可由你自备。"),
+            b("修复：智能体设置页在无障碍未连接时，界面可能卡顿约 2 秒。"),
+            b("精简：清理未使用的代码与文案。"),
+        )),
         Release("2.6.8", listOf(
             f("生图「扩写提示词」（默认开）：几句描述自动补全细节；有已加载的文本模型就用它改写，没有用模板补质量词。"),
             f("生图提示词标签库：主体 / 风格 / 光线 / 构图 / 画质 / 负面，点一下加进提示词；可自己添加、长按删除。智能体生图也能读取。"),

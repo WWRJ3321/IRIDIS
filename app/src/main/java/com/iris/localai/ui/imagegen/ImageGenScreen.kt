@@ -101,6 +101,11 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
         toast("已复制生图日志，可直接发给开发者")
     }
     var deleting by remember { mutableStateOf<ImageModel?>(null) }
+    // 2.6.9: 导入 / 改名
+    var importing by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<ImageModel?>(null) }
+    if (importing) ImportDialog(vm, onDismiss = { importing = false })
+    renaming?.let { m -> RenameDialog(m.name, onRename = { vm.renameImported(m, it) }, onDismiss = { renaming = null }) }
     deleting?.let { m ->
         ConfirmDialog(
             title = ImageGenText.DELETE_TITLE,
@@ -185,10 +190,12 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         .height(androidx.compose.foundation.layout.IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
                 ) {
-                    for (m in vm.catalog) ModelChip(m, selected = m.id == s.modelId, downloaded = m.id in s.downloaded,
+                    val catalog = remember(s.catalogRev) { vm.catalog }
+                    for (m in catalog) ModelChip(m, selected = m.id == s.modelId, downloaded = m.id in s.downloaded,
                         dl = s.downloads[m.id],
                         onClick = { vm.selectModel(m) }, onDownload = { vm.download(m) },
-                        onCancel = { vm.cancelDownload(m) }, onDelete = { deleting = m })
+                        onCancel = { vm.cancelDownload(m) }, onDelete = { deleting = m }, onRename = { renaming = m })
+                    ImportChip(s.importing, s.importFile, onClick = { importing = true })
                 }
             }
 
@@ -416,7 +423,7 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun ModelChip(
     m: ImageModel, selected: Boolean, downloaded: Boolean, dl: ImageDl?,
-    onClick: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
+    onClick: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit, onRename: () -> Unit = {},
 ) {
     val c = Iris.colors
     Column(
@@ -439,7 +446,8 @@ private fun ModelChip(
         }
         Spacer(Modifier.height(IrisDimens.space4))
         Spacer(Modifier.weight(1f))
-        Text(ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
+        Text(if (m.imported) com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_own_files)
+            else ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
         Spacer(Modifier.height(IrisDimens.space4))
         when (dl) {
             is ImageDl.Downloading, is ImageDl.Extracting -> {
@@ -461,13 +469,16 @@ private fun ModelChip(
                         style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Download)
                 }
                 // 删除 also clears a partial download's leftovers
-                if (downloaded || dl is ImageDl.Failed) IrisButton(ImageGenText.DELETE, onClick = onDelete, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Trash)
+                if (downloaded || dl is ImageDl.Failed || m.imported) Row {
+                    if (m.imported) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_rename), onClick = onRename, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Edit)
+                    IrisButton(ImageGenText.DELETE, onClick = onDelete, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Trash)
+                }
             }
         }
     }
 }
 
-private fun tierLabel(m: ImageModel): String = when (m.tier) {
+private fun tierLabel(m: ImageModel): String = if (m.imported) com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_tier) else when (m.tier) {
     com.iris.localai.imagegen.Tier.LOW -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1fa42a)
     com.iris.localai.imagegen.Tier.MID -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_fa11f8)
     com.iris.localai.imagegen.Tier.HIGH -> com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15)

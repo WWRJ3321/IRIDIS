@@ -2,6 +2,13 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.9（未真机测试）
+**本版未在真机测试。**
+
+- 新增生图「导入模型」（生图页模型行末尾）：用户自备 .gguf / .safetensors 文件导入（规避再分发/商用许可风险，App 不托管不下载这些权重）。架构预设 Anima / Z-Image / FLUX.2 Klein 4B（各带默认步数与 CFG，可改）；文本编码器与 VAE 默认复用同一模型目录里已下载的（Qwen3-0.6B / Qwen3-4B、qwen_image_vae / ae / flux2-vae），没有就一起选文件。复制时校验扩展名与文件头（GGUF 魔数 / safetensors 头），进度在导入卡片上；文件放到生图模型目录 imp-xxxx/，清单 filesDir/imagegen/imported.json（:imagegen 进程同样读取）。引擎库 libiris_sd.so 没下过会自动补下。导入的模型可改名、删除（只删自己的文件，复用的不动），智能体 generate_image 与本地 API 同样可用。仅限 diffusion + LLM 文本编码器 + VAE 三件套：现有 JNI 只传这三个路径，SD1.5/SDXL 单文件与 FLUX.1（clip_l+t5）需要改 JNI 并重新托管库，记入交接。
+- 修复智能体页（GUI 智能体一行）在无障碍未连接时每次重组都在主线程尝试重开无障碍并最多 sleep 2 秒；页面改为只读检查，「开始」时的检查移到 IO 线程。
+- 精简：删除未引用的 118 条文案（7 种语言，含 full/lite 源集检查）与死代码 rowIconSlot。审查报告 docs/audit/2.6.9-audit.md；新增 ARCHITECTURE.md、GLOSSARY.md。完整审查（拆大文件、重命名测试、统一组件与动画）放到 2.7.0。
+
 ## 2.6.8（未真机测试）
 **本版未在真机测试。**
 

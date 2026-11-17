@@ -17,11 +17,7 @@ class V268Test {
     private fun root(p: String) = listOf(p, "../$p").map { File(it) }.first { it.exists() }
 
     @Test fun version() {
-        assertEquals("2.6.8", UpdateNotes.RELEASES.first().version)
-        assertTrue(UpdateNotes.RELEASES.first().of(UpdateNotes.Tag.EXPERIMENTAL).isNotEmpty())
-        val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.8\""))
-        assertTrue(g.contains("versionCode = 267"))
+        assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.8" && it.of(UpdateNotes.Tag.EXPERIMENTAL).isNotEmpty() })
         assertTrue(root("CHANGELOG.md").readText().contains("## 2.6.8（"))
     }
 

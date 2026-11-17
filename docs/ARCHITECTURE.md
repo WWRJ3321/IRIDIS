@@ -1,5 +1,24 @@
 # 架构
 
+## 现状速览（2.6.9）
+- 单模块 Android 应用 `app/`，包名 `com.iris.localai`，Kotlin + Compose，手动依赖注入（`IrisApp.kt` 的 AppContainer）。约 6.8 万行 Kotlin / 330 个文件。
+- 行数（按顶层包）：ui 31k · agent 9.7k · engine 6.3k · data 4.3k · util 3.3k · imagegen 3.2k · voice 3.0k · knowledge 1.7k · server 1.6k · memory 1.0k · 其余 <700。
+- 最大文件：ui/chat/ChatViewModel.kt 1371、ui/settings/SettingsScreens.kt 1157、engine/EngineManager.kt 1150、agent/core/ToolCallParser.kt 1015、ui/settings/StoragePage.kt 935（拆分留到 2.7.0）。
+- 原生库不在 APK 内编译：`prebuilt-native/arm64-v8a/*.so`（llama、edge0、mnn、imagegen、bergamot、compat）；`libiris_sd.so` 与 sdq 库运行时从 GitHub tag 下载并校验 SHA-256。
+- 生图在独立进程 `:imagegen`（ImageGenProcess，Messenger IPC），模型清单 `imagegen/ImageCatalog.kt`（`builtIn` + 用户导入 `ImportedImages`）。
+
+## 常见改动入口
+| 要做的事 | 改哪里 |
+|---|---|
+| 加推荐模型 | `data/RecommendedCatalog.kt`（purpose 各语言 ≤40 字，V2217 测试） |
+| 加生图内置模型 | `imagegen/ImageCatalog.kt`（固定 revision + 大小；sd.cpp 用 `SdFiles`） |
+| 用户导入生图模型 | `imagegen/ImportedImages.kt`（架构预设 `ImportArch`）、`ui/imagegen/ImageImport.kt` |
+| 加界面文案 | `python3 tools/addstr.py x.json`（7 语言，占位符必须一致） |
+| 加配色 | 主题文件 + 同步 V214ThemesTest 名单与 V250Test 计数 |
+| 加设置项 | `data/AppSettings`/`agent/AgentSettings` + 对应设置页 |
+| 出包 | `docs/RELEASE-CHECKLIST.md` 与交接包「先读这个」第 6 步 |
+
+## 目录
 ```
 IRIDIS/
 ├── app/

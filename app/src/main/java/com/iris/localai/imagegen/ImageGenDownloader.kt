@@ -225,6 +225,8 @@ object ImageDownloads {
             val usedElsewhere = others.any { o -> o.id != model.id && path in o.sharedPaths && ImageGenFiles.modelDir(root, o).exists() }
             if (!usedElsewhere) File(root, path).delete()
         }
+        // 2.6.9: 导入的模型只删自己目录（复用的文本编码器 / VAE 属于别的模型），并移出清单
+        if (model.imported) ImportedImages.remove(model.id)
         return ok
     }
 }

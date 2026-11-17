@@ -175,10 +175,6 @@ fun RowIcon(icon: ImageVector, alpha: Float = 1f) {
     Icon(icon, null, tint = Iris.colors.textSecondary.copy(alpha = alpha), modifier = Modifier.size(IrisDimens.iconLarge))
 }
 
-/** 2.5.0: width of the leading icon slot of a row (Beta2: the bare icon in every style). */
-@Composable
-fun rowIconSlot(): Dp = IrisDimens.iconLarge
-
 /** Read-only key/value row. */
 @Composable
 fun ValueRow(title: String, value: String, modifier: Modifier = Modifier) {

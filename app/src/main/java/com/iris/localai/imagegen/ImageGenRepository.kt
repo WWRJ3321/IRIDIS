@@ -39,6 +39,9 @@ object ImageGenFiles {
      * Models waiting for the Hexagon runtime have no files yet, so never count as downloaded.
      */
     fun isDownloaded(imagegenRoot: File, model: ImageModel): Boolean {
+        // 2.6.9: 导入的模型 = 三个文件都在（大小不定）+ 引擎库已下载
+        if (model.imported) return model.sdFiles?.let { f -> listOf(f.diffusion, f.llm, f.vae).all { File(imagegenRoot, it).isFile } } == true &&
+            File(imagegenRoot, ImageCatalog.SD_LIB.path).let { it.isFile && it.length() == ImageCatalog.SD_LIB.size }
         if (model.files.isNotEmpty()) return model.files.all { rf ->
             if (rf.isArchive) ImageDownloads.unpacked(imagegenRoot, model, rf)
             else File(imagegenRoot, rf.path).let { f -> f.isFile && f.length() == rf.size }
@@ -109,7 +112,7 @@ object ImageGenFiles {
 
 /** 生图 state on disk: catalog, which models are downloaded, results and their history. */
 class ImageGenRepository(internal val context: Context) {
-    val catalog: List<ImageModel> = ImageCatalog.all
+    val catalog: List<ImageModel> get() = ImageCatalog.all
 
     private val privateModels: File by lazy {
         File(context.getExternalFilesDir(ModelDirs.SUB) ?: File(context.filesDir, ModelDirs.SUB), "imagegen")

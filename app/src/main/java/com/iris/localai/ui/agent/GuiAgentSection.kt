@@ -83,7 +83,7 @@ fun GuiAgentSection() {
                 subtitle = when {
                     run.running -> run.lines.lastOrNull() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8d11c5)
                     run.result != null -> run.result
-                    else -> runner.blockerText() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a2fb8)
+                    else -> runner.blockerText(reconnect = false) ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a2fb8)
                 },
                 enabled = run.running || connected,
                 onClick = { if (run.running) runner.stop() else asking = true },

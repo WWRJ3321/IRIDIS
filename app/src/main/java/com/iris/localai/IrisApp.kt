@@ -74,6 +74,7 @@ class IrisApp : Application() {
         super.onCreate()
         com.iris.localai.I18n.init(this) // 2.3.1
         com.iris.localai.data.ModelAliases.init(this) // 2.5.5: 模型自定义名，先于模型列表
+        com.iris.localai.imagegen.ImportedImages.init(filesDir) // 2.6.9: 导入的生图模型（:imagegen 进程也要）
         // 2.2.14: the tiny restart process (AppRestart) needs none of the app.
         if (android.os.Build.VERSION.SDK_INT >= 28 && android.app.Application.getProcessName().endsWith(":restart")) return
         com.iris.localai.util.CrashReporter.install(this)

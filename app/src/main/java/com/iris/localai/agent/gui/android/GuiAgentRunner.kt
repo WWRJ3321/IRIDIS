@@ -95,8 +95,10 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     fun dismissSetup() { _setup.value = null }
 
     /** Why a run cannot start now, or null (no side effects). */
-    fun blockerKind(): GuiBlocker? {
-        if (job?.isActive == true || chatRun?.isActive == true) return GuiBlocker.BUSY
+    fun blockerKind(reconnect: Boolean = true, self: Job? = null): GuiBlocker? {
+        if ((job?.isActive == true && job !== self) || chatRun?.isActive == true) return GuiBlocker.BUSY
+        // 2.6.9: 只读检查（界面重组时调用）不去重开无障碍、不 sleep——原来会在主线程卡最多 2 秒
+        if (!reconnect && !IrisAccessibilityService.connected) return GuiBlocker.A11Y_OFF
         if (!IrisAccessibilityService.connected) {
             // 2.1.9: 清后台 switched it off — put it back when allowed, give it a moment to connect.
             if (!IrisAccessibilityService.selfEnable(context)) return GuiBlocker.A11Y_OFF
@@ -109,7 +111,7 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
     }
 
     /** The settings page's text for [blockerKind]. */
-    fun blockerText(): String? = when (blockerKind()) {
+    fun blockerText(reconnect: Boolean = true, self: Job? = null): String? = when (blockerKind(reconnect, self)) {
         null -> null
         GuiBlocker.A11Y_OFF -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_13f110)
         GuiBlocker.NO_MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3f28a)
@@ -155,8 +157,10 @@ class GuiAgentRunner(private val context: Context, private val engine: EngineMan
 
     fun start(task: String, maxSteps: Int = com.iris.localai.agent.gui.GuiLimits.DEFAULT_MAX_STEPS) {
         if (job?.isActive == true) return
-        blockerText()?.let { _state.value = GuiRunState(result = it); return }
         job = scope.launch {
+            // 2.6.9: 检查（可能等无障碍重连最多 2 秒）移出主线程
+            val me = coroutineContext[Job]
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { blockerText(self = me) }?.let { _state.value = GuiRunState(result = it); return@launch }
             val outcome = execute(task, maxSteps)
             _state.value = _state.value.copy(result = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, GuiTaskMapping.head(outcome.stop), outcome.message))
         }

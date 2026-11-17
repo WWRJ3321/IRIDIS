@@ -107,6 +107,11 @@ data class ImageGenUi(
     val usedPrompt: String? = null,
     /** 2.6.8: 等待用户确认许可的模型（首次下载前）。 */
     val licenseAsk: String? = null,
+    /** 2.6.9: 导入进度（0..1，null = 没在导入）与正在复制的文件名。 */
+    val importing: Float? = null,
+    val importFile: String = "",
+    /** 2.6.9: 模型清单版本（导入 / 改名 / 删除后 +1，让页面重读 catalog）。 */
+    val catalogRev: Int = 0,
 ) {
     val model: ImageModel get() = ImageCatalog.byId(modelId) ?: ImageCatalog.SD15_QNN
     /** Reference image + 重绘强度 work everywhere except the fixed-size QNN context binary (txt2img only). */
@@ -180,6 +185,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val ok = downloader.delete(m, withContext(Dispatchers.IO) { repo.roots() })
             if (!ok) _ui.update { it.copy(error = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066)) }
+            if (m.imported) _ui.update { it.copy(catalogRev = it.catalogRev + 1) }
             refresh()
         }
     }
@@ -282,6 +288,97 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Copies the picked reference image into the cache (the Uri grant does not outlive the picker). */
+    // ---- 2.6.9: 导入生图模型（用户自备文件，App 不托管） ----
+
+    /** 该架构的文本编码器 / VAE 是否已在写入根目录里（可复用）。 */
+    suspend fun reusable(arch: com.iris.localai.imagegen.ImportArch): Pair<Boolean, Boolean> = withContext(Dispatchers.IO) {
+        val root = repo.modelsLocation().dir
+        File(root, arch.llmPath).isFile to File(root, arch.vaePath).isFile
+    }
+
+    /** 文件显示名（选完文件后在对话框里显示）。 */
+    suspend fun displayName(uri: Uri): String = withContext(Dispatchers.IO) { nameOf(uri) }
+
+    private fun nameOf(uri: Uri): String = runCatching {
+        getApplication<Application>().contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/') ?: "model"
+
+    private fun sizeOf(uri: Uri): Long = runCatching {
+        getApplication<Application>().contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L
+        }
+    }.getOrNull() ?: -1L
+
+    fun importModel(arch: com.iris.localai.imagegen.ImportArch, name: String, main: Uri, llm: Uri?, vae: Uri?, steps: Int, cfg: Float) {
+        if (_ui.value.importing != null) return
+        val imp = com.iris.localai.imagegen.ImportedImages
+        viewModelScope.launch {
+            val id = imp.newId()
+            val root = withContext(Dispatchers.IO) { repo.modelsLocation().dir }
+            val dir = File(root, id)
+            val err = withContext(Dispatchers.IO) {
+                runCatching {
+                    val parts = listOfNotNull(main, llm, vae)
+                    val total = parts.sumOf { sizeOf(it).coerceAtLeast(0L) }.coerceAtLeast(1L)
+                    var done = 0L
+                    fun copy(uri: Uri): String {
+                        val fn = imp.safeFileName(nameOf(uri))
+                        if (!imp.acceptable(fn)) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_ext, fn))
+                        dir.mkdirs()
+                        val out = File(dir, fn).let { if (it.exists()) File(dir, "${parts.indexOf(uri)}-$fn") else it }
+                        val part = File(dir, out.name + ".part")
+                        _ui.update { it.copy(importFile = fn) }
+                        getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
+                            part.outputStream().use { os ->
+                                val buf = ByteArray(1 shl 20)
+                                var first = true
+                                var last = 0L
+                                while (true) {
+                                    val n = ins.read(buf)
+                                    if (n < 0) break
+                                    if (first) {
+                                        if (!imp.headerOk(fn, buf.copyOf(n.coerceAtMost(16)))) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                                        first = false
+                                    }
+                                    os.write(buf, 0, n); done += n
+                                    val now = System.currentTimeMillis()
+                                    if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
+                                }
+                            }
+                        } ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                        if (!part.renameTo(out)) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                        return "$id/${out.name}"
+                    }
+                    _ui.update { it.copy(importing = 0f) }
+                    val d = copy(main)
+                    val l = llm?.let(::copy) ?: arch.llmPath
+                    val v = vae?.let(::copy) ?: arch.vaePath
+                    if (!File(root, l).isFile || !File(root, v).isFile) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_need_parts))
+                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, imp.nameFromFile(d.substringAfterLast('/'))), arch.name, d, l, v,
+                        steps.coerceIn(1, 100), cfg.coerceIn(0f, 30f)))
+                    null
+                }.exceptionOrNull()
+            }
+            if (err != null) withContext(Dispatchers.IO) { dir.deleteRecursively() }
+            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> e.message ?: e.toString() }) }
+            refresh()
+            if (err == null) imp.get(id)?.toModel()?.let { m ->
+                selectModel(m)
+                // 引擎库（libiris_sd.so）没下过就补下；权重本身不下载
+                if (!withContext(Dispatchers.IO) { com.iris.localai.imagegen.ImageGenFiles.isDownloaded(root, m) }) download(m)
+            }
+        }
+    }
+
+    fun renameImported(m: ImageModel, name: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { com.iris.localai.imagegen.ImportedImages.rename(m.id, name) }
+            _ui.update { it.copy(catalogRev = it.catalogRev + 1) }
+        }
+    }
+
     fun pickReference(uri: Uri) {
         viewModelScope.launch {
             val path = withContext(Dispatchers.IO) {

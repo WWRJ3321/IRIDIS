@@ -64,6 +64,8 @@ data class ImageModel(
     /** 2.6.8: 非 Apache/MIT 许可的模型：卡片上的一行摘要 + 原文链接，首次下载前要用户确认。 */
     val licenseNote: String = "",
     val licenseUrl: String = "",
+    /** 2.6.9: 用户导入的模型（[ImportedImages]），可改名，删除时连清单一起删。 */
+    val imported: Boolean = false,
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
     val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }
@@ -339,16 +341,20 @@ object ImageCatalog {
     )
 
     /** Every model the app knows (downloaded ones are found by id even on another phone). */
-    val known: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, ANIMA_TURBO, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
+    val builtIn: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, ANIMA_TURBO, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
 
     /**
      * 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer).
      * 2.5.1: MNN CPU 生图（sd15-mnn）隐藏：不进下载列表 / runnableModels / generate_image；已下载的在存储页删除。
      */
-    val all: List<ImageModel> by lazy {
+    private val builtInListed: List<ImageModel> by lazy {
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
-        known.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }
+        builtIn.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }
     }
+
+    /** 2.6.9: 内置 + 用户导入的（导入清单变了就跟着变）。 */
+    val known: List<ImageModel> get() = builtIn + ImportedImages.models()
+    val all: List<ImageModel> get() = builtInListed + ImportedImages.models()
 
     /** 2.5.1: 已隐藏模型的目录名（存储页单独列出以便删除）。 */
     const val SD15_MNN_ID = "sd15-mnn"

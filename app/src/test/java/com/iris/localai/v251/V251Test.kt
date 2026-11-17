@@ -124,7 +124,7 @@ class V251Test {
     // ---- C ----
     @Test fun sd15MnnHidden() {
         val ic = src("app/src/main/java/com/iris/localai/imagegen/ImageCatalog.kt")
-        assertTrue(ic.contains("known.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }"))
+        assertTrue(ic.contains("builtIn.filter { ImageRules.listed(it) && (!it.sdq || ImageRules.sdqListed(arch)) }"))
         assertTrue(ic.contains("fun listed(m: ImageModel): Boolean = m.backend != Backend.MNN_CPU"))
         assertTrue(src("app/src/main/java/com/iris/localai/imagegen/ImageGenRepository.kt").contains("it.id in dl && ImageRules.listed(it)"))
         val rc = src("app/src/main/java/com/iris/localai/data/RecommendedCatalog.kt")

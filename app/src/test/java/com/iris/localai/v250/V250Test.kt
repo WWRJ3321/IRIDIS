@@ -197,7 +197,7 @@ class V250Test {
         val dirs = res.listFiles()!!.filter { it.name.startsWith("values") && File(it, "strings.xml").isFile }
         assertEquals(7, dirs.size)
         val keys = Regex("name=\"(v250_[a-z_]+)\"").findAll(File(res, "values/strings.xml").readText()).map { it.groupValues[1] }.toSet()
-        assertTrue(keys.size >= 30)
+        assertTrue(keys.size >= 25) // 2.6.9 精简删了未用的 v250_ 文案
         for (d in dirs) {
             val t = File(d, "strings.xml").readText()
             for (k in keys) assertTrue("${d.name} $k", t.contains("name=\"$k\""))
