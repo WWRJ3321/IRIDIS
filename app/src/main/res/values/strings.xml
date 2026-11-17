@@ -2146,7 +2146,7 @@
     <string name="ig268_agree">同意并下载</string>
     <string name="ig268_license_view">许可</string>
     <string name="ig269_import">导入模型</string>
-    <string name="ig269_import_note">Anima / Z-Image / FLUX.2 · 自备文件</string>
+    <string name="ig269_import_note">自备模型文件 · 许可自负</string>
     <string name="ig269_hint">选架构和主模型（.gguf / .safetensors）。文件由你自备，许可自负。</string>
     <string name="ig269_main">主模型</string>
     <string name="ig269_te">文本编码器</string>

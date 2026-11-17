@@ -2145,7 +2145,7 @@
     <string name="ig268_agree">सहमत, डाउनलोड करें</string>
     <string name="ig268_license_view">लाइसेंस</string>
     <string name="ig269_import">मॉडल आयात करें</string>
-    <string name="ig269_import_note">Anima / Z-Image / FLUX.2 · अपनी फ़ाइलें</string>
+    <string name="ig269_import_note">अपनी मॉडल फ़ाइलें · लाइसेंस आपकी ज़िम्मेदारी</string>
     <string name="ig269_hint">आर्किटेक्चर और मुख्य मॉडल चुनें (.gguf / .safetensors)। फ़ाइल और लाइसेंस आपकी ज़िम्मेदारी।</string>
     <string name="ig269_main">मुख्य मॉडल</string>
     <string name="ig269_te">टेक्स्ट एनकोडर</string>

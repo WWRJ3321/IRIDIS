@@ -2,6 +2,12 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.6.10（未真机测试）
+**本版未在真机测试。**
+
+- 移除内置 Anima Turbo（ImageCatalog.ANIMA_TURBO 及其三个下载地址）：CircleStone Labs 非商用许可，App 内提供下载会影响收捐助。Anima 系列只能用户自己「导入模型」。旧目录 anima-turbo/ 加入存储页隐藏目录可删除；导入预设仍可复用其中的 qwen_image_vae 与共享的 Qwen3-0.6B-Base。
+- 导入说明文案去掉模型牌子（7 种语言）。
+
 ## 2.6.9（未真机测试）
 **本版未在真机测试。**
 

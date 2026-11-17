@@ -105,8 +105,8 @@ object StorageUsage {
 
     /** 2.5.0-beta9: image-generation models folder inside the models dirs (= last part of ImageGenFiles.MODELS_SUB). */
     const val IMAGEGEN_DIR = "imagegen"
-    /** 2.5.1: 已隐藏的生图模型目录（= ImageCatalog.SD15_MNN_ID）。 */
-    val HIDDEN_IMAGE_DIRS = setOf(com.iris.localai.imagegen.ImageCatalog.SD15_MNN_ID)
+    /** 2.5.1: 已隐藏的生图模型目录（SD15_MNN_ID；2.6.10 加 ANIMA_OLD_ID）。 */
+    val HIDDEN_IMAGE_DIRS = setOf(com.iris.localai.imagegen.ImageCatalog.SD15_MNN_ID, com.iris.localai.imagegen.ImageCatalog.ANIMA_OLD_ID)
 
     /** 2.5.1: [imgDirs] 下已隐藏生图模型的目录（存在的）。 */
     fun hiddenImageDirs(imgDirs: List<File>): List<File> =

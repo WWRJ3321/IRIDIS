@@ -2145,7 +2145,7 @@
     <string name="ig268_agree">Agree &amp; download</string>
     <string name="ig268_license_view">License</string>
     <string name="ig269_import">Import model</string>
-    <string name="ig269_import_note">Anima / Z-Image / FLUX.2 · your own files</string>
+    <string name="ig269_import_note">Your own model files · you handle the license</string>
     <string name="ig269_hint">Pick the architecture and main model (.gguf / .safetensors). Your files, your licence.</string>
     <string name="ig269_main">Main model</string>
     <string name="ig269_te">Text encoder</string>

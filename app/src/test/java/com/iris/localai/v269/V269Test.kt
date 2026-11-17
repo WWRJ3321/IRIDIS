@@ -14,10 +14,10 @@ class V269Test {
     private val main = "src/main/java/com/iris/localai/"
 
     @Test fun version() {
-        assertEquals("2.6.9", UpdateNotes.RELEASES.first().version)
+        assertTrue(UpdateNotes.RELEASES.any { it.version == "2.6.9" })
         val g = src("build.gradle.kts")
-        assertTrue(g.contains("versionName = \"2.6.9\""))
-        assertTrue(g.contains("versionCode = 268"))
+        assertTrue(g.contains("versionName = \"2.6.10\""))
+        assertTrue(g.contains("versionCode = 269"))
         assertTrue(root("CHANGELOG.md").readText().contains("## 2.6.9（"))
     }
 
@@ -47,8 +47,9 @@ class V269Test {
 
     @Test fun presetsPointAtBuiltInFiles() {
         // 预设复用的文件路径必须与内置模型的 sdFiles 一致（否则「用已下载」找不到）
-        assertEquals(ImageCatalog.ANIMA_TURBO.sdFiles!!.llm, ImportArch.ANIMA.llmPath)
-        assertEquals(ImageCatalog.ANIMA_TURBO.sdFiles!!.vae, ImportArch.ANIMA.vaePath)
+        assertEquals("${ImageCatalog.SHARED_DIR}/Qwen3-0.6B-Base.Q8_0.gguf", ImportArch.ANIMA.llmPath)
+        assertEquals("${ImageCatalog.ANIMA_OLD_ID}/qwen_image_vae.safetensors", ImportArch.ANIMA.vaePath)
+        assertTrue(ImageCatalog.ANIMA_OLD_ID in com.iris.localai.util.StorageUsage.HIDDEN_IMAGE_DIRS)
         assertEquals(ImageCatalog.Z_IMAGE_TURBO.sdFiles!!.llm, ImportArch.Z_IMAGE.llmPath)
         assertEquals(ImageCatalog.Z_IMAGE_TURBO.sdFiles!!.vae, ImportArch.Z_IMAGE.vaePath)
         assertEquals(ImageCatalog.FLUX2_KLEIN.sdFiles!!.llm, ImportArch.FLUX2_4B.llmPath)

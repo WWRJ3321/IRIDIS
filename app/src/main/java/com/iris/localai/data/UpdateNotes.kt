@@ -16,8 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.10", listOf(
+            b("移除内置 Anima Turbo 下载（非商用许可）。需要的话用「导入模型」导入自己的文件；旧版下载过的可在存储页删除。"),
+        )),
         Release("2.6.9", listOf(
-            f("生图「导入模型」：Anima / Z-Image / FLUX.2 Klein 可导入自己的模型文件（如 Anima 系列微调），文本编码器和 VAE 可复用已下载的；可改名、删除。文件和许可由你自备。"),
+            f("生图「导入模型」：可导入自己的模型文件，文本编码器和 VAE 可复用已下载的；可改名、删除。文件和许可由你自备。"),
             b("修复：智能体设置页在无障碍未连接时，界面可能卡顿约 2 秒。"),
             b("精简：清理未使用的代码与文案。"),
         )),

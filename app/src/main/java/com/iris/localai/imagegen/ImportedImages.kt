@@ -15,7 +15,7 @@ import java.io.File
  * 清单存 filesDir/imagegen/imported.json，主进程与 :imagegen 进程都读它（IrisApp 里 [init]）。
  */
 enum class ImportArch(val label: String, val llmPath: String, val vaePath: String, val steps: Int, val cfg: Float, val tagStyle: Boolean) {
-    ANIMA("Anima", "${ImageCatalog.SHARED_DIR}/Qwen3-0.6B-Base.Q8_0.gguf", "${ImageCatalog.ANIMA_ID}/qwen_image_vae.safetensors", 30, 4f, true),
+    ANIMA("Anima", "${ImageCatalog.SHARED_DIR}/Qwen3-0.6B-Base.Q8_0.gguf", "${ImageCatalog.ANIMA_OLD_ID}/qwen_image_vae.safetensors", 30, 4f, true),
     Z_IMAGE("Z-Image", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "z-image-turbo/ae.safetensors", 8, 1f, false),
     FLUX2_4B("FLUX.2 Klein 4B", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "flux2-klein-4b/flux2-vae.safetensors", 4, 1f, false),
 }

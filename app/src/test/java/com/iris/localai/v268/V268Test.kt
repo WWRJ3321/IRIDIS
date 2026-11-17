@@ -34,7 +34,7 @@ class V268Test {
     }
 
     @Test fun lowMemRequest() {
-        val m = ImageCatalog.ANIMA_TURBO
+        val m = ImageCatalog.Z_IMAGE_TURBO
         val r = ImageRequest("x", width = 1024, height = 1024, lowMem = true).normalize(m)
         assertEquals(768, r.width); assertEquals(768, r.height)
         assertEquals(1024, ImageRequest("x", width = 1024, height = 1024).normalize(m).width)
@@ -79,7 +79,7 @@ class V268Test {
 
     @Test fun toolExpand() {
         val p = GenerateImageTool.Parsed("a cat", "", null, null, null, null, -1L, null, 0.75f)
-        val anima = ImageCatalog.ANIMA_TURBO
+        val anima = ImageCatalog.ANYTHING_V5
         assertTrue(GenerateImageTool.expand(p, anima, true).prompt.startsWith("masterpiece"))
         assertEquals("a cat", GenerateImageTool.expand(p, anima, false).prompt)
         assertTrue(GenerateImageTool.wantsTags(JsonObject(mapOf("list_tags" to JsonPrimitive("true")))))
@@ -125,27 +125,10 @@ class V268Test {
         assertEquals(TagStore.Data(), TagStore.parse(null))
     }
 
-    // ---- 4 Anima
-    @Test fun animaRecipe() {
-        val m = ImageCatalog.ANIMA_TURBO
-        assertEquals(Backend.SDCPP, m.backend)
-        assertTrue(m in ImageCatalog.known)
-        assertTrue(m.tagStyle && ImageCatalog.ANYTHING_V5.tagStyle)
-        assertEquals("仅限非商用，生成的图片可商用", m.licenseNote)
-        assertTrue(m.licenseUrl.startsWith("https://huggingface.co/circlestone-labs/Anima/"))
-        assertTrue(m.note.startsWith("实验"))
-        assertEquals(8, m.defaultSteps); assertEquals(1f, m.defaultCfg)
-        val paths = m.files.map { it.path }
-        val sd = m.sdFiles!!
-        assertTrue(sd.diffusion in paths && sd.llm in paths && sd.vae in paths)
-        assertTrue(ImageCatalog.SD_LIB in m.files)
-        // 全部指向原仓库，不自建镜像；不用坏转换
-        val urls = m.files.map { it.url }
-        assertTrue(urls.any { it.contains("vanes430/Anima-Turbo-V1.1-GGUF") && it.endsWith("Q4_0.gguf") })
-        assertTrue(urls.any { it.contains("mradermacher/Qwen3-0.6B-Base-GGUF") })
-        assertTrue(urls.any { it.contains("circlestone-labs/Anima") && it.endsWith("qwen_image_vae.safetensors") })
-        assertFalse(urls.any { it.contains("Anima-2.9B-GGUF") || it.contains("WWRJ") && !it.contains("libiris_sd") })
-        assertEquals(1_235_394_688L, m.files.first().size)
+    // ---- 4 Anima（2.6.10 起不再内置）
+    @Test fun animaRemoved() {
+        assertTrue(ImageCatalog.known.none { m -> m.files.any { it.url.contains("Anima", true) || it.url.contains("circlestone", true) } })
+        assertTrue(ImageCatalog.ANYTHING_V5.tagStyle)
         assertTrue(src("src/main/java/com/iris/localai/ui/imagegen/ImageGenViewModel.kt").contains("licenseAsk"))
     }
 }
