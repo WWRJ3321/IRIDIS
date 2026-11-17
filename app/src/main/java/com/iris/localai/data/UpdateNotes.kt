@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.7.0", listOf(
+            f("生图「导入模型」改成通用导入：一次选好主模型、文本编码器、VAE，自动识别各自用途；新增支持 SD1.5、SDXL 单文件模型和需要 CLIP / T5 的模型。"),
+            f("生图页精简：模型、提示词、尺寸、生成一屏看完，其余参数收进「高级」。"),
+            b("修复：导入的 NPU 包生图时报错（分词器在安卓上初始化失败）。"),
+        )),
         Release("2.6.12", listOf(
             f("生图「导入模型」新增 NPU 包：骁龙 8 Elite 上用 NPU 生图，多选包里的文件导入；支持多尺寸包。"),
             b("NPU 生图库重写，可在不同运行库之间切换。"),

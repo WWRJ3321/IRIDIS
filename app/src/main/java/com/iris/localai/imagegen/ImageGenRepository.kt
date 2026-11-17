@@ -42,7 +42,7 @@ object ImageGenFiles {
         // 2.6.12: 导入的 NPU 包 = 文件夹里该有的文件都在
         if (model.imported && model.animaQnn) return AnimaQnnFiles(modelDir(imagegenRoot, model)).missing().isEmpty()
         // 2.6.9: 导入的模型 = 三个文件都在（大小不定）+ 引擎库已下载
-        if (model.imported) return model.sdFiles?.let { f -> listOf(f.diffusion, f.llm, f.vae).all { File(imagegenRoot, it).isFile } } == true &&
+        if (model.imported) return model.sdFiles?.let { f -> f.paths().all { File(imagegenRoot, it).isFile } } == true &&
             File(imagegenRoot, ImageCatalog.SD_LIB.path).let { it.isFile && it.length() == ImageCatalog.SD_LIB.size }
         if (model.files.isNotEmpty()) return model.files.all { rf ->
             if (rf.isArchive) ImageDownloads.unpacked(imagegenRoot, model, rf)

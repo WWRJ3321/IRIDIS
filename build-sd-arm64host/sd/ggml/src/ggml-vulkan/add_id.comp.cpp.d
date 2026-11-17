@@ -1,0 +1,1 @@
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/add_id.comp.cpp: /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/types.glsl

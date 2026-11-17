@@ -2172,4 +2172,14 @@
     <string name="ig270_files">包内文件</string>
     <string name="ig270_files_val">已选 %1$d 个</string>
     <string name="ig270_npu_missing">缺文件：%1$s</string>
+    <string name="ig27_hint">选模型文件（可多选）：主模型、文本编码器、VAE 一起选；NPU 包选包里的全部文件</string>
+    <string name="ig27_files">已选文件</string>
+    <string name="ig27_clear">清空</string>
+    <string name="ig27_npu">NPU 包</string>
+    <string name="ig27_unknown">无法识别：%1$s</string>
+    <string name="ig27_no_main">没有主模型</string>
+    <string name="ig27_two_main">选了不止一个主模型</string>
+    <string name="ig27_too_big">模型太大（约 %1$s GB），这台手机内存放不下</string>
+    <string name="ig27_start">先下载一个模型，或点最后的「导入模型」用自己的文件</string>
+    <string name="st27_embed">知识库检索模型</string>
 </resources>

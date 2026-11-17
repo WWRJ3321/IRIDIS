@@ -21,7 +21,8 @@ class QwenBpe(private val vocab: Map<String, Int>, private val ranks: Map<String
     companion object {
         private val SPLIT: Pattern = Pattern.compile(
             "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
-            Pattern.UNICODE_CHARACTER_CLASS,
+            // 2.7.0: 不加 UNICODE_CHARACTER_CLASS——Android（ICU 正则）不支持这个标志，类初始化直接失败
+            // （真机报错只显示混淆后的类名）；ICU 的 \p{L}、\s 本来就按 Unicode 处理。
         )
 
         /** GPT-2 bytes_to_unicode. */

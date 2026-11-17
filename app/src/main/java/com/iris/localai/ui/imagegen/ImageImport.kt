@@ -6,7 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,13 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.iris.localai.I18n
 import com.iris.localai.R
-import com.iris.localai.imagegen.ImportArch
+import com.iris.localai.imagegen.FileRole
 import com.iris.localai.imagegen.ImportedImages
 import com.iris.localai.ui.components.IrisButton
 import com.iris.localai.ui.components.IrisButtonStyle
@@ -76,14 +73,14 @@ internal fun ImportChip(progress: Float?, file: String, onClick: () -> Unit) {
 
 /** 选文件的一行：标题 + 当前选择（或「复用已下载」）+ 按钮。 */
 @Composable
-private fun PickRow(title: String, value: String, ok: Boolean, buttonText: String, onPick: () -> Unit, onClear: (() -> Unit)? = null) {
+private fun PickRow(title: String, value: String, ok: Boolean, buttonText: String, onPick: () -> Unit, onClear: (() -> Unit)? = null, clearText: String = I18n.s(R.string.ig269_reuse)) {
     val c = Iris.colors
     Row(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = IrisType.caption, color = c.textSecondary)
             Text(value, style = IrisType.labelSmall, color = if (ok) c.text else c.warning, maxLines = 2)
         }
-        if (onClear != null) IrisButton(I18n.s(R.string.ig269_reuse), onClick = onClear, style = IrisButtonStyle.Text, compact = true)
+        if (onClear != null) IrisButton(clearText, onClick = onClear, style = IrisButtonStyle.Text, compact = true)
         IrisButton(buttonText, onClick = onPick, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.File)
     }
 }
@@ -92,67 +89,51 @@ private fun PickRow(title: String, value: String, ok: Boolean, buttonText: Strin
 internal fun ImportDialog(vm: ImageGenViewModel, onDismiss: () -> Unit) {
     val c = Iris.colors
     val scope = rememberCoroutineScope()
-    var arch by remember { mutableStateOf(ImportArch.ANIMA) }
     var name by remember { mutableStateOf("") }
-    var main by remember { mutableStateOf<Pair<Uri, String>?>(null) }
-    var llm by remember { mutableStateOf<Pair<Uri, String>?>(null) }
-    var vae by remember { mutableStateOf<Pair<Uri, String>?>(null) }
-    var steps by remember { mutableStateOf(arch.steps.toString()) }
-    var cfg by remember { mutableStateOf(arch.cfg.toString()) }
-    var have by remember { mutableStateOf(false to false) }
-    LaunchedEffect(arch) { have = vm.reusable(arch); steps = arch.steps.toString(); cfg = arch.cfg.toString() }
-    var target by remember { mutableStateOf(0) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val n = vm.displayName(uri)
-            when (target) {
-                0 -> { main = uri to n; if (name.isBlank()) name = ImportedImages.nameFromFile(n) }
-                1 -> llm = uri to n
-                else -> vae = uri to n
-            }
+    var uris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var plan by remember { mutableStateOf<ImageGenViewModel.ImportPlan?>(null) }
+    var steps by remember { mutableStateOf("") }
+    var cfg by remember { mutableStateOf("") }
+    // 2.7.0: 一次选全部文件（主模型、文本编码器、VAE，或 NPU 包），读文件头自动识别各自用途
+    val pickMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { picked ->
+        if (picked.isNotEmpty()) scope.launch {
+            uris = (uris + picked).distinct()
+            val p = vm.inspect(uris)
+            plan = p
+            steps = p.defaults.steps.toString(); cfg = p.defaults.cfg.toString()
+            if (name.isBlank()) p.files.firstOrNull { it.first == p.main }?.let { name = ImportedImages.nameFromFile(it.second) }
         }
     }
-    fun open(t: Int) { target = t; runCatching { pick.launch(arrayOf("*/*")) } }
-    // 2.6.12: NPU 包 = 多选一批文件
-    var pack by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    val pickMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) pack = (pack + uris).distinct()
-    }
-    val llmOk = llm != null || have.first
-    val vaeOk = vae != null || have.second
-    val mainOk = main?.second?.let(ImportedImages::acceptable) == true
+    val p = plan
     IrisDialog(
         onDismiss = onDismiss, title = I18n.s(R.string.ig269_import),
-        confirmText = I18n.s(R.string.ig269_do_import), confirmEnabled = if (arch.npuPack) pack.isNotEmpty() else mainOk && llmOk && vaeOk,
+        confirmText = I18n.s(R.string.ig269_do_import), confirmEnabled = p != null && p.error == null && (p.npu || p.main != null),
         onConfirm = {
-            if (arch.npuPack) vm.importNpuPack(name, pack, steps.toIntOrNull() ?: arch.steps)
-            else main?.let { m -> vm.importModel(arch, name, m.first, llm?.first, vae?.first, steps.toIntOrNull() ?: arch.steps, cfg.toFloatOrNull() ?: arch.cfg) }
+            p?.let { vm.importAuto(it, name, steps.toIntOrNull() ?: it.defaults.steps, cfg.toFloatOrNull() ?: it.defaults.cfg) }
             onDismiss()
         },
     ) {
         Column {
-            Text(I18n.s(if (arch.npuPack) R.string.ig270_npu_hint else R.string.ig269_hint), style = IrisType.caption, color = c.textTertiary)
+            Text(I18n.s(R.string.ig27_hint), style = IrisType.caption, color = c.textTertiary)
             Spacer(Modifier.height(IrisDimens.space8))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-                for (a in ImportArch.entries) ArchPill(a.label, a == arch) { arch = a; llm = null; vae = null }
-            }
-            Spacer(Modifier.height(IrisDimens.space8))
-            if (arch.npuPack) PickRow(I18n.s(R.string.ig270_files), if (pack.isEmpty()) I18n.s(R.string.ig269_none) else I18n.s(R.string.ig270_files_val, pack.size),
-                pack.isNotEmpty(), I18n.s(R.string.ig269_pick), onPick = { runCatching { pickMany.launch(arrayOf("*/*")) } })
-            else {
-            PickRow(I18n.s(R.string.ig269_main), main?.second ?: I18n.s(R.string.ig269_none), mainOk, I18n.s(R.string.ig269_pick), onPick = { open(0) })
-            PickRow(I18n.s(R.string.ig269_te), llm?.second ?: if (have.first) I18n.s(R.string.ig269_downloaded, arch.llmPath.substringAfterLast('/')) else I18n.s(R.string.ig269_none),
-                llmOk, I18n.s(R.string.ig269_pick), onPick = { open(1) }, onClear = if (llm != null && have.first) { { llm = null } } else null)
-            PickRow(I18n.s(R.string.ig269_vae), vae?.second ?: if (have.second) I18n.s(R.string.ig269_downloaded, arch.vaePath.substringAfterLast('/')) else I18n.s(R.string.ig269_none),
-                vaeOk, I18n.s(R.string.ig269_pick), onPick = { open(2) }, onClear = if (vae != null && have.second) { { vae = null } } else null)
+            PickRow(I18n.s(R.string.ig27_files), if (uris.isEmpty()) I18n.s(R.string.ig269_none) else I18n.s(R.string.ig270_files_val, uris.size),
+                p != null && p.error == null, I18n.s(R.string.ig269_pick), onPick = { runCatching { pickMany.launch(arrayOf("*/*")) } },
+                onClear = if (uris.isNotEmpty()) { { uris = emptyList(); plan = null } } else null, clearText = I18n.s(R.string.ig27_clear))
+            if (p != null) {
+                if (p.npu) Text(I18n.s(R.string.ig27_npu), style = IrisType.caption, color = c.textSecondary)
+                else for ((_, n, r) in p.files) Text("${roleText(r)} · $n", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
+                if (p.reuseLlm.isNotEmpty()) Text("${I18n.s(R.string.ig269_te)} · ${I18n.s(R.string.ig269_downloaded, p.reuseLlm.substringAfterLast('/'))}", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
+                if (p.reuseVae.isNotEmpty()) Text("${I18n.s(R.string.ig269_vae)} · ${I18n.s(R.string.ig269_downloaded, p.reuseVae.substringAfterLast('/'))}", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
+                p.error?.let { Text(it, style = IrisType.caption, color = c.warning) }
+                Spacer(Modifier.height(IrisDimens.space8))
             }
             OutlinedTextField(name, { name = it.take(40) }, label = { Text(I18n.s(R.string.ig269_name)) }, singleLine = true,
                 shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+            if (p != null) Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 OutlinedTextField(steps, { steps = it.filter(Char::isDigit).take(3) }, label = { Text(ImageGenText.STEPS) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.weight(1f))
-                if (!arch.npuPack) OutlinedTextField(cfg, { cfg = it.filter { ch -> ch.isDigit() || ch == '.' }.take(4) }, label = { Text(ImageGenText.CFG) }, singleLine = true,
+                if (!p.npu) OutlinedTextField(cfg, { cfg = it.filter { ch -> ch.isDigit() || ch == '.' }.take(4) }, label = { Text(ImageGenText.CFG) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.weight(1f))
             }
@@ -160,12 +141,12 @@ internal fun ImportDialog(vm: ImageGenViewModel, onDismiss: () -> Unit) {
     }
 }
 
-@Composable
-private fun ArchPill(text: String, selected: Boolean, onClick: () -> Unit) {
-    val c = Iris.colors
-    Text(text, style = IrisType.labelSmall, color = if (selected) c.onAccentContainer else c.textSecondary,
-        modifier = Modifier.clip(IrisRadius.pillShape).background(if (selected) c.accentContainer else c.surfaceVariant)
-            .clickable(onClick = onClick).padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6))
+private fun roleText(r: FileRole): String = when (r) {
+    FileRole.CHECKPOINT, FileRole.DIFFUSION -> I18n.s(R.string.ig269_main)
+    FileRole.LLM, FileRole.T5, FileRole.CLIP_L, FileRole.CLIP_G -> I18n.s(R.string.ig269_te)
+    FileRole.VAE -> I18n.s(R.string.ig269_vae)
+    FileRole.NPU -> I18n.s(R.string.ig27_npu)
+    FileRole.UNKNOWN -> "?"
 }
 
 @Composable

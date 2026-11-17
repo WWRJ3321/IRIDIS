@@ -643,6 +643,7 @@ fun StoragePage(
 internal fun leftoverKindLabel(l: StorageUsage.Leftover): String = when (l.kind) {
     StorageUsage.LeftoverKind.PARTIAL -> if (l.active) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ddc5f0) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f57ca2)
     StorageUsage.LeftoverKind.PROJECTOR -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_961998)
+    StorageUsage.LeftoverKind.EMBED -> com.iris.localai.I18n.s(com.iris.localai.R.string.st27_embed)
     StorageUsage.LeftoverKind.UNKNOWN -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad160b)
 }
 

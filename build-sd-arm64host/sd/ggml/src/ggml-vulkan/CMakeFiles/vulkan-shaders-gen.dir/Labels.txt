@@ -1,0 +1,13 @@
+# Target labels
+ vulkan-shaders-gen
+# Source files and their labels
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/CMakeFiles/vulkan-shaders-gen
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/CMakeFiles/vulkan-shaders-gen.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/CMakeFiles/vulkan-shaders-gen-complete.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-build.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-configure.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-download.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-install.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-mkdir.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-patch.rule
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/vulkan-shaders-gen-prefix/src/vulkan-shaders-gen-stamp/vulkan-shaders-gen-update.rule

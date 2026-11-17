@@ -2171,4 +2171,14 @@
     <string name="ig270_files">Archivos del paquete</string>
     <string name="ig270_files_val">%1$d seleccionados</string>
     <string name="ig270_npu_missing">Falta: %1$s</string>
+    <string name="ig27_hint">Elige los archivos del modelo (selección múltiple): modelo principal, codificador de texto y VAE juntos; para un paquete NPU, todos sus archivos</string>
+    <string name="ig27_files">Archivos</string>
+    <string name="ig27_clear">Borrar</string>
+    <string name="ig27_npu">Paquete NPU</string>
+    <string name="ig27_unknown">No reconocido: %1$s</string>
+    <string name="ig27_no_main">Falta el modelo principal</string>
+    <string name="ig27_two_main">Más de un modelo principal</string>
+    <string name="ig27_too_big">Modelo demasiado grande (unos %1$s GB) para la memoria de este teléfono</string>
+    <string name="ig27_start">Descarga primero un modelo o toca «Importar modelo» al final para usar tus archivos</string>
+    <string name="st27_embed">Modelo de búsqueda de la base de conocimiento</string>
 </resources>

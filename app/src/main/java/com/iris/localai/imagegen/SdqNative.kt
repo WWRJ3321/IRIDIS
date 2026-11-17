@@ -70,6 +70,9 @@ object SdqNative {
 interface SdApi {
     fun lastError(): String
     fun load(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long
+    /** 2.7.0: 带单文件模型与 CLIP / T5 的加载（只有上游库有；高通分支退回 [load]）。 */
+    fun loadEx(model: String, clipL: String, clipG: String, t5: String, diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long =
+        load(diffusion, llm, vae, backend, threads, flashAttn)
     fun free(handle: Long)
     fun cancel(handle: Long)
     fun generate(handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long, listener: SdNative.Progress?): ByteArray?
@@ -77,6 +80,8 @@ interface SdApi {
     object Upstream : SdApi {
         override fun lastError() = SdNative.nativeLastError()
         override fun load(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean) = SdNative.nativeLoad(diffusion, llm, vae, backend, threads, flashAttn)
+        override fun loadEx(model: String, clipL: String, clipG: String, t5: String, diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean) =
+            SdNative.nativeLoadEx(model, clipL, clipG, t5, diffusion, llm, vae, backend, threads, flashAttn)
         override fun free(handle: Long) = SdNative.nativeFree(handle)
         override fun cancel(handle: Long) = SdNative.nativeCancel(handle)
         override fun generate(handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long, listener: SdNative.Progress?) =

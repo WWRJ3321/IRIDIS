@@ -1,0 +1,1236 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      The target system is: Linux -  - aarch64
+      The host system is: Linux - 6.12.110+ - aarch64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/bin/clang-19 
+      Build flags: --rtlib=compiler-rt;--unwindlib=libunwind;-fPIC;-ffunction-sections;-fdata-sections
+      Id flags: -c;--target=aarch64-linux-android31 
+      
+      The output was:
+      0
+      clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/3.31.6/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/clang++-19 
+      Build flags: --rtlib=compiler-rt;--unwindlib=libunwind;-fPIC;-ffunction-sections;-fdata-sections;-stdlib=libc++
+      Id flags: -c;--target=aarch64-linux-android31 
+      
+      The output was:
+      0
+      clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/3.31.6/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_72e68
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections    -v -MD -MT CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        Debian clang version 19.1.7 (3+b1)
+        Target: aarch64-unknown-linux-android31
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+         (in-process)
+         "/usr/lib/llvm-19/bin/clang" -cc1 -triple aarch64-unknown-linux-android31 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -fhalf-no-semantic-interposition -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include"
+        ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/llvm-19/lib/clang/19/include
+         /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android
+         /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include
+        End of search list.
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ -v -Wl,-v CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -o cmTC_72e68   && :
+        Debian clang version 19.1.7 (3+b1)
+        Target: aarch64-unknown-linux-android31
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+         "/usr/bin/ld.lld-19" --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --build-id --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_72e68 /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o -L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib -v CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o
+        Debian LLD 19.1.7 (compatible with GNU linkers)
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/lib/llvm-19/lib/clang/19/include]
+          add: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+          add: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        end of search list found
+        collapse include dir [/usr/lib/llvm-19/lib/clang/19/include] ==> [/usr/lib/llvm-19/lib/clang/19/include]
+        collapse include dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+        collapse include dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        implicit include dirs: [/usr/lib/llvm-19/lib/clang/19/include;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_72e68]
+        ignore line: [[1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections    -v -MD -MT CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [Debian clang version 19.1.7 (3+b1)]
+        ignore line: [Target: aarch64-unknown-linux-android31]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        ignore line: [clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple aarch64-unknown-linux-android31 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -fhalf-no-semantic-interposition -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-IxT7tt -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/llvm-19/lib/clang/19/include]
+        ignore line: [ /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+        ignore line: [ /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ -v -Wl,-v CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o -o cmTC_72e68   && :]
+        ignore line: [Debian clang version 19.1.7 (3+b1)]
+        ignore line: [Target: aarch64-unknown-linux-android31]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        ignore line: [clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]]
+        link line: [ "/usr/bin/ld.lld-19" --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --build-id --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_72e68 /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o -L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib -v CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+          arg [/usr/bin/ld.lld-19] ==> ignore
+          arg [--sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=16384] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/system/bin/linker64] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_72e68] ==> ignore
+          arg [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o] ==> obj [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o]
+          arg [-L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64] ==> dir [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_72e68.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [-lc] ==> lib [c]
+          arg [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o] ==> obj [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+        ignore line: [Debian LLD 19.1.7 (compatible with GNU linkers)]
+        ignore line: []
+        ignore line: []
+        remove lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        remove lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        collapse library dir [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64] ==> [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+        implicit libs: [-l:libunwind.a;dl;c;-l:libunwind.a;dl]
+        implicit objs: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+        implicit dirs: [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_091dd
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++    -v -MD -MT CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        Debian clang version 19.1.7 (3+b1)
+        Target: aarch64-unknown-linux-android31
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+         (in-process)
+         "/usr/lib/llvm-19/bin/clang" -cc1 -triple aarch64-unknown-linux-android31 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -fhalf-no-semantic-interposition -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1 -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include"
+        ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1
+         /usr/lib/llvm-19/lib/clang/19/include
+         /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android
+         /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include
+        End of search list.
+        [2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -fuse-ld=lld-19 -static-libstdc++ -v -Wl,-v CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_091dd   && :
+        Debian clang version 19.1.7 (3+b1)
+        Target: aarch64-unknown-linux-android31
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+         "/usr/bin/ld.lld-19" --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --build-id --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_091dd /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o -L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib -v CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -Bstatic -lc++ -Bdynamic -lm /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o
+        Debian LLD 19.1.7 (compatible with GNU linkers)
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1]
+          add: [/usr/lib/llvm-19/lib/clang/19/include]
+          add: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+          add: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        end of search list found
+        collapse include dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1]
+        collapse include dir [/usr/lib/llvm-19/lib/clang/19/include] ==> [/usr/lib/llvm-19/lib/clang/19/include]
+        collapse include dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+        collapse include dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        implicit include dirs: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1;/usr/lib/llvm-19/lib/clang/19/include;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_091dd]
+        ignore line: [[1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++    -v -MD -MT CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Debian clang version 19.1.7 (3+b1)]
+        ignore line: [Target: aarch64-unknown-linux-android31]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        ignore line: [clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple aarch64-unknown-linux-android31 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -fhalf-no-semantic-interposition -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtLgAy -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1 -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include -internal-externc-isystem /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1]
+        ignore line: [ /usr/lib/llvm-19/lib/clang/19/include]
+        ignore line: [ /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android]
+        ignore line: [ /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -fuse-ld=lld-19 -static-libstdc++ -v -Wl,-v CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_091dd   && :]
+        ignore line: [Debian clang version 19.1.7 (3+b1)]
+        ignore line: [Target: aarch64-unknown-linux-android31]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        link line: [ "/usr/bin/ld.lld-19" --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --build-id --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_091dd /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o -L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31 -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android -L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib -v CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o -Bstatic -lc++ -Bdynamic -lm /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+          arg [/usr/bin/ld.lld-19] ==> ignore
+          arg [--sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=16384] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/system/bin/linker64] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_091dd] ==> ignore
+          arg [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o] ==> obj [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o]
+          arg [-L/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64] ==> dir [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android]
+          arg [-L/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib] ==> dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_091dd.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-Bstatic] ==> search static
+          arg [-lc++] ==> lib [c++]
+          arg [-Bdynamic] ==> search dynamic
+          arg [-lm] ==> lib [m]
+          arg [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [-lc] ==> lib [c]
+          arg [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o] ==> obj [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+        ignore line: [Debian LLD 19.1.7 (compatible with GNU linkers)]
+        ignore line: []
+        ignore line: []
+        remove lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        remove lib [/usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        collapse library dir [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64] ==> [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android]
+        collapse library dir [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib] ==> [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+        implicit libs: [c++;m;-l:libunwind.a;dl;c;-l:libunwind.a;dl]
+        implicit objs: [/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtbegin_dynamic.o;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31/crtend_android.o]
+        implicit dirs: [/usr/lib/llvm-19/lib/clang/19/lib/linux/aarch64;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/31;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android;/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:1250 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineASMCompiler.cmake:135 (CMAKE_DETERMINE_COMPILER_ID_VENDOR)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/CMakeLists.txt:3 (project)"
+    message: |
+      Checking whether the ASM compiler is GNU using "--version" did not match "(GNU assembler)|(GCC)|(Free Software Foundation)":
+      Debian clang version 19.1.7 (3+b1)
+      Target: aarch64-unknown-linux-gnu
+      Thread model: posix
+      InstalledDir: /usr/lib/llvm-19/bin
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:1250 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineASMCompiler.cmake:135 (CMAKE_DETERMINE_COMPILER_ID_VENDOR)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/CMakeLists.txt:3 (project)"
+    message: |
+      Checking whether the ASM compiler is AppleClang using "--version" did not match "(Apple (clang|LLVM) version)":
+      Debian clang version 19.1.7 (3+b1)
+      Target: aarch64-unknown-linux-gnu
+      Thread model: posix
+      InstalledDir: /usr/lib/llvm-19/bin
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:1237 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineASMCompiler.cmake:135 (CMAKE_DETERMINE_COMPILER_ID_VENDOR)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/CMakeLists.txt:3 (project)"
+    message: |
+      Checking whether the ASM compiler is Clang using "--version" matched "(clang version)":
+      Debian clang version 19.1.7 (3+b1)
+      Target: aarch64-unknown-linux-gnu
+      Thread model: posix
+      InstalledDir: /usr/lib/llvm-19/bin
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/CMakeLists.txt:297 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_afedd
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DCMAKE_HAVE_LIBC_PTHREAD  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_afedd.dir/src.c.o -MF CMakeFiles/cmTC_afedd.dir/src.c.o.d -o CMakeFiles/cmTC_afedd.dir/src.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp/src.c
+        FAILED: CMakeFiles/cmTC_afedd.dir/src.c.o 
+        /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DCMAKE_HAVE_LIBC_PTHREAD  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_afedd.dir/src.c.o -MF CMakeFiles/cmTC_afedd.dir/src.c.o.d -o CMakeFiles/cmTC_afedd.dir/src.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp/src.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp/src.c:13:3: error: call to undeclared function 'pthread_cancel'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+           13 |   pthread_cancel(thread);
+              |   ^
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-eTYYCp/src.c:13:3: note: did you mean 'pthread_once'?
+        /workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/pthread.h:264:5: note: 'pthread_once' declared here
+          264 | int pthread_once(pthread_once_t* _Nonnull __once, void (* _Nonnull __init_routine)(void));
+              |     ^
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:136 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:169 (_threads_check_flag_pthread)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/CMakeLists.txt:297 (find_package)"
+    checks:
+      - "Check if compiler accepts -pthread"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-uZ3blE"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-uZ3blE"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "THREADS_HAVE_PTHREAD_ARG"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-uZ3blE'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_1de4a
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_1de4a.dir/CheckForPthreads.c.o -MF CMakeFiles/cmTC_1de4a.dir/CheckForPthreads.c.o.d -o CMakeFiles/cmTC_1de4a.dir/CheckForPthreads.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-uZ3blE/CheckForPthreads.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_1de4a.dir/CheckForPthreads.c.o -o cmTC_1de4a  -pthread && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:121 (check_cxx_compiler_flag)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-l7Yhas"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-l7Yhas"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-l7Yhas'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_502e3
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DGGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++  -std=gnu++17   -mfp16-format=ieee -MD -MT CMakeFiles/cmTC_502e3.dir/src.cxx.o -MF CMakeFiles/cmTC_502e3.dir/src.cxx.o.d -o CMakeFiles/cmTC_502e3.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-l7Yhas/src.cxx
+        FAILED: CMakeFiles/cmTC_502e3.dir/src.cxx.o 
+        /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DGGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++  -std=gnu++17   -mfp16-format=ieee -MD -MT CMakeFiles/cmTC_502e3.dir/src.cxx.o -MF CMakeFiles/cmTC_502e3.dir/src.cxx.o.d -o CMakeFiles/cmTC_502e3.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-l7Yhas/src.cxx
+        clang++-19: error: unknown argument: '-mfp16-format=ieee'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_DOTPROD"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mx6pwm"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mx6pwm"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_DOTPROD"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mx6pwm'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_d2526
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_DOTPROD  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_d2526.dir/src.cxx.o -MF CMakeFiles/cmTC_d2526.dir/src.cxx.o.d -o CMakeFiles/cmTC_d2526.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mx6pwm/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_d2526.dir/src.cxx.o -o cmTC_d2526   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_SVE"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SVE"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_bf8ab
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_SVE  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_bf8ab.dir/src.cxx.o -MF CMakeFiles/cmTC_bf8ab.dir/src.cxx.o.d -o CMakeFiles/cmTC_bf8ab.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW/src.cxx
+        FAILED: CMakeFiles/cmTC_bf8ab.dir/src.cxx.o 
+        /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_SVE  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_bf8ab.dir/src.cxx.o -MF CMakeFiles/cmTC_bf8ab.dir/src.cxx.o.d -o CMakeFiles/cmTC_bf8ab.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DiCbgW/src.cxx:3:24: error: "Feature SVE is not defined"
+            3 |                     #  error "Feature SVE is not defined"
+              |                        ^
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_MATMUL_INT8"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-Nx5R66"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-Nx5R66"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_MATMUL_INT8"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-Nx5R66'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_049e0
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_MATMUL_INT8  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_049e0.dir/src.cxx.o -MF CMakeFiles/cmTC_049e0.dir/src.cxx.o.d -o CMakeFiles/cmTC_049e0.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-Nx5R66/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_049e0.dir/src.cxx.o -o cmTC_049e0   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_FMA"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zZ6zkS"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zZ6zkS"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_FMA"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zZ6zkS'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_b9cdd
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_FMA  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_b9cdd.dir/src.cxx.o -MF CMakeFiles/cmTC_b9cdd.dir/src.cxx.o.d -o CMakeFiles/cmTC_b9cdd.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zZ6zkS/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_b9cdd.dir/src.cxx.o -o cmTC_b9cdd   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_FP16_VECTOR_ARITHMETIC"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-lSdxhe"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-lSdxhe"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_FP16_VECTOR_ARITHMETIC"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-lSdxhe'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_b5c9c
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_FP16_VECTOR_ARITHMETIC  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_b5c9c.dir/src.cxx.o -MF CMakeFiles/cmTC_b5c9c.dir/src.cxx.o.d -o CMakeFiles/cmTC_b5c9c.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-lSdxhe/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_b5c9c.dir/src.cxx.o -o cmTC_b5c9c   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-cpu/CMakeLists.txt:269 (check_cxx_source_compiles)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/CMakeLists.txt:598 (ggml_add_cpu_backend_variant_impl)"
+    checks:
+      - "Performing Test HAVE_SME"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_CXX_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_MODULE_PATH: "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/cmake/"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SME"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_89b83
+        [1/2] /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_SME  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_89b83.dir/src.cxx.o -MF CMakeFiles/cmTC_89b83.dir/src.cxx.o.d -o CMakeFiles/cmTC_89b83.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt/src.cxx
+        FAILED: CMakeFiles/cmTC_89b83.dir/src.cxx.o 
+        /usr/bin/clang++-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DHAVE_SME  --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -stdlib=libc++ -march=armv8.2-a+dotprod+i8mm+fp16 -std=gnu++17 -MD -MT CMakeFiles/cmTC_89b83.dir/src.cxx.o -MF CMakeFiles/cmTC_89b83.dir/src.cxx.o.d -o CMakeFiles/cmTC_89b83.dir/src.cxx.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt/src.cxx
+        clang++-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-dCPvEt/src.cxx:3:24: error: "Feature SME is not defined"
+            3 |                     #  error "Feature SME is not defined"
+              |                        ^
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file alloca.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DegdRZ"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DegdRZ"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_ALLOCA_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DegdRZ'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_3df1e
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_3df1e.dir/SD_ONIG_HAVE_ALLOCA_H.c.o -MF CMakeFiles/cmTC_3df1e.dir/SD_ONIG_HAVE_ALLOCA_H.c.o.d -o CMakeFiles/cmTC_3df1e.dir/SD_ONIG_HAVE_ALLOCA_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-DegdRZ/SD_ONIG_HAVE_ALLOCA_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_3df1e.dir/SD_ONIG_HAVE_ALLOCA_H.c.o -o cmTC_3df1e   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file stdint.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zJOv9b"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zJOv9b"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_STDINT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zJOv9b'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_1a187
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_1a187.dir/SD_ONIG_HAVE_STDINT_H.c.o -MF CMakeFiles/cmTC_1a187.dir/SD_ONIG_HAVE_STDINT_H.c.o.d -o CMakeFiles/cmTC_1a187.dir/SD_ONIG_HAVE_STDINT_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-zJOv9b/SD_ONIG_HAVE_STDINT_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_1a187.dir/SD_ONIG_HAVE_STDINT_H.c.o -o cmTC_1a187   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file sys/times.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-yI6CyO"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-yI6CyO"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_SYS_TIMES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-yI6CyO'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_9952f
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_9952f.dir/SD_ONIG_HAVE_SYS_TIMES_H.c.o -MF CMakeFiles/cmTC_9952f.dir/SD_ONIG_HAVE_SYS_TIMES_H.c.o.d -o CMakeFiles/cmTC_9952f.dir/SD_ONIG_HAVE_SYS_TIMES_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-yI6CyO/SD_ONIG_HAVE_SYS_TIMES_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_9952f.dir/SD_ONIG_HAVE_SYS_TIMES_H.c.o -o cmTC_9952f   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file sys/time.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-PAgbij"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-PAgbij"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_SYS_TIME_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-PAgbij'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_67fe4
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_67fe4.dir/SD_ONIG_HAVE_SYS_TIME_H.c.o -MF CMakeFiles/cmTC_67fe4.dir/SD_ONIG_HAVE_SYS_TIME_H.c.o.d -o CMakeFiles/cmTC_67fe4.dir/SD_ONIG_HAVE_SYS_TIME_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-PAgbij/SD_ONIG_HAVE_SYS_TIME_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_67fe4.dir/SD_ONIG_HAVE_SYS_TIME_H.c.o -o cmTC_67fe4   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file sys/types.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-KLYMOy"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-KLYMOy"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_SYS_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-KLYMOy'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_474ff
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_474ff.dir/SD_ONIG_HAVE_SYS_TYPES_H.c.o -MF CMakeFiles/cmTC_474ff.dir/SD_ONIG_HAVE_SYS_TYPES_H.c.o.d -o CMakeFiles/cmTC_474ff.dir/SD_ONIG_HAVE_SYS_TYPES_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-KLYMOy/SD_ONIG_HAVE_SYS_TYPES_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_474ff.dir/SD_ONIG_HAVE_SYS_TYPES_H.c.o -o cmTC_474ff   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file unistd.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-jm5fNf"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-jm5fNf"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_UNISTD_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-jm5fNf'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e1e22
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_e1e22.dir/SD_ONIG_HAVE_UNISTD_H.c.o -MF CMakeFiles/cmTC_e1e22.dir/SD_ONIG_HAVE_UNISTD_H.c.o.d -o CMakeFiles/cmTC_e1e22.dir/SD_ONIG_HAVE_UNISTD_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-jm5fNf/SD_ONIG_HAVE_UNISTD_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_e1e22.dir/SD_ONIG_HAVE_UNISTD_H.c.o -o cmTC_e1e22   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:14 (check_include_files)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for include file inttypes.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-algQXF"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-algQXF"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_INTTYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-algQXF'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_6908f
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_6908f.dir/SD_ONIG_HAVE_INTTYPES_H.c.o -MF CMakeFiles/cmTC_6908f.dir/SD_ONIG_HAVE_INTTYPES_H.c.o.d -o CMakeFiles/cmTC_6908f.dir/SD_ONIG_HAVE_INTTYPES_H.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-algQXF/SD_ONIG_HAVE_INTTYPES_H.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_6908f.dir/SD_ONIG_HAVE_INTTYPES_H.c.o -o cmTC_6908f   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFile.cmake:99 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:264 (check_include_file)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:17 (check_type_size)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for stddef.h"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-fOBtQm"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-fOBtQm"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_STDDEF_H"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-fOBtQm'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_ff9fa
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_ff9fa.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_ff9fa.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_ff9fa.dir/CheckIncludeFile.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-fOBtQm/CheckIncludeFile.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_ff9fa.dir/CheckIncludeFile.c.o -o cmTC_ff9fa   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:156 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:283 (__check_type_size_impl)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:17 (check_type_size)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Check size of int"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtw6P9"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtw6P9"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SD_ONIG_SIZEOF_INT"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtw6P9'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_d89da
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_d89da.dir/SD_ONIG_SIZEOF_INT.c.o -MF CMakeFiles/cmTC_d89da.dir/SD_ONIG_SIZEOF_INT.c.o.d -o CMakeFiles/cmTC_d89da.dir/SD_ONIG_SIZEOF_INT.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-mtw6P9/SD_ONIG_SIZEOF_INT.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_d89da.dir/SD_ONIG_SIZEOF_INT.c.o -o cmTC_d89da   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:156 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:283 (__check_type_size_impl)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:18 (check_type_size)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Check size of long"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-wmLI32"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-wmLI32"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SD_ONIG_SIZEOF_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-wmLI32'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_0f7a6
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_0f7a6.dir/SD_ONIG_SIZEOF_LONG.c.o -MF CMakeFiles/cmTC_0f7a6.dir/SD_ONIG_SIZEOF_LONG.c.o.d -o CMakeFiles/cmTC_0f7a6.dir/SD_ONIG_SIZEOF_LONG.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-wmLI32/SD_ONIG_SIZEOF_LONG.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_0f7a6.dir/SD_ONIG_SIZEOF_LONG.c.o -o cmTC_0f7a6   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:156 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:283 (__check_type_size_impl)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:19 (check_type_size)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Check size of long long"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-6SXRdK"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-6SXRdK"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SD_ONIG_SIZEOF_LONG_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-6SXRdK'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_512a5
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_512a5.dir/SD_ONIG_SIZEOF_LONG_LONG.c.o -MF CMakeFiles/cmTC_512a5.dir/SD_ONIG_SIZEOF_LONG_LONG.c.o.d -o CMakeFiles/cmTC_512a5.dir/SD_ONIG_SIZEOF_LONG_LONG.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-6SXRdK/SD_ONIG_SIZEOF_LONG_LONG.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_512a5.dir/SD_ONIG_SIZEOF_LONG_LONG.c.o -o cmTC_512a5   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:156 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckTypeSize.cmake:283 (__check_type_size_impl)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:20 (check_type_size)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Check size of void*"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-RHhCJw"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-RHhCJw"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "HAVE_SD_ONIG_SIZEOF_VOIDP"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-RHhCJw'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_9bb88
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_9bb88.dir/SD_ONIG_SIZEOF_VOIDP.c.o -MF CMakeFiles/cmTC_9bb88.dir/SD_ONIG_SIZEOF_VOIDP.c.o.d -o CMakeFiles/cmTC_9bb88.dir/SD_ONIG_SIZEOF_VOIDP.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-RHhCJw/SD_ONIG_SIZEOF_VOIDP.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_9bb88.dir/SD_ONIG_SIZEOF_VOIDP.c.o -o cmTC_9bb88   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:25 (check_symbol_exists)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/thirdparty/CMakeLists.txt:60 (sd_add_oniguruma)"
+    checks:
+      - "Looking for alloca"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-1i8WLA"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-1i8WLA"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "SD_ONIG_HAVE_ALLOCA"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-1i8WLA'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e72ec
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections  -std=gnu11 -MD -MT CMakeFiles/cmTC_e72ec.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_e72ec.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_e72ec.dir/CheckSymbolExists.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-1i8WLA/CheckSymbolExists.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_e72ec.dir/CheckSymbolExists.c.o -o cmTC_e72ec   && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:175 (_threads_check_lib)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/CMakeLists.txt:340 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthreads"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-HgwEoN"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-HgwEoN"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREADS_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-HgwEoN'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_1fd7f
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -std=gnu11 -MD -MT CMakeFiles/cmTC_1fd7f.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_1fd7f.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_1fd7f.dir/CheckFunctionExists.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-HgwEoN/CheckFunctionExists.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_1fd7f.dir/CheckFunctionExists.c.o -o cmTC_1fd7f  -lpthreads && :
+        FAILED: cmTC_1fd7f 
+        : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_1fd7f.dir/CheckFunctionExists.c.o -o cmTC_1fd7f  -lpthreads && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        ld.lld-19: error: unable to find library -lpthreads
+        clang-19: error: linker command failed with exit code 1 (use -v to see invocation)
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:176 (_threads_check_lib)"
+      - "/workspace/work/iridis-src/third_party/stable-diffusion.cpp/CMakeLists.txt:340 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthread"
+    directories:
+      source: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-iMZ3uP"
+      binary: "/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-iMZ3uP"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-android31"
+      CMAKE_C_FLAGS: "--rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld-19 -static-libstdc++"
+      CMAKE_SYSROOT: "/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREAD_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: '/workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-iMZ3uP'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_a0a84
+        [1/2] /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot   --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -std=gnu11 -MD -MT CMakeFiles/cmTC_a0a84.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_a0a84.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_a0a84.dir/CheckFunctionExists.c.o -c /workspace/work/iridis-src/build-sd-arm64host/CMakeFiles/CMakeScratch/TryCompile-iMZ3uP/CheckFunctionExists.c
+        clang-19: warning: argument unused during compilation: '--unwindlib=libunwind' [-Wunused-command-line-argument]
+        [2/2] : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_a0a84.dir/CheckFunctionExists.c.o -o cmTC_a0a84  -lpthread && :
+        FAILED: cmTC_a0a84 
+        : && /usr/bin/clang-19 --target=aarch64-linux-android31 --sysroot=/workspace/tools/android-ndk-r27c/toolchains/llvm/prebuilt/linux-x86_64/sysroot --rtlib=compiler-rt --unwindlib=libunwind -fPIC -ffunction-sections -fdata-sections -DCHECK_FUNCTION_EXISTS=pthread_create -fuse-ld=lld-19 -static-libstdc++ CMakeFiles/cmTC_a0a84.dir/CheckFunctionExists.c.o -o cmTC_a0a84  -lpthread && :
+        clang-19: warning: argument unused during compilation: '-static-libstdc++' [-Wunused-command-line-argument]
+        ld.lld-19: error: unable to find library -lpthread
+        clang-19: error: linker command failed with exit code 1 (use -v to see invocation)
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+...

@@ -183,6 +183,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             verticalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
             full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)) }
+            if (s.downloaded.isEmpty()) full { GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.ig27_start)) }
             full {
                 // 2.5.7: 卡片等高（按最高的一张），状态行贴底
                 Row(
@@ -199,22 +200,39 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 }
             }
 
+            // 2.7.0: 一屏讲清楚——模型 → 提示词 → 尺寸 → 生成；其余参数收进「高级」
             full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_47b7af)) }
             full {
                 SettingsGroup {
                     Field(s.prompt, ImageGenText.PROMPT, minLines = 3) { v -> vm.edit { it.copy(prompt = v) } }
-                    Field(s.negative, ImageGenText.NEGATIVE, minLines = 2) { v -> vm.edit { it.copy(negative = v) } }
                     // 2.6.8 标签库：分类 → 点标签追加，长按删除，「+」添加
                     TagRow(s, onCat = { c -> vm.edit { it.copy(tagCat = c) } }, onTag = vm::useTag, onLong = { removingTag = it },
                         onAdd = { addingTag = true }, onReset = vm::resetTags)
-                    com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand), s.expand,
-                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
-                }
-            }
-
-            full { SectionTitle(ImageGenText.REF_IMAGE) }
-            full {
-                SettingsGroup {
+                    val fixed = s.model.fixedSize
+                    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
+                        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c8339f), style = IrisType.row, color = Iris.colors.text)
+                        Spacer(Modifier.height(IrisDimens.space6))
+                        if (fixed != null) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a5cf72, fixed, fixed, ImageGenText.FIXED_SIZE), style = IrisType.secondary, color = Iris.colors.textSecondary)
+                        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                            for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
+                        }
+                    }
+                    com.iris.localai.ui.components.AdvancedFold("imagegen-adv") {
+                        Field(s.negative, ImageGenText.NEGATIVE, minLines = 2) { v -> vm.edit { it.copy(negative = v) } }
+                        com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand), s.expand,
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
+                        SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
+                        SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
+                        // 2.5.2: empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
+                        Field(
+                            s.seed, ImageGenText.SEED, number = true, placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_seed_hint),
+                            trailingText = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_random),
+                            onTrailing = if (com.iris.localai.imagegen.ImageSeed.isRandom(s.seed)) null else ({ vm.edit { it.copy(seed = "") } }),
+                        ) { v -> vm.edit { it.copy(seed = com.iris.localai.imagegen.ImageSeed.sanitize(v)) } }
+                        if (fixed == null) com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem), s.lowMemMode,
+                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
+                        // 参考图（图生图）：只在模型支持时出现
+                        if (s.img2imgSupported) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12), verticalAlignment = Alignment.CenterVertically) {
                         val ref = s.initImage
                         if (ref != null && s.img2imgSupported) Thumb(ref, Modifier.size(56.dp))
@@ -232,32 +250,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     if (s.img2imgSupported) {
                         if (s.initImage != null) SliderRow(ImageGenText.STRENGTH, s.strength, 0f..1f, "%.2f".format(s.strength)) { v -> vm.edit { it.copy(strength = v) } }
                     }
-                }
-            }
-            if (!s.img2imgSupported) full { GroupFootnote(ImageGenText.NO_IMG2IMG) }
-
-            full { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_3d0a2d)) }
-            full {
-                SettingsGroup {
-                    val fixed = s.model.fixedSize
-                    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
-                        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c8339f), style = IrisType.row, color = Iris.colors.text)
-                        Spacer(Modifier.height(IrisDimens.space6))
-                        if (fixed != null) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a5cf72, fixed, fixed, ImageGenText.FIXED_SIZE), style = IrisType.secondary, color = Iris.colors.textSecondary)
-                        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-                            for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
                         }
                     }
-                    if (fixed == null) com.iris.localai.ui.components.SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem), s.lowMemMode,
-                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
-                    SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
-                    SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
-                    // 2.5.2: empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
-                    Field(
-                        s.seed, ImageGenText.SEED, number = true, placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_seed_hint),
-                        trailingText = com.iris.localai.I18n.s(com.iris.localai.R.string.ig252_random),
-                        onTrailing = if (com.iris.localai.imagegen.ImageSeed.isRandom(s.seed)) null else ({ vm.edit { it.copy(seed = "") } }),
-                    ) { v -> vm.edit { it.copy(seed = com.iris.localai.imagegen.ImageSeed.sanitize(v)) } }
                 }
             }
 
@@ -384,8 +378,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                 }
             }
 
-            full { SectionTitle(ImageGenText.SELF_CHECK) }
-            full { SelfCheckCard(s.report, onRun = vm::runSelfCheck) }
+            full { com.iris.localai.ui.components.SectionFold("imagegen-check", ImageGenText.SELF_CHECK) { SelfCheckCard(s.report, onRun = vm::runSelfCheck) } }
         }
     }
 }

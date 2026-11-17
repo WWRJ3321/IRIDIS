@@ -1,0 +1,5 @@
+#version 460
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_NV_cooperative_matrix2 : require
+layout(local_size_x = 1) in;
+void main() {}

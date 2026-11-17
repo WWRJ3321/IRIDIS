@@ -49,6 +49,7 @@ object SdNative {
 
     @JvmStatic external fun nativeLastError(): String
     @JvmStatic external fun nativeLoad(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long
+    @JvmStatic external fun nativeLoadEx(model: String, clipL: String, clipG: String, t5: String, diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long
     @JvmStatic external fun nativeFree(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
     @JvmStatic external fun nativeGenerate(

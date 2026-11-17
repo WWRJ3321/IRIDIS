@@ -1,0 +1,1 @@
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/pool1d.comp.cpp: /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/pool1d.comp /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/types.glsl

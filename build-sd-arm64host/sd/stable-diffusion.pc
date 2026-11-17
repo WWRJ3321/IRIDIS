@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=/usr/local/lib
+includedir=/usr/local/include
+
+Name: stable-diffusion
+Description: Diffusion model(SD,Flux,Wan,Qwen Image,Z-Image,...) inference in pure C/C++
+Version: unknown
+Libs: -L${libdir} -lstable-diffusion
+Libs.private: -lggml -lggml-base -pthread
+Cflags: -I${includedir}

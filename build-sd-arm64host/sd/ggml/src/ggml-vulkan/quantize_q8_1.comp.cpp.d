@@ -1,0 +1,1 @@
+/workspace/work/iridis-src/build-sd-arm64host/sd/ggml/src/ggml-vulkan/quantize_q8_1.comp.cpp: /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/quantize_q8_1.comp /workspace/work/iridis-src/third_party/stable-diffusion.cpp/ggml/src/ggml-vulkan/vulkan-shaders/types.glsl
