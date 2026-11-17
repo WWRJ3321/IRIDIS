@@ -2145,8 +2145,8 @@
     <string name="ig268_agree">同意並下載</string>
     <string name="ig268_license_view">授權</string>
     <string name="ig269_import">匯入模型</string>
-    <string name="ig269_import_note">自備模型檔案 · 許可自負</string>
-    <string name="ig269_hint">選架構和主模型（.gguf / .safetensors）。檔案由你自備，授權自負。</string>
+    <string name="ig269_import_note">.gguf / .safetensors</string>
+    <string name="ig269_hint">選架構和主模型（.gguf / .safetensors）</string>
     <string name="ig269_main">主模型</string>
     <string name="ig269_te">文字編碼器</string>
     <string name="ig269_vae">VAE</string>
@@ -2158,7 +2158,7 @@
     <string name="ig269_do_import">匯入</string>
     <string name="ig269_rename">改名</string>
     <string name="ig269_tier">已匯入</string>
-    <string name="ig269_own_files">自備檔案</string>
+    <string name="ig269_own_files">已匯入</string>
     <string name="ig269_bad_ext">不支援的檔案：%1$s（只收 .gguf / .safetensors）</string>
     <string name="ig269_bad_file">檔案讀取失敗或已損壞：%1$s</string>
     <string name="ig269_need_parts">缺文字編碼器或 VAE，請一起選上</string>

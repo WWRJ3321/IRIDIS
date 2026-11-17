@@ -2145,8 +2145,8 @@
     <string name="ig268_agree">Agree &amp; download</string>
     <string name="ig268_license_view">License</string>
     <string name="ig269_import">Import model</string>
-    <string name="ig269_import_note">Your own model files · you handle the license</string>
-    <string name="ig269_hint">Pick the architecture and main model (.gguf / .safetensors). Your files, your licence.</string>
+    <string name="ig269_import_note">.gguf / .safetensors</string>
+    <string name="ig269_hint">Pick the architecture and main model (.gguf / .safetensors)</string>
     <string name="ig269_main">Main model</string>
     <string name="ig269_te">Text encoder</string>
     <string name="ig269_vae">VAE</string>
@@ -2158,7 +2158,7 @@
     <string name="ig269_do_import">Import</string>
     <string name="ig269_rename">Rename</string>
     <string name="ig269_tier">Imported</string>
-    <string name="ig269_own_files">Your files</string>
+    <string name="ig269_own_files">Imported</string>
     <string name="ig269_bad_ext">Unsupported file: %1$s (.gguf / .safetensors only)</string>
     <string name="ig269_bad_file">Could not read or damaged: %1$s</string>
     <string name="ig269_need_parts">Text encoder or VAE missing — choose them too</string>

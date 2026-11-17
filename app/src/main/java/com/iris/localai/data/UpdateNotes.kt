@@ -16,6 +16,9 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.6.11", listOf(
+            b("导入模型界面文案精简。"),
+        )),
         Release("2.6.10", listOf(
             b("移除内置 Anima Turbo 下载（非商用许可）。需要的话用「导入模型」导入自己的文件；旧版下载过的可在存储页删除。"),
         )),

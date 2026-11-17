@@ -2145,8 +2145,8 @@
     <string name="ig268_agree">सहमत, डाउनलोड करें</string>
     <string name="ig268_license_view">लाइसेंस</string>
     <string name="ig269_import">मॉडल आयात करें</string>
-    <string name="ig269_import_note">अपनी मॉडल फ़ाइलें · लाइसेंस आपकी ज़िम्मेदारी</string>
-    <string name="ig269_hint">आर्किटेक्चर और मुख्य मॉडल चुनें (.gguf / .safetensors)। फ़ाइल और लाइसेंस आपकी ज़िम्मेदारी।</string>
+    <string name="ig269_import_note">.gguf / .safetensors</string>
+    <string name="ig269_hint">आर्किटेक्चर और मुख्य मॉडल चुनें (.gguf / .safetensors)</string>
     <string name="ig269_main">मुख्य मॉडल</string>
     <string name="ig269_te">टेक्स्ट एनकोडर</string>
     <string name="ig269_vae">VAE</string>
@@ -2158,7 +2158,7 @@
     <string name="ig269_do_import">आयात</string>
     <string name="ig269_rename">नाम बदलें</string>
     <string name="ig269_tier">आयातित</string>
-    <string name="ig269_own_files">आपकी फ़ाइलें</string>
+    <string name="ig269_own_files">आयात किया गया</string>
     <string name="ig269_bad_ext">असमर्थित फ़ाइल: %1$s (केवल .gguf / .safetensors)</string>
     <string name="ig269_bad_file">पढ़ नहीं सके या खराब: %1$s</string>
     <string name="ig269_need_parts">टेक्स्ट एनकोडर या VAE नहीं है — उन्हें भी चुनें</string>
