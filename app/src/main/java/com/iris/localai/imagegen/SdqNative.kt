@@ -1,11 +1,15 @@
 package com.iris.localai.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.llama.CpuFeatures
+import com.iris.localai.engine.llama.LlamaHtpRules
 import android.content.Context
 import android.util.Log
 import java.io.File
 
 /**
- * 2.4.3: JNI surface of libiris_sdq.so — stable-diffusion.cpp's Qualcomm branch (Hexagon HTP v79+, FP8 DiT),
+ * JNI surface of libiris_sdq.so — stable-diffusion.cpp's Qualcomm branch (Hexagon HTP v79+, FP8 DiT),
  * same sd_jni.cpp built with IRIS_SDQ (symbols bound to this class, so it can sit next to libiris_sd.so).
  * The library and its HTP skels come down with the NPU models ([ImageCatalog.SDQ_LIBS]); each is copied to
  * internal storage and checked against its SHA-256 before ADSP_LIBRARY_PATH is pointed at the folder and
@@ -19,10 +23,10 @@ object SdqNative {
     @Synchronized
     fun ensureLoaded(context: Context, imagegenRoot: File?): String? {
         if (loaded) return null
-        com.iris.localai.engine.llama.CpuFeatures.missingForI8mm()?.let { return it }
+        CpuFeatures.missingForI8mm()?.let { return it }
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
         if (!ImageRules.sdqListed(arch)) return SDQ_NO_ARCH
-        val noLib = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)
+        val noLib = I18n.s(R.string.imagegen_sd240_nolib)
         val root = imagegenRoot ?: return noLib
         return try {
             val dir = File(context.filesDir, "sdq/${ImageCatalog.SDQ_TAG}").apply { mkdirs() }
@@ -42,7 +46,7 @@ object SdqNative {
             }
             android.system.Os.setenv(
                 "ADSP_LIBRARY_PATH",
-                com.iris.localai.engine.llama.LlamaHtpRules.adspPath(dir.absolutePath, System.getenv("ADSP_LIBRARY_PATH")),
+                LlamaHtpRules.adspPath(dir.absolutePath, System.getenv("ADSP_LIBRARY_PATH")),
                 true,
             )
             System.load(File(dir, "libiris_sdq.so").absolutePath)
@@ -66,11 +70,11 @@ object SdqNative {
     ): ByteArray?
 }
 
-/** 2.4.3: the two native libraries behind one interface, so SdCppEngine runs either. */
+/** the two native libraries behind one interface, so SdCppEngine runs either. */
 interface SdApi {
     fun lastError(): String
     fun load(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long
-    /** 2.7.0: 带单文件模型与 CLIP / T5 的加载（只有上游库有；高通分支退回 [load]）。 */
+    /** 带单文件模型与 CLIP / T5 的加载（只有上游库有；高通分支退回 [load]）。 */
     fun loadEx(model: String, clipL: String, clipG: String, t5: String, diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long =
         load(diffusion, llm, vae, backend, threads, flashAttn)
     fun free(handle: Long)

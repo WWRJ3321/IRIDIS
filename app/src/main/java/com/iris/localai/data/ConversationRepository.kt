@@ -21,7 +21,7 @@ class ConversationRepository(
     private val dir: File,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    /** 1.10.0: told about every save / delete (the raw history index follows the JSON files). Never throws into a save. */
+    /** told about every save / delete (the raw history index follows the JSON files). Never throws into a save. */
     interface Listener {
         fun onSaved(conversation: Conversation)
         fun onDeleted(id: String)
@@ -70,14 +70,14 @@ class ConversationRepository(
         notify { onSaved(conversation) }
     }
 
-    /** 2.2.14: chats in 回收站, one at a time (their attachments are still referenced). */
+    /** chats in 回收站, one at a time (their attachments are still referenced). */
     suspend fun forEachTrashed(block: (Conversation) -> Unit) = withContext(io) {
         for (t in _trash.value) mutex.withLock {
             runCatching { json.decodeFromString<Conversation>(AtomicFile(trashFile(t.id)).readFully().decodeToString()) }.getOrNull()
         }?.let(block)
     }
 
-    /** 1.10.0: every saved conversation, one at a time (history index backfill). */
+    /** every saved conversation, one at a time (history index backfill). */
     suspend fun forEachSaved(block: (Conversation) -> Unit) = withContext(io) {
         for (s in _summaries.value) load(s.id)?.let(block)
     }
@@ -268,7 +268,7 @@ class ConversationRepository(
     }
 }
 
-/** 2.2.14: one chat in 回收站. */
+/** one chat in 回收站. */
 @kotlinx.serialization.Serializable
 data class TrashEntry(val id: String, val title: String, val deletedAt: Long)
 

@@ -1,5 +1,12 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.components.IrisMenu
+import com.iris.localai.ui.components.IrisMenuItem
+import com.iris.localai.ui.components.IrisSheet
+import com.iris.localai.ui.components.SheetHeader
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.feedback.FeedbackVoice
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 
@@ -72,7 +79,7 @@ import com.iris.localai.ui.theme.LocalReduceMotion
 enum class CapsuleTap { STOP, SEND, CALL }
 
 /**
- * 2.2: the one long accent capsule bottom-right (replaces the 1.10.2 mic + round button).
+ * the one long accent capsule bottom-right (replaces the 1.10.2 mic + round button).
  * Empty input: tap = 语音通话, long-press = 语音输入 (release to finish, slide up to cancel).
  * Text / attachments: 发送. Generating: 停止. Pure (unit-tested).
  */
@@ -103,7 +110,7 @@ object VoiceCapsule {
     fun cancelArmed(upPx: Float, density: Float): Boolean = upPx >= CANCEL_DRAG_DP * density
 
     /**
-     * 2.1.7: how far the finger slid up ON SCREEN (px) since the long-press began. Pointer positions
+     * how far the finger slid up ON SCREEN (px) since the long-press began. Pointer positions
      * are local to the capsule, so when the layout moves under a still finger (the soft keyboard
      * hides and the composer drops 300 px) the local y changes although the finger did not move —
      * that used to read as an upward slide and cancel the dictation. Adding the capsule's own
@@ -114,7 +121,7 @@ object VoiceCapsule {
         (startOriginY + startFingerY) - (originY + fingerY)
 
     /**
-     * 2.2.17 D: a dictation shorter than this (finger lifted right after the long-press fired)
+     * D: a dictation shorter than this (finger lifted right after the long-press fired)
      * records nothing useful — discard it instead of sending an empty transcript.
      */
     const val MIN_HOLD_MS = 350L
@@ -126,7 +133,7 @@ object VoiceCapsule {
         if (armed || heldMs < MIN_HOLD_MS) HoldEnd.CANCEL else HoldEnd.SEND
 
     /**
-     * 2.2.17 D: whether the hold is over after an event. Only the finger that started it counts
+     * D: whether the hold is over after an event. Only the finger that started it counts
      * (a second finger landing or lifting no longer ends or cancels it); its change missing from
      * the event means the system took the pointer away (cancel), which also ends the hold.
      */
@@ -155,7 +162,7 @@ internal fun VoiceCapsuleButton(
     onHoldEnd: () -> Unit,
     onHoldCancel: () -> Unit,
     onCancelArmed: (Boolean) -> Unit,
-    /** 2.1.7: a reply is running — a long press on 发送 offers 「打断并发送」. */
+    /** a reply is running — a long press on 发送 offers 「打断并发送」. */
     generating: Boolean = false,
     onInterruptSend: () -> Unit = {},
 ) {
@@ -167,9 +174,9 @@ internal fun VoiceCapsuleButton(
     val haptics = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val tapNow by rememberUpdatedState<() -> Unit> {
         when (VoiceCapsule.tap(action)) {
-            CapsuleTap.STOP -> { haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK); onStop() }
+            CapsuleTap.STOP -> { haptics.perform(FeedbackEvent.TICK); onStop() }
             CapsuleTap.SEND -> if (sendEnabled) onSend()
-            CapsuleTap.CALL -> { haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK); onCall() }
+            CapsuleTap.CALL -> { haptics.perform(FeedbackEvent.TICK); onCall() }
         }
     }
     val start by rememberUpdatedState(onHoldStart)
@@ -198,7 +205,7 @@ internal fun VoiceCapsuleButton(
         while (true) { ring.snapTo(0f); ring.animateTo(1f, IrisMotion.loop(IrisMotion.PULSE_PERIOD_MS * 2)) }
     }
     val shape = IrisRadius.pillShape
-    // 2.1.7: the capsule's top in window coordinates (a layout shift moves it; see VoiceCapsule.slideUpPx).
+    // the capsule's top in window coordinates (a layout shift moves it; see VoiceCapsule.slideUpPx).
     val originY = remember { floatArrayOf(0f) }
     Box(
         Modifier
@@ -225,7 +232,7 @@ internal fun VoiceCapsuleButton(
                 onClick(VoiceCapsule.label(action)) { tapNow(); true }
             }
             .pointerInput(Unit) {
-                // 2.2.17 D: keyed on Unit — a partial transcript turning the capsule into 发送 mid-hold
+                // D: keyed on Unit — a partial transcript turning the capsule into 发送 mid-hold
                 // used to restart this detector, which ended (and sent) the dictation under the finger.
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -234,14 +241,14 @@ internal fun VoiceCapsuleButton(
                     val action = actionNow
                     val canInterrupt = canInterruptNow
                     if (canInterrupt) {
-                        // 2.1.7: tap = 发送 (补充 / 「停…」), hold = the 「打断并发送」 menu.
+                        // tap = 发送 (补充 / 「停…」), hold = the 「打断并发送」 menu.
                         var up = false
                         val held = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
                             up = waitForUpOrCancellation()?.also { it.consume() } != null
                         } == null
                         pressed = false
                         if (!held) { if (up) tapNow(); return@awaitEachGesture }
-                        haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK)
+                        haptics.perform(FeedbackEvent.TICK)
                         interruptMenu = true
                         waitForUpOrCancellation()?.consume()
                         return@awaitEachGesture
@@ -259,14 +266,14 @@ internal fun VoiceCapsuleButton(
                     if (!timedOut) { pressed = false; if (lifted) tapNow(); return@awaitEachGesture }
                     // Long-press → dictation until the finger lifts (1.14.1: lifting is the only end, a
                     // layout shift under the finger does not cut it off); slide up = cancel.
-                    com.iris.localai.ui.feedback.FeedbackVoice.dictating = true
-                    haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_START)
+                    FeedbackVoice.dictating = true
+                    haptics.perform(FeedbackEvent.LISTEN_START)
                     start()
                     val heldFrom = System.currentTimeMillis()
                     var isArmed = false
                     var done = false
                     try {
-                        // 2.2.17 D: the pointer stays routed to this node wherever it goes on screen
+                        // D: the pointer stays routed to this node wherever it goes on screen
                         // (Main pass, outside the capsule too); positions are turned into window
                         // coordinates, so leaving the button or a layout shift is not a slide.
                         while (true) {
@@ -274,7 +281,7 @@ internal fun VoiceCapsuleButton(
                             e.changes.forEach { it.consume() }
                             val ch = e.changes.firstOrNull { it.id == down.id }
                             if (ch != null) {
-                                // 2.1.7: window coordinates — the keyboard closing (layout drops) is not a slide.
+                                // window coordinates — the keyboard closing (layout drops) is not a slide.
                                 val now = VoiceCapsule.cancelArmed(down.position.y, downOrigin, ch.position.y, originY[0], density)
                                 if (now != isArmed) { isArmed = now; armed(now) }
                             }
@@ -289,16 +296,16 @@ internal fun VoiceCapsuleButton(
                                 VoiceCapsule.HoldEnd.CANCEL -> cancel()
                                 VoiceCapsule.HoldEnd.SEND -> end()
                             }
-                            haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_STOP)
-                            com.iris.localai.ui.feedback.FeedbackVoice.dictating = false
+                            haptics.perform(FeedbackEvent.LISTEN_STOP)
+                            FeedbackVoice.dictating = false
                         }
                     }
                 }
             },
         contentAlignment = Alignment.Center,
     ) {
-        com.iris.localai.ui.components.IrisMenu(expanded = interruptMenu && canInterrupt, onDismiss = { interruptMenu = false }) {
-            com.iris.localai.ui.components.IrisMenuItem(SendIntent.INTERRUPT_AND_SEND, IrisIcons.Stop) { interruptMenu = false; interruptNow() }
+        IrisMenu(expanded = interruptMenu && canInterrupt, onDismiss = { interruptMenu = false }) {
+            IrisMenuItem(SendIntent.INTERRUPT_AND_SEND, IrisIcons.Stop) { interruptMenu = false; interruptNow() }
         }
         val face = if (action == ComposerAction.VOICE && holding) -1 else action.ordinal
         AnimatedContent(targetState = face, transitionSpec = { motion(reduce) { IrisMotion.pop() } }, label = "capsuleFace") { f ->
@@ -317,7 +324,7 @@ internal fun VoiceCapsuleButton(
 /** One row of the 「技能」 sheet. */
 data class RefItem(val ref: TurnRef, val title: String, val subtitle: String)
 
-/** 2.2: what the 「技能」 sheet lists. [skillToolOff] = the skill tool is disabled (no skills offered). */
+/** what the 「技能」 sheet lists. [skillToolOff] = the skill tool is disabled (no skills offered). */
 data class RefCatalog(val skills: List<RefItem>, val tools: List<RefItem>, val skillToolOff: Boolean = false) {
     val isEmpty: Boolean get() = skills.isEmpty() && tools.isEmpty()
     val size: Int get() = skills.size + tools.size
@@ -352,7 +359,7 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
                     .height(26.dp)
                     .clip(IrisRadius.pillShape)
                     .background(c.accentContainer)
-                    .padding(start = com.iris.localai.ui.theme.IrisSpace.S, end = com.iris.localai.ui.theme.IrisSpace.XS),
+                    .padding(start = IrisSpace.S, end = IrisSpace.XS),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(if (r.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.onAccentContainer, modifier = Modifier.size(13.dp))
@@ -376,8 +383,8 @@ internal fun RefChips(refs: List<TurnRef>, onRemove: (TurnRef) -> Unit, modifier
 internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, onDismiss: () -> Unit) {
     val c = Iris.colors
     var query by remember { mutableStateOf("") }
-    com.iris.localai.ui.components.IrisSheet(onDismiss) {
-        com.iris.localai.ui.components.SheetHeader(ComposerText.SKILLS)
+    IrisSheet(onDismiss) {
+        SheetHeader(ComposerText.SKILLS)
         if (catalog.size > RefCatalog.SEARCH_FROM) {
             Row(
                 Modifier
@@ -406,10 +413,10 @@ internal fun SkillPickerSheet(catalog: RefCatalog, onPick: (TurnRef) -> Unit, on
                 if (shown.skills.isEmpty()) item {
                     EmptyLine(if (catalog.skillToolOff) ComposerText.SKILL_TOOL_OFF else if (query.isBlank()) ComposerText.NO_SKILLS else ComposerText.NO_MATCH)
                 }
-                items(shown.skills, key = { "s:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
+                items(shown.skills, key = { "s:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
                 item { SectionLabel(ComposerText.SECTION_TOOLS) }
                 if (shown.tools.isEmpty()) item { EmptyLine(if (query.isBlank()) ComposerText.NO_TOOLS else ComposerText.NO_MATCH) }
-                items(shown.tools, key = { "t:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
+                items(shown.tools, key = { "t:" + it.ref.name }) { r -> androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RefRow(r) { onPick(r.ref) } } }
             }
         }
     }
@@ -427,7 +434,7 @@ private fun EmptyLine(text: String) =
 private fun RefRow(item: RefItem, onClick: () -> Unit) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = IrisDimens.pageGutter, vertical = com.iris.localai.ui.theme.IrisSpace.S),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = IrisDimens.pageGutter, vertical = IrisSpace.S),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (item.ref.kind == TurnRefKind.SKILL) IrisIcons.Skill else IrisIcons.Tool, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.space20))

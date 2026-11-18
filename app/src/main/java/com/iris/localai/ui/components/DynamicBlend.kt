@@ -25,7 +25,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * 2.2.10 外观 ›「动态混色背景」: pure colour maths for the HyperOS-style blend (JVM-testable, no
+ * 外观 ›「动态混色背景」: pure colour maths for the HyperOS-style blend (JVM-testable, no
  * android.graphics). Blob colours come from the user's theme accent plus adjacent hues, at pastel
  * lightness in light mode and muted/darker in dark mode so text on top stays readable.
  */
@@ -75,7 +75,7 @@ object BlendPalette {
 private const val BLEND_PERIOD_S = 20f
 
 /**
- * 2.2.10: slow drifting pastel colour blobs over the top ~half of the home/chat screen, fading out
+ * slow drifting pastel colour blobs over the top ~half of the home/chat screen, fading out
  * vertically into the normal background. Drawn behind content (inside the glass source), never
  * receives input. Animates only while [LocalDecorativeMotion] is on (app resumed, not streaming,
  * no battery saver, system animations on, visual effects not 0); otherwise it holds a static frame.

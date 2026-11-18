@@ -1,5 +1,9 @@
 package com.iris.localai.ui.files
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.theme.IrisFontSize
+import com.iris.localai.ui.theme.IrisSpace
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -104,7 +108,7 @@ private val MAX_SHADOW = 10.dp
 private const val BLUR_STEPS = 5
 private val BLUR_MAX = 14.dp
 
-private val monoTitle = TextStyle(fontSize = com.iris.localai.ui.theme.IrisFontSize.L, lineHeight = 28.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+private val monoTitle = TextStyle(fontSize = IrisFontSize.L, lineHeight = 28.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
 
 /** Tab / accent colour of a card, from the active palette (works in every theme and in dark mode). */
 internal fun cardKindColor(kind: ArchiveMath.Kind, c: IrisColors): Color = when (kind) {
@@ -121,7 +125,7 @@ internal fun cardKindColor(kind: ArchiveMath.Kind, c: IrisColors): Color = when 
 private class DeckJobs { var settle: Job? = null }
 
 /**
- * 2.1.9 「卡片」 (was the first 「档案模式」): the optional pseudo-3D card-deck view of the 「文件」 page. Entries are frosted
+ * 「卡片」 (was the first 「档案模式」): the optional pseudo-3D card-deck view of the 「文件」 page. Entries are frosted
  * "archive cassette" cards in a vertical (looping when > 5) deck; the focused card faces front,
  * neighbours recede and tilt. Swipe / fling to browse; tap the focused card to open it (folders
  * fall back and the next folder rises, files get a decrypt sheet); long press = the list's menu.
@@ -207,8 +211,8 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                 EmptyState(
                     title = when {
                         state.unreadable && state.atRoot -> FilesText.UNAVAILABLE
-                        state.unreadable -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_b4991b)
-                        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910)
+                        state.unreadable -> I18n.s(R.string.files_b4991b)
+                        else -> I18n.s(R.string.agent_e96910)
                     },
                     message = if (state.unreadable) FilesText.UNAVAILABLE_HINT else null,
                     icon = IrisIcons.Archive,
@@ -246,7 +250,7 @@ fun CardStackFileView(state: FilesState, actions: FilesActions, modifier: Modifi
                             val layer = remember { ArchiveMath.Layer() }
                             Box(
                                 Modifier.align(Alignment.Center)
-                                    // 2.2.14: draw order follows the live scroll position (placement only, no
+                                    // draw order follows the live scroll position (placement only, no
                                     // recomposition): cards no longer swap layers abruptly mid-drag (flicker).
                                     .layout { m, cons ->
                                         val p = m.measure(cons)
@@ -325,9 +329,9 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
                 state.crumbs.last().label, style = IrisType.display, color = c.text, maxLines = 2,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
-            Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
+            Spacer(Modifier.width(IrisSpace.S))
             RollingNumber(count, minWidth = 2, style = monoTitle, color = c.accent)
-            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c4c4af), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = IrisDimens.space4))
+            Text(I18n.s(R.string.files_c4c4af), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(bottom = IrisDimens.space4))
         }
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
             Row(
@@ -347,7 +351,7 @@ private fun ArchiveHud(state: FilesState, actions: FilesActions, count: Int, foc
                 }
             }
             if (count > 0) {
-                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
+                Spacer(Modifier.width(IrisSpace.S))
                 Text("ARC-", style = IrisType.monoSmall, color = c.textTertiary)
                 RollingNumber(focusIndex + 1, minWidth = 4, style = IrisType.monoSmall, color = c.textSecondary)
             }
@@ -413,7 +417,7 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
             }
             .then(Modifier.drawWithContent { drawContent(); drawCardRim(this, rim) })
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(start = com.iris.localai.ui.theme.IrisSpace.L, end = com.iris.localai.ui.theme.IrisSpace.L, top = com.iris.localai.ui.theme.IrisSpace.M, bottom = IrisDimens.space12),
+            .padding(start = IrisSpace.L, end = IrisSpace.L, top = IrisSpace.M, bottom = IrisDimens.space12),
     ) {
         // 「卡片」 fix: only the focused card's text is drawn (it fades within half a card of scroll).
         Column(Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha() }) {
@@ -422,7 +426,7 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
                 Spacer(Modifier.width(IrisDimens.space8))
                 Text(
                     ArchiveMath.typeTag(e), style = IrisType.micro.copy(fontFamily = FontFamily.Monospace), color = c.textSecondary,
-                    modifier = Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = IrisDimens.space6, vertical = com.iris.localai.ui.theme.IrisSpace.XS),
+                    modifier = Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = IrisDimens.space6, vertical = IrisSpace.XS),
                 )
                 Spacer(Modifier.weight(1f))
                 if (e.system != null) SystemBadge()
@@ -430,7 +434,7 @@ private fun ArchiveCard(e: FileEntry, index: Int, focused: Boolean, contentAlpha
             Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(entryIcon(e), null, Modifier.size(22.dp), tint = if (e.isDir) c.accent else c.textSecondary)
-                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
+                Spacer(Modifier.width(IrisSpace.S))
                 Text(e.displayName, style = IrisType.titleSmall, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(IrisDimens.space4))
@@ -458,11 +462,11 @@ internal fun EntryMenu(e: FileEntry, actions: FilesActions, expanded: Boolean, o
     }
     IrisMenu(expanded = expanded, onDismiss = onDismiss) {
         if (!e.isDir) {
-            IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1d93c3), IrisIcons.OpenExternal) { onDismiss(); actions.openExternal(e) }
-            IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), IrisIcons.Share) { onDismiss(); actions.share(e) }
+            IrisMenuItem(I18n.s(R.string.files_1d93c3), IrisIcons.OpenExternal) { onDismiss(); actions.openExternal(e) }
+            IrisMenuItem(I18n.s(R.string.files_c31f48), IrisIcons.Share) { onDismiss(); actions.share(e) }
         }
-        if (canRename) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), IrisIcons.Edit) { onDismiss(); actions.requestRename(e) }
-        if (canDelete) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), IrisIcons.Trash, destructive = true) { onDismiss(); actions.requestDelete(e) }
+        if (canRename) IrisMenuItem(I18n.s(R.string.chat_c8ce4b), IrisIcons.Edit) { onDismiss(); actions.requestRename(e) }
+        if (canDelete) IrisMenuItem(I18n.s(R.string.chat_2f4aad), IrisIcons.Trash, destructive = true) { onDismiss(); actions.requestDelete(e) }
     }
 }
 
@@ -501,7 +505,7 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
             Spacer(Modifier.width(IrisDimens.space8))
             Text(ArchiveMath.typeTag(e), style = IrisType.monoSmall, color = c.textSecondary)
             Spacer(Modifier.weight(1f))
-            PressableIcon(IrisIcons.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), size = 40.dp, iconSize = IrisDimens.space20, onClick = onClose)
+            PressableIcon(IrisIcons.Close, I18n.s(R.string.ui_b15d91), size = 40.dp, iconSize = IrisDimens.space20, onClick = onClose)
         }
         Box(
             Modifier.fillMaxWidth().padding(vertical = IrisDimens.space8).clip(IrisRadius.mediumShape)
@@ -524,44 +528,44 @@ private fun DecryptSheet(e: FileEntry, index: Int, state: FilesState, actions: F
         ) {
             Column(
                 Modifier.fillMaxWidth().graphicsLayer { renderEffect = effects[ArchiveMath.blurStep(t.value, BLUR_STEPS)] }
-                    .background(c.surfaceVariant.copy(alpha = 0.5f)).padding(com.iris.localai.ui.theme.IrisSpace.M),
+                    .background(c.surfaceVariant.copy(alpha = 0.5f)).padding(IrisSpace.M),
             ) {
                 Text(e.name, style = IrisType.title, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.S))
-                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_226b09), if (e.extension.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47) else e.extension.uppercase(java.util.Locale.ROOT))
-                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_58f966), FileSizes.format(e.size))
-                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1303e6), formatModified(e.modified))
-                DetailRow(com.iris.localai.I18n.s(com.iris.localai.R.string.files_4f35e8), ArchiveMath.pathTag(e.relPath), mono = true)
+                Spacer(Modifier.height(IrisSpace.S))
+                DetailRow(I18n.s(R.string.files_226b09), if (e.extension.isEmpty()) I18n.s(R.string.chat_2a0c47) else e.extension.uppercase(java.util.Locale.ROOT))
+                DetailRow(I18n.s(R.string.files_58f966), FileSizes.format(e.size))
+                DetailRow(I18n.s(R.string.files_1303e6), formatModified(e.modified))
+                DetailRow(I18n.s(R.string.files_4f35e8), ArchiveMath.pathTag(e.relPath), mono = true)
             }
         }
         val preview = FilePreview.canPreview(e)
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space4)) {
-            if (preview) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_645dbc), onClick = { actions.onEntryClick(e) }, icon = IrisIcons.Eye, modifier = Modifier.weight(1f), compact = true)
-            else IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d7098f), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, modifier = Modifier.weight(1f), compact = true)
+            if (preview) IrisButton(I18n.s(R.string.files_645dbc), onClick = { actions.onEntryClick(e) }, icon = IrisIcons.Eye, modifier = Modifier.weight(1f), compact = true)
+            else IrisButton(I18n.s(R.string.files_d7098f), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, modifier = Modifier.weight(1f), compact = true)
             Spacer(Modifier.width(IrisDimens.space8))
-            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48), onClick = { actions.share(e) }, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+            IrisButton(I18n.s(R.string.files_c31f48), onClick = { actions.share(e) }, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
         }
         val canRename = actions.canRename(e)
         val canDelete = actions.canDelete(e)
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space8)) {
             if (preview) {
-                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.files_9f2ce6), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+                IrisButton(I18n.s(R.string.files_9f2ce6), onClick = { actions.openExternal(e) }, icon = IrisIcons.OpenExternal, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
                 Spacer(Modifier.width(IrisDimens.space8))
             }
             if (canRename) {
-                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), onClick = { onClose(); actions.requestRename(e) }, icon = IrisIcons.Edit, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
+                IrisButton(I18n.s(R.string.chat_c8ce4b), onClick = { onClose(); actions.requestRename(e) }, icon = IrisIcons.Edit, style = IrisButtonStyle.Tonal, modifier = Modifier.weight(1f), compact = true)
                 Spacer(Modifier.width(IrisDimens.space8))
             }
-            if (canDelete) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), onClick = { onClose(); actions.requestDelete(e) }, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.weight(1f), compact = true)
+            if (canDelete) IrisButton(I18n.s(R.string.chat_2f4aad), onClick = { onClose(); actions.requestDelete(e) }, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.weight(1f), compact = true)
         }
-        state.rootPath?.let { Text(it, style = IrisType.micro, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = com.iris.localai.ui.theme.IrisSpace.S)) }
+        state.rootPath?.let { Text(it, style = IrisType.micro, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = IrisSpace.S)) }
     }
 }
 
 @Composable
 private fun DetailRow(label: String, value: String, mono: Boolean = false) {
     val c = Iris.colors
-    Row(Modifier.fillMaxWidth().padding(vertical = com.iris.localai.ui.theme.IrisSpace.XS), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth().padding(vertical = IrisSpace.XS), verticalAlignment = Alignment.Top) {
         Text(label, style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.width(72.dp))
         Text(value, style = if (mono) IrisType.monoSmall else IrisType.secondary, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }

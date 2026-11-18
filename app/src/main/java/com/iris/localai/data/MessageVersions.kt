@@ -1,7 +1,7 @@
 package com.iris.localai.data
 
 /**
- * 2.0.x message versions. Pure, unit-tested.
+ * message versions. Pure, unit-tested.
  *
  * The conversation's `messages` list is always the *active path*: what the chat shows and the
  * only thing the model, the history index and the API ever read. Older versions live inside the
@@ -136,7 +136,7 @@ object MessageVersions {
         allMessages(messages).flatMap { m -> m.attachments + m.versions.flatMap { it.attachments } }
 
     /**
-     * 2.4.4: deleting message [id] from the active path (its stored versions go with it). A marker that
+     * deleting message [id] from the active path (its stored versions go with it). A marker that
      * pointed at it (compaction end, context break) moves to the message before it; null = not found.
      */
     fun delete(messages: List<ChatMessage>, id: String): List<ChatMessage>? {

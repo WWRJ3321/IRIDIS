@@ -1,5 +1,6 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -76,7 +77,7 @@ fun TypingDots(modifier: Modifier = Modifier, color: Color = Iris.colors.textSec
     // flag is off by design). Shown only until the first token; the frame clock stops in background.
     val run = !reduce
     val t = rememberInfiniteTransition(label = "dots")
-    Row(modifier.padding(vertical = com.iris.localai.ui.theme.IrisSpace.S), horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.XS)) {
+    Row(modifier.padding(vertical = IrisSpace.S), horizontalArrangement = Arrangement.spacedBy(IrisSpace.XS)) {
         repeat(3) { i ->
             val v = if (!run) null else t.animateFloat(
                 0f, 1f,

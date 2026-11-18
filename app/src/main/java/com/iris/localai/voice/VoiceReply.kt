@@ -1,12 +1,14 @@
 package com.iris.localai.voice
 
+import com.iris.localai.agent.web.SearchText
+import com.iris.localai.util.streaming.SpeechText
 import com.iris.localai.engine.PromptMessage
-import com.iris.localai.util.SentenceSplitter
+import com.iris.localai.util.streaming.SentenceSplitter
 
 /**
- * 2.1.7 语音对话 — less "AI味", speakable output, tools in voice. All pure and unit-tested.
+ * 语音对话 — less "AI味", speakable output, tools in voice. All pure and unit-tested.
  *
- * 2.1.9: the voice instruction sits at the end of the system prompt ([withVoiceSystem]), a fixed
+ * the voice instruction sits at the end of the system prompt ([withVoiceSystem]), a fixed
  * place: every request in a call has the same system prompt and the stored history is sent exactly
  * as it is kept, so the engine's KV prefix (LiteRT HistoryMatch, GenieX exact match, llama prefix)
  * still matches next turn. (2.1.7–2.1.8 put it on the newest user turn only; that turn was sent with
@@ -120,7 +122,7 @@ object VoiceSpeakable {
         if (t.count { it == '|' } >= 2) t = t.trim().trim('|').split('|').map { it.trim() }.filter { it.isNotEmpty() }.joinToString("，")
         t = SentenceSplitter.clean(t)
         t = stripEmoji(t)
-        t = com.iris.localai.util.SpeechText.speakable(t)
+        t = SpeechText.speakable(t)
         t = SPACES.replace(t, " ").trim()
         // Leftover punctuation only (a stripped URL / emoji) → nothing.
         return if (t.any { it.isLetterOrDigit() }) t else ""
@@ -219,7 +221,7 @@ class VoiceSpeech(private val max: Int = VoiceSpeakable.MAX_SENTENCES) {
     }
 }
 
-/** 2.1.7: whether a spoken request goes through the 智能体 loop (tools) instead of a plain reply. */
+/** whether a spoken request goes through the 智能体 loop (tools) instead of a plain reply. */
 object VoiceRouting {
     private val TASK = Regex(
         "^(请|麻烦)?(你)?(帮我|给我|替我)|^(查|搜|搜索|找|算|计算|翻译|提醒|定个|设(置|个|一个)|打开|打电话|打给|发给|发送|记一下|记住|整理|下载|导航)|" +
@@ -228,14 +230,14 @@ object VoiceRouting {
 
     fun looksLikeTask(text: String): Boolean {
         val t = text.trim()
-        return com.iris.localai.agent.SearchText.needsWeb(t) || TASK.containsMatchIn(t)
+        return SearchText.needsWeb(t) || TASK.containsMatchIn(t)
     }
 
     /** 智能体 on → always the agent; off → only a request that reads like a task. */
     fun useAgent(text: String, agentMode: Boolean): Boolean = agentMode || looksLikeTask(text)
 }
 
-/** 2.1.7: short spoken confirmations before a tool runs (no model call, no tokens). */
+/** short spoken confirmations before a tool runs (no model call, no tokens). */
 object VoiceCues {
     val POOL = listOf("我查一下。", "好，我来弄。", "稍等，我看看。")
     const val CONFIRM_ON_SCREEN = "这个要你在屏幕上确认，我先不动。"

@@ -1,18 +1,20 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.File
 
 /**
- * 2.2.2: whether a model can think is read from its chat template, not guessed from its name
+ * whether a model can think is read from its chat template, not guessed from its name
  * (Gemma 4's `<|think|>` / `<|channel>` and `enable_thinking` switches were missed before).
  */
 object ThinkSupport {
     private val MARKERS = listOf("<think>", "enable_thinking", "<|think|>", "<|channel>", "reasoning_content")
 
     /**
-     * 2.2.8: the templated prompt already opens a reasoning block (`…<think>\n` with no close),
+     * the templated prompt already opens a reasoning block (`…<think>\n` with no close),
      * so the model's reply starts mid-thinking and only ever writes `</think>`.
      */
     fun promptEndsWithOpenThink(prompt: String?): Boolean {

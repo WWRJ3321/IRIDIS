@@ -25,11 +25,11 @@ internal data class ChatRequest(
     val repeatPenalty: Float?,
     val maxTokens: Int?,
     val thinking: Boolean?,
-    /** 2.0.0: OpenAI `presence_penalty` / `frequency_penalty` / `seed` (and Ollama `options.*`). */
+    /** OpenAI `presence_penalty` / `frequency_penalty` / `seed` (and Ollama `options.*`). */
     val presencePenalty: Float? = null,
     val frequencyPenalty: Float? = null,
     val seed: Int? = null,
-    /** 2.0.0: OpenAI `stop` / Ollama `options.stop` (string or array). Empty = none. */
+    /** OpenAI `stop` / Ollama `options.stop` (string or array). Empty = none. */
     val stop: List<String> = emptyList(),
 )
 
@@ -57,7 +57,7 @@ internal object ChatRequestParser {
                 "assistant" -> PromptMessage.ASSISTANT
                 else -> return@mapNotNull null // tool / function messages are not supported
             }
-            // 2.6.4: image_url parts (OpenAI) / `images` (Ollama) ride on the message as raw URLs;
+            // image_url parts (OpenAI) / `images` (Ollama) ride on the message as raw URLs;
             // ApiRoutes turns them into files for the vision model.
             val text = contentText(o["content"])
             val imgs = if (role == PromptMessage.USER) contentImages(o["content"]) + ollamaImages(o["images"]) else emptyList()
@@ -106,7 +106,7 @@ internal object ChatRequestParser {
     }
 
     /**
-     * 2.6.4: the image URLs of a content array — `{"type":"image_url","image_url":{"url":…}}`,
+     * the image URLs of a content array — `{"type":"image_url","image_url":{"url":…}}`,
      * `"image_url":"…"` or Responses-style `{"type":"input_image","image_url":"…"}`. Only data URIs,
      * bare base64 and http(s) URLs; anything else is a 400.
      */
@@ -128,7 +128,7 @@ internal object ChatRequestParser {
         }
     }
 
-    /** 2.6.4: Ollama `"images": ["<base64>", …]` on a message. */
+    /** Ollama `"images": ["<base64>", …]` on a message. */
     fun ollamaImages(el: JsonElement?): List<String> = when (el) {
         null, JsonNull -> emptyList()
         is JsonArray -> el.map { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.trim()?.takeIf { s -> s.isNotEmpty() } ?: throw HttpError(400, "'images' must be base64 strings") }
@@ -153,7 +153,7 @@ internal object ChatRequestParser {
 }
 
 /**
- * 2.0.0: server-side stop sequences. Text is pushed as it streams; what [push] returns is safe to
+ * server-side stop sequences. Text is pushed as it streams; what [push] returns is safe to
  * send (a possible start of a stop sequence is held back until it is resolved). After a match
  * [hit] is true and nothing more is returned; the stop sequence itself is never emitted.
  */
@@ -207,14 +207,14 @@ class StopSequenceFilter(stops: List<String>) {
 /** Pure decisions of the API routes, kept apart from the engine so they can be unit-tested. */
 object ApiPolicy {
     /**
-     * 2.1.3: the address the local API binds. Loopback must be the IPv4 127.0.0.1: on Android
+     * the address the local API binds. Loopback must be the IPv4 127.0.0.1: on Android
      * InetAddress.getLoopbackAddress() returns ::1, so http://127.0.0.1:<port> was refused
      * (ERR_CONNECTION_REFUSED) while the switch said 运行中. LAN (with an API key) binds every interface.
      */
     fun bindHost(lan: Boolean): String = if (lan) "0.0.0.0" else "127.0.0.1"
 
     /**
-     * 2.0.0: an API request for a *different* installed model while the engine is generating
+     * an API request for a *different* installed model while the engine is generating
      * (in-app chat, voice, another API client) must not swap the model: [com.iris.localai.engine.EngineManager.load]
      * cancels whatever runs, which used to cut the user's chat reply off mid-sentence.
      */

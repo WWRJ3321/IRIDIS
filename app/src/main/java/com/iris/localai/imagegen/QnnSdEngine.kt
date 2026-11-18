@@ -123,7 +123,7 @@ object Half {
  * CLIP ids (int32 [1,77]) → text encoder → [1,77,768]; Euler; latent NHWC [1,64,64,4];
  * UNet(latent, timestep, text_emb) once for the negative/empty prompt and once for the prompt,
  * noise = uncond + cfg·(cond − uncond); VAE (divides by 0.18215 itself) → [1,512,512,3] in [0,1].
- * 2.2.12: also Local Dream's graphs (Anything V5): latent NCHW [1,4,64,64] (the loop is element-wise, so
+ * also Local Dream's graphs (Anything V5): latent NCHW [1,4,64,64] (the loop is element-wise, so
  * layout only matters at the VAE), VAE input = latent × [vaeInScale] (1/0.18215), output NCHW [1,3,H,W] in
  * [-1,1] when [vaeOutSigned].
  * Pure Kotlin over [QnnGraph], so it is unit-tested with fake graphs.

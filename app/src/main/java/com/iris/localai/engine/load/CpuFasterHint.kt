@@ -1,7 +1,12 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
- * 1.10.3: the model sheet's one-line suggestion 「建议：这个模型在 CPU 上加载更快（可选）」 + 「改用 CPU」, from the
+ * the model sheet's one-line suggestion 「建议：这个模型在 CPU 上加载更快（可选）」 + 「改用 CPU」, from the
  * real load records of 1.10.2 ([LoadStatsStore], one record per model + backend, successful loads only).
  *
  * Shown when, for one model:
@@ -15,8 +20,8 @@ package com.iris.localai.engine
 object CpuFasterHint {
     const val GPU_SLOW_MS = 60_000L
     /** A suggestion only: nothing changes unless the user taps [ACTION]; GPU stays the default. */
-    val TEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_35156c)
-    val ACTION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f)
+    val TEXT: String get() = I18n.s(R.string.engine_35156c)
+    val ACTION: String get() = I18n.s(R.string.engine_52746f)
 
     fun shouldShow(records: Collection<LoadRecord>, modelId: String, nextBackend: String?): Boolean {
         if (!Backend.GPU.label.equals(nextBackend?.trim(), ignoreCase = true)) return false

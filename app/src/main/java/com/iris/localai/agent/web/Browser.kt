@@ -1,8 +1,12 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.util.TokenEstimator
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.JsonObject
 
-/** 1.11.0: one look at a page: what the model reads. */
+/** one look at a page: what the model reads. */
 data class PageSnapshot(val title: String, val url: String, val lines: List<String>)
 
 /** The browser the `browser` tool drives; injected so the tool stays testable on the JVM. */
@@ -40,7 +44,7 @@ object BrowserTool : AgentTool {
             "open", "goto", "navigate", "visit" -> {
                 val url = Args.str(args, "url", "link", "href") ?: throw IllegalArgumentException("缺少参数 url")
                 val target = BrowserText.normalizeUrl(url)
-                // 1.14.3: local names / private IP literals are refused here without DNS; names are
+                // local names / private IP literals are refused here without DNS; names are
                 // resolved and checked by the real browser (WebViewBrowser) before loading.
                 if (NetGuard.obviouslyLocal(target)) return ToolResult(false, "Error: ${NetGuard.REFUSED}", NetGuard.REFUSED)
                 b.open(target)
@@ -80,7 +84,7 @@ object BrowserText {
         var cur = StringBuilder()
         for (line in s.lines) {
             val l = if (line.length > 400) line.take(400) + "…" else line
-            if (cur.isNotEmpty() && com.iris.localai.util.TokenEstimator.estimate(cur.toString() + l) > budget) {
+            if (cur.isNotEmpty() && TokenEstimator.estimate(cur.toString() + l) > budget) {
                 parts += cur; cur = StringBuilder()
             }
             cur.append(l).append('\n')

@@ -1,5 +1,8 @@
 package com.iris.localai.service
 
+import com.iris.localai.I18n
+import com.iris.localai.IrisApp
+import com.iris.localai.engine.EngineState
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -31,9 +34,9 @@ object GenerationMonitor {
         val chars: Int = 0,
         val finished: Boolean = false,
         val stopped: Boolean = false,
-        /** 2.5.0: when the reply started — the Live Update shows a running timer from here. */
+        /** when the reply started — the Live Update shows a running timer from here. */
         val startedAt: Long = System.currentTimeMillis(),
-        /** 2.5.0-beta9: decode speed when an engine reports one mid-reply (0 = unknown → 「N 字」). */
+        /** decode speed when an engine reports one mid-reply (0 = unknown → 「N 字」). */
         val tokensPerSecond: Float = 0f,
     )
 
@@ -55,7 +58,7 @@ object GenerationMonitor {
 
     fun requestStop() { stopHandler?.invoke() }
 
-    /** 1.10.13: every streamed piece of the running reply (both modes), for the background stall check. */
+    /** every streamed piece of the running reply (both modes), for the background stall check. */
     @Volatile var pieces: Long = 0L
         private set
     fun tick() { pieces++ }
@@ -79,8 +82,8 @@ class GenerationService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_PROGRESS, com.iris.localai.I18n.s(com.iris.localai.R.string.service_48967b), NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_DONE, com.iris.localai.I18n.s(com.iris.localai.R.string.service_e7d00e), NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_PROGRESS, I18n.s(R.string.service_48967b), NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_DONE, I18n.s(R.string.service_e7d00e), NotificationManager.IMPORTANCE_DEFAULT))
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:generation")
             .apply { setReferenceCounted(false); acquire(MAX_WAKE_MS) }
@@ -149,23 +152,23 @@ class GenerationService : LifecycleService() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(openIntent(j?.conversationId))
-            .addAction(0, com.iris.localai.I18n.s(com.iris.localai.R.string.service_095e93), stop)
+            .addAction(0, I18n.s(R.string.service_095e93), stop)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         if (!live) {
             // ≤ Android 15: unchanged 2.4.6 notification.
-            return b.setContentTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.service_16efd7))
+            return b.setContentTitle(I18n.s(R.string.service_16efd7))
                 .setContentText(GenerationText.progress(j?.title, chars))
                 .setProgress(0, 0, true)
                 .build()
         }
-        // 2.5.0 Android 16 Live Update (super island / status-bar chip on HyperOS 3 and Pixel):
+        // Android 16 Live Update (super island / status-bar chip on HyperOS 3 and Pixel):
         // ongoing + contentTitle + standard style + chronometer, not colorized, no custom views, and
         // the promotion request flag. The system decides whether it is promoted.
-        // 2.5.0-beta9: title = state (思考中 / 生成中), body = model · N 字 (or tok/s).
-        // 2.5.0-beta10: no large icon (HyperOS already draws the app icon) and BigText again — the
+        // title = state (思考中 / 生成中), body = model · N 字 (or tok/s).
+        // no large icon (HyperOS already draws the app icon) and BigText again — the
         // indeterminate ProgressStyle showed on HyperOS as a dot on an empty track (looked stuck at 0%).
         val modelName = runCatching {
-            ((applicationContext as com.iris.localai.IrisApp).container.engine.state.value as? com.iris.localai.engine.EngineState.Ready)?.model?.displayName
+            ((applicationContext as IrisApp).container.engine.state.value as? EngineState.Ready)?.model?.displayName
         }.getOrNull()
         val text = GenerationText.liveBody(modelName, chars, j?.tokensPerSecond ?: 0f)
         val n = b.setContentTitle(GenerationText.liveTitle(chars))
@@ -184,7 +187,7 @@ class GenerationService : LifecycleService() {
     private fun done(j: GenerationMonitor.Job): Notification =
         NotificationCompat.Builder(this, CHANNEL_DONE)
             .setSmallIcon(R.drawable.ic_stat_iris)
-            .setContentTitle(if (j.stopped) com.iris.localai.I18n.s(com.iris.localai.R.string.service_96131e) else com.iris.localai.I18n.s(com.iris.localai.R.string.service_9937df))
+            .setContentTitle(if (j.stopped) I18n.s(R.string.service_96131e) else I18n.s(R.string.service_9937df))
             .setContentText(GenerationText.done(j.title, j.chars))
             .setAutoCancel(true)
             .setContentIntent(openIntent(j.conversationId))
@@ -220,7 +223,7 @@ class GenerationService : LifecycleService() {
 }
 
 /**
- * 2.5.0 Android 16 (API 36) Live Updates for the 「生成中」 notification. Pure parts unit-tested.
+ * Android 16 (API 36) Live Updates for the 「生成中」 notification. Pure parts unit-tested.
  * Not using Xiaomi's private focus-island extras; HyperOS 3 maps promoted notifications to the island.
  */
 object LiveUpdate {
@@ -242,42 +245,42 @@ object LiveUpdate {
 
 /** Notification wording (unit-tested). */
 object GenerationText {
-    /** 2.5.0 Live Update body: 「正在思考…」 before the first character, then 「生成中 · N 字」. */
+    /** Live Update body: 「正在思考…」 before the first character, then 「生成中 · N 字」. */
     fun liveText(chars: Int): String =
-        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_thinking)
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_generating, chars)
+        if (chars <= 0) I18n.s(R.string.v250_live_thinking)
+        else I18n.s(R.string.v250_live_generating, chars)
 
     /** Status-bar chip, kept short: 「思考」 / 「N字」 (2.5.0-beta9). */
     fun liveChip(chars: Int): String =
-        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chip_thinking)
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chip, chars)
+        if (chars <= 0) I18n.s(R.string.v259_live_chip_thinking)
+        else I18n.s(R.string.v259_live_chip, chars)
 
-    /** 2.5.0-beta9 Live Update title = state: 「思考中」 before the first character, then 「生成中」. */
+    /** Live Update title = state: 「思考中」 before the first character, then 「生成中」. */
     fun liveTitle(chars: Int): String =
-        if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_title_thinking)
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_title_generating)
+        if (chars <= 0) I18n.s(R.string.v259_live_title_thinking)
+        else I18n.s(R.string.v259_live_title_generating)
 
     /**
-     * 2.5.0-beta9 Live Update body: 「模型名 · N 字」, or 「模型名 · X tok/s」 when a speed is known; the model
+     * Live Update body: 「模型名 · N 字」, or 「模型名 · X tok/s」 when a speed is known; the model
      * name is left out when unknown. Nothing to say yet (no model, no characters) → 「正在思考…」.
      */
     fun liveBody(model: String?, chars: Int, tokensPerSecond: Float = 0f): String {
         val name = model?.trim()?.takeIf { it.isNotEmpty() }?.take(32)
         val tail = when {
             tokensPerSecond > 0f -> String.format(java.util.Locale.US, "%.1f tok/s", tokensPerSecond)
-            chars > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.v259_live_chars, chars)
+            chars > 0 -> I18n.s(R.string.v259_live_chars, chars)
             else -> null
         }
-        return listOfNotNull(name, tail).joinToString(" · ").ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.v250_live_thinking) }
+        return listOfNotNull(name, tail).joinToString(" · ").ifEmpty { I18n.s(R.string.v250_live_thinking) }
     }
 
     fun progress(title: String?, chars: Int): String {
-        val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""
-        return if (chars <= 0) com.iris.localai.I18n.s(com.iris.localai.R.string.service_fde415, t) else com.iris.localai.I18n.s(com.iris.localai.R.string.service_92cfe0, t, chars)
+        val t = title?.takeIf { it.isNotBlank() }?.let { I18n.s(R.string.service_0cbdd1, it.take(16)) } ?: ""
+        return if (chars <= 0) I18n.s(R.string.service_fde415, t) else I18n.s(R.string.service_92cfe0, t, chars)
     }
 
     fun done(title: String?, chars: Int): String {
-        val t = title?.takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.service_0cbdd1, it.take(16)) } ?: ""
-        return com.iris.localai.I18n.s(com.iris.localai.R.string.service_374df9, t, chars)
+        val t = title?.takeIf { it.isNotBlank() }?.let { I18n.s(R.string.service_0cbdd1, it.take(16)) } ?: ""
+        return I18n.s(R.string.service_374df9, t, chars)
     }
 }

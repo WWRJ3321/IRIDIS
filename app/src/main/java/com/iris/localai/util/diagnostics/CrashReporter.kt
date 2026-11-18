@@ -1,5 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.diagnostics
 
+import com.iris.localai.util.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
@@ -14,7 +18,7 @@ import java.util.Locale
  * crashes / low-memory kills via ApplicationExitInfo — so the next launch can show it.
  */
 object CrashReporter {
-    /** 1.14.3: internal so 设置 › 存储空间 can list (and clear) the crash record. */
+    /** internal so 设置 › 存储空间 can list (and clear) the crash record. */
     internal const val FILE = "last-crash.txt"
     private const val SEEN = "crash-seen-ts"
 
@@ -54,7 +58,7 @@ object CrashReporter {
 
     /**
      * Printable tombstone text of the latest exit when that exit was a native crash, otherwise "".
-     * Reused by the dialog and by [com.iris.localai.engine.StartupLoadGuard].
+     * Reused by the dialog and by [com.iris.localai.engine.load.StartupLoadGuard].
      */
     fun nativeCrashText(context: Context): String = readExit(context).trace
 
@@ -152,7 +156,7 @@ object CrashReporter {
         val stream = info.traceInputStream ?: return "" to false
         return runCatching {
             val bytes = stream.use { it.readBytes() }
-            // 2.2.13: decoded "#00 pc …" backtrace (crashing thread first), then the raw printable runs.
+            // decoded "#00 pc …" backtrace (crashing thread first), then the raw printable runs.
             val sb = StringBuilder(TombstoneText.decodeOrNull(bytes)?.takeIf { it.length < 200_000 }.orEmpty())
             val run = StringBuilder()
             fun flush() {

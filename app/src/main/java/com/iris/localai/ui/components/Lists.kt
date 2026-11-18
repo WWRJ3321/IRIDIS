@@ -1,6 +1,12 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.iris.localai.ui.components
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.ui.theme.IrisStyle
+import com.iris.localai.ui.theme.LocalIrisStyle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,14 +75,14 @@ internal val FootnoteInset = IrisDimens.groupGutter + 18.dp
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        // 2.5.0 Beta2 柔光: small secondary-grey headers (no accent colour); 经典: tertiary grey as before.
+        // 柔光: small secondary-grey headers (no accent colour); 经典: tertiary grey as before.
         style = IrisType.sectionHeader,
         color = if (softStyle()) Iris.colors.textSecondary else Iris.colors.textTertiary,
         modifier = modifier.padding(
             start = SectionInset,
             end = IrisDimens.pageGutter,
             top = IrisDimens.space24 + IrisDimens.space4,
-            bottom = com.iris.localai.ui.theme.IrisSpace.S,
+            bottom = IrisSpace.S,
         ),
     )
 }
@@ -99,7 +105,7 @@ fun GroupFootnote(text: String, modifier: Modifier = Modifier, monospace: Boolea
         text,
         style = if (monospace) IrisType.monoSmall else IrisType.secondary,
         color = Iris.colors.textTertiary,
-        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + IrisDimens.space16, top = com.iris.localai.ui.theme.IrisSpace.S),
+        modifier = modifier.padding(start = FootnoteInset, end = IrisDimens.groupGutter + IrisDimens.space16, top = IrisSpace.S),
     )
 }
 
@@ -148,7 +154,7 @@ fun SettingsRow(
         Column(Modifier.weight(1f)) {
             Text(title, style = IrisType.row, color = titleColor.copy(alpha = titleColor.alpha * a))
             if (subtitle != null) {
-                Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.XS))
+                Spacer(Modifier.height(IrisSpace.XS))
                 Text(
                     subtitle, style = IrisType.rowSummary, color = subtitleColor.copy(alpha = subtitleColor.alpha * a),
                     maxLines = subtitleMaxLines, overflow = TextOverflow.Ellipsis,
@@ -162,9 +168,9 @@ fun SettingsRow(
     }
 }
 
-/** 2.5.0: true when the 柔光 style is on. */
+/** true when the 柔光 style is on. */
 @Composable
-fun softStyle(): Boolean = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
+fun softStyle(): Boolean = LocalIrisStyle.current == IrisStyle.SOFT
 
 /**
  * Leading row icon. 2.5.0 Beta2: monochrome in both styles — a bare line icon in the secondary
@@ -200,7 +206,7 @@ fun SwitchRow(
     val feedback = com.iris.localai.ui.feedback.rememberIrisFeedback()
     SettingsRow(
         title, subtitle = subtitle, icon = icon, enabled = enabled, role = Role.Switch,
-        onClick = { feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.TOGGLE); onChange(!checked) }, interaction = interaction,
+        onClick = { feedback.perform(FeedbackEvent.TOGGLE); onChange(!checked) }, interaction = interaction,
     ) {
         IrisSwitch(checked = checked, enabled = enabled, interaction = interaction)
     }
@@ -237,7 +243,7 @@ fun CheckRow(title: String, selected: Boolean, subtitle: String? = null, onClick
                 enter = if (LocalReduceMotion.current) EnterTransition.None else IrisMotion.popIn(0.4f),
                 exit = if (LocalReduceMotion.current) ExitTransition.None else IrisMotion.popOut(0.4f),
             ) {
-                Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
+                Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium))
             }
         }
     }
@@ -261,7 +267,7 @@ fun SliderRow(
             RollingText(display, style = IrisType.secondary.copy(fontWeight = FontWeight.Medium), color = c.textSecondary)
         }
         if (subtitle != null) {
-            Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.XS))
+            Spacer(Modifier.height(IrisSpace.XS))
             Text(subtitle, style = IrisType.rowSummary, color = c.textTertiary)
         }
         val interaction = remember { MutableInteractionSource() }
@@ -306,14 +312,14 @@ fun Fold(visible: Boolean, modifier: Modifier = Modifier, content: @Composable (
  * survives rotation ([key] must be unique per page). The chevron turns with the Snappy spring.
  */
 @Composable
-fun AdvancedFold(key: String, title: String = com.iris.localai.I18n.s(com.iris.localai.R.string.components_dfac15), content: @Composable ColumnScope.() -> Unit) {
+fun AdvancedFold(key: String, title: String = I18n.s(R.string.components_dfac15), content: @Composable ColumnScope.() -> Unit) {
     var open by androidx.compose.runtime.saveable.rememberSaveable(key) { androidx.compose.runtime.mutableStateOf(false) }
     val turn by animateFloatAsState(if (open) 180f else 0f, motionSpec(IrisMotion.Snappy), label = "advChevron")
     SettingsRow(
         title, onClick = { open = !open }, role = Role.Button,
         trailing = {
             Icon(
-                androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde),
+                androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.components_e2edde),
                 tint = Iris.colors.textTertiary,
                 modifier = Modifier.size(IrisDimens.iconMedium).graphicsLayer { rotationZ = turn },
             )
@@ -336,7 +342,7 @@ fun SectionFold(key: String, title: String, content: @Composable ColumnScope.() 
             title, onClick = { open = !open }, role = Role.Button,
             trailing = {
                 Icon(
-                    androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde),
+                    androidx.compose.material.icons.Icons.Outlined.KeyboardArrowDown, if (open) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.components_e2edde),
                     tint = Iris.colors.textTertiary,
                     modifier = Modifier.size(IrisDimens.iconMedium).graphicsLayer { rotationZ = turn },
                 )
@@ -372,7 +378,7 @@ fun NavRow(
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = IrisDimens.space8, vertical = com.iris.localai.ui.theme.IrisSpace.XS)
+            .padding(horizontal = IrisDimens.space8, vertical = IrisSpace.XS)
             .heightIn(min = IrisDimens.touchTarget)
             .clip(IrisRadius.mediumShape)
             .clickable(onClick = onClick)
@@ -408,7 +414,7 @@ fun SliderKnob(interaction: MutableInteractionSource) {
                 scaleX = s.value; scaleY = s.value
                 shadowElevation = 3.dp.toPx(); shape = CircleShape; clip = true
             }
-            // 1.8.0: plain white knob with a soft shadow (HyperOS / iOS), no accent ring.
+            // plain white knob with a soft shadow (HyperOS / iOS), no accent ring.
             .drawBehind {
                 drawCircle(Color.White)
                 if (!c.isDark) drawCircle(Color.Black.copy(alpha = 0.06f), style = androidx.compose.ui.graphics.drawscope.Stroke(0.5.dp.toPx()))

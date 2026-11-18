@@ -1,5 +1,8 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.data.TierProfile
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import android.content.Context
 import android.os.PowerManager
 import com.iris.localai.engine.llama.LlamaNative
@@ -26,13 +29,13 @@ class ThreadPolicy(context: Context) {
 
     val thermalStatus: Int get() = power?.currentThermalStatus ?: PowerManager.THERMAL_STATUS_NONE
 
-    /** 1.7.8: the user's 资源档配置 (AppSettings.tierProfiles), read live (EngineManager wires it to the settings). */
-    @Volatile var profileSource: () -> Map<String, com.iris.localai.data.TierProfile> = { emptyMap() }
-    val profiles: Map<String, com.iris.localai.data.TierProfile> get() = profileSource()
+    /** the user's 资源档配置 (AppSettings.tierProfiles), read live (EngineManager wires it to the settings). */
+    @Volatile var profileSource: () -> Map<String, TierProfile> = { emptyMap() }
+    val profiles: Map<String, TierProfile> get() = profileSource()
 
     /**
      * The plan right now (after thermal throttling). [userThreads] > 0 overrides the count.
-     * 1.7.8: [backend] picks the CPU or the GPU profile set (null = CPU).
+     * [backend] picks the CPU or the GPU profile set (null = CPU).
      */
     fun plan(tier: ResourceTier, userThreads: Int = 0, backend: Backend? = null): ResourcePlan =
         planFor(tier, userThreads, ResourceBackendKind.of(backend), thermalStatus)

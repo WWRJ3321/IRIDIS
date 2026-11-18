@@ -1,4 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.streaming
+
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.thinking.*
 
 /**
  * Turns streamed Markdown into speakable sentences.

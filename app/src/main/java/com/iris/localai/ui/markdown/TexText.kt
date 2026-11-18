@@ -1,7 +1,7 @@
 package com.iris.localai.ui.markdown
 
 /**
- * 2.5.8: 常见 LaTeX → 可读的 Unicode 文本（不排版，只让公式能看懂）。
+ * 常见 LaTeX → 可读的 Unicode 文本（不排版，只让公式能看懂）。
  * 覆盖：希腊字母、运算符/关系符、\frac、\sqrt、上下标、\text/\mathrm/\mathbf、\mathbb、\left/\right、空格命令。
  * 认不出的命令保留原样（去掉反斜杠），不会吞内容。
  */
@@ -38,7 +38,7 @@ object TexText {
     private const val SUB_DST = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ"
 
     /**
-     * 2.5.9: 模型常把公式写进反引号（`2^{2m} + 3^m`、`\gcd(a,b)=1`）。像数学且不像代码时按公式渲染。
+     * 模型常把公式写进反引号（`2^{2m} + 3^m`、`\gcd(a,b)=1`）。像数学且不像代码时按公式渲染。
      */
     private val TEX_CMD = Regex("\\\\[a-zA-Z]+")
     private val POWER = Regex("[\\w)}]\\^[\\w{(]|[\\w)}]_\\{")

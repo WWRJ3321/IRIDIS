@@ -1,14 +1,17 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.workspace
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 
 /**
- * 1.10.0: [ExternalFiles] over the user's SAF grant of `Download/IRIDIS`
+ * [ExternalFiles] over the user's SAF grant of `Download/IRIDIS`
  * (ACTION_OPEN_DOCUMENT_TREE, persisted). 1.10.6: read and write (needs the grant's write permission): listing, reading and editing files the app's direct
  * File access cannot see under scoped storage. No MANAGE_EXTERNAL_STORAGE.
- * 2.1.1: every path is resolved under [base] inside the tree — [SafPaths.WORKSPACE] for the agent
+ * every path is resolved under [base] inside the tree — [SafPaths.WORKSPACE] for the agent
  * (so models/, skills/, config/ … stay out of reach), [SafPaths.ROOT] for app-internal readers (知识库).
  */
 class SafWorkspaceFiles(private val context: Context, private val tree: Uri, private val base: List<String> = SafPaths.WORKSPACE) : ExternalFiles {
@@ -89,7 +92,7 @@ class SafWorkspaceFiles(private val context: Context, private val tree: Uri, pri
     }.getOrDefault(false)
 
     /**
-     * 2.1.1: the one-time move (see [StorageLayout.plan]) through the grant, for files the app's own File
+     * the one-time move (see [StorageLayout.plan]) through the grant, for files the app's own File
      * access cannot see: creates `workspace/` in the tree when missing, renames a clashing entry first,
      * then moves it with DocumentsContract.moveDocument. Only valid for a [SafPaths.ROOT] instance.
      */

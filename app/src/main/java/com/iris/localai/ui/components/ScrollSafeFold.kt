@@ -18,12 +18,12 @@ import com.iris.localai.ui.theme.LocalReduceMotion
 import kotlin.math.roundToInt
 
 /**
- * 2.4.5 (Issue #10): true while the chat list is being dragged or flung. Provided by ChatScreen;
+ * Issue #10: true while the chat list is being dragged or flung. Provided by ChatScreen;
  * outside the chat list it stays false.
  */
 val LocalListScrolling = staticCompositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
-/** 2.4.5 (#10): when an expand / collapse animation inside a scrolling list stops. Pure. */
+/** when an expand / collapse animation inside a scrolling list stops. Pure. */
 object FoldMotion {
     /** Jump straight to the end state: reduced motion, or the list is moving (a growing item under a fling drew garbled text). */
     fun snap(reduceMotion: Boolean, listScrolling: Boolean): Boolean = reduceMotion || listScrolling
@@ -32,7 +32,7 @@ object FoldMotion {
     fun height(full: Int, fraction: Float): Int = (full * fraction.coerceIn(0f, 1f)).roundToInt().coerceIn(0, full)
 
     /**
-     * 2.6.3 (#10 again): bodies taller than this never grow frame by frame — they take their full
+     * bodies taller than this never grow frame by frame — they take their full
      * height at once and only fade. A long thinking block growing inside the list while a fling
      * starts left the upper half of the screen drawing stale text; past one screen the growth is
      * not visible anyway.
@@ -64,7 +64,7 @@ fun ScrollSafeFold(visible: Boolean, modifier: Modifier = Modifier, content: @Co
     if (!present) return
     Layout(
         content = content,
-        // 2.6.3: ModulateAlpha — the fade no longer renders the whole (possibly very tall) body into an
+        // ModulateAlpha — the fade no longer renders the whole (possibly very tall) body into an
         // offscreen buffer, which is what drew garbage at the top of the screen mid-scroll.
         modifier = modifier.clipToBounds().graphicsLayer {
             alpha = progress.value.coerceIn(0f, 1f)

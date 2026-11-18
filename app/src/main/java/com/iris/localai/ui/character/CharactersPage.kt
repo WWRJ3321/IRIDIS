@@ -1,5 +1,7 @@
 package com.iris.localai.ui.character
 
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.LocalReduceMotion
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -74,7 +76,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 2.3.2 角色卡 page (sidebar › 角色): list (avatar, name, one line), tap = start a chat with it;
+ * 角色卡 page (sidebar › 角色): list (avatar, name, one line), tap = start a chat with it;
  * ⋮ = edit / export PNG / export JSON / delete; 新建 and 导入 (PNG / JSON / CHARX) at the top.
  */
 @Composable
@@ -101,7 +103,7 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
             val msg = withContext(Dispatchers.IO) {
                 runCatching {
                     val name = uri.lastPathSegment.orEmpty()
-                    val bytes = context.contentResolver.openInputStream(uri)!!.use { inp ->
+                    val bytes = (context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("无法打开所选文件")).use { inp ->
                         val b = inp.readBytes(); if (b.size > CardCodec.MAX_BYTES) throw CardCodec.CardFormatException(CardCodec.CardFormatException.Kind.TOO_BIG); b
                     }
                     val imp = CardCodec.decode(bytes, name)
@@ -127,7 +129,7 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
             val ok = withContext(Dispatchers.IO) {
                 runCatching {
                     val png = e.avatar?.let { pngOf(it.readBytes()) } ?: CardCodec.solidPng()
-                    context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(CardCodec.encodePng(e.card, png)) }
+                    (context.contentResolver.openOutputStream(uri, "wt") ?: throw java.io.IOException("无法打开所选文件")).use { it.write(CardCodec.encodePng(e.card, png)) }
                 }.isSuccess
             }
             toast(I18n.s(if (ok) R.string.ch232_exported else R.string.kb232_failed))
@@ -138,21 +140,21 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
         if (uri == null || e == null) return@rememberLauncherForActivityResult
         scope.launch {
             val ok = withContext(Dispatchers.IO) {
-                runCatching { context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(e.card.toJson().toByteArray()) } }.isSuccess
+                runCatching { (context.contentResolver.openOutputStream(uri, "wt") ?: throw java.io.IOException("无法打开所选文件")).use { it.write(e.card.toJson().toByteArray()) } }.isSuccess
             }
             toast(I18n.s(if (ok) R.string.ch232_exported else R.string.kb232_failed))
         }
     }
 
-    // 2.5.3: the editor pushes in / pops out with the app's page transition (it used to swap in place).
+    // the editor pushes in / pops out with the app's page transition (it used to swap in place).
     val editorKey: Any? = if (creating) EDITOR_NEW else editing
-    val reduceMotion = com.iris.localai.ui.theme.LocalReduceMotion.current
+    val reduceMotion = LocalReduceMotion.current
     androidx.compose.animation.AnimatedContent(
         targetState = editorKey,
         contentKey = { k -> (k as? CharacterStore.Entry)?.id ?: k },
         transitionSpec = {
-            if (reduceMotion) com.iris.localai.ui.motion.IrisMotion.none
-            else com.iris.localai.ui.motion.IrisMotion.push(forward = targetState != null)
+            if (reduceMotion) IrisMotion.none
+            else IrisMotion.push(forward = targetState != null)
         },
         label = "characterEditor",
     ) { target ->
@@ -209,7 +211,7 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
     }
 }
 
-/** 2.5.3: AnimatedContent key of 「新建角色」 (an existing card is keyed by its entry). */
+/** AnimatedContent key of 「新建角色」 (an existing card is keyed by its entry). */
 private const val EDITOR_NEW = "new"
 
 private fun fileBase(e: CharacterStore.Entry) = CharacterStore.slug(e.card.name).ifEmpty { e.id }
@@ -305,7 +307,7 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
     var cloneVoice by remember { mutableStateOf(base.bindCloneVoice) }
     var imageStyle by remember { mutableStateOf(base.bindImageStyle) }
     var avatar by remember { mutableStateOf<ByteArray?>(null) }
-    // 2.3.5: imported cards that use the split fields open 高级 so nothing is hidden
+    // imported cards that use the split fields open 高级 so nothing is hidden
     var advanced by remember { mutableStateOf(base.personality.isNotBlank() || base.scenario.isNotBlank() || base.alternateGreetings.isNotEmpty()) }
     var modelMenu by remember { mutableStateOf(false) }
     val models by container.models.models.collectAsStateWithLifecycle()
@@ -313,7 +315,7 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) scope.launch {
-            val png = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openInputStream(uri)!!.use { avatarPng(it.readBytes()) } }.getOrNull() }
+            val png = withContext(Dispatchers.IO) { runCatching { (context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("无法打开所选文件")).use { avatarPng(it.readBytes()) } }.getOrNull() }
             if (png == null) Toast.makeText(context, I18n.s(R.string.ch232_err_image), Toast.LENGTH_SHORT).show() else avatar = png
         }
     }
@@ -357,7 +359,7 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
                 Text(I18n.s(R.string.ch232_avatar_hint), style = IrisType.secondary, color = c.textSecondary)
             }
             Field(I18n.s(R.string.ch232_f_name), name, { name = it }, single = true)
-            // 2.3.5: one prompt box is enough — 设定 is written straight as a prompt (stored as the card's
+            // one prompt box is enough — 设定 is written straight as a prompt (stored as the card's
             // description). The tavern-card split fields (性格/场景/备选开场白/标签) live under 高级.
             Field(I18n.s(R.string.ch235_f_prompt), description, { description = it }, hint = I18n.s(R.string.ch235_h_prompt), minLines = 6)
             Field(I18n.s(R.string.ch232_f_first), firstMes, { firstMes = it }, hint = I18n.s(R.string.ch235_h_first))

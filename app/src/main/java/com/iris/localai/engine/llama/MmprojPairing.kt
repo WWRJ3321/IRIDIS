@@ -1,9 +1,10 @@
 package com.iris.localai.engine.llama
 
+import com.iris.localai.data.GgufSearch
 import com.iris.localai.engine.geniex.GenieXVision
 
 /**
- * 2.2.17: which vision projector (mmproj) goes with a GGUF model for llama.cpp mtmd. Pure.
+ * which vision projector (mmproj) goes with a GGUF model for llama.cpp mtmd. Pure.
  *
  * Order: the user's pick in 模型配置 ([userPick]: a file name in the same folder; "" = 不使用) →
  * a projector downloaded with the model (`<model>-mmproj-*.gguf`) → a projector sharing the model's
@@ -21,7 +22,7 @@ object MmprojPairing {
         if (userPick != null) return if (userPick == OFF) null else userPick.takeIf { it in siblings && isProjector(it) }
         val projectors = siblings.filter { it != modelFile && isProjector(it) }
         if (projectors.isEmpty()) return null
-        val stem = modelFile.replace(com.iris.localai.data.GgufSearch.SPLIT, ".gguf").removeSuffix(".gguf").removeSuffix(".GGUF")
+        val stem = modelFile.replace(GgufSearch.SPLIT, ".gguf").removeSuffix(".gguf").removeSuffix(".GGUF")
         projectors.firstOrNull { it.startsWith("$stem-") }?.let { return it }
         return GenieXVision.findMmproj(modelFile, projectors) ?: run {
             val lower = modelFile.lowercase()

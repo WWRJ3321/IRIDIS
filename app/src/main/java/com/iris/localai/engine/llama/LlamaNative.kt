@@ -1,5 +1,7 @@
 package com.iris.localai.engine.llama
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.annotation.Keep
 import java.io.File
 
@@ -23,7 +25,7 @@ object LlamaNative {
     /** null when the library is usable, otherwise a user-facing reason. */
     val unavailableReason: String? by lazy { tryLoad() }
 
-    /** 2.5.0-beta8: which build was loaded ("iris_llama" or the no-i8mm "iris_llama_compat"), null before / on failure. */
+    /** which build was loaded ("iris_llama" or the no-i8mm "iris_llama_compat"), null before / on failure. */
     @Volatile var loadedLibrary: String? = null
         private set
 
@@ -36,16 +38,16 @@ object LlamaNative {
             android.util.Log.i("IrisLlama", "loaded lib$lib.so")
             null
         } catch (t: Throwable) {
-            // 2.5.0: the regular APK ships without libiris_llama_compat.so; a no-i8mm CPU needs the legacy build.
+            // the regular APK ships without libiris_llama_compat.so; a no-i8mm CPU needs the legacy build.
             if (lib == CpuFeatures.LIB_COMPAT) {
                 android.util.Log.w("IrisLlama", "lib$lib.so missing: ${t.message}")
-                runCatching { com.iris.localai.I18n.s(com.iris.localai.R.string.v250_compat_needed) }
+                runCatching { I18n.s(R.string.v250_compat_needed) }
                     .getOrDefault("本机需安装老芯片兼容版")
             } else "无法加载 llama.cpp 原生库：${t.message ?: t.javaClass.simpleName}"
         }
     }
 
-    /** 2.2.14: OpenCL init/compile progress ticks (changes = not hung) and the last ggml_opencl log line. */
+    /** OpenCL init/compile progress ticks (changes = not hung) and the last ggml_opencl log line. */
     @JvmStatic external fun nativeGpuTicks(): Int
     @JvmStatic external fun nativeGpuLastLog(): String
 
@@ -58,15 +60,15 @@ object LlamaNative {
         handle: Long, pathUtf8: ByteArray, nCtx: Int, nThreads: Int, nBatch: Int,
         flashAttn: Boolean, nGpuLayers: Int, kvType: Int, useMmap: Boolean, listener: LoadProgressListener?,
     ): String?
-    /** 2.5.0-beta9: MTP draft tokens per step for the next [nativeLoad] (0 = off). */
+    /** MTP draft tokens per step for the next [nativeLoad] (0 = off). */
     @JvmStatic external fun nativeSetMtp(handle: Long, nDraft: Int)
-    /** 2.5.1: MoE 专家留 CPU 按需加载 + 激活专家数（0 = 模型默认），作用于下次 [nativeLoad]。 */
+    /** MoE 专家留 CPU 按需加载 + 激活专家数（0 = 模型默认），作用于下次 [nativeLoad]。 */
     @JvmStatic external fun nativeSetMoe(handle: Long, moeCpu: Boolean, nExpertUsed: Int)
-    /** 2.5.4: LES 前瞻专家调度开关 + manifest 目录（下次 nativeLoad）。 */
+    /** LES 前瞻专家调度开关 + manifest 目录（下次 nativeLoad）。 */
     @JvmStatic external fun nativeSetLes(handle: Long, on: Boolean, dirUtf8: ByteArray)
-    /** 2.5.4: "off" | "on" | "skip: <reason>"。 */
+    /** "off" | "on" | "skip: <reason>"。 */
     @JvmStatic external fun nativeLesStatus(handle: Long): String
-    /** 2.5.0-beta9: "off" | "active n=<draft>" | "fallback: <reason>". */
+    /** "off" | "active n=<draft>" | "fallback: <reason>". */
     @JvmStatic external fun nativeMtpStatus(handle: Long): String
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
@@ -74,7 +76,7 @@ object LlamaNative {
     @JvmStatic external fun nativeClearCancel(handle: Long)
     @JvmStatic external fun nativeReset(handle: Long)
     @JvmStatic external fun nativeSetThreads(handle: Long, threads: Int)
-    /** 1.7.2: park a mid-reply tier switch; applied by the decoding thread before its next decode. */
+    /** park a mid-reply tier switch; applied by the decoding thread before its next decode. */
     @JvmStatic external fun nativeRequestLivePolicy(handle: Long, threads: Int, cpus: IntArray, nice: Int)
     @JvmStatic external fun nativeMeta(handle: Long): String
     /** Pins the calling thread to [cpus] (empty = all) and sets its nice value; bit 1 = affinity ok, 2 = priority ok. */
@@ -83,9 +85,9 @@ object LlamaNative {
         handle: Long, roles: Array<ByteArray>, contents: Array<ByteArray>,
         floats: FloatArray, ints: IntArray, sink: PieceSink?,
     ): String
-    /** 2.2.17 (mtmd): loads the vision projector for the loaded model (empty path = drop it); null = ok, else the reason. */
+    /** mtmd: loads the vision projector for the loaded model (empty path = drop it); null = ok, else the reason. */
     @JvmStatic external fun nativeLoadMmproj(handle: Long, pathUtf8: ByteArray, preferGpu: Boolean): String?
-    /** 2.2.17: [nativeGenerate] with picture files placed in front of message [imageMsg]. */
+    /** [nativeGenerate] with picture files placed in front of message [imageMsg]. */
     @JvmStatic external fun nativeGenerateVision(
         handle: Long, roles: Array<ByteArray>, contents: Array<ByteArray>,
         floats: FloatArray, ints: IntArray, images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?,
@@ -127,7 +129,7 @@ object CpuFeatures {
         val required = mapOf("asimddp" to "dotprod", "asimdhp" to "fp16")
         val missing = required.filterKeys { it !in features }.values
         return if (missing.isEmpty()) null
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.v250_cpu_missing, missing.joinToString(" / "))
+        else I18n.s(R.string.v250_cpu_missing, missing.joinToString(" / "))
     }
 
     /** The i8mm native builds (stable-diffusion.cpp CPU/NPU, llama.cpp Hexagon): the pre-beta8 check, unchanged. */

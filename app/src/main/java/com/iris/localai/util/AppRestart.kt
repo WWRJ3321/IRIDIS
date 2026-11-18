@@ -1,12 +1,16 @@
 package com.iris.localai.util
 
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 
 /**
- * 2.2.14: restarts the app process (used when a native GPU load hangs: the stuck JNI call
+ * restarts the app process (used when a native GPU load hangs: the stuck JNI call
  * cannot be interrupted and holds the engine thread). [RestartActivity] runs in its own
  * process, kills the old one and starts the launcher activity again.
  */

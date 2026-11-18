@@ -1,16 +1,18 @@
 package com.iris.localai.server
 
+import com.iris.localai.imagegen.ImageGenRepository
+import com.iris.localai.imagegen.RepositoryImageGenBackend
 import com.iris.localai.AppContainer
-import com.iris.localai.agent.GenerateImageTool
+import com.iris.localai.agent.tools.GenerateImageTool
 
 /**
- * 2.6.4: [ApiMedia] on the app: 生图 through the same backend as the agent's generate_image (model from
+ * [ApiMedia] on the app: 生图 through the same backend as the agent's generate_image (model from
  * 设置 › 智能体 › 生图, chat model unloaded for a large image model when 内存不够先卸 is on), 朗读 through
  * the app's [com.iris.localai.voice.SpeechSynthesizer] with the voice set in 设置 › 语音.
  */
 class AppApiMedia(private val context: android.content.Context, private val c: AppContainer) : ApiMedia {
     private val backend by lazy {
-        com.iris.localai.imagegen.RepositoryImageGenBackend(com.iris.localai.imagegen.ImageGenRepository(context), yielder = { c.agent.chatYield })
+        RepositoryImageGenBackend(ImageGenRepository(context), yielder = { c.agent.chatYield })
     }
     private val imageLock = kotlinx.coroutines.sync.Mutex()
     private val speechLock = kotlinx.coroutines.sync.Mutex()

@@ -1,16 +1,17 @@
 package com.iris.localai.knowledge
 
+import com.iris.localai.engine.llama.LlamaNative
 import androidx.annotation.Keep
 
 /**
- * 2.5.1: JNI surface of the 知识库 embedder (app/src/main/cpp/jni_embed.cpp, inside libiris_llama /
+ * JNI surface of the 知识库 embedder (app/src/main/cpp/jni_embed.cpp, inside libiris_llama /
  * libiris_llama_compat). Loading the library goes through [com.iris.localai.engine.llama.LlamaNative] (CPU check,
  * compat fallback); the embedder has its own llama_model + context and never touches the chat engine.
  */
 @Keep
 object KbEmbedNative {
     /** null when usable. */
-    val unavailableReason: String? get() = com.iris.localai.engine.llama.LlamaNative.unavailableReason
+    val unavailableReason: String? get() = LlamaNative.unavailableReason
 
     /** Handle (0 = failed). CPU, mmap, embeddings on, pooling from the model, n_ctx 2048. */
     @JvmStatic external fun nativeEmbedLoad(pathUtf8: ByteArray, threads: Int): Long

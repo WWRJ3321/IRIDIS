@@ -51,7 +51,7 @@ object DeviceProbe {
 
     fun nativeProbe(context: Context, refresh: Boolean = false): QnnProbe {
         val arch = htpArch(socModel())
-        // 2.2.13: never touch libQnnHtp on a SoC the image models do not support (no DSP session on e.g. 8+ Gen 1).
+        // never touch libQnnHtp on a SoC the image models do not support (no DSP session on e.g. 8+ Gen 1).
         if (arch == null || arch < MIN_PROBE_ARCH) return QnnProbe(libLoaded = false, error = "此芯片不支持 NPU 生图，已跳过 QNN 探测")
         val dir = qnnRuntimeDir(context.filesDir, arch)
         val key = dir?.path ?: ""

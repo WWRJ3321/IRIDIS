@@ -1,5 +1,5 @@
 /*
- * 2.3.0: parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
+ * parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
  * are adapted from Mika (https://github.com/wangzan101/mika), Copyright 2026 wangzan101,
  * Apache License 2.0. Modified for IRIDIS.
  */
@@ -35,7 +35,7 @@ data class UiNode(
     val enabled: Boolean = true,
     val visible: Boolean = true,
     val pkg: String = "",
-    /** 2.3.0: an empty field's placeholder (AccessibilityNodeInfo.hintText). */
+    /** an empty field's placeholder (AccessibilityNodeInfo.hintText). */
     val hint: String = "",
     val selected: Boolean = false,
     val children: List<UiNode> = emptyList(),
@@ -57,7 +57,7 @@ object UiTreeSerializer {
     const val MAX_CHARS = 2400
     private const val LABEL_CHARS = 40
 
-    /** 2.3.0: candidates collected before the cap is applied (actionable ones are kept first). */
+    /** candidates collected before the cap is applied (actionable ones are kept first). */
     private const val MAX_CANDIDATES = 200
 
     fun elements(root: UiNode?, screenW: Int, screenH: Int, scale: Float = 1000f, maxElements: Int = MAX_ELEMENTS): List<UiElement> {
@@ -73,7 +73,7 @@ object UiTreeSerializer {
                 val label = own.ifEmpty { if (actionable) childText(n) else "" }
                 // Plain text that only repeats an actionable parent's borrowed label adds nothing.
                 if (label.isNotEmpty() || n.editable || n.scrollable) {
-                    // 2.3.0 compaction: the same label at (almost) the same place is shown once.
+                    // compaction: the same label at (almost) the same place is shown once.
                     val dup = label.isNotEmpty() && cand.any { (m, l) -> l == label && near(m.bounds, n.bounds, screenW, screenH) }
                     if (!dup) cand += n to label
                 }
@@ -83,7 +83,7 @@ object UiTreeSerializer {
             n.children.forEach(::visit)
         }
         visit(root)
-        // 2.3.0 (Mika-style compaction): over the cap, keep what can be acted on first, then plain text, in screen order.
+        // Mika-style compaction: over the cap, keep what can be acted on first, then plain text, in screen order.
         val keep: List<Pair<UiNode, String>> = if (cand.size <= maxElements) cand else {
             val pri = cand.indices.sortedWith(compareBy({ if (isActionable(cand[it].first)) 0 else 1 }, { it })).take(maxElements).toSet()
             cand.filterIndexed { i, _ -> i in pri }
@@ -97,7 +97,7 @@ object UiTreeSerializer {
         kotlin.math.abs((a.left + a.right) - (b.left + b.right)) / 2.0 <= w * 0.02 &&
             kotlin.math.abs((a.top + a.bottom) - (b.top + b.bottom)) / 2.0 <= h * 0.02
 
-    /** 2.3.0: the first element whose label contains [text] (case and spaces ignored); for scroll-until-found. */
+    /** the first element whose label contains [text] (case and spaces ignored); for scroll-until-found. */
     fun find(elements: List<UiElement>, text: String): UiElement? {
         val t = text.lowercase().filterNot { it.isWhitespace() }
         if (t.isEmpty()) return null
@@ -106,18 +106,18 @@ object UiTreeSerializer {
         return elements.firstOrNull { !it.node.scrollable && hit(it) } ?: elements.firstOrNull { hit(it) }
     }
 
-    /** 2.3.0: grid centre of an element, as shown in its line. */
+    /** grid centre of an element, as shown in its line. */
     fun gridCentre(e: UiElement, w: Int, h: Int, scale: Float = 1000f): Pair<Int, Int> {
         val cx = ((e.node.bounds.left + e.node.bounds.right) / 2.0).coerceIn(0.0, w.toDouble())
         val cy = ((e.node.bounds.top + e.node.bounds.bottom) / 2.0).coerceIn(0.0, h.toDouble())
         return (cx / w * scale).toInt().coerceAtMost(scale.toInt()) to (cy / h * scale).toInt().coerceAtMost(scale.toInt())
     }
 
-    /** 2.2.3: fewer text-bearing elements than this → run the OCR fallback. */
+    /** fewer text-bearing elements than this → run the OCR fallback. */
     const val OCR_MIN_TEXT = 4
     const val MAX_OCR_LINES = 40
 
-    /** 2.2.3: true when the tree carries too little text to be a useful reference. */
+    /** true when the tree carries too little text to be a useful reference. */
     fun needsOcr(elements: List<UiElement>, root: UiNode? = null): Boolean =
         elements.count { it.label.isNotEmpty() } < OCR_MIN_TEXT || unlabeledControls(root)
 
@@ -141,7 +141,7 @@ object UiTreeSerializer {
     }
 
     /**
-     * 2.2.3: [elements] plus OCR text lines as `[i] OCR "text" (x,y)` on the same grid. Lines that
+     * [elements] plus OCR text lines as `[i] OCR "text" (x,y)` on the same grid. Lines that
      * repeat a tree label or are off screen are skipped. Reference only (no coordinate snapping).
      */
     fun withOcr(elements: List<UiElement>, lines: List<OcrLine>, screenW: Int, screenH: Int, scale: Float = 1000f): List<UiElement> {

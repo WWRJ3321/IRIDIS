@@ -1,7 +1,7 @@
 package com.iris.localai.ui.chat
 
 /**
- * 2.1.7: a message sent while a reply / 智能体 run is still going. Either it stops the run and
+ * a message sent while a reply / 智能体 run is still going. Either it stops the run and
  * becomes a new turn ([Kind.INTERRUPT]: 「停」「等等」「不对」「算了」…, or 「打断并发送」 on a long
  * press of 发送), or it is a 补充 ([Kind.SUPPLEMENT]): the 智能体 reads it before its next step,
  * a plain reply answers it right after it finishes. Pure (unit-tested).
@@ -54,7 +54,7 @@ data class QueuedMessage(
     val forAgent: Boolean = false,
 )
 
-/** 2.1.7: the 补充 queue (FIFO; per conversation; any item can be cancelled). Pure. */
+/** the 补充 queue (FIFO; per conversation; any item can be cancelled). Pure. */
 class SendQueue {
     private val items = ArrayList<QueuedMessage>()
 

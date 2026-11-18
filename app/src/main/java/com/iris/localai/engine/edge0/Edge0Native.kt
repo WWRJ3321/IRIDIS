@@ -1,6 +1,6 @@
 package com.iris.localai.engine.edge0
 
-/** 2.6.5: JNI of libiris_edge0.so (app/src/main/cpp/edge0/edge0_jni.cpp). Load only after [Edge0Support.deviceOk]. */
+/** JNI of libiris_edge0.so (app/src/main/cpp/edge0/edge0_jni.cpp). Load only after [Edge0Support.deviceOk]. */
 object Edge0Native {
     fun interface Events { fun onEvent(kind: Int, index: Int, text: ByteArray) }
 

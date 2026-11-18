@@ -1,5 +1,10 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.core
 
+import com.iris.localai.context.ToolRollup
+import com.iris.localai.engine.ChannelThink
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -29,7 +34,7 @@ sealed interface ParsedReply {
 }
 
 /**
- * 1.9.0: tolerant tool-call reader for small local models. The prompt teaches one format,
+ * tolerant tool-call reader for small local models. The prompt teaches one format,
  *
  *     ```tool
  *     {"tool": "read_file", "args": {"path": "a.txt"}}
@@ -53,11 +58,11 @@ object ToolCallParser {
     private val NAME_KEYS = listOf("tool", "name", "tool_name", "function")
     private val ARG_KEYS = listOf("args", "arguments", "parameters", "params", "input")
     private val TOOL_NAME = Regex("^[A-Za-z_][A-Za-z0-9_.\\-]{0,63}$")
-    /** 1.10.4: role names the models sometimes emit as a "tool" — plain prose, never a call. */
+    /** role names the models sometimes emit as a "tool" — plain prose, never a call. */
     val ROLE_NAMES = setOf("system", "user", "assistant", "human", "ai", "tool", "function", "bot", "model")
-    /** 1.10.4: LFM2 native form — a line starting `tool_call:<name>{...}`. */
+    /** LFM2 native form — a line starting `tool_call:<name>{...}`. */
     /**
-     * 1.13.3: Gemma 4 native form — `<|tool_call>call:name{key: <|"|>value<|"|>}<tool_call|>`.
+     * Gemma 4 native form — `<|tool_call>call:name{key: <|"|>value<|"|>}<tool_call|>`.
      * Keys are bare and strings may be wrapped in the `<|"|>` escape token.
      */
     private val GEMMA_OPEN = Regex("<\\|tool_call>\\s*(?:call\\s*:)?\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*")
@@ -76,7 +81,7 @@ object ToolCallParser {
                 i++; continue
             }
             if (ch == '"') { inStr = true; out.append(ch); i++; continue }
-            // 2.1.8: bare value right after `:` (`query: 诡秘之主 小说`) → one quoted string
+            // bare value right after `:` (`query: 诡秘之主 小说`) → one quoted string
             if (out.trimEnd().lastOrNull() == ':') {
                 JsonRepair.bareValue(t, i)?.let { (q, end) -> out.append(q); i = end; continue }
             }
@@ -93,7 +98,7 @@ object ToolCallParser {
         return out.toString()
     }
     private val LFM_CALL = Regex("(?m)^\\s*tool_call\\s*:\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*(\\{.*)$")
-    /** 1.10.4: common misnames → the real tool. Keys are lowercase/underscores stripped. */
+    /** common misnames → the real tool. Keys are lowercase/underscores stripped. */
     private val ALIASES = mapOf(
         "ls" to "list_dir", "dir" to "list_dir", "listdir" to "list_dir", "ll" to "list_dir",
         "cat" to "read_file", "read" to "read_file", "open" to "read_file", "readfile" to "read_file", "view" to "read_file", "file" to "read_file",
@@ -109,10 +114,10 @@ object ToolCallParser {
     )
     /** Map a misnamed call to a real tool name; null when nothing plausibly matches. */
     fun canonicalizeName(raw: String, available: Set<String>): String? {
-        val key = raw.trim().lowercase().replace(Regex("[_\\-.\\s]"), "")
+        val key = raw.trim().lowercase().replace(RX_1, "")
         if (key.isEmpty()) return null
         available.firstOrNull { it.lowercase() == raw.trim().lowercase() }?.let { return it }
-        available.firstOrNull { it.lowercase().replace(Regex("[_\\-.\\s]"), "") == key }?.let { return it }
+        available.firstOrNull { it.lowercase().replace(RX_1, "") == key }?.let { return it }
         val alias = ALIASES[key]
         if (alias != null && available.any { it == alias }) return alias
         // one edit away (case/typo): "readflle" → "read_file"
@@ -133,31 +138,32 @@ object ToolCallParser {
     }
 
     /**
-     * 2.2.3: the main string argument of single-argument tools: a positional `name("v")` maps to it,
+     * the main string argument of single-argument tools: a positional `name("v")` maps to it,
      * and when a call's args are missing / only the signature placeholders (`prompt, image?`) it is
      * filled from the user's latest message ([fillMainArg]).
      */
     val MAIN_ARG = mapOf(
         "generate_image" to "prompt", "web_search" to "query", "search_local" to "query", "screen" to "task",
     )
-    /** 2.2.3: first positional argument of other tools in Python-style calls. */
+    /** first positional argument of other tools in Python-style calls. */
     private val POSITIONAL = MAIN_ARG + mapOf(
         "read_file" to "path", "write_file" to "path", "skill" to "name",
         "web_fetch" to "url", "kb_search" to "query", "memory" to "action", "plan" to "title", "activate" to "tool",
+        "calculator" to "expression",
     )
     /**
-     * 2.2.5: registered tool names, for the tolerant fallback (a known name followed by key/value
+     * registered tool names, for the tolerant fallback (a known name followed by key/value
      * pairs in any form). The agent loop sets it per run; the default covers the built-in tools.
      */
     @Volatile var knownTools: Set<String> = emptySet()
     private fun known(): Set<String> = knownTools.ifEmpty { POSITIONAL.keys + setOf("edit_file", "list_dir", "search_files", "todo", "datetime", "recall", "phone", "browser", "process_file") }
 
-    /** 2.2.5: GLM-4.5 pairs `<arg_key>k</arg_key><arg_value>v</arg_value>` (value close tag optional). */
+    /** GLM-4.5 pairs `<arg_key>k</arg_key><arg_value>v</arg_value>` (value close tag optional). */
     private val ARG_PAIR = Regex("(?is)<arg_key>\\s*(.*?)\\s*</arg_key>\\s*(?:<arg_value>(.*?)(?:</arg_value>|(?=<arg_key>)|(?=</tool_call>)|$))?")
     /** The tool name written right before the first `<arg_key>`: `<name`, `<name>`, `name`, `"name":`. */
     private val GLM_NAME_TAIL = Regex("(?s)<?\\s*[\"']?([A-Za-z_][A-Za-z0-9_.\\-]*)[\"']?\\s*>?\\s*:?\\s*$")
     private val NOT_NAMES = setOf("tool_call", "arg_key", "arg_value", "function", "parameter")
-    /** 2.2.5: markup that only ever appears in a tool call; never left as the visible answer. */
+    /** markup that only ever appears in a tool call; never left as the visible answer. */
     private val CALL_MARKUP = Regex("(?i)</?arg_key>|</?arg_value>|</?tool_call>|<function\\s*=|<parameter\\s*=")
 
     internal fun glmArgs(s: String): JsonObject = buildJsonObject {
@@ -178,7 +184,7 @@ object ToolCallParser {
         return (from + m.range.first) to name
     }
 
-    /** 2.2.5: GLM-4.5 body `name<arg_key>k</arg_key><arg_value>v</arg_value>…` (also `<name<arg_key>`, `<name>`). */
+    /** GLM-4.5 body `name<arg_key>k</arg_key><arg_value>v</arg_value>…` (also `<name<arg_key>`, `<name>`). */
     internal fun glmCall(body: String): ToolCall? {
         val (start, name) = glmStart(body) ?: return null
         val args = glmArgs(body.substring(start))
@@ -188,12 +194,12 @@ object ToolCallParser {
     private val KV_PAIR = Regex("^[\\s,;]*([A-Za-z_][A-Za-z0-9_]*)\\s*[=:]\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'[^']*'|[^\\s,;)}\"']+)")
 
     /**
-     * 2.2.5: tolerant fallback — a registered tool name immediately followed by arguments as
+     * tolerant fallback — a registered tool name immediately followed by arguments as
      * arg_key/arg_value pairs, `<parameter=k>v`, a JSON object, or `k="v"` pairs.
      */
     internal fun knownToolCall(text: String): Pair<ToolCall, Int>? {
         for (name in known().sortedByDescending { it.length }) {
-            val re = Regex("(?<![A-Za-z0-9_])" + Regex.escape(name) + "(?![A-Za-z0-9_])")
+            val re = NAME_RX.getOrPut(name) { Regex("(?<![A-Za-z0-9_])" + Regex.escape(name) + "(?![A-Za-z0-9_])") }
             for (m in re.findAll(text)) {
                 var i = m.range.last + 1
                 while (i < text.length && (text[i].isWhitespace() || text[i] in ">\"'`:(")) i++
@@ -225,10 +231,10 @@ object ToolCallParser {
         return null
     }
 
-    /** 2.2.3: qwen3_coder / LFM XML form `<function=name><parameter=k>v</parameter></function>`. */
+    /** qwen3_coder / LFM XML form `<function=name><parameter=k>v</parameter></function>`. */
     private val XML_FN = Regex("(?is)<function\\s*=\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*>(.*?)(?:</function>|$)")
     private val XML_PARAM = Regex("(?is)<parameter\\s*=\\s*([A-Za-z_][A-Za-z0-9_\\-]*)\\s*>(.*?)(?:</parameter>|(?=<parameter\\s*=)|(?=</function>)|$)")
-    /** 2.2.3: Python / function-call form `name(a="v", k=1)` / `name("v")` / `name(prompt, image?)`. */
+    /** Python / function-call form `name(a="v", k=1)` / `name("v")` / `name(prompt, image?)`. */
     private val PY_CALL = Regex("(?s)^\\s*([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*\\((.*)\\)\\s*;?\\s*$")
 
     internal fun xmlCall(body: String): ToolCall? {
@@ -290,7 +296,7 @@ object ToolCallParser {
     }
 
     /**
-     * 2.2.3: reads `name(...)`. Bare identifiers (`prompt, image?`) are the signature copied from the
+     * reads `name(...)`. Bare identifiers (`prompt, image?`) are the signature copied from the
      * prompt, not values: they are dropped (the args then stay empty and [fillMainArg] may fill them).
      */
     internal fun pyCall(body: String, format: CallFormat): ToolCall? {
@@ -300,7 +306,7 @@ object ToolCallParser {
         val args = LinkedHashMap<String, JsonElement>()
         var positional = 0
         for (part in splitTop(m.groupValues[2])) {
-            val eq = Regex("^([A-Za-z_][A-Za-z0-9_]*)\\s*[=:]\\s*(.*)$", RegexOption.DOT_MATCHES_ALL).find(part)
+            val eq = RX_2.find(part)
             if (eq != null) {
                 val v = pyValue(eq.groupValues[2]) ?: JsonPrimitive(eq.groupValues[2].trim())
                 args[eq.groupValues[1]] = v
@@ -315,7 +321,7 @@ object ToolCallParser {
     }
 
     /**
-     * 2.2.3: a call to a single-main-argument tool whose main argument is missing, blank or just the
+     * a call to a single-main-argument tool whose main argument is missing, blank or just the
      * placeholder text gets the user's latest message instead of failing.
      */
     fun fillMainArg(parsed: ParsedReply, userText: String): ParsedReply {
@@ -333,23 +339,27 @@ object ToolCallParser {
     private val SIGNATURE = Regex("^[A-Za-z_][A-Za-z0-9_]*\\??(\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*\\??)*$")
 
     /**
-     * 2.2.8: strict reading first; a reply it calls malformed goes through every tolerant reader
+     * strict reading first; a reply it calls malformed goes through every tolerant reader
      * ([tolerant]) before the agent loop spends a retry on it.
      */
     fun parse(raw: String): ParsedReply {
         val reply = k2Normalize(raw)
         val r = parseStrict(reply)
+        // 放宽：正文里夹着一个 {"name": "<已注册工具>", …} 的 JSON（前后有说明文字、没有代码块）也当作调用。
+        if (r is ParsedReply.Final && inlineJsonCall(reply)) {
+            tolerant(reply)?.let { (call, before) -> if (call.name in known()) return ParsedReply.Call(call, before) }
+        }
         if (r !is ParsedReply.Malformed) return r
         return tolerant(reply)?.let { (call, before) -> ParsedReply.Call(call, before) } ?: r
     }
 
     /**
-     * 2.2.8: last-chance readers for a reply the strict parser could not read: fenced / <tool_call>
+     * last-chance readers for a reply the strict parser could not read: fenced / <tool_call>
      * bodies and the whole text, each tried as (repaired) JSON — single quotes, trailing commas,
      * Python True/False/None —, `name(k="v")` function calls, `name{…}` / `name k="v"` after a
      * registered tool name, XML `<function=…>` and GLM `<arg_key>`. Returns the call and the prose before it.
      */
-    /** 2.2.13: K2 Horizon call / reasoning markup rewritten into the `<tool_call>` + GLM arg_key form read below. */
+    /** K2 Horizon call / reasoning markup rewritten into the `<tool_call>` + GLM arg_key form read below. */
     const val K2_CALL_OPEN = "<ifm|tool_call>"
     const val K2_CALL_CLOSE = "</ifm|tool_call>"
     private val K2_ARG_TYPE = Regex("(?s)<ifm\\|arg_type>.*?</ifm\\|arg_type>\\s*")
@@ -363,14 +373,14 @@ object ToolCallParser {
     }
 
     /**
-     * 2.2.14: the reply with all reasoning removed, so a call only *mentioned* while thinking is
+     * the reply with all reasoning removed, so a call only *mentioned* while thinking is
      * never run: closed `<think>…</think>` blocks, everything before a lone `</think>` (the
      * template opened thinking in the prompt) and an unclosed `<think>` to the end. Gemma 4 /
      * K2 reasoning tags are mapped to `<think>` first.
      */
     fun outsideThink(raw: String): String {
         var t = k2Normalize(raw)
-        if (t.contains(ChannelThinkTags.OPEN)) t = com.iris.localai.engine.ChannelThink.convert(t)
+        if (t.contains(ChannelThinkTags.OPEN)) t = ChannelThink.convert(t)
         t = THINK.replace(t, "")
         val close = t.lastIndexOf("</think>", ignoreCase = true)
         if (close >= 0) t = t.substring(close + "</think>".length)
@@ -400,7 +410,13 @@ object ToolCallParser {
     private fun fenceStart(text: String, at: Int): Int {
         val head = text.substring(0, at)
         val cut = maxOf(head.lastIndexOf("```"), QWEN_OPEN.findAll(head).lastOrNull()?.range?.first ?: -1)
-        return if (cut >= 0 && head.substring(cut).replace(Regex("(?i)```[A-Za-z_]*|<tool_call>"), "").isBlank()) cut else at
+        return if (cut >= 0 && head.substring(cut).replace(RX_3, "").isBlank()) cut else at
+    }
+
+    /** 正文里有 `{"name"|"tool"|"function": "<已注册工具名>"` 的 JSON 对象。 */
+    internal fun inlineJsonCall(reply: String): Boolean {
+        val names = known()
+        return INLINE_JSON_CALL.findAll(outsideThink(reply)).any { it.groupValues[1] in names }
     }
 
     private fun readAny(body: String): Pair<ToolCall, Int>? {
@@ -417,7 +433,7 @@ object ToolCallParser {
             i = body.indexOf('{', i + 1)
         }
         // name(k="v") to a registered tool.
-        Regex("([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*\\(").findAll(body).forEach { m ->
+        RX_4.findAll(body).forEach { m ->
             if (m.groupValues[1] !in names) return@forEach
             val open = m.range.last
             val end = closeParen(body, open)
@@ -457,9 +473,9 @@ object ToolCallParser {
             val before = text.substring(0, open.range.first).trim()
             val rest = text.substring(open.range.last + 1)
             val body = QWEN_CLOSE.find(rest)?.let { rest.substring(0, it.range.first) } ?: rest
-            // 2.2.3: XML (qwen3_coder / LFM) and Python-style bodies.
+            // XML (qwen3_coder / LFM) and Python-style bodies.
             if (XML_FN.containsMatchIn(body)) xmlCall(body)?.let { return ParsedReply.Call(it, before) }
-            // 2.2.5: GLM-4.5 arg_key / arg_value body.
+            // GLM-4.5 arg_key / arg_value body.
             if (body.contains("<arg_key>", ignoreCase = true)) glmCall(body)?.let { return ParsedReply.Call(it, before) }
             if (!body.trimStart().startsWith("{")) pyCall(body, CallFormat.QWEN_TAG)?.let { return ParsedReply.Call(it, before) }
             return fromObjectText(body, CallFormat.QWEN_TAG, before, required = true)
@@ -475,7 +491,7 @@ object ToolCallParser {
             xmlCall(text.substring(i))?.let { return ParsedReply.Call(it, text.substring(0, i).trim()) }
         }
         // 1c) 2.2.3: a bare Python-style call to a known tool alone on its line.
-        Regex("(?m)^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\(.*\\)\\s*;?\\s*$").findAll(text).firstOrNull { it.groupValues[1] in POSITIONAL }?.let { m ->
+        RX_5.findAll(text).firstOrNull { it.groupValues[1] in POSITIONAL }?.let { m ->
             pyCall(m.value, CallFormat.PLAIN_JSON)?.let { return ParsedReply.Call(it, text.substring(0, m.range.first).trim()) }
         }
 
@@ -521,7 +537,7 @@ object ToolCallParser {
             val r = fromObjectText(obj, CallFormat.PLAIN_JSON, before, required = false)
             if (r is ParsedReply.Call) return r
             // Looks like a call ("tool": … right at the start) but is broken → ask for a retry.
-            if (brace == 0 && Regex("^\\{\\s*[\"']?(tool|name)[\"']?\\s*:").containsMatchIn(obj)) {
+            if (brace == 0 && RX_6.containsMatchIn(obj)) {
                 return fromObjectText(obj, CallFormat.PLAIN_JSON, before, required = true)
             }
         }
@@ -532,7 +548,7 @@ object ToolCallParser {
             val start = body.indexOf('{')
             if (start >= 0) {
                 val el = JsonRepair.parse(JsonRepair.extractObject(body, start), json) as? JsonObject
-                // 1.10.8: tool_call:system{…} is a role name too — prose, never a call.
+                // tool_call:system{…} is a role name too — prose, never a call.
                 if (m.groupValues[1].lowercase() in ROLE_NAMES) return ParsedReply.Final(reply.trim())
                 if (el != null) return ParsedReply.Call(ToolCall(m.groupValues[1], el, CallFormat.FENCED), before)
             }
@@ -554,23 +570,23 @@ object ToolCallParser {
      */
     fun callEnd(streamed: CharSequence): Int? {
         val s = streamed.toString()
-        // 2.2.14: nothing written while thinking is still open ends the turn (calls there are only mentions).
+        // nothing written while thinking is still open ends the turn (calls there are only mentions).
         if (openThinkAt(k2Normalize(s)) >= 0 || s.lastIndexOf("<|channel>") > s.lastIndexOf("<channel|>")) return null
         val noThinkStart = thinkEnd(s).let { e -> if (s.contains("ifm|think")) maxOf(e, k2ThinkEnd(s)) else e }
-        // 2.2.13: K2 Horizon `<ifm|tool_call>…</ifm|tool_call>` ends at its own close tag.
+        // K2 Horizon `<ifm|tool_call>…</ifm|tool_call>` ends at its own close tag.
         s.indexOf(K2_CALL_OPEN, noThinkStart).let { k ->
             if (k >= 0) {
                 val close = s.indexOf(K2_CALL_CLOSE, k + K2_CALL_OPEN.length)
                 return if (close >= 0) close + K2_CALL_CLOSE.length else null
             }
         }
-        // 2.1.7: inside unfinished thinking the model often *mentions* "<tool_response>" while
+        // inside unfinished thinking the model often *mentions* "<tool_response>" while
         // reading the results ("the <tool_response> shows…"); cutting there ended the turn with
         // an empty answer. Only a complete call ends a turn while thinking is still open.
         val inThink = openThinkAt(s) >= 0
-        // 1.10.4: cheap guard — most streamed tokens contain none of the call markers,
+        // cheap guard — most streamed tokens contain none of the call markers,
         // so skip the full regex scan (the per-token hot path).
-        // 1.13.3: Gemma 4 native call ends at <tool_call|>.
+        // Gemma 4 native call ends at <tool_call|>.
         if (s.indexOf("<|tool_call>", noThinkStart) >= 0) GEMMA_OPEN.find(s, noThinkStart)?.let { m ->
             val close = s.indexOf(GEMMA_CLOSE, m.range.last + 1)
             return if (close >= 0) close + GEMMA_CLOSE.length else null
@@ -578,7 +594,7 @@ object ToolCallParser {
         if (!s.contains("<tool_call>", ignoreCase = true) && s.indexOf("```", noThinkStart) < 0 &&
             s.indexOf("tool_call", noThinkStart, ignoreCase = true) < 0 && s.indexOf("<tool_response", noThinkStart, ignoreCase = true) < 0
         ) return null
-        // 1.10.4: LFM2 form ends at the end of its line once a closing brace appeared.
+        // LFM2 form ends at the end of its line once a closing brace appeared.
         LFM_CALL.find(s, noThinkStart)?.let { m ->
             if ('}' in m.groupValues[2]) return m.range.last + 1
             return null
@@ -587,7 +603,7 @@ object ToolCallParser {
             QWEN_CLOSE.find(s, open.range.last + 1)?.let { return it.range.last + 1 }
             return null
         }
-        // 2.2.5: GLM call written without its <tool_call> open tag ends at the closing tag.
+        // GLM call written without its <tool_call> open tag ends at the closing tag.
         if (!inThink) QWEN_CLOSE.find(s, noThinkStart)?.let { return it.range.last + 1 }
         for (m in FENCE_OPEN.findAll(s, noThinkStart)) {
             val lang = m.groupValues[1].lowercase()
@@ -606,7 +622,7 @@ object ToolCallParser {
     fun visibleText(raw: String): String {
         var streamed = raw
         thinkEnd(raw).let { f ->
-            // 2.2.13: hide a K2 Horizon call section (complete or still being typed) from where it starts.
+            // hide a K2 Horizon call section (complete or still being typed) from where it starts.
             val k = raw.indexOf("<ifm|tool_call", f)
             if (k >= 0) streamed = raw.substring(0, k)
             else raw.lastIndexOf('<').let { t -> if (t >= f && t > raw.length - 16 && "<ifm|tool_call".startsWith(raw.substring(t))) streamed = raw.substring(0, t) }
@@ -614,7 +630,7 @@ object ToolCallParser {
         val from = thinkEnd(streamed)
         var cut = streamed.length
         QWEN_OPEN.find(streamed, from)?.let { cut = minOf(cut, it.range.first) }
-        // 2.2.5: GLM / stray call markup (no open tag) is hidden from where the call starts.
+        // GLM / stray call markup (no open tag) is hidden from where the call starts.
         glmStart(streamed, from)?.let { cut = minOf(cut, it.first) }
         CALL_MARKUP.find(streamed, from)?.let { cut = minOf(cut, it.range.first) }
         streamed.indexOf("<|tool_call>", from).let { if (it >= 0) cut = minOf(cut, it) }
@@ -632,11 +648,11 @@ object ToolCallParser {
         }
         val tag = streamed.lastIndexOf('<')
         if (tag >= from && streamed.substring(tag).lowercase().let { "<tool_call>".startsWith(it) || "<|tool_call>".startsWith(it) }) cut = minOf(cut, tag)
-        return com.iris.localai.context.ToolRollup.stripEcho(stripCalls(streamed.substring(0, cut), streaming = true).trimEnd())
+        return ToolRollup.stripEcho(stripCalls(streamed.substring(0, cut), streaming = true).trimEnd())
     }
 
     /**
-     * 2.1.0: the reply as the user sees it. Every span that reads as a tool call — ```tool / ```json
+     * the reply as the user sees it. Every span that reads as a tool call — ```tool / ```json
      * / bare-JSON / `<tool_call>` / Gemma / LFM forms — is removed; the prose around it is kept.
      * With [streaming], a call still being written at the end (an open ```json fence, a `{"tool"`
      * line, a half-typed fence tag) is hidden too. Ordinary code and JSON data stay. Pure.
@@ -697,7 +713,7 @@ object ToolCallParser {
             if (m.groupValues[1].lowercase() in ROLE_NAMES || cuts.any { m.range.first in it }) continue
             cuts += m.range.first until m.range.last + 1
         }
-        // 2.2.5: GLM calls and any other call markup outside code blocks: from the call's start to
+        // GLM calls and any other call markup outside code blocks: from the call's start to
         // its closing </tool_call> (or the end).
         var gs = 0
         while (gs < s.length) {
@@ -714,7 +730,7 @@ object ToolCallParser {
         cuts.forEach { r -> for (k in r) if (k in keep.indices) keep[k] = false }
         val out = StringBuilder(s.length)
         for (k in s.indices) if (keep[k]) out.append(s[k])
-        val body = out.toString().replace(Regex("[ \t]+\n"), "\n").replace(Regex("\n{3,}"), "\n\n").trim()
+        val body = out.toString().replace(RX_7, "\n").replace(RX_8, "\n\n").trim()
         return text.substring(0, from) + (if (from > 0 && body.isNotEmpty()) "\n" else "") + body
     }
 
@@ -744,7 +760,7 @@ object ToolCallParser {
     }
 
     /**
-     * 2.1.7: the canonical block of a complete call written inside thinking that never closed
+     * the canonical block of a complete call written inside thinking that never closed
      * ([callEnd] stops the stream right after it), or null. The answer part of such a turn is
      * empty, so without this the call was neither run nor shown.
      */
@@ -752,7 +768,7 @@ object ToolCallParser {
     fun callInOpenThink(@Suppress("UNUSED_PARAMETER") raw: String): String? = null
 
     private fun k2ThinkEnd(s: String): Int {
-        val m = Regex("</ifm\\|think(?:_fast|_faster)?>").findAll(s).lastOrNull() ?: return 0
+        val m = RX_9.findAll(s).lastOrNull() ?: return 0
         return m.range.last + 1
     }
 
@@ -786,7 +802,7 @@ object ToolCallParser {
             ?: return if (required) ParsedReply.Malformed("JSON 无法解析：${raw.take(80)}", before) else ParsedReply.Final(body)
         val obj = element as? JsonObject
             ?: return if (required) ParsedReply.Malformed("工具调用必须是 JSON 对象", before) else ParsedReply.Final(body)
-        // 1.10.4: {"name":"system"|...} — a role/dialogue JSON the model wrote as prose, never a call.
+        // {"name":"system"|...} — a role/dialogue JSON the model wrote as prose, never a call.
         val nameRaw = NAME_KEYS.firstNotNullOfOrNull { (obj[it] as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }?.trim()?.lowercase()
         if (nameRaw != null && nameRaw in ROLE_NAMES) return ParsedReply.Final((if (before.isEmpty()) body else "$before\n$body").trim())
         return when (val r = toCall(obj, format)) {
@@ -866,8 +882,8 @@ object JsonRepair {
 
     /** Parses [raw] as is, then once more after [repair]; null when both fail. */
     fun parse(raw: String, json: Json): JsonElement? {
-        // 1.10.8: lenient mode would read “curly” quotes as part of unquoted strings — repair first.
-        // 2.1.8: same for 'single quotes' outside "strings": lenient keeps them as part of the value
+        // lenient mode would read “curly” quotes as part of unquoted strings — repair first.
+        // same for 'single quotes' outside "strings": lenient keeps them as part of the value
         // ({"query": '三体'} → `'三体'`), and {'tool': …} must parse too.
         if ('“' in raw || singleQuoteOutside(raw)) runCatching { json.parseToJsonElement(repair(raw)) }.getOrNull()?.let { return it }
         return runCatching { json.parseToJsonElement(raw) }.getOrNull()
@@ -888,7 +904,7 @@ object JsonRepair {
     private val LITERAL = Regex("^(?:-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?|true|false|null|True|False|None)$")
 
     /**
-     * 2.1.8: a bare (unquoted) value starting at [i] — `诡秘之主 小说` in `"query": 诡秘之主 小说}` —
+     * a bare (unquoted) value starting at [i] — `诡秘之主 小说` in `"query": 诡秘之主 小说}` —
      * read up to the next `,` or `}` and returned as one JSON string with the index after it.
      * Null when [i] starts a string, object, array, number or true/false/null.
      */
@@ -916,7 +932,7 @@ object JsonRepair {
     /**
      * Raw control characters inside strings → escapes; single-quoted strings → double-quoted;
      * trailing commas dropped; True/False/None → true/false/null (outside strings).
-     * 1.10.8: a wrong separator after a key (`"tool"; "x"`, `"tool"= "x"`, full-width `：`) → `:`,
+     * a wrong separator after a key (`"tool"; "x"`, `"tool"= "x"`, full-width `：`) → `:`,
      * and `;` / `，` between members → `,`; “curly quotes” around keys/values → `"`.
      */
     fun repair(s: String): String {
@@ -927,14 +943,14 @@ object JsonRepair {
         val stack = ArrayList<Char>()
         var expectKey = false     // inside an object, before a key
         var afterKey = false      // a key string just closed; next is its separator
-        var expectValue = false   // 2.1.8: right after a key's `:`
+        var expectValue = false   // right after a key's `:`
         while (i < s.length) {
             val ch = s[i]
             if (quote != null) {
                 when {
                     esc -> { esc = false; out.append(ch) }
                     ch == '\\' -> { esc = true; out.append(ch) }
-                    // 2.1.8: an unescaped `"` inside a "value" (`""三体" 小说"`) is kept when what
+                    // an unescaped `"` inside a "value" (`""三体" 小说"`) is kept when what
                     // follows cannot come after a string
                     ch == '"' && quote == '"' && !closesString(s, i) -> out.append("\\\"")
                     ch == quote -> {
@@ -1013,3 +1029,18 @@ object Args {
 
     fun primitive(args: JsonObject, key: String): String? = runCatching { args[key]?.jsonPrimitive?.content }.getOrNull()
 }
+
+// 预编译的正则（原先在函数体内每次调用都编译）。
+private val RX_1 = Regex("[_\\-.\\s]")
+private val RX_2 = Regex("^([A-Za-z_][A-Za-z0-9_]*)\\s*[=:]\\s*(.*)$", RegexOption.DOT_MATCHES_ALL)
+private val RX_3 = Regex("(?i)```[A-Za-z_]*|<tool_call>")
+private val RX_4 = Regex("([A-Za-z_][A-Za-z0-9_.\\-]*)\\s*\\(")
+private val RX_5 = Regex("(?m)^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\(.*\\)\\s*;?\\s*$")
+private val RX_6 = Regex("^\\{\\s*[\"']?(tool|name)[\"']?\\s*:")
+private val RX_7 = Regex("[ \t]+\n")
+private val RX_8 = Regex("\n{3,}")
+private val RX_9 = Regex("</ifm\\|think(?:_fast|_faster)?>")
+/** 工具名 → 匹配正则的小缓存（工具名集合很小）。 */
+private val NAME_RX = java.util.concurrent.ConcurrentHashMap<String, Regex>()
+/** 内联 JSON 调用的开头：`{"name": "web_search"` / `{"tool": "calculator"`。 */
+private val INLINE_JSON_CALL = Regex("\\{\\s*[\"']?(?:name|tool|function)[\"']?\\s*:\\s*[\"']([A-Za-z_][A-Za-z0-9_.\\-]*)[\"']")

@@ -1,11 +1,13 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * 2.0.1: 温度限速. When the phone (battery sensor, °C) reaches the user's limit (35–50, 0 = off),
+ * 温度限速. When the phone (battery sensor, °C) reaches the user's limit (35–50, 0 = off),
  * generation is paced: the decoding thread sleeps between tokens, so the CPU / GPU really idles and
  * heats less (a delay in the collector would not help: the engines buffer without limit).
  * The further over the limit, the slower: 10 → 6 → 4 → 2 tok/s. Released 1 °C below the limit.

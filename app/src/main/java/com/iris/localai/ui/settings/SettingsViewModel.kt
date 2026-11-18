@@ -1,5 +1,27 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.ModelFormat
+import com.iris.localai.data.TierProfile
+import com.iris.localai.engine.BenchResult
+import com.iris.localai.engine.EngineFactory
+import com.iris.localai.engine.resources.CpuTopology
+import com.iris.localai.engine.resources.ResourceBackendKind
+import com.iris.localai.engine.resources.ResourceTier
+import com.iris.localai.engine.resources.TierProfiles
+import com.iris.localai.server.ApiAuth
+import com.iris.localai.translate.BergamotNative
+import com.iris.localai.translate.TranslatePack
+import com.iris.localai.util.VisionQuality
+import com.iris.localai.voice.ASR_SAMPLE_RATE
+import com.iris.localai.voice.AudioFileDecoder
+import com.iris.localai.voice.CloneAudio
+import com.iris.localai.voice.ClonedVoice
+import com.iris.localai.voice.InstalledTts
+import com.iris.localai.voice.Microphone
+import com.iris.localai.voice.SystemTts
+import com.iris.localai.voice.VoiceKind
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,43 +42,43 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     val engine = c.engine.state
     val performanceCores: Int get() = c.engine.threadPolicy.performanceCores
     // ---- 1.7.8: 资源档配置 ----
-    val topology: com.iris.localai.engine.CpuTopology get() = c.engine.threadPolicy.topology
+    val topology: CpuTopology get() = c.engine.threadPolicy.topology
     /** Profile set of the backend the loaded model really runs on (CPU when nothing is loaded). */
-    val activeKind: com.iris.localai.engine.ResourceBackendKind
-        get() = com.iris.localai.engine.ResourceBackendKind.of(c.engine.readyDetails?.activeBackend)
-    fun profile(kind: com.iris.localai.engine.ResourceBackendKind, tier: com.iris.localai.engine.ResourceTier) =
-        com.iris.localai.engine.TierProfiles.resolve(c.settings.current.tierProfiles, kind, tier, topology)
-    fun defaultProfile(kind: com.iris.localai.engine.ResourceBackendKind, tier: com.iris.localai.engine.ResourceTier) =
-        com.iris.localai.engine.TierProfiles.defaults(kind, tier, topology)
-    fun validate(p: com.iris.localai.data.TierProfile) = com.iris.localai.engine.TierProfiles.validate(p, topology)
+    val activeKind: ResourceBackendKind
+        get() = ResourceBackendKind.of(c.engine.readyDetails?.activeBackend)
+    fun profile(kind: ResourceBackendKind, tier: ResourceTier) =
+        TierProfiles.resolve(c.settings.current.tierProfiles, kind, tier, topology)
+    fun defaultProfile(kind: ResourceBackendKind, tier: ResourceTier) =
+        TierProfiles.defaults(kind, tier, topology)
+    fun validate(p: TierProfile) = TierProfiles.validate(p, topology)
     /**
      * Saves [p] when it is valid (returns the problems otherwise, nothing saved). A profile equal to
      * the default is stored as "no entry", so a later default change still reaches it. Editing the
      * tier in use is picked up by EngineManager (live where possible, else the debounced reload).
      */
-    fun saveProfile(kind: com.iris.localai.engine.ResourceBackendKind, tier: com.iris.localai.engine.ResourceTier, p: com.iris.localai.data.TierProfile): List<String> =
-        com.iris.localai.engine.TierProfiles.store(c.settings, kind, tier, p, topology)
-    fun resetProfile(kind: com.iris.localai.engine.ResourceBackendKind, tier: com.iris.localai.engine.ResourceTier) = update {
-        it.copy(tierProfiles = it.tierProfiles - com.iris.localai.engine.TierProfiles.key(kind, tier))
+    fun saveProfile(kind: ResourceBackendKind, tier: ResourceTier, p: TierProfile): List<String> =
+        TierProfiles.store(c.settings, kind, tier, p, topology)
+    fun resetProfile(kind: ResourceBackendKind, tier: ResourceTier) = update {
+        it.copy(tierProfiles = it.tierProfiles - TierProfiles.key(kind, tier))
     }
-    fun resetProfiles(kind: com.iris.localai.engine.ResourceBackendKind) = update { s ->
+    fun resetProfiles(kind: ResourceBackendKind) = update { s ->
         s.copy(tierProfiles = s.tierProfiles.filterKeys { !it.startsWith(kind.name + ".") })
     }
 
-    /** 1.7.5: what the last tier change really did (status line under the bar). */
+    /** what the last tier change really did (status line under the bar). */
     val tierApply = c.engine.tierApply
-    /** 1.7.6: last reply by tier segment, for 资源诊断. */
+    /** last reply by tier segment, for 资源诊断. */
     val telemetryReport = c.engine.telemetryReport
-    fun tierPlan(t: com.iris.localai.engine.ResourceTier, kind: com.iris.localai.engine.ResourceBackendKind = com.iris.localai.engine.ResourceBackendKind.CPU) =
+    fun tierPlan(t: ResourceTier, kind: ResourceBackendKind = ResourceBackendKind.CPU) =
         c.engine.threadPolicy.nominal(t, kind)
-    fun tierThreads(tier: Int): Int = c.engine.threadPolicy.nominal(com.iris.localai.engine.ResourceTier.of(tier)).threads
-    fun tierBatch(tier: Int): Int = c.engine.threadPolicy.nominal(com.iris.localai.engine.ResourceTier.of(tier)).batch
-    fun setDefaultBackend(format: com.iris.localai.data.ModelFormat, backend: String?) = update { s ->
+    fun tierThreads(tier: Int): Int = c.engine.threadPolicy.nominal(ResourceTier.of(tier)).threads
+    fun tierBatch(tier: Int): Int = c.engine.threadPolicy.nominal(ResourceTier.of(tier)).batch
+    fun setDefaultBackend(format: ModelFormat, backend: String?) = update { s ->
         s.copy(defaultBackends = if (backend == null) s.defaultBackends - format.name else s.defaultBackends + (format.name to backend))
     }
 
     // ---- NPU runtime (full flavour only) ----
-    val npu = com.iris.localai.engine.EngineFactory.npu(app)
+    val npu = EngineFactory.npu(app)
     private var npuJob: Job? = null
     fun installNpu() {
         val n = npu ?: return
@@ -67,7 +89,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteNpu() { cancelNpu(); npu?.delete() }
 
     // ---- 2.2.0: GenieX runtime (full flavour only) ----
-    val geniex = com.iris.localai.engine.EngineFactory.geniex(app)
+    val geniex = EngineFactory.geniex(app)
     private var geniexJob: Job? = null
     fun installGeniex() {
         val g = geniex ?: return
@@ -81,7 +103,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     sealed interface Bench {
         data object Idle : Bench
         data class Running(val done: Int, val total: Int) : Bench
-        data class Done(val rows: List<com.iris.localai.engine.BenchResult>, val backend: String) : Bench
+        data class Done(val rows: List<BenchResult>, val backend: String) : Bench
         data class Failed(val message: String) : Bench
     }
     private val _bench = kotlinx.coroutines.flow.MutableStateFlow<Bench>(Bench.Idle)
@@ -94,7 +116,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val ready = c.engine.ensureLoaded()
                 val details = c.engine.readyDetails
-                if (!ready || details == null) { _bench.value = Bench.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99db9d)); return@launch }
+                if (!ready || details == null) { _bench.value = Bench.Failed(I18n.s(R.string.settings_99db9d)); return@launch }
                 val llamaCpu = details.backend.contains("llama.cpp") && details.backend.startsWith("CPU")
                 val counts = if (llamaCpu) {
                     val pc = c.engine.threadPolicy.performanceCores
@@ -133,12 +155,12 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun resetContext() = c.settings.resetContext()
     fun reloadModel() = viewModelScope.launch { c.engine.reload() }
 
-    /** 2.1.7 「默认模型」: installed models for the picker; "" = 上次使用的模型. */
+    /** 「默认模型」: installed models for the picker; "" = 上次使用的模型. */
     val installedModels = c.models.models
     fun refreshModels() = viewModelScope.launch { c.models.refresh() }
     fun setDefaultModel(fileName: String) { update { it.copy(defaultModelFile = fileName) } }
-    /** 2.1.7 「识图清晰度」 (px; takes effect with the next picture, no reload). */
-    fun setVisionSide(side: Int) { update { it.copy(visionSide = com.iris.localai.util.VisionQuality.of(side).side) } }
+    /** 「识图清晰度」 (px; takes effect with the next picture, no reload). */
+    fun setVisionSide(side: Int) { update { it.copy(visionSide = VisionQuality.of(side).side) } }
 
     fun deleteAllConversations() = viewModelScope.launch { c.conversations.deleteAll() }
 
@@ -166,35 +188,35 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun importTtsUrl(url: String) = startImport { c.customTts.importUrl(url) }
     fun cancelTtsImport() { customJob?.cancel(); c.customTts.clearImportMessage() }
     fun clearTtsImportMessage() = c.customTts.clearImportMessage()
-    // 2.5.0 Beta5: picking a local voice (pack / imported / cloned) is exclusive and switches 朗读引擎 to 本机 —
+    // picking a local voice (pack / imported / cloned) is exclusive and switches 朗读引擎 to 本机 —
     // with 系统 TTS selected the synthesizer ignored the pick, so read-aloud kept the system voice.
-    fun useCustomTts(m: com.iris.localai.voice.InstalledTts) = update { VoiceChoice.pickCustom(it, m.packId) }
-    fun activeCustomTts(): com.iris.localai.voice.InstalledTts? = c.customTts.find(c.settings.current.ttsPack)
-    fun deleteCustomTts(m: com.iris.localai.voice.InstalledTts) = viewModelScope.launch {
+    fun useCustomTts(m: InstalledTts) = update { VoiceChoice.pickCustom(it, m.packId) }
+    fun activeCustomTts(): InstalledTts? = c.customTts.find(c.settings.current.ttsPack)
+    fun deleteCustomTts(m: InstalledTts) = viewModelScope.launch {
         if (c.settings.current.ttsPack == m.packId) c.synthesizer.release()
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.customTts.delete(m.id) }
     }
 
     fun usePack(pack: VoicePack) = update {
-        // 2.5.0 Beta5: a built-in voice also clears the cloned voice (it won over every pack, so the pick did nothing).
-        if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) it.copy(asrPack = pack.id) else VoiceChoice.pickPack(it, pack.id)
+        // a built-in voice also clears the cloned voice (it won over every pack, so the pick did nothing).
+        if (pack.kind == VoiceKind.ASR) it.copy(asrPack = pack.id) else VoiceChoice.pickPack(it, pack.id)
     }
-    fun activePack(kind: com.iris.localai.voice.VoiceKind): VoicePack? =
-        c.voiceStore.active(kind, if (kind == com.iris.localai.voice.VoiceKind.ASR) c.settings.current.asrPack else c.settings.current.ttsPack)
+    fun activePack(kind: VoiceKind): VoicePack? =
+        c.voiceStore.active(kind, if (kind == VoiceKind.ASR) c.settings.current.asrPack else c.settings.current.ttsPack)
 
     // ---- 2.3.0 ③ offline translation packs ----
     val translatePacks get() = c.translator.packs.states
-    private val trDownloads = HashMap<com.iris.localai.translate.TranslatePack, Job>()
-    fun downloadTranslate(pack: com.iris.localai.translate.TranslatePack) {
+    private val trDownloads = HashMap<TranslatePack, Job>()
+    fun downloadTranslate(pack: TranslatePack) {
         if (trDownloads[pack]?.isActive == true) return
         trDownloads[pack] = c.scope.launch { runCatching { c.translator.packs.download(pack, c.settings.current.downloadSource) } }
     }
-    fun cancelTranslate(pack: com.iris.localai.translate.TranslatePack) { trDownloads.remove(pack)?.cancel() }
-    fun deleteTranslate(pack: com.iris.localai.translate.TranslatePack) { c.translator.release(); c.translator.packs.delete(pack) }
-    val offlineEngineAvailable: Boolean get() = com.iris.localai.translate.BergamotNative.available
+    fun cancelTranslate(pack: TranslatePack) { trDownloads.remove(pack)?.cancel() }
+    fun deleteTranslate(pack: TranslatePack) { c.translator.release(); c.translator.packs.delete(pack) }
+    val offlineEngineAvailable: Boolean get() = BergamotNative.available
 
     fun deletePack(pack: VoicePack) = viewModelScope.launch {
-        if (pack.kind == com.iris.localai.voice.VoiceKind.ASR) c.recognizer.release() else c.synthesizer.release()
+        if (pack.kind == VoiceKind.ASR) c.recognizer.release() else c.synthesizer.release()
         c.voiceStore.delete(pack)
     }
 
@@ -204,14 +226,14 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
      * viewModelScope), gave no feedback while the model loaded, kept synthesising after a stop,
      * and cut off the end of the sentence by releasing the player while audio was still queued.
      */
-    fun previewVoice(clone: com.iris.localai.voice.ClonedVoice? = null) {
+    fun previewVoice(clone: ClonedVoice? = null) {
         if (previewJob?.isActive == true) {
             val same = previewTarget.value == (clone?.id ?: "")
             stopPreview()
             if (same) return
         }
         previewTarget.value = clone?.id ?: ""
-        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7a658c) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_87feec)); return }
+        if (clone == null && !c.synthesizer.isAvailable) { _preview.value = Preview.Failed(if (c.synthesizer.systemSelected()) I18n.s(R.string.settings_7a658c) else I18n.s(R.string.settings_87feec)); return }
         // Stops a running voice conversation or read-aloud instead of talking over it.
         c.synthesizer.claim(this) { stopPreview() }
         c.synthesizer.globalOnly = true
@@ -224,7 +246,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 player = out
                 val s = c.settings.current
                 val text = if (c.synthesizer.usingSystem || c.synthesizer.speakingWithClone || c.synthesizer.speakingCustom || c.synthesizer.activePack()?.singleSpeaker != false || s.ttsSpeakerId >= 3)
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48574b) else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
+                    I18n.s(R.string.settings_48574b) else "Hi, I'm IRIDIS, an assistant that runs entirely on your phone."
                 val job = kotlin.coroutines.coroutineContext[Job]
                 c.synthesizer.speak(text, s.ttsSpeakerId, s.ttsSpeed) { chunk ->
                     if (_preview.value != Preview.Playing) _preview.value = Preview.Playing
@@ -236,7 +258,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 _preview.value = Preview.Idle
                 throw e
             } catch (t: Throwable) {
-                _preview.value = Preview.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4f2890, t.message ?: t.javaClass.simpleName))
+                _preview.value = Preview.Failed(I18n.s(R.string.settings_4f2890, t.message ?: t.javaClass.simpleName))
             } finally {
                 player?.release()
                 if (previewPlayer === player) previewPlayer = null
@@ -269,19 +291,19 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         stopDraftPlayback()
         stopRecordingRequested = false
         recordJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            val rate = com.iris.localai.voice.CloneAudio.RECORD_RATE
-            val max = (com.iris.localai.voice.CloneAudio.MAX_SEC * rate).toInt()
+            val rate = CloneAudio.RECORD_RATE
+            val max = (CloneAudio.MAX_SEC * rate).toInt()
             val buf = FloatArray(max)
             var n = 0
             _draft.value = CloneDraft.Recording(0f, 0f)
             try {
-                kotlinx.coroutines.withTimeoutOrNull(((com.iris.localai.voice.CloneAudio.MAX_SEC + 1) * 1000).toLong()) {
-                    com.iris.localai.voice.Microphone.frames(rate, android.media.MediaRecorder.AudioSource.MIC, effects = false)
+                kotlinx.coroutines.withTimeoutOrNull(((CloneAudio.MAX_SEC + 1) * 1000).toLong()) {
+                    Microphone.frames(rate, android.media.MediaRecorder.AudioSource.MIC, effects = false)
                         .collect { f ->
                             val k = minOf(f.size, max - n)
                             System.arraycopy(f, 0, buf, n, k)
                             n += k
-                            _draft.value = CloneDraft.Recording(n.toFloat() / rate, com.iris.localai.voice.Microphone.rms(f))
+                            _draft.value = CloneDraft.Recording(n.toFloat() / rate, Microphone.rms(f))
                             if (n >= max || stopRecordingRequested) throw StopRecording()
                         }
                 }
@@ -290,7 +312,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 _draft.value = CloneDraft.Idle
                 throw e
             } catch (t: Throwable) {
-                _draft.value = CloneDraft.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd2ddd, t.message ?: t.javaClass.simpleName))
+                _draft.value = CloneDraft.Failed(I18n.s(R.string.settings_fd2ddd, t.message ?: t.javaClass.simpleName))
                 return@launch
             }
             processClip(buf.copyOf(n), rate)
@@ -304,38 +326,38 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         if (recordJob?.isActive == true) return
         stopDraftPlayback()
         recordJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            _draft.value = CloneDraft.Processing(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c34bda))
+            _draft.value = CloneDraft.Processing(I18n.s(R.string.settings_c34bda))
             val pcm = try {
-                com.iris.localai.voice.AudioFileDecoder.decode(getApplication(), uri, maxSec = 40f)
+                AudioFileDecoder.decode(getApplication(), uri, maxSec = 40f)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (t: Throwable) {
-                _draft.value = CloneDraft.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_da7116, t.message ?: t.javaClass.simpleName))
+                _draft.value = CloneDraft.Failed(I18n.s(R.string.settings_da7116, t.message ?: t.javaClass.simpleName))
                 return@launch
             }
             // Keep a 24 kHz reference: ZipVoice works at 24 kHz, higher rates only cost memory.
-            val rate = minOf(pcm.sampleRate, com.iris.localai.voice.CloneAudio.RECORD_RATE)
-            processClip(com.iris.localai.voice.CloneAudio.resample(pcm.samples, pcm.sampleRate, rate), rate)
+            val rate = minOf(pcm.sampleRate, CloneAudio.RECORD_RATE)
+            processClip(CloneAudio.resample(pcm.samples, pcm.sampleRate, rate), rate)
         }
     }
 
     private suspend fun processClip(raw: FloatArray, rate: Int) {
-        val clip = com.iris.localai.voice.CloneAudio.prepare(raw, rate)
-        com.iris.localai.voice.CloneAudio.problem(clip, rate)?.let { _draft.value = CloneDraft.Failed(it); return }
-        val secs = com.iris.localai.voice.CloneAudio.seconds(clip, rate)
-        val longNote = if (raw.size.toFloat() / rate > com.iris.localai.voice.CloneAudio.MAX_SEC + 0.5f) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5407cc) else null
+        val clip = CloneAudio.prepare(raw, rate)
+        CloneAudio.problem(clip, rate)?.let { _draft.value = CloneDraft.Failed(it); return }
+        val secs = CloneAudio.seconds(clip, rate)
+        val longNote = if (raw.size.toFloat() / rate > CloneAudio.MAX_SEC + 0.5f) I18n.s(R.string.settings_5407cc) else null
         var text = ""
         var note = longNote
         if (c.recognizer.isAvailable) {
-            _draft.value = CloneDraft.Processing(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a99852))
+            _draft.value = CloneDraft.Processing(I18n.s(R.string.settings_a99852))
             text = try {
                 c.recognizer.prepare(c.settings.current.asrLanguage)
-                c.recognizer.transcribe(com.iris.localai.voice.CloneAudio.resample(clip, rate, com.iris.localai.voice.ASR_SAMPLE_RATE))
+                c.recognizer.transcribe(CloneAudio.resample(clip, rate, ASR_SAMPLE_RATE))
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (t: Throwable) {
-                note = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_fd468e); ""
+                note = I18n.s(R.string.settings_fd468e); ""
             }
         } else {
-            note = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_add960)
+            note = I18n.s(R.string.settings_add960)
         }
-        if (secs < 5f) note = listOfNotNull(note, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c6d587)).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d))
+        if (secs < 5f) note = listOfNotNull(note, I18n.s(R.string.settings_c6d587)).joinToString(I18n.s(R.string.settings_c4530d))
         _draft.value = CloneDraft.Ready(clip, rate, text, secs, note)
     }
 
@@ -377,11 +399,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     /** Which voice the 试听 button is playing ("" = the selected voice). */
     val previewTarget = kotlinx.coroutines.flow.MutableStateFlow("")
 
-    /** 2.2.10: an Android TTS engine is installed (朗读引擎「系统 TTS」). */
+    /** an Android TTS engine is installed (朗读引擎「系统 TTS」). */
     fun systemTtsAvailable(): Boolean = c.synthesizer.system?.hasEngine() == true
     fun openSystemTtsSettings() {
         val ctx = getApplication<Application>()
-        runCatching { ctx.startActivity(com.iris.localai.voice.SystemTts.settingsIntent()) }
+        runCatching { ctx.startActivity(SystemTts.settingsIntent()) }
             .onFailure { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     }
 
@@ -418,9 +440,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         update { it.copy(apiKey = newKey()) }
     }
 
-    /** 2.1.7: user-typed key (saved as typed, header-safe chars only). Blank on the LAN keeps the old key. */
+    /** user-typed key (saved as typed, header-safe chars only). Blank on the LAN keeps the old key. */
     fun setApiKey(raw: String) {
-        val k = com.iris.localai.server.ApiAuth.sanitizeKey(raw)
+        val k = ApiAuth.sanitizeKey(raw)
         update { if (k.isEmpty() && it.apiAllowLan) it else it.copy(apiKey = k) }
     }
 

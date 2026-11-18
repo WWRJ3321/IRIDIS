@@ -1,12 +1,20 @@
 package com.iris.localai.engine.mnn
 
+import com.iris.localai.engine.Backend
+import com.iris.localai.engine.resources.LiveApply
+import com.iris.localai.engine.resources.LiveChange
+import com.iris.localai.engine.resources.LiveResourcePolicy
+import com.iris.localai.engine.resources.ResourcePlan
+import com.iris.localai.engine.resources.ThermalGovernor
+import com.iris.localai.util.diagnostics.CrashReporter
+import com.iris.localai.util.io.Attachments
 import android.content.Context
 import android.util.Log
 import com.iris.localai.data.GenerationStats
 import com.iris.localai.data.LocalModel
 import com.iris.localai.engine.EngineException
 import com.iris.localai.engine.MnnKleidiPolicy
-import com.iris.localai.engine.NativeLoadCrash
+import com.iris.localai.engine.load.NativeLoadCrash
 import com.iris.localai.engine.GenEvent
 import com.iris.localai.engine.InferenceEngine
 import com.iris.localai.engine.LoadConfig
@@ -28,7 +36,7 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * 1.7.8: what goes into MNN's `thread_num`. On the CPU it is the worker count; on OpenCL MNN reads it
+ * what goes into MNN's `thread_num`. On the CPU it is the worker count; on OpenCL MNN reads it
  * as GPU mode bits (llm.cpp:211-215 ORs 64|512; OpenCLBackend.cpp:1659-1683 decodes the tuning
  * level), so it must be a fixed mode, never the tier's thread count. Unit-tested in V178Test.
  */
@@ -62,15 +70,15 @@ class MnnEngine(private val context: Context) : InferenceEngine {
     @Volatile private var loaded = false
     @Volatile private var visionLoaded = false
     @Volatile private var active: Request? = null
-    /** 2.4.0: a detached native generate (prefill cannot be interrupted) is still running. */
+    /** a detached native generate (prefill cannot be interrupted) is still running. */
     @Volatile private var nativeRunning = 0
     override val busyNative: Boolean get() = nativeRunning > 0
     private var modelId = ""
     private var backendLabel = ""
     @Volatile private var onCpu = false
     @Volatile private var loadedThreads = 0
-    /** 1.7.5: cores + nice the MNN threads have now (set at load, by live re-pins and per reply). */
-    @Volatile private var live: com.iris.localai.engine.LiveChange? = null
+    /** cores + nice the MNN threads have now (set at load, by live re-pins and per reply). */
+    @Volatile private var live: LiveChange? = null
 
     private class Request { @Volatile var cancelled = false }
 
@@ -80,7 +88,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
         private val out: SendChannel<GenEvent>,
     ) : MnnPieceSink {
         override fun onPiece(utf8: ByteArray): Boolean {
-            com.iris.localai.engine.ThermalGovernor.pace { req.cancelled }
+            ThermalGovernor.pace { req.cancelled }
             return !req.cancelled && out.trySend(GenEvent.Piece(String(utf8, Charsets.UTF_8))).isSuccess
         }
     }
@@ -106,7 +114,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
 
     override suspend fun load(model: LocalModel, config: LoadConfig, onProgress: (Float) -> Unit): ModelDetails =
         withContext(nativeThread) {
-            // 2.0.5: load libiris_mnn before the OpenCL probe. The probe used to run first, so on a
+            // load libiris_mnn before the OpenCL probe. The probe used to run first, so on a
             // fresh process it hit UnsatisfiedLinkError and every GPU pick fell back to CPU.
             MnnNative.unavailableReason?.let { throw EngineException(it) }
             loaded = false
@@ -122,20 +130,20 @@ class MnnEngine(private val context: Context) : InferenceEngine {
             val cacheDir = File(context.cacheDir, "mnn/${model.fileName.hashCode().toUInt().toString(16)}").apply { mkdirs() }
 
             val useGpu = when (config.backend) {
-                com.iris.localai.engine.Backend.NPU -> throw EngineException("此版本的 MNN 未编入 NPU（QNN）后端")
-                com.iris.localai.engine.Backend.GPU -> {
-                    // 2.0.4: say why (dlerror) instead of a bare "no OpenCL".
+                Backend.NPU -> throw EngineException("此版本的 MNN 未编入 NPU（QNN）后端")
+                Backend.GPU -> {
+                    // say why (dlerror) instead of a bare "no OpenCL".
                     val why = runCatching { MnnNative.nativeOpenClProbe() }.getOrElse { it.message ?: "probe failed" }
                     if (why.isNotEmpty()) throw EngineException("本机没有可用的 OpenCL（${why.take(300)}）")
                     true
                 }
-                com.iris.localai.engine.Backend.CPU -> false
+                Backend.CPU -> false
             }
-            // 1.7.4: MNN creates its worker pool inside nativeLoad; the native side applies the
+            // MNN creates its worker pool inside nativeLoad; the native side applies the
             // tier's cores + nice to this thread just for that call (the workers inherit them) and
             // restores this thread afterwards. Java priority is not touched any more.
             val plan = config.resources
-            // 1.7.8: on OpenCL MNN does not read thread_num as a thread count: Llm::initRuntime
+            // on OpenCL MNN does not read thread_num as a thread count: Llm::initRuntime
             // (llm.cpp:211-215) passes it as ScheduleConfig.numThread | 64 | 512, and
             // OpenCLBackend (OpenCLBackend.cpp:1659-1683) decodes it as the GPU mode bits
             // (MNNForwardType.h: 1 TUNING_NONE, 2 HEAVY, 4 WIDE, 8 NORMAL, 16 FAST). ≤ 1.7.7 sent the
@@ -146,7 +154,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
             // which would override our pinning of the host thread → always "normal" on the GPU.
             val power = if (useGpu) "normal" else plan?.mnnPower ?: "normal"
             val nativeThreads = MnnThreadArg.forBackend(useGpu, threads)
-            // 1.7.9: the tier's GPU 性能提示 → Adreno cl_qcom_perf_hint of the OpenCL context (IRIS MNN
+            // the tier's GPU 性能提示 → Adreno cl_qcom_perf_hint of the OpenCL context (IRIS MNN
             // patch, OpenCLRuntime.cpp). Separate from power: it binds no cores and keeps thread_num=4.
             val hintArg = if (useGpu) "|" + (plan?.gpuHint?.native ?: "normal") else ""
             // Loading is one blocking native call; creep the bar so the UI never looks frozen.
@@ -160,19 +168,19 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                 // A previous nativeLoad death turns it off on any SoC for this attempt.
                 val kleidiOn = !useGpu && MnnKleidiPolicy.enabled(
                     android.os.Build.SOC_MODEL,
-                    NativeLoadCrash.traceShowsLoad(com.iris.localai.util.CrashReporter.nativeCrashText(context)),
+                    NativeLoadCrash.traceShowsLoad(CrashReporter.nativeCrashText(context)),
                 )
                 if (!useGpu && !kleidiOn) Log.i(TAG, "MNN KleidiAI off (soc=${android.os.Build.SOC_MODEL})")
                 val kleidiArg = if (useGpu) "" else "|kleidi=${if (kleidiOn) 1 else 0}"
                 val h = newHandle()
-                // 1.8.0: per-stage load logging to <files>/iris_mnn_load.log (export button reads it).
+                // per-stage load logging to <files>/iris_mnn_load.log (export button reads it).
                 runCatching { MnnNative.nativeSetDiagDir(context.getExternalFilesDir(null)?.path?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)) }
-                // 1.8.0 crash-diag: 禁用视觉模块 switch → libMNN createLLM probe (strong override in mnn_engine.cpp).
+                // crash-diag: 禁用视觉模块 switch → libMNN createLLM probe (strong override in mnn_engine.cpp).
                 runCatching { MnnNative.nativeSetNoVisual(config.noVisual) }
                 val err = MnnNative.nativeLoad(
                     h, cfg.path.toByteArray(Charsets.UTF_8), "$backend|$power$hintArg$kleidiArg", nativeThreads, ctx,
                     cacheDir.path.toByteArray(Charsets.UTF_8), config.useMmap,
-                    (plan?.let { com.iris.localai.engine.LiveResourcePolicy.coresFor(it, threads) } ?: emptyList()).toIntArray(),
+                    (plan?.let { LiveResourcePolicy.coresFor(it, threads) } ?: emptyList()).toIntArray(),
                     plan?.nice ?: 0, plan != null,
                 )
                 if (err != null) {
@@ -182,8 +190,8 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                 loaded = true
                 onCpu = !useGpu
                 loadedThreads = threads
-                live = if (plan != null && !useGpu) com.iris.localai.engine.LiveChange(
-                    threads, com.iris.localai.engine.LiveResourcePolicy.coresFor(plan, threads), plan.nice,
+                live = if (plan != null && !useGpu) LiveChange(
+                    threads, LiveResourcePolicy.coresFor(plan, threads), plan.nice,
                 ) else null
                 backendLabel = if (useGpu) "GPU · OpenCL · MNN" else "CPU · MNN"
             } finally {
@@ -199,9 +207,9 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                 contextLength = ctx,
                 trainContextLength = 0,
                 supportsThinking = m.supportsThinking,
-                // 1.10.12: Qwen-VL / Omni folders ship visual.mnn; MNN reads <img>path</img> in the prompt.
+                // Qwen-VL / Omni folders ship visual.mnn; MNN reads <img>path</img> in the prompt.
                 supportsVision = visionLoaded,
-                visionMaxSide = com.iris.localai.util.Attachments.MNN_VISION_MAX_SIDE,
+                visionMaxSide = Attachments.MNN_VISION_MAX_SIDE,
                 thinkingPrefilled = m.thinkingPrefilled,
                 hasChatTemplate = m.hasChatTemplate,
                 backend = backendLabel,
@@ -231,13 +239,13 @@ class MnnEngine(private val context: Context) : InferenceEngine {
             params.topK, params.maxNewTokens, if (params.disableThinking) 1 else 0,
             plan?.nice ?: 0, if (plan != null) 1 else 0,
         )
-        // 1.7.6: cores for the *loaded* thread count — widened onto neighbouring non-prime cores
+        // cores for the *loaded* thread count — widened onto neighbouring non-prime cores
         // when the tier has fewer cores than threads, never released onto the prime cores.
-        val genCores = plan?.let { com.iris.localai.engine.LiveResourcePolicy.coresFor(it, loadedThreads) } ?: emptyList()
+        val genCores = plan?.let { LiveResourcePolicy.coresFor(it, loadedThreads) } ?: emptyList()
         val cpus = genCores.toIntArray()
         // The native side re-applies this reply's policy to the pool workers.
-        if (plan != null && onCpu) live = com.iris.localai.engine.LiveChange(loadedThreads, genCores, plan.nice)
-        // 2.1.1: the native call runs detached and is awaited cancellably. Prefill (incl. the visual
+        if (plan != null && onCpu) live = LiveChange(loadedThreads, genCores, plan.nice)
+        // the native call runs detached and is awaited cancellably. Prefill (incl. the visual
         // encoder) is one blocking MNN call that cannot be interrupted; with withContext the stop
         // button waited for all of it. Now a stop ends this request at once; the native side stops at
         // its first cancel check after prefill, and the next request queues behind it on nativeThread.
@@ -252,7 +260,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                     MnnNative.nativeClearCancel(h)
                     if (req.cancelled) CANCELLED_JSON
                     else {
-                        com.iris.localai.engine.ThermalGovernor.beginReply()
+                        ThermalGovernor.beginReply()
                         MnnNative.nativeGenerate(h, roles, contents, floats, ints, cpus, sink)
                     }
                 }
@@ -291,20 +299,20 @@ class MnnEngine(private val context: Context) : InferenceEngine {
         send(GenEvent.Done(reason, stats, error))
     }.buffer(Channel.UNLIMITED)
 
-    override fun liveApplyMode(): com.iris.localai.engine.LiveApply =
-        if (onCpu) com.iris.localai.engine.LiveApply.LIVE_POLICY else com.iris.localai.engine.LiveApply.RELOAD
+    override fun liveApplyMode(): LiveApply =
+        if (onCpu) LiveApply.LIVE_POLICY else LiveApply.RELOAD
 
     /**
-     * 1.7.5: moves MNN's existing threads (pool workers recorded at load + the generating thread
+     * moves MNN's existing threads (pool workers recorded at load + the generating thread
      * while a reply runs) to the tier's cores / nice. Never blocks on the generating thread: the
      * native call only does sched_setaffinity / setpriority on tids. True only when the kernel
      * accepted both for every live thread.
      */
-    override fun applyResourcesLive(plan: com.iris.localai.engine.ResourcePlan): Boolean {
+    override fun applyResourcesLive(plan: ResourcePlan): Boolean {
         if (!loaded || !onCpu) return false
-        // 1.7.6: the loaded thread count stays until the idle reload; with fewer target cores than
+        // the loaded thread count stays until the idle reload; with fewer target cores than
         // threads they go to the target + neighbouring non-prime cores (中→省电: cpu4-5), never all.
-        val liveCores = com.iris.localai.engine.LiveResourcePolicy.coresFor(plan, loadedThreads)
+        val liveCores = LiveResourcePolicy.coresFor(plan, loadedThreads)
         val json = synchronized(handleLock) {
             val h = handle
             if (h == 0L) return false
@@ -316,13 +324,13 @@ class MnnEngine(private val context: Context) : InferenceEngine {
             "threads=${r.targets} affinity=${r.affinityOk} nice=${r.niceOk} gone=${r.gone} generating=${r.generating}" +
             (if (liveCores != plan.cpus) " (cores ${liveCores.joinToString(",")}: tier has ${plan.cpus.size} cores < $loadedThreads threads, prime cores excluded)" else "") +
             " | ${r.readback}" + if (plan.threads != loadedThreads) " | thread count ${loadedThreads}→${plan.threads} needs an idle reload" else "")
-        if (ok) live = com.iris.localai.engine.LiveChange(
+        if (ok) live = LiveChange(
             loadedThreads, liveCores, plan.nice,
         )
         return ok
     }
 
-    override fun livePolicy(): com.iris.localai.engine.LiveChange? = if (loaded && onCpu) live else null
+    override fun livePolicy(): LiveChange? = if (loaded && onCpu) live else null
 
     override fun resourceThreadIds(): IntArray = synchronized(handleLock) {
         val h = handle
@@ -397,7 +405,7 @@ class MnnEngine(private val context: Context) : InferenceEngine {
         const val TAG = "MnnEngine"
         const val RES_TAG = "IrisResource"
         const val CANCELLED_JSON = """{"stop":2}"""
-        /** 2.1.1: detached native generate calls (see [generate]); still serialised on [nativeThread]. */
+        /** detached native generate calls (see [generate]); still serialised on [nativeThread]. */
         val nativeScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + nativeThread) }
         /** One native thread for all MnnEngine instances (a new engine is created per load). */
         val nativeThread by lazy {

@@ -1,5 +1,6 @@
 package com.iris.localai.engine.edge0
 
+import com.iris.localai.engine.StopReason
 import com.iris.localai.engine.PromptMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -11,7 +12,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * 2.6.5: chat history → the JSON edge0_jni.cpp reads, and the engine's event stream → the text form the
+ * chat history → the JSON edge0_jni.cpp reads, and the engine's event stream → the text form the
  * rest of the app already folds: reasoning inside `<think>…</think>`, native tool calls as
  * `<tool_call>{"name":…,"arguments":…}</tool_call>` (ToolCallParser reads that form). Pure, unit-tested.
  */
@@ -64,11 +65,11 @@ object Edge0Prompt {
     }
 
     /** Native stop name → app reason. */
-    fun stop(name: String?): com.iris.localai.engine.StopReason = when (name) {
-        "end", "stop", "tool_calls" -> com.iris.localai.engine.StopReason.END
-        "length" -> com.iris.localai.engine.StopReason.MAX_TOKENS
-        "capacity" -> com.iris.localai.engine.StopReason.CONTEXT_FULL
-        "cancelled" -> com.iris.localai.engine.StopReason.CANCELLED
-        else -> com.iris.localai.engine.StopReason.ERROR
+    fun stop(name: String?): StopReason = when (name) {
+        "end", "stop", "tool_calls" -> StopReason.END
+        "length" -> StopReason.MAX_TOKENS
+        "capacity" -> StopReason.CONTEXT_FULL
+        "cancelled" -> StopReason.CANCELLED
+        else -> StopReason.ERROR
     }
 }

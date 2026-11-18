@@ -1,5 +1,7 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.Iris
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -57,7 +59,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** 2.6.2: geometry of the picture editor (crop box, view ↔ picture mapping). Pure, unit-tested. */
+/** geometry of the picture editor (crop box, view ↔ picture mapping). Pure, unit-tested. */
 object ImageEditMath {
     enum class Handle { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, MOVE }
 
@@ -145,7 +147,7 @@ object ImageEditMath {
     }
 }
 
-/** 2.6.2: bitmap operations of the editor (Android only). */
+/** bitmap operations of the editor (Android only). */
 internal object ImageEditOps {
     fun rotateLeft(b: Bitmap): Bitmap {
         val m = android.graphics.Matrix().apply { postRotate(-90f) }
@@ -188,7 +190,7 @@ data class PenStroke(val points: List<Offset>, val color: Color, val width: Floa
 private enum class EditTool { CROP, DRAW }
 
 /**
- * 2.6.2: full-screen picture editor — crop (drag the corners or the box), rotate left, doodle
+ * full-screen picture editor — crop (drag the corners or the box), rotate left, doodle
  * (six colours). Undo steps back one stroke or one crop / rotation. 完成 hands back the result.
  */
 @Composable
@@ -206,6 +208,7 @@ internal fun ImageEditor(source: Bitmap, onCancel: () -> Unit, onDone: (Bitmap) 
     var pen by remember { mutableStateOf(Color(ImageEditMath.PEN[0])) }
     val img = remember(cur) { cur.asImageBitmap() }
     val white = Color.White
+    val highlight = Iris.colors.accent
 
     fun bake(): Bitmap {
         var b = cur
@@ -289,7 +292,7 @@ internal fun ImageEditor(source: Bitmap, onCancel: () -> Unit, onDone: (Bitmap) 
         ) {
             BarText(I18n.s(R.string.img262_cancel), white.copy(alpha = 0.85f), onCancel)
             Spacer(Modifier.weight(1f))
-            BarText(I18n.s(R.string.img262_done), Color(0xFFFFCC00)) { onDone(bake()) }
+            BarText(I18n.s(R.string.img262_done), highlight) { onDone(bake()) }
         }
         // Bottom: tool options, then the tools.
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().systemBarsPadding().padding(bottom = 8.dp)) {
@@ -308,7 +311,7 @@ internal fun ImageEditor(source: Bitmap, onCancel: () -> Unit, onDone: (Bitmap) 
                     }
                     EditTool.CROP -> Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         BarText(I18n.s(R.string.img262_reset), white) { crop = Rect(0f, 0f, cur.width.toFloat(), cur.height.toFloat()) }
-                        BarText(I18n.s(R.string.img262_apply), Color(0xFFFFCC00)) { commit(bake()); tool = null }
+                        BarText(I18n.s(R.string.img262_apply), highlight) { commit(bake()); tool = null }
                     }
                     null -> Unit
                 }
@@ -339,8 +342,8 @@ private fun BarText(text: String, color: Color, onClick: () -> Unit) {
 
 @Composable
 internal fun ToolButton(icon: ImageVector, label: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val a by animateFloatAsState(if (enabled) 1f else 0.35f, label = "toolAlpha")
-    val tint = (if (selected) Color(0xFFFFCC00) else Color.White).copy(alpha = a)
+    val a by animateFloatAsState(if (enabled) 1f else 0.35f, IrisMotion.FadeIn.float(), label = "toolAlpha")
+    val tint = (if (selected) Iris.colors.accent else Color.White).copy(alpha = a)
     Column(
         Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp),

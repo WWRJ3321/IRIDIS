@@ -1,5 +1,7 @@
 package com.iris.localai.ui.models
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
@@ -40,7 +42,7 @@ import com.iris.localai.ui.theme.IrisType
 import kotlinx.coroutines.launch
 
 /**
- * 2.5.8: 模型与加载 › 看懂模型。2.6.4: 分节（目录可跳转）、拆解示例、术语表、与推荐卡片互链。
+ * 模型与加载 › 看懂模型。2.6.4: 分节（目录可跳转）、拆解示例、术语表、与推荐卡片互链。
  * 纯静态内容；中文界面（简/繁）用中文，其余语言用英文（沿用 2.5.8 的机制）。
  */
 object ModelGuide {
@@ -62,7 +64,7 @@ object ModelGuide {
     const val L_SMALL = "taobao-mnn/Qwen3.5-0.8B-MNN"
     val LINKS: List<String> get() = listOf(L_GGUF, L_MNN, L_LITERT, L_9B, L_SMALL, RecommendedCatalog.REAP_Q4, RecommendedCatalog.REAP_IQ3, RecommendedCatalog.LFM_REPO)
 
-    fun chinese(): Boolean = runCatching { com.iris.localai.I18n.s(com.iris.localai.R.string.lang_code) }.getOrDefault("zh").startsWith("zh")
+    fun chinese(): Boolean = runCatching { I18n.s(R.string.lang_code) }.getOrDefault("zh").startsWith("zh")
 
     val TITLE: String get() = if (chinese()) "看懂模型" else "Model basics"
     val ENTRY_HINT: String get() = if (chinese()) "名称、格式、参数量、量化、MoE 是什么" else "Names, formats, size, quantization, MoE"
@@ -199,7 +201,7 @@ object ModelGuide {
 }
 
 /**
- * 2.6.4: open 看懂模型 from another page (a recommended card's detail), optionally at one section.
+ * open 看懂模型 from another page (a recommended card's detail), optionally at one section.
  * MainActivity sets [opener]; the page takes [pending] once.
  */
 object ModelGuideNav {

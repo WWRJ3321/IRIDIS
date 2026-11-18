@@ -1,5 +1,22 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.IrisApp
+import com.iris.localai.R
+import com.iris.localai.agent.core.Citations
+import com.iris.localai.agent.core.StepStatus
+import com.iris.localai.data.MessageVersions
+import com.iris.localai.knowledge.KbPrompt
+import com.iris.localai.knowledge.KbSource
+import com.iris.localai.ui.agent.AgentSteps
+import com.iris.localai.ui.components.IrisDialog
+import com.iris.localai.ui.components.IrisMenu
+import com.iris.localai.ui.components.IrisMenuItem
+import com.iris.localai.ui.components.ScrollSafeFold
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.util.streaming.ReplySpeed
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -76,9 +93,9 @@ import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.theme.LocalReduceMotion
-import com.iris.localai.util.ParagraphSplitter
-import com.iris.localai.util.ThinkParseCache
-import com.iris.localai.util.TypewriterPacer
+import com.iris.localai.util.streaming.ParagraphSplitter
+import com.iris.localai.util.streaming.ThinkParseCache
+import com.iris.localai.util.streaming.TypewriterPacer
 import androidx.compose.runtime.derivedStateOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
@@ -93,7 +110,7 @@ fun UserMessage(
     onRemember: (() -> Unit)? = null,
     /** 2.0.x: ‹ › between the versions of this message (and the conversation that followed each). */
     onSwitchVersion: (Int) -> Unit = {},
-    /** 2.4.4: 「删除」 (null = hidden). */
+    /** 「删除」 (null = hidden). */
     onDelete: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
@@ -103,7 +120,7 @@ fun UserMessage(
     val translator = rememberTranslator()
     Box(Modifier.fillMaxWidth().padding(start = 52.dp), contentAlignment = Alignment.CenterEnd) {
       Column(horizontalAlignment = Alignment.End) {
-        // 1.10.12: attached pictures / files above the bubble.
+        // attached pictures / files above the bubble.
         if (message.attachments.isNotEmpty()) {
             AttachmentStrip(message.attachments, modifier = Modifier.padding(bottom = if (message.content.isNotBlank()) IrisDimens.space6 else 0.dp))
         }
@@ -120,21 +137,21 @@ fun UserMessage(
                 .clip(IrisRadius.bubbleShape)
                 .background(c.surfaceVariant)
                 .combinedClickable(onClick = {}, onLongClick = {
-                    haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.LONG_PRESS); menu = true
+                    haptics.perform(FeedbackEvent.LONG_PRESS); menu = true
                 })
-                .padding(horizontal = IrisDimens.space16, vertical = com.iris.localai.ui.theme.IrisSpace.S),
+                .padding(horizontal = IrisDimens.space16, vertical = IrisSpace.S),
         ) {
             Text(message.content, style = IrisType.message, color = c.text)
         }
         TranslationBlock(message.id)
         VersionSwitcher(message, onSwitchVersion)
       }
-        com.iris.localai.ui.components.IrisMenu(menu, { menu = false }) {
-            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab), Icons.Outlined.ContentCopy) { clipboard.setText(AnnotatedString(message.content)); menu = false }
-            com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { menu = false; translator.translateMessage(message.id, message.content) }
-            com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_27a36e), Icons.Outlined.Edit) { menu = false; onEdit() }
-            if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { menu = false; onRemember() }
-            if (onDelete != null) com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
+        IrisMenu(menu, { menu = false }) {
+            IrisMenuItem(I18n.s(R.string.ui_79d3ab), Icons.Outlined.ContentCopy) { clipboard.setText(AnnotatedString(message.content)); menu = false }
+            IrisMenuItem(TranslateText.TRANSLATE, IrisIcons.Translate) { menu = false; translator.translateMessage(message.id, message.content) }
+            IrisMenuItem(I18n.s(R.string.chat_27a36e), Icons.Outlined.Edit) { menu = false; onEdit() }
+            if (onRemember != null) IrisMenuItem(VersionText.REMEMBER, IrisIcons.Memory) { menu = false; onRemember() }
+            if (onDelete != null) IrisMenuItem(I18n.s(R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
         }
     }
 }
@@ -155,9 +172,9 @@ fun AssistantMessage(
     onSpeak: () -> Unit,
     onStopSpeaking: () -> Unit,
     streamText: () -> String? = { null },
-    /** 1.7.7: what the reply waits for before its first text (e.g. 「正在重载模型…」). */
+    /** what the reply waits for before its first text (e.g. 「正在重载模型…」). */
     status: String? = null,
-    /** 1.10.6: opens 「查看提示内容」 (null = hidden). */
+    /** opens 「查看提示内容」 (null = hidden). */
     onShowPrompt: (() -> Unit)? = null,
     /** 2.0.x: edit this reply in place (null = hidden). */
     onEdit: (() -> Unit)? = null,
@@ -165,10 +182,10 @@ fun AssistantMessage(
     onRemember: (() -> Unit)? = null,
     /** 2.0.x: ‹ › between the versions of this reply. */
     onSwitchVersion: (Int) -> Unit = {},
-    /** 2.2.9: 「＋ 记住？」 chip (shown when [ChatMessage.memorySuggestion] is set). */
+    /** 「＋ 记住？」 chip (shown when [ChatMessage.memorySuggestion] is set). */
     onAcceptMemory: (() -> Unit)? = null,
     onDismissMemory: (() -> Unit)? = null,
-    /** 2.4.4: 「删除」 in ⋯ (null = hidden). */
+    /** 「删除」 in ⋯ (null = hidden). */
     onDelete: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
@@ -178,19 +195,19 @@ fun AssistantMessage(
     }
     // While a thinking reply starts, show the (empty) thinking block right away instead of typing
     // dots that are then swapped for the block: one layout from the first frame, no jump.
-    // 1.13.3: while a tool runs (or waits for you) its card is the live part; no empty 思考中 below it.
+    // while a tool runs (or waits for you) its card is the live part; no empty 思考中 below it.
     val stepActive = streaming && message.agentSteps.lastOrNull()?.status.let {
-        it == com.iris.localai.agent.StepStatus.RUNNING || it == com.iris.localai.agent.StepStatus.ASKING
+        it == StepStatus.RUNNING || it == StepStatus.ASKING
     }
     val hasThinking by remember(parts, streaming, expectThinking, stepActive) {
         derivedStateOf { parts.value.hasThinking || (streaming && !stepActive && expectThinking && parts.value.answer.isEmpty()) }
     }
     val hasAnswer by remember(parts) { derivedStateOf { parts.value.answer.isNotEmpty() } }
-    // 2.2.17 D 引用链接: web_search sources of this reply (inline [n] links + 来源 row).
-    val sources = remember(message.agentSteps, streaming) { if (streaming) emptyList() else com.iris.localai.agent.Citations.fromSteps(message.agentSteps) }
+    // D 引用链接: web_search sources of this reply (inline [n] links + 来源 row).
+    val sources = remember(message.agentSteps, streaming) { if (streaming) emptyList() else Citations.fromSteps(message.agentSteps) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-        // 1.9.0 智能体: tool steps of this reply, above the reasoning and the answer.
-        com.iris.localai.ui.agent.AgentSteps(message.agentSteps, streaming) { st ->
+        // 智能体: tool steps of this reply, above the reasoning and the answer.
+        AgentSteps(message.agentSteps, streaming) { st ->
             val lp = remember(st.lead) { ThinkParseCache().parse(st.lead) }
             Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
                 if (lp.thinking.isNotBlank()) ThinkingBlock({ lp.thinking }, { false }, streaming = false, elapsedMs = 0L, initiallyExpanded = false)
@@ -234,8 +251,8 @@ fun AssistantMessage(
                 TranslationBlock(message.id)
                 VersionSwitcher(message, onSwitchVersion)
                 ActionRow(message, parts.value.answer, isLast, speaking, onRegenerate, onSpeak, onStopSpeaking, onShowPrompt, onEdit, onRemember, onDelete = onDelete)
-                // 2.4.1: only the snippets the reply really cites (file name or [n]); none → no chips.
-                val citedKb = remember(message.content, message.kbSources) { com.iris.localai.knowledge.KbPrompt.cited(message.content, message.kbSources) }
+                // only the snippets the reply really cites (file name or [n]); none → no chips.
+                val citedKb = remember(message.content, message.kbSources) { KbPrompt.cited(message.content, message.kbSources) }
                 if (citedKb.isNotEmpty()) KbSourceChips(citedKb)
                 if (sources.isNotEmpty()) WebSourceChips(sources)
                 val suggestion = message.memorySuggestion
@@ -249,10 +266,10 @@ fun AssistantMessage(
 
 /** The visible answer: smooth reveal + incremental Markdown while streaming. */
 @Composable
-private fun AnswerBody(text: () -> String, streaming: Boolean, sources: List<com.iris.localai.agent.Citations.Source> = emptyList()) {
+private fun AnswerBody(text: () -> String, streaming: Boolean, sources: List<Citations.Source> = emptyList()) {
     val revealed by rememberRevealedText(text, animate = streaming)
-    val shown = if (streaming || sources.isEmpty()) revealed else remember(revealed, sources) { com.iris.localai.agent.Citations.linkify(revealed, sources) }
-    // 1.12.0: a finished reply is selectable — long-press, drag the handles, copy just a part.
+    val shown = if (streaming || sources.isEmpty()) revealed else remember(revealed, sources) { Citations.linkify(revealed, sources) }
+    // a finished reply is selectable — long-press, drag the handles, copy just a part.
     // (Not while streaming: the text changes under the selection.)
     if (streaming) Markdown(shown, streaming = true)
     else androidx.compose.foundation.text.selection.SelectionContainer { Markdown(shown, streaming = false) }
@@ -293,7 +310,7 @@ internal fun rememberRevealedText(target: () -> String, animate: Boolean): andro
                     if (origin == 0L) origin = now
                     shownLen.intValue = pacer.step(target().length, dt, done = false, nowSec = (now - origin) / 1e9f)
                 }
-                // 1.13.0: ~40 reveals a second instead of one per vsync (120 Hz): each reveal re-lays
+                // ~40 reveals a second instead of one per vsync (120 Hz): each reveal re-lays
                 // out the last Markdown block, and the eye cannot tell the difference.
                 kotlinx.coroutines.delay(REVEAL_GAP_MS)
             }
@@ -315,10 +332,10 @@ internal fun rememberRevealedText(target: () -> String, animate: Boolean): andro
 private const val FRESH_BLOCK_CHARS = 48
 private const val REVEAL_GAP_MS = 22L
 
-/** 2.1: labels of the assistant action bar's overflow. */
+/** labels of the assistant action bar's overflow. */
 internal object ActionRowText {
-    val MORE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fff96e)
-    val SHOW_PROMPT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_48ba23)
+    val MORE: String get() = I18n.s(R.string.chat_fff96e)
+    val SHOW_PROMPT: String get() = I18n.s(R.string.chat_48ba23)
 }
 
 @Composable
@@ -342,10 +359,10 @@ private fun ActionRow(
     val meta = remember(message.outputChars, message.outputMs, message.totalMs, message.interrupted, message.stats, message.edited, message.kbRefs, message.content) {
         buildList {
             if (message.edited) add(VersionText.EDITED)
-            if (message.kbRefs > 0 && message.kbSources.isEmpty() && com.iris.localai.knowledge.KbPrompt.citesAny(message.content, message.kbRefs)) add(com.iris.localai.knowledge.KbPrompt.chip(message.kbRefs))
-            if (message.interrupted) add(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_829778))
+            if (message.kbRefs > 0 && message.kbSources.isEmpty() && KbPrompt.citesAny(message.content, message.kbRefs)) add(KbPrompt.chip(message.kbRefs))
+            if (message.interrupted) add(I18n.s(R.string.chat_829778))
             // Measured for this reply on the device: output speed (first char → end) and total time.
-            com.iris.localai.util.ReplySpeed.format(message.outputChars, message.outputMs, message.totalMs,
+            ReplySpeed.format(message.outputChars, message.outputMs, message.totalMs,
                 message.stats?.takeIf { it.generatedTokens >= 8 && it.generateMs >= 300 }?.tokensPerSecond ?: 0f)?.let { add(it) }
         }.joinToString(" · ")
     }
@@ -353,33 +370,33 @@ private fun ActionRow(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 0.dp).height(40.dp)) {
         val iconSize = 18.dp
         PressableIcon(
-            if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab),
+            if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) I18n.s(R.string.chat_52e6ab) else I18n.s(R.string.ui_79d3ab),
             size = 40.dp, iconSize = iconSize, tint = c.textSecondary, haptic = true,
             modifier = Modifier.padding(end = IrisDimens.space2),
         ) { clipboard.setText(AnnotatedString(answer)); copied = true }
         if (isLast) {
-            PressableIcon(Icons.Outlined.Refresh, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a7c232), size = 40.dp, iconSize = iconSize, tint = c.textSecondary, onClick = onRegenerate)
+            PressableIcon(Icons.Outlined.Refresh, I18n.s(R.string.chat_a7c232), size = 40.dp, iconSize = iconSize, tint = c.textSecondary, onClick = onRegenerate)
         }
         PressableIcon(
             if (speaking) Icons.Outlined.StopCircle else Icons.AutoMirrored.Outlined.VolumeUp,
-            if (speaking) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9082b) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f),
+            if (speaking) I18n.s(R.string.chat_b9082b) else I18n.s(R.string.chat_f9ab1f),
             size = 40.dp, iconSize = iconSize, tint = if (speaking) c.text else c.textSecondary,
             modifier = Modifier.pulse(speaking, min = 0.55f),
             onClick = if (speaking) onStopSpeaking else onSpeak,
         )
-        // 2.1: low-frequency actions live behind ⋯ so the bar stays short.
+        // low-frequency actions live behind ⋯ so the bar stays short.
         run {
             var overflow by remember { mutableStateOf(false) }
             val translator = rememberTranslator()
             Box {
-                PressableIcon(com.iris.localai.ui.icons.IrisIcons.More, ActionRowText.MORE, size = 40.dp, iconSize = iconSize, tint = c.textSecondary) { overflow = true }
-                com.iris.localai.ui.components.IrisMenu(overflow, { overflow = false }) {
-                    // 2.3.0 ③: translate the answer (thinking excluded), shown under the reply.
-                    if (answer.isNotBlank()) com.iris.localai.ui.components.IrisMenuItem(TranslateText.TRANSLATE, com.iris.localai.ui.icons.IrisIcons.Translate) { overflow = false; translator.translateMessage(message.id, answer) }
-                    if (onEdit != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.EDIT_REPLY, com.iris.localai.ui.icons.IrisIcons.Edit) { overflow = false; onEdit() }
-                    if (onRemember != null) com.iris.localai.ui.components.IrisMenuItem(VersionText.REMEMBER, com.iris.localai.ui.icons.IrisIcons.Memory) { overflow = false; onRemember() }
-                    if (onShowPrompt != null) com.iris.localai.ui.components.IrisMenuItem(ActionRowText.SHOW_PROMPT, com.iris.localai.ui.icons.IrisIcons.Prompt) { overflow = false; onShowPrompt() }
-                    if (onDelete != null) com.iris.localai.ui.components.IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { overflow = false; onDelete() }
+                PressableIcon(IrisIcons.More, ActionRowText.MORE, size = 40.dp, iconSize = iconSize, tint = c.textSecondary) { overflow = true }
+                IrisMenu(overflow, { overflow = false }) {
+                    // translate the answer (thinking excluded), shown under the reply.
+                    if (answer.isNotBlank()) IrisMenuItem(TranslateText.TRANSLATE, IrisIcons.Translate) { overflow = false; translator.translateMessage(message.id, answer) }
+                    if (onEdit != null) IrisMenuItem(VersionText.EDIT_REPLY, IrisIcons.Edit) { overflow = false; onEdit() }
+                    if (onRemember != null) IrisMenuItem(VersionText.REMEMBER, IrisIcons.Memory) { overflow = false; onRemember() }
+                    if (onShowPrompt != null) IrisMenuItem(ActionRowText.SHOW_PROMPT, IrisIcons.Prompt) { overflow = false; onShowPrompt() }
+                    if (onDelete != null) IrisMenuItem(I18n.s(R.string.del244_delete), Icons.Outlined.DeleteOutline, destructive = true) { overflow = false; onDelete() }
                 }
             }
         }
@@ -397,7 +414,7 @@ private fun ActionRow(
 private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streaming: Boolean, elapsedMs: Long, initiallyExpanded: Boolean = true, answerStarted: Boolean = false) {
     val c = Iris.colors
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-    // 2.6.7 思考自动收起：本条正在生成、正文刚开始输出时收起一次（之后用户再点开不再干预）
+    // 思考自动收起：本条正在生成、正文刚开始输出时收起一次（之后用户再点开不再干预）
     if (streaming) {
         val autoFold = rememberAutoFoldThinking()
         androidx.compose.runtime.LaunchedEffect(answerStarted, autoFold) {
@@ -418,26 +435,26 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
-            Icon(com.iris.localai.ui.icons.IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + IrisDimens.space2))
+            Icon(IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + IrisDimens.space2))
             Text(
                 when {
-                    thinking -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_234bae)
-                    elapsedMs > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_78b04b, Format.seconds(elapsedMs))
-                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6df621)
+                    thinking -> I18n.s(R.string.chat_234bae)
+                    elapsedMs > 0 -> I18n.s(R.string.chat_78b04b, Format.seconds(elapsedMs))
+                    else -> I18n.s(R.string.chat_6df621)
                 },
                 style = IrisType.label, color = c.textSecondary,
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false).pulse(thinking),
             )
             Icon(
-                Icons.Outlined.KeyboardArrowDown, if (expanded) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_83cb1e) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fedcac),
+                Icons.Outlined.KeyboardArrowDown, if (expanded) I18n.s(R.string.chat_83cb1e) else I18n.s(R.string.chat_fedcac),
                 tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = arrow },
             )
         }
         // While thinking streams the body is already there (one line tall), so the first words do
         // not arrive together with an expand animation of a container that is still growing.
-        // 2.4.5 (#10): jumps to its end as soon as the list scrolls (garbled text under a fling mid-animation).
-        com.iris.localai.ui.components.ScrollSafeFold(visible = expanded && (hasText || (streaming && thinking))) {
+        // jumps to its end as soon as the list scrolls (garbled text under a fling mid-animation).
+        ScrollSafeFold(visible = expanded && (hasText || (streaming && thinking))) {
             Row(Modifier.padding(start = IrisDimens.space6, top = IrisDimens.space4).height(IntrinsicSize.Min)) {
                 Box(Modifier.width(IrisDimens.space2).fillMaxHeight().clip(IrisRadius.pillShape).background(c.outline))
                 ThinkingParagraphs(text, animate = streaming && thinking, modifier = Modifier.padding(start = IrisDimens.space12))
@@ -480,7 +497,7 @@ fun MessageRow(message: ChatMessage, modifier: Modifier = Modifier, content: @Co
         modifier
             .fillMaxWidth()
             .widthIn(max = IrisDimens.messageMaxWidth)
-            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L)
+            .padding(horizontal = IrisSpace.L)
             .graphicsLayer {
                 val v = rise.value
                 alpha = v.coerceIn(0f, 1f)
@@ -498,11 +515,11 @@ fun ChatMessage.isUser() = role == Role.USER
 
 /** 2.0.x: labels of the message-version switcher and the new message actions. */
 object VersionText {
-    val PREV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b54f81)
-    val NEXT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4630a8)
-    val EDIT_REPLY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3d23ae)
-    val EDITED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9b7287)
-    val REMEMBER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_15bc4e)
+    val PREV: String get() = I18n.s(R.string.chat_b54f81)
+    val NEXT: String get() = I18n.s(R.string.chat_4630a8)
+    val EDIT_REPLY: String get() = I18n.s(R.string.chat_3d23ae)
+    val EDITED: String get() = I18n.s(R.string.chat_9b7287)
+    val REMEMBER: String get() = I18n.s(R.string.chat_15bc4e)
     /** 0-based [active] of [count] → "2/3". */
     fun label(active: Int, count: Int): String = "${active + 1}/$count"
 }
@@ -510,30 +527,30 @@ object VersionText {
 /** 2.0.x: compact ‹ 2/3 › under a message with more than one version; nothing otherwise. */
 @Composable
 fun VersionSwitcher(message: ChatMessage, onSwitch: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val n = com.iris.localai.data.MessageVersions.count(message)
+    val n = MessageVersions.count(message)
     if (n < 2) return
-    val i = com.iris.localai.data.MessageVersions.active(message)
+    val i = MessageVersions.active(message)
     val c = Iris.colors
     Row(modifier.height(IrisDimens.space32), verticalAlignment = Alignment.CenterVertically) {
         PressableIcon(
-            com.iris.localai.ui.icons.IrisIcons.ChevronLeft, VersionText.PREV, size = IrisDimens.space32, iconSize = IrisDimens.space16,
+            IrisIcons.ChevronLeft, VersionText.PREV, size = IrisDimens.space32, iconSize = IrisDimens.space16,
             tint = c.textSecondary, enabled = i > 0, haptic = true,
         ) { onSwitch(i - 1) }
         Text(VersionText.label(i, n), style = IrisType.caption, color = c.textSecondary, maxLines = 1)
         PressableIcon(
-            com.iris.localai.ui.icons.IrisIcons.ChevronRight, VersionText.NEXT, size = IrisDimens.space32, iconSize = IrisDimens.space16,
+            IrisIcons.ChevronRight, VersionText.NEXT, size = IrisDimens.space32, iconSize = IrisDimens.space16,
             tint = c.textSecondary, enabled = i < n - 1, haptic = true,
         ) { onSwitch(i + 1) }
     }
 }
 
-/** 2.2.9 texts of the 「记住？」 chip. */
+/** texts of the 「记住？」 chip. */
 internal object MemoryChipText {
-    val DISMISS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c0d5d6)
-    fun label(text: String): String { val t = if (text.length > 24) text.take(23) + Typography.ellipsis else text; return com.iris.localai.I18n.s(com.iris.localai.R.string.chat_664f6a, t) }
+    val DISMISS: String get() = I18n.s(R.string.chat_c0d5d6)
+    fun label(text: String): String { val t = if (text.length > 24) text.take(23) + Typography.ellipsis else text; return I18n.s(R.string.chat_664f6a, t) }
 }
 
-/** 2.2.9: 「＋ 记住？「…」」 under a finished reply: tap saves, ✕ / long press ignores. */
+/** 「＋ 记住？「…」」 under a finished reply: tap saves, ✕ / long press ignores. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MemorySuggestionChip(text: String, onAccept: () -> Unit, onDismiss: () -> Unit) {
@@ -556,10 +573,10 @@ private fun MemorySuggestionChip(text: String, onAccept: () -> Unit, onDismiss: 
     }
 }
 
-/** 2.2.9 D4: 「出处：租房合同.md · 第 3 段」 chips; a tap shows the snippet. */
-/** 2.2.17 D: 「来源」 under a web_search answer — number + title + domain, tap opens the page. */
+/** D4: 「出处：租房合同.md · 第 3 段」 chips; a tap shows the snippet. */
+/** D: 「来源」 under a web_search answer — number + title + domain, tap opens the page. */
 @Composable
-private fun WebSourceChips(sources: List<com.iris.localai.agent.Citations.Source>) {
+private fun WebSourceChips(sources: List<Citations.Source>) {
     val c = Iris.colors
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     Row(
@@ -567,7 +584,7 @@ private fun WebSourceChips(sources: List<com.iris.localai.agent.Citations.Source
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
     ) {
-        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ca20), style = IrisType.caption, color = c.textTertiary)
+        Text(I18n.s(R.string.chat_26ca20), style = IrisType.caption, color = c.textTertiary)
         sources.forEach { s ->
             Text(
                 "${s.n} · ${s.title.take(18)}${if (s.title.length > 18) "…" else ""} · ${s.domain}",
@@ -597,7 +614,7 @@ private fun KbSourceChips(sources: List<String>) {
     ) {
         sources.forEach { label ->
             Text(
-                com.iris.localai.knowledge.KbSource.chip(label), style = IrisType.caption, color = c.textSecondary, maxLines = 1,
+                KbSource.chip(label), style = IrisType.caption, color = c.textSecondary, maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier
                     .clip(IrisRadius.pillShape)
@@ -611,16 +628,16 @@ private fun KbSourceChips(sources: List<String>) {
     open?.let { label ->
         val text by androidx.compose.runtime.produceState<String?>(null, label) {
             value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val (file, idx) = com.iris.localai.knowledge.KbSource.parse(label)
-                runCatching { (context.applicationContext as com.iris.localai.IrisApp).container.agent.knowledge.chunksOf(file).getOrNull(idx) }.getOrNull().orEmpty()
+                val (file, idx) = KbSource.parse(label)
+                runCatching { (context.applicationContext as IrisApp).container.agent.knowledge.chunksOf(file).getOrNull(idx) }.getOrNull().orEmpty()
             }
         }
-        com.iris.localai.ui.components.IrisDialog(
-            onDismiss = { open = null }, title = label, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { open = null }, dismissText = null,
+        IrisDialog(
+            onDismiss = { open = null }, title = label, confirmText = I18n.s(R.string.ui_b15d91), onConfirm = { open = null }, dismissText = null,
         ) {
             androidx.compose.foundation.layout.Box(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                 Text(
-                    when (val t = text) { null -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a); "" -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9a6156); else -> t },
+                    when (val t = text) { null -> I18n.s(R.string.chat_62a33a); "" -> I18n.s(R.string.chat_9a6156); else -> t },
                     style = IrisType.body, color = c.text,
                 )
             }
@@ -628,14 +645,14 @@ private fun KbSourceChips(sources: List<String>) {
     }
 }
 
-/** 2.6.7 思考自动收起：何时收起。纯函数，单测覆盖。 */
+/** 思考自动收起：何时收起。纯函数，单测覆盖。 */
 internal object ThinkFold {
     fun shouldFold(enabled: Boolean, streaming: Boolean, answerStarted: Boolean): Boolean = enabled && streaming && answerStarted
 }
 
 @Composable
 private fun rememberAutoFoldThinking(): Boolean {
-    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as? com.iris.localai.IrisApp ?: return false
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as? IrisApp ?: return false
     val s by app.container.settings.settings.collectAsStateWithLifecycle()
     return s.autoFoldThinking
 }

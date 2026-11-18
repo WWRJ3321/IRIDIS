@@ -26,7 +26,7 @@ object GuiSafety {
     /** Apps the agent never operates by itself (payment and banking) — the user takes over there. */
     val PROTECTED_PACKAGE_HINTS = listOf("com.eg.android.alipaygphone", "bank", "wallet", "com.unionpay")
 
-    /** 2.2.9: words in the model's stated intent (its thought) that make a tap / enter need the user's OK. */
+    /** words in the model's stated intent (its thought) that make a tap / enter need the user's OK. */
     val INTENT_WORDS = listOf("确认支付", "支付", "付款", "转账", "购买", "下单", "发送", "删除", "pay", "send", "delete")
 
     fun intentWord(thought: String?): String? {

@@ -1,5 +1,10 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.resources.CoolDown
+import com.iris.localai.engine.resources.ThermalGovernor
+import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -18,8 +23,8 @@ import com.iris.localai.data.Format
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
-import com.iris.localai.util.PerfSampler
-import com.iris.localai.util.RateWindow
+import com.iris.localai.util.diagnostics.PerfSampler
+import com.iris.localai.util.diagnostics.RateWindow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -41,7 +46,7 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
     LaunchedEffect(Unit) {
         rate.clear()
         withContext(Dispatchers.IO) { sampler.sample() } // primes the CPU delta
-        // 1.13.1: counts visible characters from the reply's own timer (whitespace, <think> tags and
+        // counts visible characters from the reply's own timer (whitespace, <think> tags and
         // agent tool-call text were counted before, and the per-step stream reset made it drop to 0),
         // sampled every 250 ms over a 3 s window; system stats stay at once a second.
         var tick = 0
@@ -56,33 +61,33 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
     Column(
         modifier
             .background(c.surfaceVariant.copy(alpha = 0.92f), IrisRadius.smallShape)
-            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space6),
+            .padding(horizontal = IrisSpace.S, vertical = IrisDimens.space6),
     ) {
         val style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight)
-        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4485a1) + (speed?.let { String.format(Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_292451), it) } ?: "—"), style = style, color = c.text)
+        Text(I18n.s(R.string.chat_4485a1) + (speed?.let { String.format(Locale.US, I18n.s(R.string.chat_292451), it) } ?: "—"), style = style, color = c.text)
         Text("CPU " + (r?.cpuPercent?.let { String.format(Locale.US, "%.0f%%", it) } ?: "—"), style = style, color = c.textSecondary)
-        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bcf4c8) + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
-        // 2.5.9: 电池温度（系统广播，约每次变化 0.1 °C 时更新）
-        val temp = com.iris.localai.engine.ThermalGovernor.tempC
-        // 2.6.7: 按「过热暂停」上限标色：接近（少算）橙、到上限红；降温中加标记
+        Text(I18n.s(R.string.chat_bcf4c8) + (r?.rssBytes?.let { Format.bytes(it) } ?: "—"), style = style, color = c.textSecondary)
+        // 电池温度（系统广播，约每次变化 0.1 °C 时更新）
+        val temp = ThermalGovernor.tempC
+        // 按「过热暂停」上限标色：接近（少算）橙、到上限红；降温中加标记
         if (!temp.isNaN()) {
-            val lim = com.iris.localai.engine.CoolDown.limitC
+            val lim = CoolDown.limitC
             val tone = PerfTone.of(temp, lim)
-            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.pf259_temp, String.format(Locale.US, "%.1f", temp)) +
-                (if (com.iris.localai.engine.CoolDown.cooling) " · " + com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_short) else ""),
+            Text(I18n.s(R.string.pf259_temp, String.format(Locale.US, "%.1f", temp)) +
+                (if (CoolDown.cooling) " · " + I18n.s(R.string.cool267_short) else ""),
                 style = style, color = when (tone) { 2 -> c.danger; 1 -> c.warning; else -> c.textSecondary })
         }
-        r?.gpuPercent?.let { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4cb9bb, it), style = style, color = c.textSecondary) }
+        r?.gpuPercent?.let { Text(I18n.s(R.string.chat_4cb9bb, it), style = style, color = c.textSecondary) }
     }
 }
 
-/** 2.6.7: 温度标色 0 正常 / 1 接近上限（已在少算）/ 2 到上限。上限关时沿用 42 °C 标红。纯函数。 */
+/** 温度标色 0 正常 / 1 接近上限（已在少算）/ 2 到上限。上限关时沿用 42 °C 标红。纯函数。 */
 internal object PerfTone {
     fun of(tempC: Float, limitC: Int): Int = when {
         tempC.isNaN() -> 0
         limitC <= 0 -> if (tempC >= 42f) 2 else 0
         tempC >= limitC -> 2
-        com.iris.localai.engine.CoolDown.hot(tempC, limitC) -> 1
+        CoolDown.hot(tempC, limitC) -> 1
         else -> 0
     }
 }

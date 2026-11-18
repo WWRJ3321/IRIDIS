@@ -1,5 +1,8 @@
 package com.iris.localai.agent.gui.android
 
+import com.iris.localai.IrisApp
+import com.iris.localai.data.ThemeMode
+import com.iris.localai.ui.theme.IrisPalette
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -33,7 +36,7 @@ import kotlinx.coroutines.CompletableDeferred
  */
 object GuiOverlay {
     private val main = Handler(Looper.getMainLooper())
-    /** 2.2.7: window root (transparent, padded so the capsule's shadow is not clipped). */
+    /** window root (transparent, padded so the capsule's shadow is not clipped). */
     private var bar: FrameLayout? = null
     private var titleView: TextView? = null
     private var status: TextView? = null
@@ -42,21 +45,21 @@ object GuiOverlay {
     private var onStop: (() -> Unit)? = null
     @Volatile private var capturing = false
 
-    /** 2.2.7: the app's theme (saved 配色 + 深色模式, system dark followed) resolved for plain views. */
+    /** the app's theme (saved 配色 + 深色模式, system dark followed) resolved for plain views. */
     private class Look(
         val surface: Int, val hairline: Int, val title: Int, val sub: Int,
         val accent: Int, val errBg: Int, val errFg: Int,
     )
 
     private fun look(s: IrisAccessibilityService): Look {
-        val settings = runCatching { (s.application as com.iris.localai.IrisApp).container.settings.settings.value }.getOrNull()
+        val settings = runCatching { (s.application as IrisApp).container.settings.settings.value }.getOrNull()
         val sysDark = (s.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val dark = when (settings?.themeMode) {
-            com.iris.localai.data.ThemeMode.LIGHT -> false
-            com.iris.localai.data.ThemeMode.DARK -> true
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
             else -> sysDark
         }
-        val c = com.iris.localai.ui.theme.IrisPalette.of(settings?.themePalette).colors(dark)
+        val c = IrisPalette.of(settings?.themePalette).colors(dark)
         // No per-window background blur for an overlay view (blur-behind would blur the whole
         // screen and the agent's screenshots), so the frosted surface is a little more opaque.
         val base = if (dark) c.surfaceElevated.toArgb() else Color.WHITE
@@ -207,7 +210,7 @@ object GuiOverlay {
             val s = IrisAccessibilityService.instance ?: run { answer.complete(false); return@post }
             val wm = s.getSystemService(WindowManager::class.java)
             question?.let { runCatching { wm.removeView(it) } }
-            // 2.2.9: same frosted card + theme accent as the 停止 bar.
+            // same frosted card + theme accent as the 停止 bar.
             val k = look(s)
             val box = LinearLayout(s).apply {
                 orientation = LinearLayout.VERTICAL

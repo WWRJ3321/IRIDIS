@@ -1,15 +1,17 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * 2.2.10 性能 ›「终止温度」: unlike [ThermalGovernor] (which only slows tokens down), reaching this
+ * 性能 ›「终止温度」: unlike [ThermalGovernor] (which only slows tokens down), reaching this
  * temperature stops every generation and unloads every model; nothing reloads by itself.
  * Inputs: battery temperature (°C) plus the system's own signals.
  *
- * 2.4.2:
+ * 
  *  - The system signal used to trip on a single THERMAL_STATUS_SEVERE or a single predicted
  *    headroom ≥ 1.0 — on HyperOS that happens for a moment under any big model, so the cutoff
  *    fired at a battery of 4x°C while the notice showed that battery temperature ("没到就停").

@@ -1,5 +1,8 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
  * Whether an MNN CPU load may pass `enable_kleidiai=1`.
  *

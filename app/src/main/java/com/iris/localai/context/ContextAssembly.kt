@@ -1,5 +1,11 @@
 package com.iris.localai.context
 
+import com.iris.localai.data.TurnRefs
+import com.iris.localai.memory.MemoryItem
+import com.iris.localai.memory.MemoryRecall
+import com.iris.localai.util.ContextPlanner
+import com.iris.localai.util.TokenEstimator
+import com.iris.localai.util.io.Attachments
 import com.iris.localai.data.ChatMessage
 import com.iris.localai.data.ContextStrategy
 import com.iris.localai.data.Conversation
@@ -7,10 +13,10 @@ import com.iris.localai.data.Role
 import com.iris.localai.engine.PromptMessage
 import com.iris.localai.memory.MemoryPrompt
 import com.iris.localai.util.CtxMessage
-import com.iris.localai.util.ThinkParser
+import com.iris.localai.util.thinking.ThinkParser
 
 /**
- * 1.10.0: what goes in front of the context planner. Pure, unit-tested:
+ * what goes in front of the context planner. Pure, unit-tested:
  *  - the active history (after a manual break, error / empty replies left out, thinking stripped);
  *  - in 智能体 mode an assistant message carries its tool steps rolled up, one line each, so the
  *    next turn knows what was already done (the 1.9.0 gap);
@@ -26,24 +32,24 @@ object ContextAssembly {
             if (i >= 0) list = list.drop(i + 1)
         }
         return list
-            // 1.13.0: an assistant reply with a notice-type error but real text stays in history.
+            // an assistant reply with a notice-type error but real text stays in history.
             .filter { (it.error == null || (it.role == Role.ASSISTANT && it.content.isNotBlank())) && (it.content.isNotBlank() || it.attachments.isNotEmpty() || it.refs.isNotEmpty() || (withTools && it.agentSteps.isNotEmpty())) }
             .map { m ->
                 CompactMsg(
                     m.id,
                     if (m.role == Role.USER) CompactMsg.USER else CompactMsg.ASSISTANT,
-                    // 1.10.12: attached text files ride along with the user's words.
-                    if (m.role == Role.USER) com.iris.localai.data.TurnRefs.userText(m.content, com.iris.localai.util.Attachments.promptBlock(m.attachments, vision), m.refs) else ThinkParser.stripForHistory(m.content),
+                    // attached text files ride along with the user's words.
+                    if (m.role == Role.USER) TurnRefs.userText(m.content, Attachments.promptBlock(m.attachments, vision), m.refs) else ThinkParser.stripForHistory(m.content),
                     if (m.role == Role.ASSISTANT) m.agentSteps else emptyList(),
                 )
             }
             .filterNot { !it.isUser && it.text.isBlank() && (!withTools || it.steps.isEmpty()) }
     }
 
-    /** 2.2.17 D: [blocks] (message id → block the planner attaches) counted into each message's estimate. */
+    /** D: [blocks] (message id → block the planner attaches) counted into each message's estimate. */
     fun withExtras(active: List<CompactMsg>, blocks: Map<String, String>): List<CompactMsg> =
         if (blocks.isEmpty()) active else active.map { m ->
-            blocks[m.id]?.takeIf { it.isNotBlank() }?.let { m.copy(extraTokens = com.iris.localai.util.TokenEstimator.estimate(it) + 2) } ?: m
+            blocks[m.id]?.takeIf { it.isNotBlank() }?.let { m.copy(extraTokens = TokenEstimator.estimate(it) + 2) } ?: m
         }
 
     /** Messages the planner still sees (the compacted part left out). */
@@ -60,11 +66,11 @@ object ContextAssembly {
         memoryBlock.trim(),
     ).filter { it.isNotEmpty() }.joinToString("\n\n")
 
-    /** 2.3: the compaction summary, placed in front of the remaining history (ContextRequest.lead). */
+    /** the compaction summary, placed in front of the remaining history (ContextRequest.lead). */
     fun lead(state: CompactState?, recall: Boolean = false): String =
         state?.let { Compactor.render(it) + if (recall) "\n" + RECALL_HINT else "" }.orEmpty()
 
-    /** 2.1.9 (pi-vcc): after a compaction the original messages stay searchable — say how. */
+    /** pi-vcc: after a compaction the original messages stay searchable — say how. */
     const val RECALL_HINT = "需要早期原文细节时用 recall 查，别重做已完成的事。"
 
     /**
@@ -74,7 +80,7 @@ object ContextAssembly {
     fun autoAllowed(agentMode: Boolean, strategy: ContextStrategy, autoCompact: Boolean): Boolean =
         autoCompact && (agentMode || strategy == ContextStrategy.TOKEN_BUDGET)
 
-    /** 2.2.9 E: a strategy other than 按 token 预算 was chosen in 开发者选项 → 「已由开发者选项接管」. */
+    /** E: a strategy other than 按 token 预算 was chosen in 开发者选项 → 「已由开发者选项接管」. */
     fun devTakeover(strategy: ContextStrategy): Boolean = strategy != ContextStrategy.TOKEN_BUDGET
     const val TAKEOVER = "已由开发者选项接管"
 
@@ -83,14 +89,14 @@ object ContextAssembly {
         if (!inject || conv.memoryEpoch != epoch) "" else MemoryPrompt.frozen(conv.memorySnapshot.orEmpty(), MemoryPrompt.budget(contextTokens))
 
     /**
-     * 2.2.9 C: the relevant FACT items for the user message [query], put in front of that message
+     * C: the relevant FACT items for the user message [query], put in front of that message
      * (not the system prompt). Half the memory budget; "" when nothing matches.
      */
-    fun turnMemory(items: List<com.iris.localai.memory.MemoryItem>, query: String, contextTokens: Int): String =
-        com.iris.localai.memory.MemoryRecall.turnBlock(items, query, MemoryPrompt.budget(contextTokens) / 2)
+    fun turnMemory(items: List<MemoryItem>, query: String, contextTokens: Int): String =
+        MemoryRecall.turnBlock(items, query, MemoryPrompt.budget(contextTokens) / 2)
 
     /** Prompt messages of the base system + planner output, for tests and the agent prompt. */
     fun prompt(system: String, history: List<CtxMessage>, lead: String = ""): List<PromptMessage> =
         (if (system.isBlank()) emptyList() else listOf(PromptMessage(PromptMessage.SYSTEM, system))) +
-            com.iris.localai.util.ContextPlanner.withLead(history.map { PromptMessage(it.role, it.content) }, lead)
+            ContextPlanner.withLead(history.map { PromptMessage(it.role, it.content) }, lead)
 }

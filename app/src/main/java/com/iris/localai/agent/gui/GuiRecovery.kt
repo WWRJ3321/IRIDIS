@@ -7,14 +7,14 @@
  */
 package com.iris.localai.agent.gui
 
-/** 2.3.0: what kind of screen this is (from the element list; pure). */
+/** what kind of screen this is (from the element list; pure). */
 enum class ScreenKind { NORMAL, BLANK, NEEDS_HUMAN, APP_NOT_RESPONDING, APP_CRASHED }
 
 /** [button] = the system dialog's button the loop presses by itself (等待 / 关闭应用). */
 data class ScreenCheck(val kind: ScreenKind, val cause: String? = null, val button: UiElement? = null)
 
 /**
- * 2.3.0 screen diagnosis, after Mika's ScreenDiagnosis: captcha / payment / password / SMS-code
+ * screen diagnosis, after Mika's ScreenDiagnosis: captcha / payment / password / SMS-code
  * screens are pointed out to the model (it decides whether to hand over), an empty tree is reported,
  * and the system "app isn't responding" / "keeps stopping" dialogs are recognised so the loop can
  * clear them without spending a model step.
@@ -89,7 +89,7 @@ class StuckTracker {
 }
 
 /**
- * 2.3.0 step memory: older steps leave the history window, so they are kept as one summary line
+ * step memory: older steps leave the history window, so they are kept as one summary line
  * (apps visited, text typed, how many steps failed or changed nothing). Pure.
  */
 class StepMemory {
@@ -124,7 +124,7 @@ class StepMemory {
 }
 
 /**
- * 2.3.0 task-done check (Mika verifies answers before accepting them; here the model still judges):
+ * task-done check (Mika verifies answers before accepting them; here the model still judges):
  * a "done" right after an action that failed or changed nothing is sent back once with a request
  * to look at the current screen and confirm. Pure.
  */
@@ -138,7 +138,7 @@ object FinishCheck {
         "你说任务已完成，但上一步「$lastLabel」失败或画面没有变化。请看当前截图确认：确实完成就再次结束任务（finish / terminate），否则继续操作。"
 }
 
-/** 2.3.0: the foreground app changed although the action was not meant to switch apps (a mis-tap opened something). Pure. */
+/** the foreground app changed although the action was not meant to switch apps (a mis-tap opened something). Pure. */
 object AppJump {
     fun note(action: GuiAction, before: String?, after: String?): String? {
         if (before.isNullOrEmpty() || after.isNullOrEmpty() || before == after) return null

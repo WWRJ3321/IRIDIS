@@ -12,7 +12,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipInputStream
 
 /**
- * 2.3.2 角色卡 import / export (pure Kotlin, no Android):
+ * 角色卡 import / export (pure Kotlin, no Android):
  *  - PNG: tEXt (also zTXt / iTXt) chunk `ccv3` (V3) or `chara` (V1/V2), base64 of UTF-8 JSON; `ccv3` wins.
  *  - JSON: the card itself.
  *  - CHARX: zip with `card.json` at the root and assets (`embeded://path` URIs) inside.

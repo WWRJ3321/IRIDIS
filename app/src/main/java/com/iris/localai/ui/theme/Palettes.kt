@@ -1,23 +1,25 @@
 package com.iris.localai.ui.theme
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.compose.ui.graphics.Color
 
 /**
- * 2.1.4 配色: the default IRIDIS look plus four tinted themes. Each has a light and a dark variant;
+ * 配色: the default IRIDIS look plus four tinted themes. Each has a light and a dark variant;
  * 浅色 / 深色 / 跟随系统 still decides which one is used. The whole UI is tinted (page and chat
  * background, cards, bubbles, accent, selection), and text keeps WCAG AA contrast on every
  * surface (checked in V214ThemesTest).
  */
 enum class IrisPalette(val id: String, val label: String, val light: IrisColors, val dark: IrisColors) {
-    DEFAULT("default", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_18c634), IrisLightColors, IrisDarkColors),
-    SAKURA("sakura", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_fe96de), SakuraLight, SakuraDark),
-    MINT("mint", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_d72c6c), MintLight, MintDark),
-    LILAC("lilac", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_dc19f4), LilacLight, LilacDark),
-    CREAM("cream", com.iris.localai.I18n.s(com.iris.localai.R.string.theme_ff1a86), CreamLight, CreamDark),
-    /** 2.5.6: 烟雨白 page, 淡珊瑚 bubbles, 窈蓝 accent. */
-    MIST("mist", com.iris.localai.I18n.s(com.iris.localai.R.string.v256_theme_mist), MistLight, MistDark),
-    /** 2.5.6: 云霄 blue bubbles, 乳白 chat, 玫瑰粉 accent. */
-    SKY("sky", com.iris.localai.I18n.s(com.iris.localai.R.string.v256_theme_sky), SkyLight, SkyDark);
+    DEFAULT("default", I18n.s(R.string.theme_18c634), IrisLightColors, IrisDarkColors),
+    SAKURA("sakura", I18n.s(R.string.theme_fe96de), SakuraLight, SakuraDark),
+    MINT("mint", I18n.s(R.string.theme_d72c6c), MintLight, MintDark),
+    LILAC("lilac", I18n.s(R.string.theme_dc19f4), LilacLight, LilacDark),
+    CREAM("cream", I18n.s(R.string.theme_ff1a86), CreamLight, CreamDark),
+    /** 烟雨白 page, 淡珊瑚 bubbles, 窈蓝 accent. */
+    MIST("mist", I18n.s(R.string.v256_theme_mist), MistLight, MistDark),
+    /** 云霄 blue bubbles, 乳白 chat, 玫瑰粉 accent. */
+    SKY("sky", I18n.s(R.string.v256_theme_sky), SkyLight, SkyDark);
 
     fun colors(dark: Boolean): IrisColors = if (dark) this.dark else light
 
@@ -31,16 +33,16 @@ enum class IrisPalette(val id: String, val label: String, val light: IrisColors,
 }
 
 /**
- * 2.1.4 自定义背景: cards, bubbles and chips become slightly see-through so the picture shows
+ * 自定义背景: cards, bubbles and chips become slightly see-through so the picture shows
  * through; sheets, dialogs and the composer field ([IrisColors.surface]) stay opaque.
  */
-/** 2.2.14 纯色背景: one page colour everywhere, every glass tint fully opaque (nothing mixes). */
+/** 纯色背景: one page colour everywhere, every glass tint fully opaque (nothing mixes). */
 fun IrisColors.solid(): IrisColors = copy(
     chatBackground = background,
     glassTint = surface.copy(alpha = 1f),
     glassTintOpaque = surface.copy(alpha = 1f),
     glassRim = Color.Transparent,
-    backgroundTop = Color.Unspecified, // 2.5.0: no 柔光 gradient either
+    backgroundTop = Color.Unspecified, // no 柔光 gradient either
 )
 
 fun IrisColors.overBackdrop(): IrisColors = copy(
@@ -48,7 +50,7 @@ fun IrisColors.overBackdrop(): IrisColors = copy(
     surfaceElevated = surfaceElevated.copy(alpha = 0.88f),
     codeBackground = codeBackground.copy(alpha = 0.88f),
     accentContainer = accentContainer.copy(alpha = 0.9f),
-    backgroundTop = Color.Unspecified, // 2.5.0: the picture is the background
+    backgroundTop = Color.Unspecified, // the picture is the background
 )
 
 private fun tinted(
@@ -178,7 +180,7 @@ internal val SkyDark = tinted(
     outline = 0x24D6EEFA, glassTint = 0x8C0F181F, glassTintOpaque = 0xEB162028,
 )
 
-/** 2.5.6: 烟雨 / 云霄 swatches show their three source colours as a gradient (null = plain accent dot). */
+/** 烟雨 / 云霄 swatches show their three source colours as a gradient (null = plain accent dot). */
 val IrisPalette.swatchGradient: List<Color>?
     get() = when (this) {
         IrisPalette.MIST -> listOf(Color(0xFFE3E3E5), Color(0xFFFFD0DC), Color(0xFF7C9FCD))

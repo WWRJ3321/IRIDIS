@@ -1,5 +1,8 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.LocalIndication
@@ -76,7 +79,7 @@ fun Modifier.pressScale(interaction: MutableInteractionSource, pressedScale: Flo
 }
 
 /** Round icon button. [size] is the visual size; touch area is extended to 48 dp by Compose. */
-/** 2.2.11: default [PressableIcon] size; [IrisTopBar] lowers it so action icons match the 44 dp back circle. */
+/** default [PressableIcon] size; [IrisTopBar] lowers it so action icons match the 44 dp back circle. */
 val LocalPressableIconSize = androidx.compose.runtime.staticCompositionLocalOf { IrisDimens.touchTarget }
 
 @Composable
@@ -110,7 +113,7 @@ fun PressableIcon(
                 interactionSource = interaction,
                 indication = LocalIndication.current,
                 onClick = {
-                    if (haptic) haptics.perform(com.iris.localai.ui.feedback.FeedbackEvent.TOGGLE)
+                    if (haptic) haptics.perform(FeedbackEvent.TOGGLE)
                     onClick()
                 },
             ),
@@ -180,7 +183,7 @@ fun IrisButton(
     ) {
         if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(18.dp))
         AnimatedContent(text, transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "btnText") { t ->
-            FitText(t, style = IrisType.label, color = fg) // 2.4.4: shrink to fit instead of 「…」
+            FitText(t, style = IrisType.label, color = fg) // shrink to fit instead of 「…」
         }
     }
 }
@@ -288,7 +291,7 @@ fun SegmentedControl(
                     val seg = size.width / n.toFloat()
                     pos.dragBy(dx / seg, 0f, (n - 1).toFloat(), dimension = 1f)
                     val i = kotlin.math.round(pos.value).toInt().coerceIn(0, n - 1)
-                    if (i != lastIdx) { lastIdx = i; haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK) }
+                    if (i != lastIdx) { lastIdx = i; haptic.perform(FeedbackEvent.TICK) }
                     ch.consume()
                 }
             },
@@ -359,7 +362,7 @@ fun IrisSwitch(checked: Boolean, enabled: Boolean = true, interaction: MutableIn
     Box(
         modifier
             .size(width = 50.dp, height = 30.dp)
-            .semantics { contentDescription = if (checked) com.iris.localai.I18n.s(com.iris.localai.R.string.components_849320) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_d58a55) }
+            .semantics { contentDescription = if (checked) I18n.s(R.string.components_849320) else I18n.s(R.string.components_d58a55) }
             .drawBehind {
                 val p = pos.value
                 val t = p.coerceIn(0f, 1f)

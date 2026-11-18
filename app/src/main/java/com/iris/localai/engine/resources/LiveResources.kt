@@ -1,10 +1,14 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import com.iris.localai.data.ModelFormat
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * 1.7.2: when does a resource-tier change made *during* a reply reach the engine?
+ * when does a resource-tier change made *during* a reply reach the engine?
  *
  * Only GGUF on llama.cpp's CPU backend can take it mid-reply, and only the parts that ggml reads
  * per graph: thread count (llama_context::graph_compute → set_n_threads for every decode), and the
@@ -24,7 +28,7 @@ enum class LiveApply {
     LIVE_POLICY,
 }
 
-/** 1.7.5: what one tier change actually did — drives the one-line status on the resource card. */
+/** what one tier change actually did — drives the one-line status on the resource card. */
 enum class TierApplyResult {
     /** Everything the new tier changes is already in effect (live re-pin confirmed by the kernel). */
     LIVE,
@@ -38,11 +42,11 @@ enum class TierApplyResult {
     RELOADING,
     /** That reload finished: the model now runs with the tier. */
     RELOADED,
-    /** 1.7.7: the reload failed; the model was restored with the previous tier (setting reverted). */
+    /** the reload failed; the model was restored with the previous tier (setting reverted). */
     RELOAD_FAILED,
     /** No model loaded: the tier is used when one is. */
     NO_MODEL,
-    /** 1.10.2: LiteRT-LM on the GPU / NPU — not reloaded for a speed change; the next load uses it. */
+    /** LiteRT-LM on the GPU / NPU — not reloaded for a speed change; the next load uses it. */
     NEXT_LOAD,
 }
 
@@ -70,7 +74,7 @@ object LiveResourcePolicy {
     /**
      * Cores to pin [threads] running threads to when the target tier's [cpus] are fewer than them.
      *
-     * 1.7.5 released the pinning (every core) in that case, so a live switch 中→省电 / 全部→省电 on
+     * released the pinning (every core) in that case, so a live switch 中→省电 / 全部→省电 on
      * MNN (thread count fixed until the idle reload) let the old threads run on the prime cores
      * (cpu6/7 on the 8 Elite) — the opposite of what a lower tier asks for. 1.7.6: never unpin.
      *  - [cpus] empty (target = every core) or already ≥ [threads] cores → [cpus] unchanged;
@@ -80,7 +84,7 @@ object LiveResourcePolicy {
      * Examples on the 8 Elite: 中→省电 (2 threads, target cpu5) → cpu4-5; 全部→省电/中 (8 threads)
      * → cpu0-5. The idle reload then loads the target thread count and the plain target cores.
      * Prime cores already in [cpus] (高) stay; only non-prime cores are ever added.
-     * 1.7.8: [nonPrime] is the plan's widen pool = the user's configured 省电 + 中 cores
+     * [nonPrime] is the plan's widen pool = the user's configured 省电 + 中 cores
      * (资源档配置, same backend kind), so the result only ever uses cores the user gave the lower
      * tiers; 「全部」 is gone, so 全部→高 (8 threads on cpu0-7) can no longer happen.
      * Mirrors thread_policy.h cores_for, which now trusts the list it is given.
@@ -101,7 +105,7 @@ object LiveResourcePolicy {
     fun coresFor(plan: ResourcePlan, threads: Int): List<Int> = coresFor(plan.cpus, threads, plan.nonPrimeCpus)
 
     /**
-     * 1.7.5: result of one tier change on a loaded model. [liveOk] = the engine confirmed the
+     * result of one tier change on a loaded model. [liveOk] = the engine confirmed the
      * live part (null = it was not attempted), [threadsDiffer] = the new tier uses another thread
      * count than the loaded model.
      */
@@ -116,18 +120,18 @@ object LiveResourcePolicy {
         LiveApply.RELOAD -> TierApplyResult.RELOAD
     }
 
-    /** 1.7.5: the one short status line under the tier bar (null = nothing changed yet). */
+    /** the one short status line under the tier bar (null = nothing changed yet). */
     fun statusText(r: TierApplyResult?): String? = when (r) {
         null -> null
-        TierApplyResult.LIVE -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4633d9)
-        TierApplyResult.LIVE_THREADS_ON_RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c18fb3)
-        TierApplyResult.RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_998c99)
-        TierApplyResult.NEXT_REPLY -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_08d6a2)
-        TierApplyResult.RELOADING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_54e6e3)
-        TierApplyResult.RELOADED -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6d5736)
-        TierApplyResult.RELOAD_FAILED -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_acede9)
-        TierApplyResult.NO_MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b89512)
-        TierApplyResult.NEXT_LOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_862082)
+        TierApplyResult.LIVE -> I18n.s(R.string.engine_4633d9)
+        TierApplyResult.LIVE_THREADS_ON_RELOAD -> I18n.s(R.string.engine_c18fb3)
+        TierApplyResult.RELOAD -> I18n.s(R.string.engine_998c99)
+        TierApplyResult.NEXT_REPLY -> I18n.s(R.string.engine_08d6a2)
+        TierApplyResult.RELOADING -> I18n.s(R.string.chat_54e6e3)
+        TierApplyResult.RELOADED -> I18n.s(R.string.engine_6d5736)
+        TierApplyResult.RELOAD_FAILED -> I18n.s(R.string.engine_acede9)
+        TierApplyResult.NO_MODEL -> I18n.s(R.string.engine_b89512)
+        TierApplyResult.NEXT_LOAD -> I18n.s(R.string.engine_862082)
     }
 
     /**
@@ -142,11 +146,11 @@ object LiveResourcePolicy {
 
     /** Parts of the new plan that this reply will not use (shown / logged honestly). */
     fun deferredParts(current: ResourcePlan?, next: ResourcePlan, mode: LiveApply): List<String> {
-        if (mode != LiveApply.IMMEDIATE) return listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a8b0c2))
+        if (mode != LiveApply.IMMEDIATE) return listOf(I18n.s(R.string.agent_a8b0c2))
         if (current == null) return emptyList()
         val out = ArrayList<String>(2)
-        if (current.batch != next.batch) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e099c2)
-        if (current.allowGpu != next.allowGpu) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1c2f26)
+        if (current.batch != next.batch) out += I18n.s(R.string.engine_e099c2)
+        if (current.allowGpu != next.allowGpu) out += I18n.s(R.string.engine_1c2f26)
         return out
     }
 
@@ -156,20 +160,20 @@ object LiveResourcePolicy {
      * right away when idle, after the current reply when generating. Never "立即生效" for them.
      */
     fun note(mode: LiveApply, generating: Boolean): String = when {
-        mode == LiveApply.LIVE_POLICY && !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_062c7f)
-        mode == LiveApply.LIVE_POLICY -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_3e24d4)
-        mode == LiveApply.RELOAD && !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e39bbb)
-        mode == LiveApply.RELOAD -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8e41e9)
-        !generating -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_bcc05e)
-        mode == LiveApply.IMMEDIATE -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0a66ca)
-        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_7f77bf)
+        mode == LiveApply.LIVE_POLICY && !generating -> I18n.s(R.string.engine_062c7f)
+        mode == LiveApply.LIVE_POLICY -> I18n.s(R.string.engine_3e24d4)
+        mode == LiveApply.RELOAD && !generating -> I18n.s(R.string.engine_e39bbb)
+        mode == LiveApply.RELOAD -> I18n.s(R.string.engine_8e41e9)
+        !generating -> I18n.s(R.string.engine_bcc05e)
+        mode == LiveApply.IMMEDIATE -> I18n.s(R.string.engine_0a66ca)
+        else -> I18n.s(R.string.engine_7f77bf)
     }
 
-    /** 1.7.8: short card status when the model runs on the GPU / NPU (null on the CPU). */
-    fun backendNote(active: Backend?): String? = if (active == null || active == Backend.CPU) null else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_243289)
+    /** short card status when the model runs on the GPU / NPU (null on the CPU). */
+    fun backendNote(active: Backend?): String? = if (active == null || active == Backend.CPU) null else I18n.s(R.string.engine_243289)
 
-    /** 1.7.8: the full sentence for settings pages. */
-    val GPU_SCOPE_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2203f1)
+    /** the full sentence for settings pages. */
+    val GPU_SCOPE_NOTE: String get() = I18n.s(R.string.engine_2203f1)
 
 }
 
@@ -186,18 +190,18 @@ class PendingLive<T : Any> {
 }
 
 /**
- * 1.7.8: the per-reply IrisResource line (EngineManager.generateOnce), so tiers and backends can be
+ * the per-reply IrisResource line (EngineManager.generateOnce), so tiers and backends can be
  * compared on the phone with `adb logcat -s IrisResource`. Pure, unit-tested.
  */
 object ResourceLog {
     /** What the tier controls on each backend, said once per line so nobody reads too much into it. */
     fun scope(active: Backend?): String = when (active) {
-        Backend.CPU, null -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6fc6f4)
-        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a6ac8b)
+        Backend.CPU, null -> I18n.s(R.string.settings_6fc6f4)
+        else -> I18n.s(R.string.engine_a6ac8b)
     }
 
     /**
-     * 1.7.9: "low" / "normal" / "high" (what the OpenCL context really got), "none" (driver took no
+     * "low" / "normal" / "high" (what the OpenCL context really got), "none" (driver took no
      * hint), "unsupported" (LiteRT); "-" on the CPU. Notes the tier's wish when it differs.
      */
     fun gpuHintText(active: Backend?, plan: ResourcePlan?, effective: String?): String {
@@ -219,7 +223,7 @@ object ResourceLog {
         reason: StopReason?,
         tokens: Int?,
         tokPerSec: Float?,
-        /** 1.7.9: [ModelDetails.gpuHint] — the GPU perf hint actually in effect. */
+        /** [ModelDetails.gpuHint] — the GPU perf hint actually in effect. */
         gpuHint: String? = null,
     ): String {
         val tier = plan?.tier?.short ?: "?"

@@ -1,5 +1,10 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.components.SegmentedRow
+import com.iris.localai.ui.theme.IrisRadius
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -59,10 +64,10 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
     val tint by animateColorAsState(if (usage.nearFull) c.danger else c.textTertiary, motionSpec(IrisMotion.Color), label = "ctxTint")
     Row(
         modifier
-            .clip(com.iris.localai.ui.theme.IrisRadius.pillShape)
+            .clip(IrisRadius.pillShape)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_82e5eb, usage.used, usage.limit) }
-            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space4),
+            .semantics { contentDescription = I18n.s(R.string.chat_82e5eb, usage.used, usage.limit) }
+            .padding(horizontal = IrisSpace.S, vertical = IrisDimens.space4),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
     ) {
@@ -74,7 +79,7 @@ fun ContextMeter(usage: ContextUsage, onClick: () -> Unit, modifier: Modifier = 
         }
         Text(
             (if (usage.exact) "" else "≈") + "${short(usage.used)} / ${if (usage.limit > 0) short(usage.limit) else "?"}" +
-                (if (usage.summarizing) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_744a56) else "") + ContextText.meterSuffix(usage),
+                (if (usage.summarizing) I18n.s(R.string.chat_744a56) else "") + ContextText.meterSuffix(usage),
             style = IrisType.caption, color = tint, maxLines = 1,
         )
     }
@@ -98,16 +103,16 @@ fun ContextSheet(
     compactionText: String = "",
     onCompact: () -> Unit = {},
     onClearCompaction: () -> Unit = {},
-    /** 2.2.9 E: 本对话的策略 only with 开发者选项 › 开发者模式 on. */
+    /** E: 本对话的策略 only with 开发者选项 › 开发者模式 on. */
     showStrategy: Boolean = false,
-    /** 2.5.6: 上下文长度 of the loaded model (0 = nothing loaded); [trainContext] caps the choices. */
+    /** 上下文长度 of the loaded model (0 = nothing loaded); [trainContext] caps the choices. */
     contextLength: Int = 0,
     trainContext: Int = 0,
     onContextLength: ((Int) -> Unit)? = null,
 ) {
     val c = Iris.colors
     IrisSheet(onDismiss = onDismiss) {
-        SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_50f198))
+        SheetHeader(I18n.s(R.string.chat_50f198))
         Column(Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4)) {
             Text(ContextText.usageTitle(usage), style = IrisType.body, color = if (usage.nearFull) c.danger else c.text)
             Spacer(Modifier.height(IrisDimens.space4))
@@ -123,21 +128,21 @@ fun ContextSheet(
         }
         if (onContextLength != null && contextLength > 0) {
             val opts = ContextChoices.options(contextLength, trainContext)
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len))
+            SectionTitle(I18n.s(R.string.v256_ctx_len))
             SettingsGroup {
-                com.iris.localai.ui.components.SegmentedRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len_now, shortTokens(contextLength)),
+                SegmentedRow(
+                    I18n.s(R.string.v256_ctx_len_now, shortTokens(contextLength)),
                     opts.map { shortTokens(it) },
                     opts.indexOf(contextLength).coerceAtLeast(0),
                     onSelect = { i -> val n = opts[i]; if (n != contextLength) { onContextLength(n); onDismiss() } },
-                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v256_ctx_len_hint),
+                    subtitle = I18n.s(R.string.v256_ctx_len_hint),
                 )
             }
         }
         if (showStrategy || usage.overridden) {
-        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2436d1))
+        SectionTitle(I18n.s(R.string.chat_2436d1))
         SettingsGroup {
-            StrategyRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_82ef16), com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6100c4, globalStrategy.label), selected = !usage.overridden, enabled = true) { onStrategy(null) }
+            StrategyRow(I18n.s(R.string.chat_82ef16), I18n.s(R.string.chat_6100c4, globalStrategy.label), selected = !usage.overridden, enabled = true) { onStrategy(null) }
             ContextStrategy.entries.forEach { st ->
                 Divider()
                 val unsupported = st == ContextStrategy.KV_SHIFT && usage.shiftUnsupported != null
@@ -145,7 +150,7 @@ fun ContextSheet(
                     st.label,
                     when {
                         unsupported -> usage.shiftUnsupported!!
-                        st == ContextStrategy.SLIDING_WINDOW -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_efeb27, keepTurns)
+                        st == ContextStrategy.SLIDING_WINDOW -> I18n.s(R.string.chat_efeb27, keepTurns)
                         else -> st.hint
                     },
                     selected = usage.overridden && usage.strategy == st,
@@ -154,24 +159,24 @@ fun ContextSheet(
             }
         }
         }
-        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1107b5))
+        SectionTitle(I18n.s(R.string.chat_1107b5))
         SettingsGroup {
             SettingsRow(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2e622), icon = Icons.Outlined.ContentCut, enabled = hasMessages,
-                subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b31514),
+                I18n.s(R.string.chat_f2e622), icon = Icons.Outlined.ContentCut, enabled = hasMessages,
+                subtitle = I18n.s(R.string.chat_b31514),
                 onClick = { onBreakHere(); onDismiss() },
             )
             if (usage.hasBreak) {
                 Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_97702e), icon = Icons.Outlined.LinkOff, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_87afd1), onClick = { onClearBreak(); onDismiss() })
+                SettingsRow(I18n.s(R.string.chat_97702e), icon = Icons.Outlined.LinkOff, subtitle = I18n.s(R.string.chat_87afd1), onClick = { onClearBreak(); onDismiss() })
             }
             if (usage.hasSummary) {
                 Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d20427), icon = Icons.Outlined.DeleteSweep, subtitle = summary, subtitleMaxLines = 4, onClick = { onClearSummary(); onDismiss() })
+                SettingsRow(I18n.s(R.string.chat_d20427), icon = Icons.Outlined.DeleteSweep, subtitle = summary, subtitleMaxLines = 4, onClick = { onClearSummary(); onDismiss() })
             }
         }
-        // 1.10.0: deterministic compaction (no model call).
-        SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1b6c77))
+        // deterministic compaction (no model call).
+        SectionTitle(I18n.s(R.string.chat_1b6c77))
         SettingsGroup {
             SettingsRow(
                 ContextText.COMPACT, icon = Icons.Outlined.Compress, enabled = hasMessages,
@@ -187,7 +192,7 @@ fun ContextSheet(
                 )
             }
         }
-        GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f0c202) + if (usage.memoryInjected) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d33fc) else "")
+        GroupFootnote(I18n.s(R.string.chat_f0c202) + if (usage.memoryInjected) I18n.s(R.string.chat_5d33fc) else "")
     }
 }
 
@@ -195,12 +200,12 @@ fun ContextSheet(
 private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-            if (selected) Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+            if (selected) Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
         }
     }
 }
 
-/** 2.5.6: context lengths offered in the context sheet: at most 5, around the current one, never above the trained length. */
+/** context lengths offered in the context sheet: at most 5, around the current one, never above the trained length. */
 object ContextChoices {
     val ALL = listOf(2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288)
     fun options(current: Int, train: Int): List<Int> {
@@ -213,28 +218,28 @@ object ContextChoices {
     }
 }
 
-/** 1.10.0 texts of compaction (unit-tested). */
+/** texts of compaction (unit-tested). */
 object ContextText {
-    val COMPACT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_16a350)
-    val COMPACT_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_84cbc7)
-    val UNDO_COMPACT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a442e8)
-    /** 2.2.9 E: the one switch. */
-    val AUTO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bbba84)
-    val AUTO_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_25e748)
-    fun compacted(u: ContextUsage): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ac1c, u.compactedMessages) + if (u.compactions > 1) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_71b5d7, u.compactions) else ""
-    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fcc0f3) else ""
-    fun divider(n: Int): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_e4733e, n)
-    fun compactNotice(n: Int): String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a29a4d, n)
-    /** 2.2.9 E: 「这次对话用了 41%」 (no conversation / no model → 「这次对话还没开始」). */
-    fun usageTitle(u: ContextUsage): String = if (u.limit > 0 && u.used > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5cde4e, (u.fraction * 100).toInt()) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_98486a)
+    val COMPACT: String get() = I18n.s(R.string.chat_16a350)
+    val COMPACT_HINT: String get() = I18n.s(R.string.chat_84cbc7)
+    val UNDO_COMPACT: String get() = I18n.s(R.string.chat_a442e8)
+    /** E: the one switch. */
+    val AUTO: String get() = I18n.s(R.string.chat_bbba84)
+    val AUTO_SUB: String get() = I18n.s(R.string.chat_25e748)
+    fun compacted(u: ContextUsage): String = I18n.s(R.string.chat_26ac1c, u.compactedMessages) + if (u.compactions > 1) I18n.s(R.string.chat_71b5d7, u.compactions) else ""
+    fun meterSuffix(u: ContextUsage): String = if (u.compactedMessages > 0) I18n.s(R.string.chat_fcc0f3) else ""
+    fun divider(n: Int): String = I18n.s(R.string.chat_e4733e, n)
+    fun compactNotice(n: Int): String = I18n.s(R.string.chat_a29a4d, n)
+    /** E: 「这次对话用了 41%」 (no conversation / no model → 「这次对话还没开始」). */
+    fun usageTitle(u: ContextUsage): String = if (u.limit > 0 && u.used > 0) I18n.s(R.string.chat_5cde4e, (u.fraction * 100).toInt()) else I18n.s(R.string.chat_98486a)
     /** 「这次对话用了 41% · 模型现在能看到最近 26 条」. */
-    fun usageLine(u: ContextUsage): String = usageTitle(u) + if (u.visibleMessages > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_25ff72, u.visibleMessages) else ""
+    fun usageLine(u: ContextUsage): String = usageTitle(u) + if (u.visibleMessages > 0) I18n.s(R.string.chat_25ff72, u.visibleMessages) else ""
     /** Detail line under the bar: 「约 3.4k / 8k · 模型现在能看到最近 26 条」. */
     fun usageDetail(u: ContextUsage): String = listOfNotNull(
-        if (u.limit > 0) (if (u.exact) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35)) + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_3c47ff),
-        u.visibleMessages.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a20e8a, it) },
-        // 2.3.2: knowledge snippets counted apart (part of the total above).
-        u.knowledgeTokens.takeIf { it > 0 }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.kb232_meter, shortTokens(it)) },
+        if (u.limit > 0) (if (u.exact) "" else I18n.s(R.string.chat_768d35)) + "${shortTokens(u.used)} / ${shortTokens(u.limit)}" else I18n.s(R.string.chat_3c47ff),
+        u.visibleMessages.takeIf { it > 0 }?.let { I18n.s(R.string.chat_a20e8a, it) },
+        // knowledge snippets counted apart (part of the total above).
+        u.knowledgeTokens.takeIf { it > 0 }?.let { I18n.s(R.string.kb232_meter, shortTokens(it)) },
     ).joinToString(" · ")
 }
 
@@ -246,7 +251,7 @@ fun shortTokens(n: Int): String = when {
     else -> "$n"
 }
 
-/** 1.10.0: thin marker after the last compacted message (tap = 撤销压缩). */
+/** thin marker after the last compacted message (tap = 撤销压缩). */
 @Composable
 fun CompactionDivider(count: Int, onClear: () -> Unit) {
     val c = Iris.colors
@@ -260,7 +265,7 @@ fun CompactionDivider(count: Int, onClear: () -> Unit) {
         Icon(Icons.Outlined.Compress, null, tint = c.textTertiary, modifier = Modifier.size(14.dp))
         Text(
             ContextText.divider(count), style = IrisType.caption, color = c.textTertiary,
-            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
+            modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
         )
         Box(Modifier.weight(1f).height(1.dp).padding(start = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline.copy(alpha = 0.6f)) }
@@ -280,8 +285,8 @@ fun ContextBreakDivider(onClear: () -> Unit) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline) }
         }
         Text(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7217c), style = IrisType.caption, color = c.textTertiary,
-            modifier = Modifier.clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
+            I18n.s(R.string.chat_c7217c), style = IrisType.caption, color = c.textTertiary,
+            modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClick = onClear).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4),
         )
         Box(Modifier.weight(1f).height(1.dp).padding(start = IrisDimens.space8)) {
             Canvas(Modifier.fillMaxWidth().height(1.dp)) { drawRect(c.outline) }

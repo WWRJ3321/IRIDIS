@@ -1,11 +1,19 @@
 package com.iris.localai.engine
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.geniex.GenieX
+import com.iris.localai.engine.geniex.GenieXRules
+import com.iris.localai.engine.geniex.GgufEngineRule
+import com.iris.localai.engine.llama.LlamaHtpRuntime
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import android.content.Context
 import com.iris.localai.data.LocalModel
 import com.iris.localai.data.ModelFormat
 
 /**
- * 1.7.1: one backend abstraction for all three engines. Every engine declares which of these it
+ * one backend abstraction for all three engines. Every engine declares which of these it
  * can run a given model on ([BackendCapabilities]); [EngineManager] picks one, loads, falls back
  * along [BackendPlanner.chain] (NPU → GPU → CPU), remembers native crashes ([BackendCrashMemory])
  * and reports the backend that is really in use ([ModelDetails.activeBackend]).
@@ -35,16 +43,21 @@ data class BackendEnvironment(
     val npuRuntimeInstalled: Boolean,
     /** The full flavour ships LiteRT-LM and MNN. */
     val fullFlavor: Boolean,
-    /** 2.2.0: why GenieX cannot run right now (not in this build / not Snapdragon / runtime missing), null = ready. */
-    val geniexBlock: String? = com.iris.localai.engine.geniex.GenieX.NOT_IN_BUILD,
-    /** 2.2.0: this chip can run AI Hub QAIRT bundles through GenieX. */
+    /** why GenieX cannot run right now (not in this build / not Snapdragon / runtime missing), null = ready. */
+    val geniexBlock: String? = GenieX.NOT_IN_BUILD,
+    /** this chip can run AI Hub QAIRT bundles through GenieX. */
     val geniexQairt: Boolean = false,
-    /** 2.2.15: the built-in llama.cpp Hexagon runtime (libiris_lhtp + upstream ggml-hexagon) can run GGUF on this chip's NPU. */
+    /** the built-in llama.cpp Hexagon runtime (libiris_lhtp + upstream ggml-hexagon) can run GGUF on this chip's NPU. */
     val htpReady: Boolean = false,
-    /** 2.3.6: llama.cpp's Vulkan backend is used for GGUF on the GPU (non-Qualcomm SoC: Mali / Immortalis / Xclipse). */
+    /** llama.cpp's Vulkan backend is used for GGUF on the GPU (non-Qualcomm SoC: Mali / Immortalis / Xclipse). */
     val hasVulkan: Boolean = false,
+    /** 驱动文件在，但上次 CPU 加载崩溃后为安全关闭了 OpenCL（可在模型设置里「重新检测 GPU」）。 */
+    val openClOff: Boolean = false,
 ) {
-    /** 2.3.6: the GGUF (llama.cpp) GPU path on this device: Adreno → OpenCL, anything else → Vulkan. */
+    /** GPU 不可用时的原因：被安全关闭 / 真没有驱动。 */
+    fun noGpuReason(): String = if (openClOff) I18n.s(R.string.engine_cl_off) else I18n.s(R.string.engine_2d318f)
+
+    /** the GGUF (llama.cpp) GPU path on this device: Adreno → OpenCL, anything else → Vulkan. */
     val ggufGpu: Boolean get() = if (hasVulkan) true else hasOpenCl
 
     companion object {
@@ -53,22 +66,24 @@ data class BackendEnvironment(
             "/vendor/lib64/egl/libGLES_mali.so",
         )
 
-        /** 2.0: base id (SM8750P / SM8750-AB → sm8750), the same rule the LiteRT engine uses ([NpuIds]). */
+        /** base id (SM8750P / SM8750-AB → sm8750), the same rule the LiteRT engine uses ([NpuIds]). */
         private fun socModel(): String? =
             if (android.os.Build.VERSION.SDK_INT >= 31) NpuIds.baseSocId(android.os.Build.SOC_MODEL) else null
 
         fun probe(context: Context): BackendEnvironment {
             val npu = runCatching { EngineFactory.npu(context) }.getOrNull()
             val gx = runCatching { EngineFactory.geniex(context) }.getOrNull()
+            val clDriver = OPENCL_PATHS.any { java.io.File(it).exists() }
             return BackendEnvironment(
-                hasOpenCl = !BackendCrashMemory.openClDisabled && OPENCL_PATHS.any { java.io.File(it).exists() },
+                hasOpenCl = !BackendCrashMemory.openClDisabled && clDriver,
+                openClOff = BackendCrashMemory.openClDisabled && clDriver,
                 npuSoc = npu?.takeIf { it.chipLabel != null }?.let { socModel() },
-                // 2.4.4: the MediaTek dispatch library is in the APK and copied on load, so it never waits on a download.
+                // the MediaTek dispatch library is in the APK and copied on load, so it never waits on a download.
                 npuRuntimeInstalled = npu?.state?.value is NpuState.Installed || npu?.vendor == NpuVendor.MEDIATEK,
                 fullFlavor = ModelFormat.LITERT in EngineFactory.supportedFormats,
-                geniexBlock = com.iris.localai.engine.geniex.GenieXRules.block(gx?.state?.value),
+                geniexBlock = GenieXRules.block(gx?.state?.value),
                 geniexQairt = gx?.qairtSupported == true,
-                htpReady = runCatching { com.iris.localai.engine.llama.LlamaHtpRuntime.available(context) }.getOrDefault(false),
+                htpReady = runCatching { LlamaHtpRuntime.available(context) }.getOrDefault(false),
                 hasVulkan = GpuPolicy.vulkanGguf(),
             )
         }
@@ -98,32 +113,32 @@ object BackendCapabilities {
     fun npuKv(fileName: String): Int? = NpuIds.kvCapacity(fileName)
 
     fun options(format: ModelFormat, fileName: String, env: BackendEnvironment, engine: String? = null): List<BackendOption> {
-        val noCl = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2d318f)
+        val noCl = env.noGpuReason()
         return when (format) {
-            // 2.1.3: no engine given (the normal case) → the backend decides the engine (NPU = GenieX).
+            // no engine given (the normal case) → the backend decides the engine (NPU = GenieX).
             ModelFormat.GGUF -> if (engine == null) {
-                com.iris.localai.engine.geniex.GgufEngineRule.options(env)
-            } else if (engine == com.iris.localai.engine.geniex.GenieX.ENGINE_GENIEX) {
-                com.iris.localai.engine.geniex.GenieXRules.ggufOptions(env)
+                GgufEngineRule.options(env)
+            } else if (engine == GenieX.ENGINE_GENIEX) {
+                GenieXRules.ggufOptions(env)
             } else listOf(
                 BackendOption(Backend.CPU, true, detail = "llama.cpp · ARM KleidiAI"),
                 BackendOption(Backend.GPU, env.ggufGpu, if (env.ggufGpu) null else noCl, GpuPolicy.ggufGpuDetail(env)),
-                BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5d3c02)),
+                BackendOption(Backend.NPU, false, I18n.s(R.string.engine_5d3c02)),
             )
             ModelFormat.LITERT -> {
                 if (!env.fullFlavor) return listOf(
-                    BackendOption(Backend.CPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
-                    BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
-                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_68c04c)),
+                    BackendOption(Backend.CPU, false, I18n.s(R.string.engine_68c04c)),
+                    BackendOption(Backend.GPU, false, I18n.s(R.string.engine_68c04c)),
+                    BackendOption(Backend.NPU, false, I18n.s(R.string.engine_68c04c)),
                 )
                 val target = npuTarget(fileName)
                 if (target != null) {
                     // AOT-compiled for one NPU: the graph cannot run anywhere else.
-                    val onlyNpu = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_38a7f5, target.uppercase())
+                    val onlyNpu = I18n.s(R.string.engine_38a7f5, target.uppercase())
                     val npuReason = when {
-                        env.npuSoc == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_03e4b1)
-                        !NpuIds.socMatches(target, env.npuSoc) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_81efa3, target.uppercase(), env.npuSoc.uppercase())
-                        !env.npuRuntimeInstalled -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f2f7b2)
+                        env.npuSoc == null -> I18n.s(R.string.engine_03e4b1)
+                        !NpuIds.socMatches(target, env.npuSoc) -> I18n.s(R.string.engine_81efa3, target.uppercase(), env.npuSoc.uppercase())
+                        !env.npuRuntimeInstalled -> I18n.s(R.string.engine_f2f7b2)
                         else -> null
                     }
                     listOf(
@@ -133,54 +148,54 @@ object BackendCapabilities {
                     )
                 } else listOf(
                     BackendOption(Backend.CPU, true, detail = "XNNPACK"),
-                    // 1.10.3: an explicit GPU pick is still honoured, but say what it costs.
+                    // an explicit GPU pick is still honoured, but say what it costs.
                     BackendOption(Backend.GPU, true, detail = "Adreno · ML Drift · $LITERT_GPU_WARNING"),
                     BackendOption(Backend.NPU, false, "通用 .litertlm 不能上 NPU；需要带 _${env.npuSoc ?: "sm8750"} 的 NPU 编译版"),
                 )
             }
             ModelFormat.MNN -> {
                 if (!env.fullFlavor) return listOf(
-                    BackendOption(Backend.CPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
-                    BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
-                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1b7218)),
+                    BackendOption(Backend.CPU, false, I18n.s(R.string.engine_1b7218)),
+                    BackendOption(Backend.GPU, false, I18n.s(R.string.engine_1b7218)),
+                    BackendOption(Backend.NPU, false, I18n.s(R.string.engine_1b7218)),
                 )
                 listOf(
                     BackendOption(Backend.CPU, true, detail = "ARMv8.2 FP16 · KleidiAI"),
                     BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, "OpenCL"),
-                    BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e7293d)),
+                    BackendOption(Backend.NPU, false, I18n.s(R.string.engine_e7293d)),
                 )
             }
-            ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieXRules.qairtOptions(env)
+            ModelFormat.QAIRT -> GenieXRules.qairtOptions(env)
             ModelFormat.EDGE0 -> listOf(
                 BackendOption(Backend.CPU, true, detail = "armv8.6-a · i8mm"),
-                BackendOption(Backend.GPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.e265_cpu_only)),
-                BackendOption(Backend.NPU, false, com.iris.localai.I18n.s(com.iris.localai.R.string.e265_cpu_only)),
+                BackendOption(Backend.GPU, false, I18n.s(R.string.e265_cpu_only)),
+                BackendOption(Backend.NPU, false, I18n.s(R.string.e265_cpu_only)),
             )
         }
     }
 
     fun features(format: ModelFormat, fileName: String, backend: Backend? = null, engine: String? = null): EngineFeatures = when (format) {
-        ModelFormat.GGUF -> if (engine == com.iris.localai.engine.geniex.GenieX.ENGINE_GENIEX) com.iris.localai.engine.geniex.GenieXRules.GGUF_FEATURES else EngineFeatures(
+        ModelFormat.GGUF -> if (engine == GenieX.ENGINE_GENIEX) GenieXRules.GGUF_FEATURES else EngineFeatures(
             contextShift = true, flashAttention = true, kvQuant = true, mmap = true,
             presenceFrequency = true, seed = true, batchSize = true, liveThreads = true,
         )
         ModelFormat.LITERT -> EngineFeatures(
             minP = false, repeatPenalty = false,
-            // 2.0: compiled KV size, else the family default (Gemma 4 NPU 4096, unknown 1024).
+            // compiled KV size, else the family default (Gemma 4 NPU 4096, unknown 1024).
             fixedContext = if (npuTarget(fileName) != null) NpuIds.historyBudget(fileName) else null,
         )
         ModelFormat.MNN -> EngineFeatures(mmap = true)
-        ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieXRules.QAIRT_FEATURES
+        ModelFormat.QAIRT -> GenieXRules.QAIRT_FEATURES
         ModelFormat.EDGE0 -> EngineFeatures(minP = false, repeatPenalty = false)
     }
 
     /** Reason context shift is unavailable for this engine, or null when it is supported. */
     fun contextShiftUnsupported(format: ModelFormat?): String? = when (format) {
         ModelFormat.GGUF, null -> null
-        ModelFormat.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee01f1)
-        ModelFormat.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4d508e)
-        ModelFormat.QAIRT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c7c233)
-        ModelFormat.EDGE0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.e265_no_shift)
+        ModelFormat.LITERT -> I18n.s(R.string.engine_ee01f1)
+        ModelFormat.MNN -> I18n.s(R.string.engine_4d508e)
+        ModelFormat.QAIRT -> I18n.s(R.string.engine_c7c233)
+        ModelFormat.EDGE0 -> I18n.s(R.string.e265_no_shift)
     }
 
     /**
@@ -192,7 +207,7 @@ object BackendCapabilities {
     fun autoBackend(format: ModelFormat, fileName: String, options: List<BackendOption>, allowGpu: Boolean = true): Backend {
         val avail = options.filter { it.available }.map { it.backend }.toSet()
         val wanted = when {
-            // 2.1.3: GGUF 自动 stays on the CPU even when GenieX makes the NPU available (NPU is an explicit pick).
+            // GGUF 自动 stays on the CPU even when GenieX makes the NPU available (NPU is an explicit pick).
             Backend.NPU in avail && format != ModelFormat.GGUF -> Backend.NPU
             format == ModelFormat.LITERT && allowGpu && !prefersCpu(fileName) && Backend.GPU in avail -> Backend.GPU
             else -> Backend.CPU
@@ -201,15 +216,15 @@ object BackendCapabilities {
     }
 
     /**
-     * 1.7.8: the backend a load starts with. The user's explicit choice (model setting or the
+     * the backend a load starts with. The user's explicit choice (model setting or the
      * engine's default backend) always wins and is independent of the resource tier; only 自动
      * ([explicit] == null) applies [autoBackend]'s fixed per-format policy.
      */
     fun preferred(explicit: Backend?, format: ModelFormat, fileName: String, options: List<BackendOption>): Backend =
         explicit ?: autoBackend(format, fileName, options, allowGpu = true)
 
-    /** 1.10.3: shown on the LiteRT GPU option (model settings / default backend). */
-    val LITERT_GPU_WARNING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2bac8a)
+    /** shown on the LiteRT GPU option (model settings / default backend). */
+    val LITERT_GPU_WARNING: String get() = I18n.s(R.string.engine_2bac8a)
 
     /**
      * LiteRT models 自动 keeps on the CPU. Qwen3.5 (≤ 1.8.0) and, 1.9.0, Agents-A1 (a Qwen3.5-based
@@ -255,7 +270,7 @@ class BackendCrashMemory(context: Context) {
         prefs.getString(KEY_ARMED, null)?.let { armed ->
             val e = prefs.edit().remove(KEY_ARMED)
             if (lastExitWasCrash(context)) {
-                // 2.2.13: any crash during a load turns on crash-safe mode for the next load (CPU only).
+                // any crash during a load turns on crash-safe mode for the next load (CPU only).
                 e.putBoolean(KEY_SAFE_MODE, true)
                 // A CPU load that still crashed: the OpenCL registry probe (runs for every load) is the
                 // prime suspect on some Adreno drivers, so keep the vendor OpenCL driver out from now on.
@@ -268,7 +283,7 @@ class BackendCrashMemory(context: Context) {
         if (openClDisabled) runCatching { android.system.Os.setenv("IRIS_NO_OPENCL", "1", true) }
     }
 
-    /** 2.2.13: true once after a load crashed the app; that next load runs on CPU only. */
+    /** true once after a load crashed the app; that next load runs on CPU only. */
     fun takeSafeMode(): Boolean {
         if (!prefs.getBoolean(KEY_SAFE_MODE, false)) return false
         prefs.edit().remove(KEY_SAFE_MODE).commit()
@@ -296,7 +311,7 @@ class BackendCrashMemory(context: Context) {
     fun crashed(modelId: String): Set<Backend> =
         Backend.entries.filter { prefs.getBoolean(BAD_PREFIX + key(modelId, it), false) }.toSet()
 
-    /** 2.2.14: an OpenCL (llama.cpp GPU) load hung on this device; GGUF defaults to CPU until retried. */
+    /** an OpenCL (llama.cpp GPU) load hung on this device; GGUF defaults to CPU until retried. */
     val openClHung: Boolean get() = prefs.getBoolean(KEY_CL_HUNG, false)
 
     /** Written before the process restarts: remember the hang and which model to reload on CPU. */
@@ -312,6 +327,18 @@ class BackendCrashMemory(context: Context) {
         return f
     }
 
+    /**
+     * 「重新检测 GPU」：清掉崩溃后关闭 OpenCL 的记录，本进程重新允许 OpenCL。
+     * 返回 true 表示本进程启动时已关闭过 OpenCL（原生库可能已按此初始化），需重启应用才完全生效。
+     */
+    fun retryGpu(): Boolean {
+        val wasOff = openClDisabled
+        prefs.edit().remove(KEY_NO_OPENCL).remove(KEY_CL_HUNG).remove(KEY_CL_HANG_DETAIL).commit()
+        openClDisabled = false
+        runCatching { android.system.Os.unsetenv("IRIS_NO_OPENCL") }
+        return wasOff
+    }
+
     fun forget(modelId: String) {
         val e = prefs.edit().remove(KEY_NO_OPENCL).remove(KEY_CL_HUNG).remove(KEY_CL_HANG_DETAIL)
         Backend.entries.forEach { e.remove(BAD_PREFIX + key(modelId, it)) }
@@ -321,7 +348,7 @@ class BackendCrashMemory(context: Context) {
     private fun key(modelId: String, b: Backend) = "${b.name}|$modelId"
 
     companion object {
-        /** 2.2.13: OpenCL kept off for this process after a CPU load crashed (see init). */
+        /** OpenCL kept off for this process after a CPU load crashed (see init). */
         @Volatile var openClDisabled = false
             private set
         private const val KEY_ARMED = "armed"
@@ -339,7 +366,7 @@ fun LocalModel.backendOptions(env: BackendEnvironment, engine: String? = null): 
     BackendCapabilities.options(format, fileName, env, engine)
 
 /**
- * 2.3.6: which GPU API llama.cpp uses. Qualcomm (Adreno) stays on OpenCL, where llama.cpp has hand-tuned
+ * which GPU API llama.cpp uses. Qualcomm (Adreno) stays on OpenCL, where llama.cpp has hand-tuned
  * kernels; other SoCs (MediaTek / Exynos / Tensor: Mali, Immortalis, Xclipse) use Vulkan. The native
  * side applies the same rule (GGML_DISABLE_VULKAN before the backend registry starts, iris_engine.cpp).
  */
@@ -354,6 +381,6 @@ object GpuPolicy {
         listOf("/system/lib64/libvulkan.so", "/vendor/lib64/libvulkan.so").any { java.io.File(it).exists() }
 
     fun ggufGpuDetail(env: BackendEnvironment): String =
-        if (env.hasVulkan) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_vk236)
-        else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4abf01)
+        if (env.hasVulkan) I18n.s(R.string.engine_vk236)
+        else I18n.s(R.string.engine_4abf01)
 }

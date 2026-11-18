@@ -1,10 +1,16 @@
 package com.iris.localai.translate
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.workspace.StorageLayout
+import com.iris.localai.data.DownloadSources
+import com.iris.localai.data.ModelDirs
+import com.iris.localai.data.ModelStorage
 import android.content.Context
 import android.os.StatFs
 import com.iris.localai.data.DownloadSource
 import com.iris.localai.data.Format
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import com.iris.localai.voice.PackState
 import com.iris.localai.voice.VoiceDirs
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +25,7 @@ import java.io.IOException
 import kotlin.coroutines.coroutineContext
 
 /**
- * 2.3.0 ③: offline translation packs — Mozilla Firefox Translations (Bergamot / Marian) models,
+ * offline translation packs — Mozilla Firefox Translations (Bergamot / Marian) models,
  * one direction per pack, pinned to a Hugging Face revision and fetched through the same download
  * sources as voice packs (自动 / 魔搭 / hf-mirror / HF). Models: MPL-2.0 (Mozilla
  * firefox-translations-models); the Hugging Face copy is published under CC-BY-4.0.
@@ -30,12 +36,12 @@ enum class TranslatePack(
     val sizes: List<Long>,
 ) {
     ZH_EN(
-        "bergamot-zhen-tiny", TransLang.ZH, TransLang.EN, com.iris.localai.I18n.s(com.iris.localai.R.string.translate_d72896), com.iris.localai.I18n.s(com.iris.localai.R.string.translate_688492),
+        "bergamot-zhen-tiny", TransLang.ZH, TransLang.EN, I18n.s(R.string.translate_d72896), I18n.s(R.string.translate_688492),
         "tiny/zhen", "model.zhen.intgemm.alphas.bin", "lex.50.50.zhen.s2t.bin", "vocab.zhen.spm", "vocab.zhen.spm",
         listOf(25_461_051L, 9_219_524L, 1_359_697L),
     ),
     EN_ZH(
-        "bergamot-enzh-base", TransLang.EN, TransLang.ZH, com.iris.localai.I18n.s(com.iris.localai.R.string.translate_931985), com.iris.localai.I18n.s(com.iris.localai.R.string.translate_5ecfb0),
+        "bergamot-enzh-base", TransLang.EN, TransLang.ZH, I18n.s(R.string.translate_931985), I18n.s(R.string.translate_5ecfb0),
         "base/enzh", "model.enzh.intgemm.alphas.bin", "lex.50.50.enzh.s2t.bin", "srcvocab.enzh.spm", "trgvocab.enzh.spm",
         listOf(42_992_955L, 6_506_248L, 806_952L, 772_004L),
     );
@@ -76,7 +82,7 @@ object BergamotConfig {
 class TranslatePackStore(private val context: Context) {
     private val privateRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, SUB).apply { mkdirs() }
 
-    private fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateRoot, com.iris.localai.agent.StorageLayout.VOICE + "/" + SUB)
+    private fun location(): ModelDirs.Location = ModelStorage.location(privateRoot, StorageLayout.VOICE + "/" + SUB)
 
     fun dir(pack: TranslatePack): File = location().let { VoiceDirs.packDir(it.listDirs, it.dir, pack.id, MARKER) }
     fun isInstalled(pack: TranslatePack) = File(dir(pack), MARKER).exists()
@@ -93,7 +99,7 @@ class TranslatePackStore(private val context: Context) {
         val need = pack.totalBytes - have + 32L * 1024 * 1024
         try {
             val free = StatFs(dir.absolutePath).availableBytes
-            if (free < need) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
+            if (free < need) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
             var done = have
             publish(pack, PackState.Downloading(done, pack.totalBytes))
             for ((name, size) in pack.files) {
@@ -102,8 +108,8 @@ class TranslatePackStore(private val context: Context) {
                 if (target.exists() && target.length() == size) continue
                 val url = "${com.iris.localai.data.DownloadSources.HF}/${TranslatePack.REPO}/resolve/${TranslatePack.REVISION}/${pack.dir}/$name"
                 val before = done - (HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L)
-                com.iris.localai.data.DownloadSources.fetchAny(
-                    com.iris.localai.data.DownloadSources.resolve(url, source), target, size,
+                DownloadSources.fetchAny(
+                    DownloadSources.resolve(url, source), target, size,
                     { got -> done = before + got; publish(pack, PackState.Downloading(done, pack.totalBytes)) },
                     fetch = { u, t, e, b -> HttpDownload.fetchOnce(u, t, e, b) }, attemptsPerSource = 3,
                 )
@@ -112,7 +118,7 @@ class TranslatePackStore(private val context: Context) {
             File(dir, MARKER).writeText(TranslatePack.REVISION)
             publish(pack, PackState.Installed)
         } catch (t: Throwable) {
-            publish(pack, if (t is kotlinx.coroutines.CancellationException) (if (isInstalled(pack)) PackState.Installed else PackState.NotInstalled) else PackState.Failed(t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)))
+            publish(pack, if (t is kotlinx.coroutines.CancellationException) (if (isInstalled(pack)) PackState.Installed else PackState.NotInstalled) else PackState.Failed(t.message ?: I18n.s(R.string.data_65e200)))
             throw t
         }
     }

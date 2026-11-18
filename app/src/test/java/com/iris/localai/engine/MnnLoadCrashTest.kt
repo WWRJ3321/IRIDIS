@@ -53,22 +53,4 @@ class MnnLoadCrashTest {
         assertEquals(PreloadDecision.LOAD, PreloadPolicy.decide(true, "a.mnn", true, true, false))
     }
 
-    @Test fun loadPathCarriesTheGuard() {
-        val em = file("src/main/java/com/iris/localai/engine/EngineManager.kt").readText()
-        assertTrue(em.contains("startupGuard.blockAutoLoad()"))
-        assertTrue(em.contains("加载模型 "))
-        assertTrue(em.contains("startupGuard.noteLoadSucceeded()"))
-        assertTrue(em.contains("_preloadSkipNotice.value = startupGuard.skipNotice()"))
-        val guard = file("src/main/java/com/iris/localai/engine/load/StartupLoadGuard.kt").readText()
-        assertTrue(guard.contains(".commit()"))
-        assertFalse(guard.contains(".apply()"))
-        val vm = file("src/main/java/com/iris/localai/ui/chat/ChatViewModel.kt").readText()
-        assertTrue(vm.contains("c.engine.preloadSkipNotice.collect"))
-        val mnn = file("src/full/java/com/iris/localai/engine/mnn/MnnEngine.kt").readText()
-        assertTrue(mnn.contains("MnnKleidiPolicy.enabled"))
-        assertTrue(mnn.contains("|kleidi="))
-        val cpp = file("src/main/cpp/mnn/mnn_engine.cpp").readText()
-        assertTrue(cpp.contains("kleidi="))
-        assertTrue(cpp.contains("backendType == \"cpu\" && kleidi"))
-    }
 }

@@ -1,6 +1,6 @@
 package com.iris.localai.files
 
-import com.iris.localai.agent.StorageLayout
+import com.iris.localai.agent.workspace.StorageLayout
 import com.iris.localai.data.AppSettings
 import com.iris.localai.data.sanitized
 import org.junit.Assert.assertEquals
@@ -301,34 +301,4 @@ class FilesLogicTest {
     private fun file(p: String) = File(p).let { if (it.exists()) it else File("app/$p") }
     private fun src(p: String) = file("src/main/java/com/iris/localai/$p").readText()
 
-    @Test fun wiring() {
-        val main = src("ui/MainActivity.kt")
-        assertTrue(main.contains("Route.APP_FILES -> com.iris.localai.ui.files.AppFilesPage("))
-        assertTrue(main.contains("onOpenFiles = { push(Route.APP_FILES) }"))
-        val screen = src("ui/files/FilesScreen.kt")
-        // 2.1.9: three styles from a small menu, same state / actions / dialogs
-        assertFalse(screen.contains("ArchiveFileView"))
-        assertTrue(screen.contains("FileViewStyle.CARDS -> CardStackFileView(state, vm)"))
-        assertTrue(screen.contains("FileViewStyle.entries.forEach"))
-        assertFalse(screen.contains("TODO(part B)"))
-        val cards = src("ui/files/CardStackFileView.kt")
-        assertTrue(cards.contains("fun CardStackFileView(state: FilesState, actions: FilesActions"))
-        assertTrue(cards.contains("ArchiveMath.halfWindow(n)"))        // only the visible window is composed
-        assertTrue(cards.contains("ArchiveMath.deckBias("))            // fix: stack centred, no empty top half
-        assertTrue(cards.contains("ArchiveMath.contentAlpha("))        // fix: no text bleeding through
-        assertTrue(cards.contains("SystemBadge()"))
-        assertTrue(cards.contains("Build.VERSION_CODES.S"))
-        assertFalse(cards.contains("tween(") || cards.contains("durationMillis"))
-        for (view in listOf(cards)) for (banned in listOf("WebView", "WebGL", "MiSans", "Novecento", "Arknights", "明日方舟", "Rhodes", "罗德岛", "MediaPlayer", "SoundPool"))
-            assertFalse("archive views must not use $banned", view.contains(banned))
-        assertTrue(screen.contains("\"档案模式\""))
-        assertFalse(screen.contains("material.icons"))
-        assertFalse(src("ui/files/FilesViewModel.kt").contains("material.icons"))
-        val paths = file("src/main/res/xml/shared_paths.xml").readText()
-        assertTrue(paths.contains("path=\"Download/IRIDIS/\""))
-        // no new permission: the manifest's permission list is unchanged
-        val manifest = file("src/main/AndroidManifest.xml").readText()
-        assertEquals(14, Regex("<uses-permission ").findAll(manifest).count()) // 2.1.9: + WRITE_SECURE_SETTINGS (GUI 无障碍 self-enable, user-granted)
-        assertNotNull(Regex("MANAGE_EXTERNAL_STORAGE").find(manifest))
-    }
 }

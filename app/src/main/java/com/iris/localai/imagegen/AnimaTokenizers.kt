@@ -12,7 +12,7 @@ import java.text.Normalizer
 import java.util.regex.Pattern
 
 /**
- * 2.6.12: Anima NPU 包的两个分词器（读 HF tokenizer.json），按通用的提示词权重写法切分。
+ * Anima NPU 包的两个分词器（读 HF tokenizer.json），按通用的提示词权重写法切分。
  * - [QwenBpe]：Qwen2 字节级 BPE（NFC + 官方切分正则），不加起止符。
  * - [T5Unigram]：T5 SentencePiece Unigram（NFKC 近似 Precompiled 表，Metaspace），末尾由调用方加 </s>=1。
  * - [ComfyWeights]：(词:1.2) / (词) 权重语法；T5 每个 id 带权重，Qwen 只取去掉语法后的文本。
@@ -21,7 +21,7 @@ class QwenBpe(private val vocab: Map<String, Int>, private val ranks: Map<String
     companion object {
         private val SPLIT: Pattern = Pattern.compile(
             "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
-            // 2.7.0: 不加 UNICODE_CHARACTER_CLASS——Android（ICU 正则）不支持这个标志，类初始化直接失败
+            // 不加 UNICODE_CHARACTER_CLASS——Android（ICU 正则）不支持这个标志，类初始化直接失败
             // （真机报错只显示混淆后的类名）；ICU 的 \p{L}、\s 本来就按 Unicode 处理。
         )
 
@@ -40,11 +40,11 @@ class QwenBpe(private val vocab: Map<String, Int>, private val ranks: Map<String
         }
 
         fun fromJson(text: String): QwenBpe {
-            val m = Json.parseToJsonElement(text).jsonObject["model"]!!.jsonObject
+            val m = (Json.parseToJsonElement(text).jsonObject["model"] ?: error("tokenizer.json 缺少 model")).jsonObject
             val vocab = HashMap<String, Int>(160_000)
-            for ((k, v) in m["vocab"]!!.jsonObject) vocab[k] = v.jsonPrimitive.intOrNull ?: continue
+            for ((k, v) in (m["vocab"] ?: error("tokenizer.json 缺少 vocab")).jsonObject) vocab[k] = v.jsonPrimitive.intOrNull ?: continue
             val ranks = HashMap<String, Int>(160_000)
-            m["merges"]!!.jsonArray.forEachIndexed { i, e ->
+            (m["merges"] ?: error("tokenizer.json 缺少 merges")).jsonArray.forEachIndexed { i, e ->
                 val key = if (e is JsonArray) e[0].jsonPrimitive.content + " " + e[1].jsonPrimitive.content else e.jsonPrimitive.content
                 ranks.putIfAbsent(key, i)
             }
@@ -97,10 +97,10 @@ class T5Unigram(private val pieces: Map<String, Pair<Int, Double>>, private val 
         private val MULTI_SPACE = Regex(" {2,}")
 
         fun fromJson(text: String): T5Unigram {
-            val m = Json.parseToJsonElement(text).jsonObject["model"]!!.jsonObject
+            val m = (Json.parseToJsonElement(text).jsonObject["model"] ?: error("tokenizer.json 缺少 model")).jsonObject
             val map = HashMap<String, Pair<Int, Double>>(40_000)
             var maxLen = 1
-            m["vocab"]!!.jsonArray.forEachIndexed { i, e ->
+            (m["vocab"] ?: error("tokenizer.json 缺少 vocab")).jsonArray.forEachIndexed { i, e ->
                 val a = e.jsonArray
                 val p = a[0].jsonPrimitive.content
                 map.putIfAbsent(p, i to (a[1].jsonPrimitive.doubleOrNull ?: 0.0))

@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 
 /**
- * 2.2.4: the one soft shadow of the design language — wide, faint, never a hard edge. Dark theme
+ * the one soft shadow of the design language — wide, faint, never a hard edge. Dark theme
  * uses a deeper (but still diffuse) shadow since the surface colour already lifts the element.
  */
 fun Modifier.softShadow(elevation: Dp, shape: Shape, dark: Boolean): Modifier =

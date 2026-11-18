@@ -1,12 +1,15 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import java.net.URLDecoder
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
 
 /**
- * 2.5.2: what web_search / web_fetch read off a page, cleaned. Pure (unit-tested in v252):
+ * what web_search / web_fetch read off a page, cleaned. Pure (unit-tested in v252):
  *  - [decode]: bytes → text by BOM, Content-Type charset, `<meta charset>` / XML declaration, else UTF-8
  *    (GBK/GB2312 pages were read as UTF-8 and came out garbled);
  *  - [decodeEntities]: every numeric and the common named entities in one pass (&amp;lt; stays "&lt;");

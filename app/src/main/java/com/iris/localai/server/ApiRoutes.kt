@@ -1,5 +1,12 @@
 package com.iris.localai.server
 
+import com.iris.localai.data.GenerationStats
+import com.iris.localai.engine.EngineState
+import com.iris.localai.engine.SamplingConfig
+import com.iris.localai.util.VisionPrompt
+import com.iris.localai.util.io.Attachments
+import com.iris.localai.util.thinking.ApiThinkOnly
+import com.iris.localai.util.thinking.ThinkOnlyPolicy
 import com.iris.localai.data.ModelRepository
 import com.iris.localai.data.SettingsRepository
 import com.iris.localai.data.sanitized
@@ -8,7 +15,7 @@ import com.iris.localai.engine.GenEvent
 import com.iris.localai.engine.PromptMessage
 import com.iris.localai.engine.Requester
 import com.iris.localai.engine.StopReason
-import com.iris.localai.util.StreamingThinkSplitter
+import com.iris.localai.util.thinking.StreamingThinkSplitter
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.serialization.json.JsonArray
@@ -39,7 +46,7 @@ import java.util.UUID
  *   GET  /api/tags                 (Ollama)
  *   POST /api/chat                 (Ollama, NDJSON stream)
  *   GET  /health
- *   2.6.4: image_url in chat (vision models), POST /v1/images/generations (生图), POST /v1/audio/speech (朗读)
+ *   image_url in chat (vision models), POST /v1/images/generations (生图), POST /v1/audio/speech (朗读)
  */
 private const val GEN_TAG = "IrisGen"
 
@@ -51,9 +58,9 @@ class ApiRoutes(
     private val models: ModelRepository,
     private val settings: SettingsRepository,
     private val json: kotlinx.serialization.json.Json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true },
-    /** 2.6.4: 生图 / 朗读 for the media endpoints (null = 501). */
+    /** 生图 / 朗读 for the media endpoints (null = 501). */
     private val media: ApiMedia? = null,
-    /** 2.6.4: where pictures sent in chat are written for the vision model (null = image_url refused). */
+    /** where pictures sent in chat are written for the vision model (null = image_url refused). */
     private val imageDir: java.io.File? = null,
 ) {
     suspend fun handle(req: HttpRequest, res: HttpResponder) {
@@ -87,7 +94,7 @@ class ApiRoutes(
     }
 
     private fun authorize(req: HttpRequest) {
-        // 2.1.7: custom key; Bearer or x-api-key. Empty key = no auth (browser pages still refused).
+        // custom key; Bearer or x-api-key. Empty key = no auth (browser pages still refused).
         ApiAuth.check(settings.current.apiKey, req.headers)?.let { throw it }
     }
 
@@ -127,13 +134,13 @@ class ApiRoutes(
         if (requested != null && match == null && engine.readyModel == null) {
             throw HttpError(404, "model '$requested' not found; GET /v1/models lists installed models")
         }
-        // 2.0.0: never swap models under a running generation (load() would cancel the in-app chat).
+        // never swap models under a running generation (load() would cancel the in-app chat).
         if (ApiPolicy.modelSwitchBlocked(engine.busy.value != null, match?.fileName, engine.readyModel?.fileName)) {
             throw HttpError(503, "model '${match?.fileName}' is not loaded and the engine is busy with another request " +
                 "(in-app chat or another client); retry later or use the loaded model '${engine.readyModel?.fileName ?: "-"}'")
         }
         if (!engine.ensureLoaded(match?.fileName)) {
-            throw HttpError(503, engine.state.value.let { (it as? com.iris.localai.engine.EngineState.Failed)?.message }
+            throw HttpError(503, engine.state.value.let { (it as? EngineState.Failed)?.message }
                 ?: "no model loaded; load one in the app or pass an installed model id")
         }
     }
@@ -143,7 +150,7 @@ class ApiRoutes(
      * through the same clamps as the settings screen (NaN-safe) — except max_tokens, where small
      * values (e.g. 1 for a probe) are legitimate. Threads / cores follow the resource tier, like chat.
      */
-    private fun sampling(cr: ChatRequest, forceNoThinking: Boolean = false): com.iris.localai.engine.SamplingConfig {
+    private fun sampling(cr: ChatRequest, forceNoThinking: Boolean = false): SamplingConfig {
         val base = engine.effective()
         val clamped = settings.current.copy(
             temperature = cr.temperature ?: base.temperature,
@@ -167,11 +174,11 @@ class ApiRoutes(
     private class Collected(val answer: String, val reasoning: String, val done: GenEvent.Done, val stopped: Boolean = false)
 
     /**
-     * 2.0.0: a client stop sequence matched: the generation was ended by cancelling its collection,
+     * a client stop sequence matched: the generation was ended by cancelling its collection,
      * so the engine's own Done (and its stats) never arrives. Pieces stand in for the token count.
      */
     private fun stoppedDone(done: GenEvent.Done?, pieces: Int): GenEvent.Done = when {
-        done == null -> GenEvent.Done(StopReason.END, com.iris.localai.data.GenerationStats(generatedTokens = pieces))
+        done == null -> GenEvent.Done(StopReason.END, GenerationStats(generatedTokens = pieces))
         done.reason == StopReason.ERROR -> done
         else -> done.copy(reason = StopReason.END) // finish_reason "stop", not "length"
     }
@@ -210,23 +217,23 @@ class ApiRoutes(
     }
 
     /**
-     * 1.7.8: non-streamed generation with the think-only rule ([com.iris.localai.util.ApiThinkOnly]):
+     * non-streamed generation with the think-only rule ([com.iris.localai.util.thinking.ApiThinkOnly]):
      * reasoning but no answer → once more with thinking off; still nothing → explicit 502 error.
      */
     private suspend fun collectWithContinuation(cr: ChatRequest): Collected {
         val params = sampling(cr)
         val first = collectAll(engine.generate(history(cr), params, Requester.API), newSplitter(cr), StopSequenceFilter(cr.stop))
         if (first.stopped) return first
-        val d1 = com.iris.localai.util.ApiThinkOnly.afterFirst(cr.thinking == false, first.reasoning, first.answer, first.done.reason, first.done.error, params.maxNewTokens)
+        val d1 = ApiThinkOnly.afterFirst(cr.thinking == false, first.reasoning, first.answer, first.done.reason, first.done.error, params.maxNewTokens)
         when (d1.step) {
-            com.iris.localai.util.ApiThinkOnly.Step.DONE -> return first
-            com.iris.localai.util.ApiThinkOnly.Step.FAIL -> throw HttpError(502, d1.message ?: com.iris.localai.util.ThinkOnlyPolicy.THINK_ONLY)
-            com.iris.localai.util.ApiThinkOnly.Step.CONTINUE -> Unit
+            ApiThinkOnly.Step.DONE -> return first
+            ApiThinkOnly.Step.FAIL -> throw HttpError(502, d1.message ?: ThinkOnlyPolicy.THINK_ONLY)
+            ApiThinkOnly.Step.CONTINUE -> Unit
         }
         android.util.Log.i(GEN_TAG, "API think-only reply (${first.done.reason}) → continuing once with thinking off")
         val second = collectAll(engine.generate(history(cr), sampling(cr, forceNoThinking = true), Requester.API), StreamingThinkSplitter(false), StopSequenceFilter(cr.stop))
-        val d2 = com.iris.localai.util.ApiThinkOnly.afterContinuation(first.reasoning, second.answer, second.done.reason, second.done.error, params.maxNewTokens)
-        if (d2.step == com.iris.localai.util.ApiThinkOnly.Step.FAIL) throw HttpError(502, d2.message ?: com.iris.localai.util.ThinkOnlyPolicy.THINK_ONLY)
+        val d2 = ApiThinkOnly.afterContinuation(first.reasoning, second.answer, second.done.reason, second.done.error, params.maxNewTokens)
+        if (d2.step == ApiThinkOnly.Step.FAIL) throw HttpError(502, d2.message ?: ThinkOnlyPolicy.THINK_ONLY)
         return Collected(second.answer, first.reasoning, merged(first.done, second.done))
     }
 
@@ -234,7 +241,7 @@ class ApiRoutes(
         StreamingThinkSplitter(startInThinking = engine.readyDetails?.thinkingPrefilled == true && cr.thinking != false)
 
     /**
-     * 1.7.8: streamed generation with the same rule. [onPiece] gets every delta (reasoning only from
+     * streamed generation with the same rule. [onPiece] gets every delta (reasoning only from
      * the first pass); returns the final Done (both passes merged) and, when the reply must fail,
      * the message to send as the stream's error.
      */
@@ -245,7 +252,7 @@ class ApiRoutes(
         val params = sampling(cr)
         val answer = StringBuilder(); val reasoning = StringBuilder()
         suspend fun pass(
-            p: com.iris.localai.engine.SamplingConfig,
+            p: SamplingConfig,
             splitter: StreamingThinkSplitter,
             answerOnly: Boolean,
             stop: StopSequenceFilter,
@@ -279,16 +286,16 @@ class ApiRoutes(
         val first = pass(params, newSplitter(cr), answerOnly = false, stop = firstStop)
         if (first.reason == StopReason.ERROR) return first to null
         if (firstStop.hit) return first to null // the client's stop sequence ended the reply: no think-only continuation
-        val d1 = com.iris.localai.util.ApiThinkOnly.afterFirst(cr.thinking == false, reasoning.toString(), answer.toString(), first.reason, first.error, params.maxNewTokens)
+        val d1 = ApiThinkOnly.afterFirst(cr.thinking == false, reasoning.toString(), answer.toString(), first.reason, first.error, params.maxNewTokens)
         return when (d1.step) {
-            com.iris.localai.util.ApiThinkOnly.Step.DONE -> first to null
-            com.iris.localai.util.ApiThinkOnly.Step.FAIL -> first to d1.message
-            com.iris.localai.util.ApiThinkOnly.Step.CONTINUE -> {
+            ApiThinkOnly.Step.DONE -> first to null
+            ApiThinkOnly.Step.FAIL -> first to d1.message
+            ApiThinkOnly.Step.CONTINUE -> {
                 android.util.Log.i(GEN_TAG, "API think-only reply (${first.reason}) → continuing once with thinking off")
                 val second = pass(sampling(cr, forceNoThinking = true), StreamingThinkSplitter(false), answerOnly = true, stop = StopSequenceFilter(cr.stop))
                 if (second.reason == StopReason.ERROR) return merged(first, second) to null
-                val d2 = com.iris.localai.util.ApiThinkOnly.afterContinuation(reasoning.toString(), answer.toString(), second.reason, second.error, params.maxNewTokens)
-                merged(first, second) to d2.message.takeIf { d2.step == com.iris.localai.util.ApiThinkOnly.Step.FAIL }
+                val d2 = ApiThinkOnly.afterContinuation(reasoning.toString(), answer.toString(), second.reason, second.error, params.maxNewTokens)
+                merged(first, second) to d2.message.takeIf { d2.step == ApiThinkOnly.Step.FAIL }
             }
         }
     }
@@ -423,13 +430,13 @@ class ApiRoutes(
         val root = imageDir ?: throw HttpError(501, "images are not supported by this server")
         val dir = java.io.File(root, UUID.randomUUID().toString()).apply { mkdirs() }
         try {
-            val side = com.iris.localai.util.VisionPrompt.maxSide(details.visionMaxSide, settings.current.visionSide)
+            val side = VisionPrompt.maxSide(details.visionMaxSide, settings.current.visionSide)
             val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 msgs.map { m ->
                     if (m.images.isEmpty()) m else m.copy(images = m.images.mapIndexed { i, url ->
                         val bytes = if (ApiImages.isRemote(url)) fetchImage(url) else ApiImages.decode(url)
                         val f = java.io.File(dir, "img$i.${ApiImages.sniff(bytes) ?: "bin"}").apply { writeBytes(bytes) }
-                        com.iris.localai.util.Attachments.visionCopy(f.path, side)
+                        Attachments.visionCopy(f.path, side)
                     })
                 }
             }

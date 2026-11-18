@@ -1,5 +1,9 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.web.BrowserText
+import com.iris.localai.ui.components.IrisProgressBar
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -65,10 +69,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 1.11.0 texts of the 浏览器 pages (unit-tested). */
+/** texts of the 浏览器 pages (unit-tested). */
 object ToolPageText {
-    val BROWSER_NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_edb1e1)
-    val BROWSER_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fc83b5)
+    val BROWSER_NAV: String get() = I18n.s(R.string.agent_edb1e1)
+    val BROWSER_NOTE: String get() = I18n.s(R.string.agent_fc83b5)
 }
 
 @Composable
@@ -87,9 +91,9 @@ fun BrowserPage(onBack: () -> Unit) {
             browser.layoutOffscreen(web)
         }
     }
-    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_912302), onBack, scrollUnder = false, actions = {
-        PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5094c1), enabled = web.canGoBack()) { web.goBack() }
-        PressableIcon(Icons.Outlined.Refresh, com.iris.localai.I18n.s(com.iris.localai.R.string.models_694fc5)) { web.reload() }
+    SubpageScaffold(I18n.s(R.string.agent_912302), onBack, scrollUnder = false, actions = {
+        PressableIcon(Icons.AutoMirrored.Outlined.ArrowBack, I18n.s(R.string.agent_5094c1), enabled = web.canGoBack()) { web.goBack() }
+        PressableIcon(Icons.Outlined.Refresh, I18n.s(R.string.models_694fc5)) { web.reload() }
     }) {
         Column(Modifier.fillMaxSize().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
@@ -98,14 +102,14 @@ fun BrowserPage(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = IrisType.secondary.copy(color = c.text),
-                    placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_efd030), style = IrisType.secondary) },
+                    placeholder = { Text(I18n.s(R.string.agent_efd030), style = IrisType.secondary) },
                     shape = IrisRadius.mediumShape,
                     colors = irisTextFieldColors(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, autoCorrectEnabled = false),
-                    keyboardActions = KeyboardActions(onGo = { web.loadUrl(com.iris.localai.agent.BrowserText.normalizeUrl(url)) }),
+                    keyboardActions = KeyboardActions(onGo = { web.loadUrl(BrowserText.normalizeUrl(url)) }),
                 )
             }
-            if (st.loading) com.iris.localai.ui.components.IrisProgressBar(progress = null, height = IrisDimens.space2, track = c.outline.copy(alpha = 0.4f))
+            if (st.loading) IrisProgressBar(progress = null, height = IrisDimens.space2, track = c.outline.copy(alpha = 0.4f))
             Box(Modifier.weight(1f).fillMaxWidth().clip(IrisRadius.mediumShape).background(c.surface)) {
                 AndroidView(factory = {
                     (web.parent as? android.view.ViewGroup)?.removeView(web)

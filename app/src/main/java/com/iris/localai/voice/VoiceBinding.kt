@@ -1,7 +1,7 @@
 package com.iris.localai.voice
 
 /**
- * 2.3.3: a card's bound voice is a per-conversation override, never written to the global settings.
+ * a card's bound voice is a per-conversation override, never written to the global settings.
  * [speaker] null = keep the global speaker; [clone] "" = no cloned voice while the card speaks.
  */
 data class VoiceOverride(val pack: String, val speaker: Int?, val clone: String)
@@ -19,6 +19,6 @@ object VoiceBinding {
     fun effective(global: VoiceSel, override: VoiceOverride?): VoiceSel =
         if (override == null) global else VoiceSel(override.pack, override.speaker ?: global.speaker, override.clone)
 
-    /** 2.3.4: the override in force; the settings voice preview ([globalOnly]) ignores any card chat override. */
+    /** the override in force; the settings voice preview ([globalOnly]) ignores any card chat override. */
     fun applicable(override: VoiceOverride?, globalOnly: Boolean): VoiceOverride? = if (globalOnly) null else override
 }

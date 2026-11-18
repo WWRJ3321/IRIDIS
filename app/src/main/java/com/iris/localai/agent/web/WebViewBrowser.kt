@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
@@ -23,7 +26,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * 1.11.0: the agent's browser — one WebView kept for the app's lifetime (so cookies and logins
+ * the agent's browser — one WebView kept for the app's lifetime (so cookies and logins
  * stay), created on the main thread on first use. Off screen it is laid out at a phone size; the
  * 浏览器 page shows the same WebView so the user can watch it or sign in by hand.
  * Every call blocks the calling (tool) thread, never the main thread.
@@ -36,7 +39,7 @@ class WebViewBrowser(context: Context) : BrowserDriver, SearchBrowser {
     @Volatile private var navigated = 0L
 
     /**
-     * 2.0.0: the `browser` tool and 浏览器搜索 share this one WebView, so every call holds this lock
+     * the `browser` tool and 浏览器搜索 share this one WebView, so every call holds this lock
      * (reentrant; a search holds it for its whole load → consent → read sequence).
      */
     private val gate = java.util.concurrent.locks.ReentrantLock(true)
@@ -71,11 +74,11 @@ class WebViewBrowser(context: Context) : BrowserDriver, SearchBrowser {
                 loading = false
                 _status.value = Status(url, v.title.orEmpty(), false)
             }
-            // 1.14.3: navigations (links, redirects, form posts) to a local name / private IP literal
+            // navigations (links, redirects, form posts) to a local name / private IP literal
             // are dropped. Main thread: pure check only, no DNS.
             override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean =
                 BrowserNet.obviouslyLocal(request.url?.toString())
-            // 1.14.3: every http(s) request the page makes is checked without DNS (private literals,
+            // every http(s) request the page makes is checked without DNS (private literals,
             // local names); main-frame loads are also resolved and refused when the name points
             // inside. Runs on a WebView worker thread, so the lookup does not block the UI.
             override fun shouldInterceptRequest(v: WebView, request: WebResourceRequest): WebResourceResponse? {
@@ -119,17 +122,17 @@ class WebViewBrowser(context: Context) : BrowserDriver, SearchBrowser {
     /** Waits for a navigation started after [since] to finish (or a short settle when none starts). */
     private fun settle(since: Long, maxMs: Long = 20_000) {
         val end = System.currentTimeMillis() + maxMs
-        Thread.sleep(400)
+        pause(400)
         while (System.currentTimeMillis() < end) {
             if (!loading && (navigated < since || System.currentTimeMillis() - since > 900)) break
-            Thread.sleep(150)
+            pause(150)
         }
-        Thread.sleep(500) // let scripts render
+        pause(500) // let scripts render
     }
 
     /** Loads [url] (public hosts only) and waits for it to settle. Caller holds [gate]. */
     private fun navigate(url: String) {
-        // 1.14.3: resolved here (tool thread) so the agent gets a clear refusal (SecurityException).
+        // resolved here (tool thread) so the agent gets a clear refusal (SecurityException).
         val uri = runCatching { java.net.URI(url) }.getOrNull()
         val scheme = uri?.scheme?.lowercase()
         if (scheme == "http" || scheme == "https") {
@@ -163,7 +166,7 @@ class WebViewBrowser(context: Context) : BrowserDriver, SearchBrowser {
         val t = System.currentTimeMillis()
         val r = js(BrowserScripts.type(id, text, submit)) ?: return@exclusive null
         if (!r.contains("ok")) return@exclusive null
-        if (submit) settle(t) else Thread.sleep(300)
+        if (submit) settle(t) else pause(300)
         snapshot()
     }
 
@@ -185,17 +188,23 @@ class WebViewBrowser(context: Context) : BrowserDriver, SearchBrowser {
             settle(t)
             return r
         }
-        override fun pause(ms: Long) = Thread.sleep(ms)
+        override fun pause(ms: Long) = this@WebViewBrowser.pause(ms)
     }
 
     /** The page is left on the results, so the 浏览器 page shows what was searched. */
     override fun <T> withSearchPage(block: (SearchPageOps) -> T): T = exclusive { block(searchOps) }
 
+    /** 可中断的等待：工具经 runInterruptible 运行，取消时线程被中断，这里立即抛出 InterruptedException。 */
+    private fun pause(ms: Long) {
+        if (Thread.interrupted()) throw InterruptedException()
+        Thread.sleep(ms)
+    }
+
     private companion object { const val BUSY_WAIT_S = 90L }
 }
 
 /**
- * 1.14.3: the in-app browser's address checks (see [WebViewBrowser]). WebView resolves names
+ * the in-app browser's address checks (see [WebViewBrowser]). WebView resolves names
  * itself, so unlike web_fetch this cannot pin the checked address: it keeps the agent's browser off
  * local names, private literals and names that resolve inside, not a determined DNS rebinding.
  */

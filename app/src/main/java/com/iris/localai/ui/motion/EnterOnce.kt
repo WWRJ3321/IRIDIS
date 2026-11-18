@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import com.iris.localai.ui.theme.LocalReduceMotion
 
 /**
- * 2.5.3: one-shot entrance for full-screen dialog content (image viewer, web preview, image history):
+ * one-shot entrance for full-screen dialog content (image viewer, web preview, image history):
  * fade in + 0.96 → 1 scale with the Gentle spring, instead of popping in. Only graphicsLayer work;
  * instant when the system removes animations.
  */

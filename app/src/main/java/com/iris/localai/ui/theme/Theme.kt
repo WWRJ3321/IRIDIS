@@ -27,7 +27,7 @@ import com.iris.localai.data.ThemeMode
 
 /**
  * Semantic colours. Components use these, never raw hex values.
- * 1.8.0 (HyperOS 75% / iOS 25%): dark is pure black with #1C1C1E cards, light is HyperOS
+ * HyperOS 75% / iOS 25%: dark is pure black with #1C1C1E cards, light is HyperOS
  * #F7F7F7 with white cards; the accent is the HyperOS blue used by switches, sliders, the
  * selected segment, primary buttons and the send button.
  */
@@ -53,7 +53,7 @@ data class IrisColors(
     val accentContainer: Color,
     val onAccentContainer: Color,
     val danger: Color,
-    /** 1.10.10: iOS system green / orange for status dots (running, listening, busy). */
+    /** iOS system green / orange for status dots (running, listening, busy). */
     val success: Color,
     val warning: Color,
     val codeBackground: Color,
@@ -68,9 +68,9 @@ data class IrisColors(
     val glassTintOpaque: Color,
     val glassRim: Color,
     val scrim: Color,
-    /** 2.5.0 柔光: top colour of the page gradient (Unspecified = plain [background], 经典). */
+    /** 柔光: top colour of the page gradient (Unspecified = plain [background], 经典). */
     val backgroundTop: Color = Color.Unspecified,
-    /** 2.5.0 柔光: the tinted tile behind row icons (Unspecified = no tile, 经典). */
+    /** 柔光: the tinted tile behind row icons (Unspecified = no tile, 经典). */
     val iconTile: Color = Color.Unspecified,
 )
 
@@ -136,7 +136,7 @@ internal val IrisDarkColors = IrisColors(
 
 val LocalIrisColors = staticCompositionLocalOf { IrisLightColors }
 
-/** 2.5.0 界面风格: 柔光 (default; Beta2: solid neutral, one accent) or 经典 (≤ 2.4.6 look). */
+/** 界面风格: 柔光 (default; Beta2: solid neutral, one accent) or 经典 (≤ 2.4.6 look). */
 enum class IrisStyle(val id: String) {
     SOFT("soft"), CLASSIC("classic");
     companion object {
@@ -148,7 +148,7 @@ enum class IrisStyle(val id: String) {
 val LocalIrisStyle = staticCompositionLocalOf { IrisStyle.CLASSIC }
 
 /**
- * 2.5.0 Beta2 柔光 = 克制 (restrained) look: solid neutral greys whatever the palette — no page
+ * 柔光 = 克制 (restrained) look: solid neutral greys whatever the palette — no page
  * gradient, no blue-violet dark, no icon tiles. The palette (默认 / 樱花 / 薄荷 / 丁香 / 奶油) only
  * supplies the single accent (switches, selection, primary buttons, links). Values in [SoftNeutral]
  * (pure ARGB longs, unit-tested).
@@ -239,7 +239,7 @@ object SoftLook {
     }
 }
 
-/** 2.2.14 纯色背景 is on: decorative gradients / glows / top fades draw nothing. */
+/** 纯色背景 is on: decorative gradients / glows / top fades draw nothing. */
 val LocalSolidBackground = staticCompositionLocalOf { false }
 
 
@@ -268,13 +268,13 @@ fun IrisTheme(
     glassQuality: GlassQuality,
     reduceMotion: Boolean = false,
     decorativeMotion: Boolean = true,
-    /** 2.1.4 配色 (默认 / 樱花粉 / 薄荷绿 / 丁香紫 / 奶油黄); the mode still picks light or dark. */
+    /** 配色 (默认 / 樱花粉 / 薄荷绿 / 丁香紫 / 奶油黄); the mode still picks light or dark. */
     palette: IrisPalette = IrisPalette.DEFAULT,
-    /** 2.1.4: a custom chat background is set → cards and bubbles turn slightly see-through. */
+    /** a custom chat background is set → cards and bubbles turn slightly see-through. */
     backdrop: Boolean = false,
-    /** 2.2.14 纯色背景. */
+    /** 纯色背景. */
     solid: Boolean = false,
-    /** 2.5.0 界面风格 (柔光 / 经典). */
+    /** 界面风格 (柔光 / 经典). */
     style: IrisStyle = IrisStyle.CLASSIC,
     content: @Composable () -> Unit,
 ) {
@@ -290,9 +290,9 @@ fun IrisTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 2.1.5: no system contrast scrim behind the gesture pill (HyperOS draws one otherwise).
+            // no system contrast scrim behind the gesture pill (HyperOS draws one otherwise).
             window.isNavigationBarContrastEnforced = false
-            // 2.4.6: the window background follows the app's own light/dark choice (not only the
+            // the window background follows the app's own light/dark choice (not only the
             // system's), so the predictive-back preview no longer shows white behind a dark app.
             window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(c.background.toArgb() or 0xFF000000.toInt()))
             WindowCompat.getInsetsController(window, view).apply {
@@ -308,7 +308,7 @@ fun IrisTheme(
             surfaceContainer = c.surfaceElevated, surfaceContainerHigh = c.surfaceElevated, surfaceContainerLow = c.surface,
             secondaryContainer = c.accentContainer, onSecondaryContainer = c.onAccentContainer,
             outline = c.outline, outlineVariant = c.outline, error = c.danger,
-            // 2.2.5: every Material accent slot maps to the brand tokens — no baseline-purple leaks.
+            // every Material accent slot maps to the brand tokens — no baseline-purple leaks.
             primaryContainer = c.accentContainer, onPrimaryContainer = c.onAccentContainer, inversePrimary = c.accent,
             secondary = c.accent, onSecondary = c.onAccent,
             tertiary = c.accent, onTertiary = c.onAccent, tertiaryContainer = c.accentContainer, onTertiaryContainer = c.onAccentContainer,
@@ -322,7 +322,7 @@ fun IrisTheme(
             surfaceContainer = c.surfaceElevated, surfaceContainerHigh = c.surfaceElevated, surfaceContainerLow = c.surface,
             secondaryContainer = c.accentContainer, onSecondaryContainer = c.onAccentContainer,
             outline = c.outline, outlineVariant = c.outline, error = c.danger,
-            // 2.2.5: every Material accent slot maps to the brand tokens — no baseline-purple leaks.
+            // every Material accent slot maps to the brand tokens — no baseline-purple leaks.
             primaryContainer = c.accentContainer, onPrimaryContainer = c.onAccentContainer, inversePrimary = c.accent,
             secondary = c.accent, onSecondary = c.onAccent,
             tertiary = c.accent, onTertiary = c.onAccent, tertiaryContainer = c.accentContainer, onTertiaryContainer = c.onAccentContainer,
@@ -337,7 +337,7 @@ fun IrisTheme(
             LocalSolidBackground provides solid,
             LocalGlassQuality provides glassQuality,
             LocalReduceMotion provides reduceMotion,
-            // 2.1.4: text selection follows the theme accent.
+            // text selection follows the theme accent.
             androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
                 androidx.compose.foundation.text.selection.TextSelectionColors(c.accent, c.accent.copy(alpha = 0.3f)),
             LocalDecorativeMotion provides (decorativeMotion && !reduceMotion),

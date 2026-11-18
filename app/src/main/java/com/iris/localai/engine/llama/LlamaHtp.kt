@@ -8,7 +8,7 @@ import com.iris.localai.engine.NpuIds
 import java.io.File
 
 /**
- * 2.2.15: the JNI calls [LlamaEngine] makes, so one engine can drive either native library:
+ * the JNI calls [LlamaEngine] makes, so one engine can drive either native library:
  * libiris_llama.so (CPU + Adreno OpenCL, [LlamaNative]) or libiris_lhtp.so (CPU + Hexagon NPU, [LlamaHtpNative]).
  */
 interface LlamaJni {
@@ -24,17 +24,17 @@ interface LlamaJni {
     fun requestLivePolicy(h: Long, threads: Int, cpus: IntArray, nice: Int)
     fun meta(h: Long): String
     fun generate(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray, sink: PieceSink?): String
-    /** 2.2.17: vision projector (mtmd). Only libiris_llama has it; the NPU library stays text-only. */
+    /** vision projector (mtmd). Only libiris_llama has it; the NPU library stays text-only. */
     fun loadMmproj(h: Long, path: ByteArray, preferGpu: Boolean): String? = "内置 NPU 运行库不支持 mmproj 识图"
     fun generateVision(h: Long, roles: Array<ByteArray>, contents: Array<ByteArray>, floats: FloatArray, ints: IntArray,
                        images: Array<ByteArray>, imageMsg: Int, sink: PieceSink?): String = generate(h, roles, contents, floats, ints, sink)
-    /** 2.5.0-beta9: MTP draft tokens for the next [load] (0 = off). Only libiris_llama has it. */
+    /** MTP draft tokens for the next [load] (0 = off). Only libiris_llama has it. */
     fun setMtp(h: Long, nDraft: Int) {}
-    /** 2.5.0-beta9: "off" | "active n=…" | "fallback: …" for the loaded model. */
+    /** "off" | "active n=…" | "fallback: …" for the loaded model. */
     fun mtpStatus(h: Long): String = "off"
-    /** 2.5.1: MoE 专家按需加载 + 激活专家数（0 = 模型默认），作用于下次 [load]；旧库没有该符号时忽略。 */
+    /** MoE 专家按需加载 + 激活专家数（0 = 模型默认），作用于下次 [load]；旧库没有该符号时忽略。 */
     fun setMoe(h: Long, moeCpu: Boolean, expertUsed: Int) {}
-    /** 2.5.4: LES（只有 libiris_llama 有；旧库 / NPU 库无此符号时保持原样）。 */
+    /** LES（只有 libiris_llama 有；旧库 / NPU 库无此符号时保持原样）。 */
     fun setLes(h: Long, on: Boolean, dir: ByteArray) {}
     fun lesStatus(h: Long): String = "off"
 }
@@ -92,7 +92,7 @@ object LlamaHtpNative {
         handle: Long, pathUtf8: ByteArray, nCtx: Int, nThreads: Int, nBatch: Int,
         flashAttn: Boolean, nGpuLayers: Int, kvType: Int, useMmap: Boolean, listener: LoadProgressListener?,
     ): String?
-    /** 2.5.1: MoE 专家按需加载 + 激活专家数（下次 nativeLoad）。 */
+    /** MoE 专家按需加载 + 激活专家数（下次 nativeLoad）。 */
     @JvmStatic external fun nativeSetMoe(handle: Long, moeCpu: Boolean, nExpertUsed: Int)
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)
@@ -127,7 +127,7 @@ object LlamaHtpRules {
 }
 
 /**
- * 2.2.15: the built-in GGUF NPU runtime — the same llama.cpp as the CPU/GPU engine (K2 Horizon, LFM3,
+ * the built-in GGUF NPU runtime — the same llama.cpp as the CPU/GPU engine (K2 Horizon, LFM3,
  * Gemma 4 …) plus upstream ggml-hexagon. Shipped as full-flavour assets (not jniLibs: the names would
  * clash with GenieX's packaging excludes), copied to app storage on first use, then System.load'ed;
  * ADSP_LIBRARY_PATH points FastRPC at the directory holding libiris-htp-vNN.so.

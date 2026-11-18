@@ -1,7 +1,12 @@
-package com.iris.localai.util
+package com.iris.localai.util.diagnostics
+
+import com.iris.localai.util.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 
 /**
- * 2.2.13: readable text of an ApplicationExitInfo native-crash trace. Android 12+ hands out the
+ * readable text of an ApplicationExitInfo native-crash trace. Android 12+ hands out the
  * tombstone as a protobuf (system/core/debuggerd/proto/tombstone.proto), so its printable runs lose
  * the "#00 pc …" layout and the crashing thread is buried among idle libc / libhwui threads. This
  * decodes the fields needed for a debuggerd-style report: signal + fault address, abort message,

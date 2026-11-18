@@ -31,11 +31,11 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.theme.softShadow
 
-/** 2.5.0: what the settings 重点卡 shows for the engine (pure, unit-tested). */
+/** what the settings 重点卡 shows for the engine (pure, unit-tested). */
 enum class HeroStatus { NONE, LOADING, READY, FAILED }
 
 /**
- * 2.5.0 设置首页顶部的重点卡: the current model and its state, with one action (切换模型).
+ * 设置首页顶部的重点卡: the current model and its state, with one action (切换模型).
  * Beta2: the same solid neutral card in both styles — no colour, no gradient; hierarchy comes from
  * type weight and spacing only. 柔光 shows the action as an accent text link and the state as text
  * (no status dot); 经典 keeps the dot and the tinted pill button.

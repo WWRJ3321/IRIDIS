@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">応答が長さの上限に達し内容が不完全なため、書き込みませんでした</string>
     <string name="ask245_pill">確認待ち：%1$s</string>
     <string name="ask245_reopen">確認を開く</string>
-    <string name="vg245_title">画像認識に GPU を使う</string>
+    <string name="vg245_title">画像認識（mmproj）</string>
     <string name="vg245_off">Snapdragon では mmproj を CPU で実行。再読み込みで有効</string>
     <string name="vg245_on">画像認識が高速に。一部機種で固まる場合あり。再読み込みで有効</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU 専用版、4K コンテキスト、テキストのみ（ベータ）</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">モデルが大きすぎます（約 %1$s GB）。この端末のメモリに収まりません</string>
     <string name="ig27_start">まずモデルをダウンロードするか、最後の「モデルをインポート」で自分のファイルを使います</string>
     <string name="st27_embed">ナレッジベース検索モデル</string>
+    <string name="engine_cl_off">前回の読み込みでクラッシュしたため、安全のため GPU（OpenCL）をオフにしました</string>
+    <string name="models_gpu_recheck">GPU を再検出</string>
+    <string name="models_gpu_recheck_ok">再検出しました：GPU は使用できます。</string>
+    <string name="models_gpu_recheck_restart">GPU を再び有効にしました。アプリを再起動すると反映されます。</string>
+    <string name="models_gpu_recheck_none">OpenCL ドライバが見つかりません。</string>
+    <string name="vg27b_note">通常の GGUF モデルの画像認識はここで CPU / GPU を選びます。モデルが NPU（GenieX）で動く場合は GenieX が自動で処理し、この設定は影響しません。再読み込みで有効。</string>
 </resources>

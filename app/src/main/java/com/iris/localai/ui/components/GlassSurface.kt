@@ -1,5 +1,7 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.ui.theme.IrisDarkColors
+import com.iris.localai.ui.theme.IrisLightColors
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -39,7 +41,7 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 /*
- * 2.2.4 liquid glass. A screen marks the content that scrolls under its floating chrome with
+ * liquid glass. A screen marks the content that scrolls under its floating chrome with
  * [glassBackdrop] (one source per screen — the chat list is captured as one layer, never per item)
  * and provides its [HazeState] through [LocalGlassHaze]. Every floating surface (top-bar buttons,
  * pills, menus, drawer, sheets, dialogs) then draws [glassSurface]: a 24 dp (2.2.5) backdrop blur
@@ -52,25 +54,25 @@ import dev.chrisbanes.haze.hazeSource
 val LocalGlassHaze = staticCompositionLocalOf<HazeState?> { null }
 
 object GlassTokens {
-    /** 2.2.5: stronger frosted glass (user: 2.2.4 pill too flat, no glass feel). */
+    /** stronger frosted glass (user: 2.2.4 pill too flat, no glass feel). */
     val blurRadius = 24.dp
     val rim = 1.dp
     val elevation = 8.dp
     /** Tint over the blur: light ≈ 45 % white, dark ≈ 40 % near-black. */
     val lightTint = Color.White.copy(alpha = 0.45f)
-    val darkTint = Color(0xFF141416).copy(alpha = 0.40f)
-    /** 2.2.7: stronger tint for glass that carries a list (the expanded model panel). */
+    val darkTint = IrisDarkColors.glassTint.copy(alpha = 0.40f)
+    /** stronger tint for glass that carries a list (the expanded model panel). */
     val lightTintStrong = Color.White.copy(alpha = 0.78f)
-    val darkTintStrong = Color(0xFF141416).copy(alpha = 0.72f)
+    val darkTintStrong = IrisDarkColors.glassTint.copy(alpha = 0.72f)
     const val NOISE = 0.15f
     /** Without blur the tint must carry the contrast on its own. */
-    val lightFallback = Color(0xFFFAFAFB).copy(alpha = 0.94f)
-    val darkFallback = Color(0xFF1C1C1F).copy(alpha = 0.92f)
+    val lightFallback = IrisLightColors.surface.copy(alpha = 0.94f)
+    val darkFallback = IrisDarkColors.surface.copy(alpha = 0.92f)
     const val PRESS_SCALE = 0.96f
 }
 
 /**
- * 2.5.0 Beta2 柔光 solid surfaces (user: the matte glass still looked 花哨/廉价): fully opaque
+ * 柔光 solid surfaces (user: the matte glass still looked 花哨/廉价): fully opaque
  * surface colour, no blur, no sheen/rim, a 0.5 dp low-contrast hairline, and at most a faint
  * 2 dp shadow in light theme (none in dark). 经典 keeps the 2.2.5 glass. Pure constants (unit-tested).
  */
@@ -93,7 +95,7 @@ object MatteGlass {
     fun shadowDp(dark: Boolean, elevated: Boolean): Float = if (!elevated || dark || SHADOW_ALPHA_LIGHT <= 0f) 0f else SHADOW_DP
 }
 
-/** 2.5.0 Beta2: solid surface for the 柔光 style (see [MatteGlass]); [state]/[strong] are ignored. */
+/** solid surface for the 柔光 style (see [MatteGlass]); [state]/[strong] are ignored. */
 @Composable
 @Suppress("UNUSED_PARAMETER")
 private fun Modifier.matteGlassSurface(shape: Shape, elevation: Dp, state: HazeState?, strong: Boolean): Modifier {
@@ -169,7 +171,7 @@ fun Modifier.glassSurface(
 }
 
 /**
- * 2.2.5: large surfaces (bottom sheets, dialogs, drawer) are NOT see-through glass: they live in
+ * large surfaces (bottom sheets, dialogs, drawer) are NOT see-through glass: they live in
  * their own window (Haze cannot sample the screen behind it — that produced the milky wash) or
  * cover too much to stay readable. A near-opaque surface (95 % surface colour) with the same rim
  * and top highlight; the scrim behind is a plain ~32 % black ([LARGE_SCRIM]).
@@ -179,7 +181,7 @@ fun Modifier.largeSurface(shape: Shape, elevation: Dp = 0.dp): Modifier {
     val c = Iris.colors
     val dark = c.isDark
     if (softStyle()) {
-        // 2.5.0 Beta2 柔光: opaque neutral sheet, 0.5 dp hairline, faint shadow (light only).
+        // 柔光: opaque neutral sheet, 0.5 dp hairline, faint shadow (light only).
         val sh = MatteGlass.shadowDp(dark, elevation.value > 0f)
         val sc = Color.Black.copy(alpha = MatteGlass.SHADOW_ALPHA_LIGHT)
         return (if (sh > 0f) this.shadow(sh.dp, shape, clip = false, ambientColor = sc, spotColor = sc) else this)
@@ -187,7 +189,7 @@ fun Modifier.largeSurface(shape: Shape, elevation: Dp = 0.dp): Modifier {
             .background(c.surface.copy(alpha = 1f))
             .border(MatteGlass.HAIRLINE_DP.dp, MatteGlass.hairline(dark), shape)
     }
-    val fill = (if (dark) c.surfaceElevated else c.surface).copy(alpha = 1f) // 2.2.6: fully opaque
+    val fill = (if (dark) c.surfaceElevated else c.surface).copy(alpha = 1f) // fully opaque
     val rim = Brush.linearGradient(
         0f to Color.White.copy(alpha = if (dark) 0.14f else 0.70f),
         1f to Color.White.copy(alpha = if (dark) 0.03f else 0.15f),
@@ -200,21 +202,21 @@ fun Modifier.largeSurface(shape: Shape, elevation: Dp = 0.dp): Modifier {
         .border(GlassTokens.rim, rim, shape)
 }
 
-/** 2.2.5: the dark scrim behind sheets, dialogs and the drawer. */
+/** the dark scrim behind sheets, dialogs and the drawer. */
 val LARGE_SCRIM = Color.Black.copy(alpha = 0.32f)
 
 /**
- * 2.2.5: a very soft ambient glow behind the top of the empty home screen (brand blue + light
+ * a very soft ambient glow behind the top of the empty home screen (brand blue + light
  * purple blobs fading out by ~35 % of the screen height) so the frosted top bar has something to
  * frost. Drawn inside the Haze source; the composer area and the empty-state content are untouched.
  */
 @Composable
 fun HomeAmbientGlow(modifier: Modifier = Modifier) {
-    // 2.5.0 Beta2: no accent glow in 柔光 (restrained, no gradients); 经典 keeps it.
+    // no accent glow in 柔光 (restrained, no gradients); 经典 keeps it.
     if (softStyle()) return
     val c = Iris.colors
     val a = if (c.isDark) 0.08f else 0.14f
-    // 2.2.5: both blobs follow the theme accent (the second is the accent hue-shifted +40°).
+    // both blobs follow the theme accent (the second is the accent hue-shifted +40°).
     val blue = c.accent
     val purple = remember(c.accent) {
         val hsv = FloatArray(3)

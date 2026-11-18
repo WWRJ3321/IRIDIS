@@ -8,7 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 2.4.6: non-streaming chat requests (OpenAI `stream:false`, Ollama `stream:false`) used to send nothing
+ * non-streaming chat requests (OpenAI `stream:false`, Ollama `stream:false`) used to send nothing
  * until the whole reply was generated. Agent clients with long system prompts + tool lists need tens of
  * seconds of prefill on a phone, and their HTTP client (often a 60 s timeout) gave up with
  * "Request timed out", retried, and timed out again.

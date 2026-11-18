@@ -1,7 +1,13 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.ModelFormat
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
- * 1.10.3: GPU compile-cache diagnostics and guards (user: 「可我想用GPU」 — GPU loads take hundreds of
+ * GPU compile-cache diagnostics and guards (user: 「可我想用GPU」 — GPU loads take hundreds of
  * seconds every time, i.e. the compile cache never seems to hit).
  *
  * What LiteRT-LM 0.18.0 does (source tag v0.18.0):
@@ -72,15 +78,15 @@ object GpuCacheDiag {
     fun lowSpace(freeBytes: Long, modelBytes: Long): Boolean = freeBytes in 0 until (modelBytes + SPACE_SLACK_BYTES)
 
     fun lowSpaceNotice(modelName: String, freeBytes: Long, modelBytes: Long): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fc5278, modelName, gb(freeBytes), gb(modelBytes))
+        I18n.s(R.string.engine_fc5278, modelName, gb(freeBytes), gb(modelBytes))
 
-    val INTERRUPTED_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b8f9e9)
+    val INTERRUPTED_NOTICE: String get() = I18n.s(R.string.engine_b8f9e9)
 
     private fun gb(b: Long) = String.format(java.util.Locale.ROOT, "%.1f GB", b / 1_073_741_824.0)
 }
 
 /**
- * 1.10.3: when the process is kept alive with a foreground service during a load. A GPU / NPU load
+ * when the process is kept alive with a foreground service during a load. A GPU / NPU load
  * of a LiteRT-LM model compiles for minutes in one blocking native call; HyperOS / Android freeze
  * or kill a backgrounded app within seconds, which both stretches the load and leaves the runtime's
  * half-written cache stale (→ the next load compiles again).
@@ -88,6 +94,6 @@ object GpuCacheDiag {
 object LoadKeepAlivePolicy {
     fun keepAlive(state: EngineState): Boolean =
         state is EngineState.Loading &&
-            state.model.format == com.iris.localai.data.ModelFormat.LITERT &&
+            state.model.format == ModelFormat.LITERT &&
             (state.backend == Backend.GPU || state.backend == Backend.NPU)
 }

@@ -1,6 +1,8 @@
 package com.iris.localai.files
 
-import com.iris.localai.agent.StorageLayout
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.workspace.StorageLayout
 import java.io.File
 import java.nio.file.Files
 import java.util.Locale
@@ -18,25 +20,25 @@ import java.util.Locale
  * a stored "ARCHIVE" falls back to [LIST].
  */
 enum class FileViewStyle(val label: String) {
-    LIST(com.iris.localai.I18n.s(com.iris.localai.R.string.files_371297)),
-    /** 2.1.9 「卡片」: the pseudo-3D card deck (CardStackFileView, the first 「档案模式」). */
-    CARDS(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d87f21));
+    LIST(I18n.s(R.string.files_371297)),
+    /** 「卡片」: the pseudo-3D card deck (CardStackFileView, the first 「档案模式」). */
+    CARDS(I18n.s(R.string.files_d87f21));
 
     companion object {
         fun parse(s: String?): FileViewStyle = entries.firstOrNull { it.name.equals(s?.trim(), ignoreCase = true) } ?: LIST
     }
 }
 
-enum class FileSort(val label: String) { NAME(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7ec2d)), TIME(com.iris.localai.I18n.s(com.iris.localai.R.string.files_19fcb9)), SIZE(com.iris.localai.I18n.s(com.iris.localai.R.string.files_58f966)) }
+enum class FileSort(val label: String) { NAME(I18n.s(R.string.agent_d7ec2d)), TIME(I18n.s(R.string.files_19fcb9)), SIZE(I18n.s(R.string.files_58f966)) }
 
 /** The app's own folders at the root, in their fixed display order ([StorageLayout.RESERVED]). */
 enum class SystemFolder(val dir: String, val label: String) {
-    MODELS(StorageLayout.MODELS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)),
-    VOICE(StorageLayout.VOICE, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)),
-    SKILLS(StorageLayout.SKILLS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143)),
-    KNOWLEDGE(StorageLayout.KNOWLEDGE, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e4333)),
-    CONFIG(StorageLayout.CONFIG, com.iris.localai.I18n.s(com.iris.localai.R.string.files_224e2c)),
-    WORKSPACE(StorageLayout.WORKSPACE, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1));
+    MODELS(StorageLayout.MODELS, I18n.s(R.string.chat_8000f1)),
+    VOICE(StorageLayout.VOICE, I18n.s(R.string.settings_48df35)),
+    SKILLS(StorageLayout.SKILLS, I18n.s(R.string.chat_699143)),
+    KNOWLEDGE(StorageLayout.KNOWLEDGE, I18n.s(R.string.agent_7e4333)),
+    CONFIG(StorageLayout.CONFIG, I18n.s(R.string.files_224e2c)),
+    WORKSPACE(StorageLayout.WORKSPACE, I18n.s(R.string.agent_4fa8c1));
 
     companion object {
         /** Case-insensitive, like shared storage. */
@@ -155,12 +157,12 @@ object FileSizes {
 
 /** Why a new name is refused (null = fine). Messages are user-facing. */
 enum class NameProblem(val message: String) {
-    EMPTY(com.iris.localai.I18n.s(com.iris.localai.R.string.files_df09ff)),
-    TOO_LONG(com.iris.localai.I18n.s(com.iris.localai.R.string.files_47d612)),
-    ILLEGAL(com.iris.localai.I18n.s(com.iris.localai.R.string.files_6fc1e3)),
-    DOTS(com.iris.localai.I18n.s(com.iris.localai.R.string.files_1946a5)),
-    EXISTS(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d36ec9)),
-    RESERVED(com.iris.localai.I18n.s(com.iris.localai.R.string.files_ca25a3)),
+    EMPTY(I18n.s(R.string.files_df09ff)),
+    TOO_LONG(I18n.s(R.string.files_47d612)),
+    ILLEGAL(I18n.s(R.string.files_6fc1e3)),
+    DOTS(I18n.s(R.string.files_1946a5)),
+    EXISTS(I18n.s(R.string.files_d36ec9)),
+    RESERVED(I18n.s(R.string.files_ca25a3)),
 }
 
 object FileNames {
@@ -209,8 +211,8 @@ object FileProtection {
     }
 
     fun warningText(rel: String): String? = if (!modelWarning(rel)) null else when (SystemFolder.of(FilesPaths.segments(rel)!![0])) {
-        SystemFolder.VOICE -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_fc1127)
-        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.files_067a54)
+        SystemFolder.VOICE -> I18n.s(R.string.files_fc1127)
+        else -> I18n.s(R.string.files_067a54)
     }
 
     /** Hidden from the listing: dot-files and app bookkeeping at the root. */
@@ -283,37 +285,37 @@ object FilesIo {
     }
 
     fun mkdir(root: File, parentRel: String, name: String): Result {
-        val parent = FilesPaths.resolve(root, parentRel) ?: return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
+        val parent = FilesPaths.resolve(root, parentRel) ?: return Result.Failed(I18n.s(R.string.files_a0b599))
         FileNames.validate(name, parentRel, parent.list()?.toList().orEmpty())?.let { return Result.Failed(it.message) }
         val target = File(parent, name.trim())
-        if (!FilesPaths.isInside(root, target)) return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
-        return if (target.mkdir()) Result.Ok(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76ace8, name.trim())) else Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_68105f))
+        if (!FilesPaths.isInside(root, target)) return Result.Failed(I18n.s(R.string.files_a0b599))
+        return if (target.mkdir()) Result.Ok(I18n.s(R.string.agent_76ace8, name.trim())) else Result.Failed(I18n.s(R.string.files_68105f))
     }
 
     fun rename(root: File, rel: String, newName: String): Result {
-        if (!FileProtection.canRename(rel)) return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_4831d0))
-        val from = FilesPaths.resolve(root, rel) ?: return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
+        if (!FileProtection.canRename(rel)) return Result.Failed(I18n.s(R.string.files_4831d0))
+        val from = FilesPaths.resolve(root, rel) ?: return Result.Failed(I18n.s(R.string.files_a0b599))
         val parentRel = FilesPaths.parent(rel)
         val n = newName.trim()
-        if (n == from.name) return Result.Ok(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d45d7f))
+        if (n == from.name) return Result.Ok(I18n.s(R.string.files_d45d7f))
         FileNames.validate(n, parentRel, from.parentFile?.list()?.toList().orEmpty(), current = from.name)?.let { return Result.Failed(it.message) }
         val to = File(from.parentFile, n)
-        if (!FilesPaths.isInside(root, to)) return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
+        if (!FilesPaths.isInside(root, to)) return Result.Failed(I18n.s(R.string.files_a0b599))
         val ok = if (n.equals(from.name, ignoreCase = true)) {
             // case-only change on a case-insensitive volume: go through a temporary name
             val tmp = File(from.parentFile, ".iridis-rename-" + System.nanoTime())
             from.renameTo(tmp) && (tmp.renameTo(to) || tmp.renameTo(from).let { false })
         } else !to.exists() && from.renameTo(to)
-        return if (ok) Result.Ok(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_eac80a, n)) else Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d3df5a))
+        return if (ok) Result.Ok(I18n.s(R.string.agent_eac80a, n)) else Result.Failed(I18n.s(R.string.files_d3df5a))
     }
 
     fun delete(root: File, rel: String): Result {
-        if (!FileProtection.canDelete(rel)) return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_b92433))
+        if (!FileProtection.canDelete(rel)) return Result.Failed(I18n.s(R.string.files_b92433))
         // Resolve the parent (a symlink entry may point outside; the link itself is still ours to remove).
-        val parent = FilesPaths.resolve(root, FilesPaths.parent(rel)) ?: return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_a0b599))
+        val parent = FilesPaths.resolve(root, FilesPaths.parent(rel)) ?: return Result.Failed(I18n.s(R.string.files_a0b599))
         val target = File(parent, FilesPaths.name(FilesPaths.normalize(rel)!!))
-        if (!target.exists() && !Files.isSymbolicLink(target.toPath())) return Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_d9523e))
-        return if (deleteTree(target)) Result.Ok(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b0b6b9, target.name)) else Result.Failed(com.iris.localai.I18n.s(com.iris.localai.R.string.files_ec6662))
+        if (!target.exists() && !Files.isSymbolicLink(target.toPath())) return Result.Failed(I18n.s(R.string.files_d9523e))
+        return if (deleteTree(target)) Result.Ok(I18n.s(R.string.agent_b0b6b9, target.name)) else Result.Failed(I18n.s(R.string.files_ec6662))
     }
 
     /** Deletes [f]; symbolic links are removed as links and never followed. */

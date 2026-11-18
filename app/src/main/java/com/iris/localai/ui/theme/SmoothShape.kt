@@ -18,7 +18,7 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 
 /*
- * 1.8.0: "continuous" rounded corners (the iOS / HyperOS squircle look). A plain rounded corner
+ * "continuous" rounded corners (the iOS / HyperOS squircle look). A plain rounded corner
  * starts its curve abruptly where the straight edge ends; a smoothed corner eases into the curve
  * with two cubic Béziers on either side of a shorter circular arc (corner smoothing, 0 = plain
  * circle, ~0.6 = iOS). Pure geometry lives in [SmoothCorner] so it is unit-tested on the JVM.
@@ -140,7 +140,7 @@ fun smoothShape(radius: Dp, smoothing: Float = IrisRadius.SMOOTHING): Shape =
     if (radius <= 0.dp) androidx.compose.ui.graphics.RectangleShape else SmoothRoundedShape(radius, smoothing)
 
 /**
- * 2.6.2: clips what is drawn to [shape] but not hit-testing. Modifier.clip with an
+ * clips what is drawn to [shape] but not hit-testing. Modifier.clip with an
  * [Outline.Generic] shape (our continuous corners) hit-tests each touch with Path.op against a
  * 0.01 px square; Skia's path ops lose that square to float precision ~8192 px from the top of
  * the clipped node, so rows far down a tall card stopped taking taps. Use this on tall containers.

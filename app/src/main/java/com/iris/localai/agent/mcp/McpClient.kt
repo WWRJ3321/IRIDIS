@@ -1,5 +1,7 @@
 package com.iris.localai.agent.mcp
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -27,7 +29,7 @@ data class McpToolInfo(val name: String, val description: String = "", val schem
 }
 
 /**
- * 2.3.0 ②: MCP client for one REMOTE server (no stdio / subprocess on Android).
+ * MCP client for one REMOTE server (no stdio / subprocess on Android).
  * Streamable HTTP first (POST, JSON or SSE answer, Mcp-Session-Id, MCP-Protocol-Version); when
  * initialize is refused with 400/404/405 it falls back to the 2024-11-05 HTTP+SSE transport (GET
  * stream → `endpoint` event → POSTs, answers on the stream). A dropped stream / expired session
@@ -71,7 +73,7 @@ class McpClient(
         } catch (t: Throwable) {
             reset(); throw t
         }
-        res.error?.let { reset(); throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7fdb2b, it.message)) }
+        res.error?.let { reset(); throw McpException(I18n.s(R.string.agent_7fdb2b, it.message)) }
         val r = res.result as? JsonObject
         protocol = (r?.get("protocolVersion") as? JsonPrimitive)?.contentOrNull?.takeIf { it in JsonRpc.SUPPORTED } ?: JsonRpc.PROTOCOL_VERSION
         serverName = ((r?.get("serverInfo") as? JsonObject)?.get("name") as? JsonPrimitive)?.contentOrNull
@@ -105,7 +107,7 @@ class McpClient(
                 val id = ids.getAndIncrement()
                 val body = JsonRpc.request(id, method, params)
                 val res = if (mode == Mode.SSE) postSse(body, id, timeoutMs) else postStreamable(body, id, timeoutMs)
-                res.error?.let { throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8927af, it.message, it.code)) }
+                res.error?.let { throw McpException(I18n.s(R.string.agent_8927af, it.message, it.code)) }
                 return res.result
             } catch (e: McpException) {
                 throw e
@@ -139,7 +141,7 @@ class McpClient(
         mode = Mode.NONE; sessionId = null; protocol = null; sseEndpoint = null
         runCatching { sseConn?.disconnect() }
         sseThread?.interrupt(); sseConn = null; sseThread = null
-        pending.values.forEach { it.completeExceptionally(IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8439c1))) }
+        pending.values.forEach { it.completeExceptionally(IOException(I18n.s(R.string.agent_8439c1))) }
         pending.clear()
     }
 
@@ -147,9 +149,9 @@ class McpClient(
 
     private class HttpStatus(val code: Int, val body: String) : IOException("HTTP $code") {
         fun describe() = when (code) {
-            401, 403 -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_240203, code)
-            404 -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_38047b)
-            else -> "HTTP $code" + body.take(120).takeIf { it.isNotBlank() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ae5443, it) }.orEmpty()
+            401, 403 -> I18n.s(R.string.agent_240203, code)
+            404 -> I18n.s(R.string.agent_38047b)
+            else -> "HTTP $code" + body.take(120).takeIf { it.isNotBlank() }?.let { I18n.s(R.string.agent_ae5443, it) }.orEmpty()
         }
     }
 
@@ -189,16 +191,16 @@ class McpClient(
                         val n = r.read(buf)
                         val events = if (n < 0) parser.finish() else parser.feed(String(buf, 0, n))
                         for (ev in events) if (ev.event == "message") JsonRpc.responseFor(id, JsonRpc.parse(ev.data))?.let { return it }
-                        if (n < 0) throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8808ff))
+                        if (n < 0) throw McpException(I18n.s(R.string.agent_8808ff))
                     }
                     @Suppress("UNREACHABLE_CODE") throw IllegalStateException()
                 }
             } else {
                 val text = c.inputStream.use { readCapped(it.reader()) }
-                JsonRpc.responseFor(id, JsonRpc.parse(text)) ?: throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6a19f3))
+                JsonRpc.responseFor(id, JsonRpc.parse(text)) ?: throw McpException(I18n.s(R.string.agent_6a19f3))
             }
         } catch (e: TimeoutException) {
-            throw java.net.SocketTimeoutException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3831e))
+            throw java.net.SocketTimeoutException(I18n.s(R.string.agent_f3831e))
         } finally {
             c.disconnect()
         }
@@ -212,7 +214,7 @@ class McpClient(
         c.readTimeout = 0 // long-lived stream; per-request timeouts are on the futures
         val code = c.responseCode
         if (code !in 200..299) { c.disconnect(); throw McpException(HttpStatus(code, "").describe()) }
-        if (!c.contentType.orEmpty().lowercase().contains("text/event-stream")) { c.disconnect(); throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_64a237)) }
+        if (!c.contentType.orEmpty().lowercase().contains("text/event-stream")) { c.disconnect(); throw McpException(I18n.s(R.string.agent_64a237)) }
         sseConn = c
         val endpoint = CompletableFuture<String>()
         val t = Thread({
@@ -231,8 +233,8 @@ class McpClient(
                 }
             } catch (_: Throwable) {
             } finally {
-                endpoint.completeExceptionally(IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e65b1b)))
-                pending.values.forEach { it.completeExceptionally(IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7d5406))) }
+                endpoint.completeExceptionally(IOException(I18n.s(R.string.agent_e65b1b)))
+                pending.values.forEach { it.completeExceptionally(IOException(I18n.s(R.string.agent_7d5406))) }
                 pending.clear()
                 if (sseConn === c) mode = Mode.NONE
             }
@@ -241,7 +243,7 @@ class McpClient(
         sseThread = t
         t.start()
         sseEndpoint = try { endpoint.get(readTimeoutMs.toLong(), TimeUnit.MILLISECONDS) } catch (e: Exception) {
-            reset(); throw McpException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_94ca41))
+            reset(); throw McpException(I18n.s(R.string.agent_94ca41))
         }
     }
 
@@ -249,12 +251,12 @@ class McpClient(
         val f = CompletableFuture<JsonRpc.Message>()
         pending[id] = f
         try {
-            postRaw(sseEndpoint ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fb0ca6)), body)
+            postRaw(sseEndpoint ?: throw IOException(I18n.s(R.string.agent_fb0ca6)), body)
             return f.get(timeoutMs, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
-            throw java.net.SocketTimeoutException(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3831e))
+            throw java.net.SocketTimeoutException(I18n.s(R.string.agent_f3831e))
         } catch (e: java.util.concurrent.ExecutionException) {
-            throw (e.cause as? IOException) ?: IOException(e.cause?.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4379a7))
+            throw (e.cause as? IOException) ?: IOException(e.cause?.message ?: I18n.s(R.string.agent_4379a7))
         } finally {
             pending.remove(id)
         }
@@ -283,11 +285,11 @@ class McpClient(
         fun resolve(base: String, ref: String): String = runCatching { URI(base).resolve(ref).toString() }.getOrDefault(ref)
 
         fun describe(t: Throwable?): String = when (t) {
-            null -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0745fc)
-            is java.net.SocketTimeoutException -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_279f5b, t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_71a0cc))
-            is java.net.UnknownHostException -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ddff6b, t.message)
-            is java.net.ConnectException -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_90ac91, t.message)
-            is javax.net.ssl.SSLException -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9f1e0c, t.message)
+            null -> I18n.s(R.string.agent_0745fc)
+            is java.net.SocketTimeoutException -> I18n.s(R.string.agent_279f5b, t.message ?: I18n.s(R.string.agent_71a0cc))
+            is java.net.UnknownHostException -> I18n.s(R.string.agent_ddff6b, t.message)
+            is java.net.ConnectException -> I18n.s(R.string.agent_90ac91, t.message)
+            is javax.net.ssl.SSLException -> I18n.s(R.string.agent_9f1e0c, t.message)
             else -> t.message ?: t.javaClass.simpleName
         }
     }

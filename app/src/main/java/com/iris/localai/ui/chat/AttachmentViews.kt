@@ -1,5 +1,13 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.markdown.ChatImageViewer
+import com.iris.localai.ui.markdown.ImageSource
+import com.iris.localai.ui.markdown.RichText
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.ui.theme.LocalReduceMotion
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,14 +57,14 @@ import com.iris.localai.ui.components.PressableIcon
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
-import com.iris.localai.util.Attachments
+import com.iris.localai.util.io.Attachments
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 1.10.12: a row of attachments (composer: removable; messages: read-only).
- * 1.13.0: a LazyRow — scrolls sideways, items spring in, fade + shrink out when removed and the
+ * a row of attachments (composer: removable; messages: read-only).
+ * a LazyRow — scrolls sideways, items spring in, fade + shrink out when removed and the
  * rest slide over; in the composer a long press picks one up to drag it to a new place.
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -69,26 +77,26 @@ fun AttachmentStrip(
     onReplace: ((old: Attachment, new: Attachment) -> Unit)? = null,
 ) {
     if (list.isEmpty()) return
-    val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
+    val reduce = LocalReduceMotion.current
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     val haptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val spacingPx = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
     var dragKey by remember { mutableStateOf<String?>(null) }
-    // 2.4.5 (#13): tap a picture → full-screen viewer (zoom, pan, left / right through the message's pictures).
+    // tap a picture → full-screen viewer (zoom, pan, left / right through the message's pictures).
     var viewing by remember { mutableStateOf<Int?>(null) }
     viewing?.let { start ->
         val pics = list.filter { it.kind == AttachmentKind.IMAGE }
         val ctx = androidx.compose.ui.platform.LocalContext.current
         val scope = androidx.compose.runtime.rememberCoroutineScope()
-        com.iris.localai.ui.markdown.ChatImageViewer(
-            pics.map { com.iris.localai.ui.markdown.ImageSource.LocalFile(it.path) to it.name }, start, onDismiss = { viewing = null },
-            // 2.6.2: 编辑 only where the attachment can still change (the composer).
+        ChatImageViewer(
+            pics.map { ImageSource.LocalFile(it.path) to it.name }, start, onDismiss = { viewing = null },
+            // 编辑 only where the attachment can still change (the composer).
             onEdit = onReplace?.let { replace -> { i: Int, edited: android.graphics.Bitmap ->
                 val old = pics.getOrNull(i)
                 if (old != null) scope.launch {
                     val new = withContext(Dispatchers.IO) { ImageEditSave.save(ctx, old, edited) }
                     if (new != null) { replace(old, new); viewing = null }
-                    else android.widget.Toast.makeText(ctx, com.iris.localai.I18n.s(com.iris.localai.R.string.img262_save_failed), android.widget.Toast.LENGTH_SHORT).show()
+                    else android.widget.Toast.makeText(ctx, I18n.s(R.string.img262_save_failed), android.widget.Toast.LENGTH_SHORT).show()
                 }
             } },
         )
@@ -100,7 +108,7 @@ fun AttachmentStrip(
             onDragStart = { at ->
                 state.layoutInfo.visibleItemsInfo.firstOrNull { at.x.toInt() in it.offset..(it.offset + it.size) }?.let {
                     dragKey = it.key as? String; dragDx = 0f
-                    haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.LONG_PRESS)
+                    haptic.perform(FeedbackEvent.LONG_PRESS)
                 }
             },
             onDrag = { change, d ->
@@ -127,7 +135,7 @@ fun AttachmentStrip(
     androidx.compose.foundation.lazy.LazyRow(
         modifier = modifier.then(gestures),
         state = state,
-        horizontalArrangement = Arrangement.spacedBy(com.iris.localai.ui.theme.IrisSpace.S),
+        horizontalArrangement = Arrangement.spacedBy(IrisSpace.S),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items(list.size, key = { list[it].path }) { i ->
@@ -153,9 +161,9 @@ fun AttachmentStrip(
             ) {
                 if (a.kind == AttachmentKind.IMAGE) ImageThumb(a, 64.dp) { viewing = list.filter { it.kind == AttachmentKind.IMAGE }.indexOfFirst { it.path == a.path }.coerceAtLeast(0) } else FileChip(a)
                 if (onRemove != null) {
-                    Box(Modifier.align(Alignment.TopEnd).padding(com.iris.localai.ui.theme.IrisSpace.XS)) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(IrisSpace.XS)) {
                         PressableIcon(
-                            Icons.Rounded.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8506eb, a.name), size = 22.dp, iconSize = 13.dp,
+                            Icons.Rounded.Close, I18n.s(R.string.chat_8506eb, a.name), size = 22.dp, iconSize = 13.dp,
                             tint = Iris.colors.onAccent, background = Iris.colors.text.copy(alpha = 0.55f),
                             onClick = { onRemove(a) },
                         )
@@ -166,18 +174,18 @@ fun AttachmentStrip(
     }
 }
 
-/** 2.6.2: writes an edited picture next to the attachments and returns the replacing attachment. */
+/** writes an edited picture next to the attachments and returns the replacing attachment. */
 internal object ImageEditSave {
     fun save(context: android.content.Context, old: Attachment, edited: android.graphics.Bitmap): Attachment? = runCatching {
         val (name, png) = ImageEditMath.outName(old.name)
         val format = if (png) android.graphics.Bitmap.CompressFormat.PNG else android.graphics.Bitmap.CompressFormat.JPEG
-        val out = java.io.File(com.iris.localai.util.Attachments.dir(context), java.util.UUID.randomUUID().toString().take(8) + "-" + name)
+        val out = java.io.File(Attachments.dir(context), java.util.UUID.randomUUID().toString().take(8) + "-" + name)
         if (!ImageEditOps.write(edited, out, format)) { out.delete(); return null }
         old.copy(name = name, path = out.path, mime = if (format == android.graphics.Bitmap.CompressFormat.PNG) "image/png" else "image/jpeg", sizeBytes = out.length())
     }.getOrNull()
 }
 
-/** 1.13.0: pure reorder used by the composer's drag (kept separate for tests). */
+/** pure reorder used by the composer's drag (kept separate for tests). */
 object AttachmentOrder {
     fun <T> move(list: List<T>, from: Int, to: Int): List<T> {
         if (from !in list.indices || to !in list.indices || from == to) return list
@@ -197,7 +205,7 @@ private fun ImageThumb(a: Attachment, size: Dp, onOpen: () -> Unit) {
     }
     Box(
         Modifier.size(size).clip(IrisRadius.smallShape).background(c.surfaceVariant)
-            .clickable(onClickLabel = com.iris.localai.ui.markdown.RichText.OPEN_IMAGE, onClick = onOpen),
+            .clickable(onClickLabel = RichText.OPEN_IMAGE, onClick = onOpen),
         contentAlignment = Alignment.Center,
     ) {
         val b = bmp
@@ -215,7 +223,7 @@ private fun FileChip(a: Attachment) {
             .widthIn(min = 120.dp, max = 200.dp)
             .clip(IrisRadius.smallShape)
             .background(c.surfaceVariant)
-            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M),
+            .padding(horizontal = IrisSpace.M),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(32.dp).background(c.accentContainer, CircleShape), contentAlignment = Alignment.Center) {
@@ -224,11 +232,11 @@ private fun FileChip(a: Attachment) {
                 null, tint = c.onAccentContainer, modifier = Modifier.size(17.dp),
             )
         }
-        Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
-        Column(Modifier.padding(end = com.iris.localai.ui.theme.IrisSpace.M)) {
+        Spacer(Modifier.width(IrisSpace.S))
+        Column(Modifier.padding(end = IrisSpace.M)) {
             Text(a.name, style = IrisType.labelSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                Attachments.ext(a.name).uppercase().ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47) } + " · " + Attachments.sizeLabel(a.sizeBytes),
+                Attachments.ext(a.name).uppercase().ifBlank { I18n.s(R.string.chat_2a0c47) } + " · " + Attachments.sizeLabel(a.sizeBytes),
                 style = IrisType.caption, color = c.textSecondary, maxLines = 1,
             )
         }

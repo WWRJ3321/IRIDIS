@@ -1,4 +1,9 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
  * Stops a native load crash from becoming a startup loop.
@@ -31,9 +36,9 @@ object NativeLoadCrash {
 }
 
 object LoadCrashGate {
-    val SKIP_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5fe370)
+    val SKIP_NOTICE: String get() = I18n.s(R.string.engine_5fe370)
     /** Native crash during load, but the tombstone did not contain the JNI symbol. */
-    val SKIP_NOTICE_NO_SYMBOL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_33b3b1)
+    val SKIP_NOTICE_NO_SYMBOL: String get() = I18n.s(R.string.engine_33b3b1)
 
     fun notice(breadcrumbOnly: Boolean): String = if (breadcrumbOnly) SKIP_NOTICE_NO_SYMBOL else SKIP_NOTICE
 

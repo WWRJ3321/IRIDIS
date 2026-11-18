@@ -1,8 +1,11 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.workspace
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
 import java.io.File
 
-/** 1.10.0: where the agent workspace lives. */
+/** where the agent workspace lives. */
 enum class WorkspaceLocation(val label: String) {
     /**
      * Public `Download/IRIDIS/workspace` (2.1.1; the whole `Download/IRIDIS` in 2.1.0, `Download/IRISLocalAI`
@@ -11,7 +14,7 @@ enum class WorkspaceLocation(val label: String) {
     DOWNLOADS("下载/IRIDIS/workspace"),
     /** App-private `filesDir/workspace` (the 1.9.0 location). */
     PRIVATE("应用私有目录"),
-    /** 2.3.3: a real folder the user picked (needs 全部文件访问); models / 知识库 / voice stay in Download/IRIDIS. */
+    /** a real folder the user picked (needs 全部文件访问); models / 知识库 / voice stay in Download/IRIDIS. */
     CUSTOM("自定义位置");
 
     companion object {
@@ -27,16 +30,16 @@ data class WorkspaceChoice(
     /** Why the requested location could not be used (Chinese, shown as a notice); null = no fallback. */
     val fallbackReason: String? = null,
     /**
-     * 2.1.1: the app's resource root that holds skills/ and knowledge/ (never the sandbox):
+     * the app's resource root that holds skills/ and knowledge/ (never the sandbox):
      * `Download/IRIDIS` next to `workspace/`, or `filesDir/iridis` in 应用私有目录 mode.
      */
     val appRoot: File = File(root.parentFile ?: root, StorageLayout.PRIVATE_APP_DIR),
-    /** 2.3.3: why the custom folder could not be used (fallbackReason is then set). */
+    /** why the custom folder could not be used (fallbackReason is then set). */
     val customProblem: CustomWorkspace.Problem? = null,
 )
 
 /**
- * 2.3.3: validation of a user-picked agent workspace folder (real path; native tools need one, so no
+ * validation of a user-picked agent workspace folder (real path; native tools need one, so no
  * SAF tree). Pure, unit-tested: the app passes its storage volumes (/storage/emulated/0, SD cards).
  */
 object CustomWorkspace {
@@ -111,7 +114,7 @@ object WorkspaceResolver {
         volumes: List<File> = emptyList(),
     ): WorkspaceChoice {
         if (requested == WorkspaceLocation.CUSTOM) {
-            // 2.3.3: the sandbox moves; skills / 知识库 / models stay with the default location.
+            // the sandbox moves; skills / 知识库 / models stay with the default location.
             val base = resolve(WorkspaceLocation.DOWNLOADS, downloadsDir, storageState, privateRoot, usable)
             val problem = CustomWorkspace.validate(customPath, allFiles, volumes, downloadsDir?.let { downloadsRoot(it) }, usable)
             return if (problem == null) WorkspaceChoice(requested, WorkspaceLocation.CUSTOM, CustomWorkspace.canonical(customPath!!)!!, appRoot = base.appRoot)
@@ -134,7 +137,7 @@ object WorkspaceResolver {
     fun probe(dir: File): Boolean = runCatching {
         dir.mkdirs()
         if (!dir.isDirectory) return false
-        // 2.6.7: 每次用新文件名——旧安装留下的 .iris-probe 属于别的 uid，重装后写不进去会被误判为不可用。
+        // 每次用新文件名——旧安装留下的 .iris-probe 属于别的 uid，重装后写不进去会被误判为不可用。
         val f = File(dir, ".iris-probe-" + System.nanoTime() + "-" + (0..9999).random())
         f.writeText("ok")
         val ok = f.readText() == "ok"
@@ -154,7 +157,7 @@ object WorkspaceResolver {
 }
 
 /**
- * 2.1.0: one-time move of `Download/IRISLocalAI` (1.10.0 – 2.0.0) to `Download/IRIDIS`. With scoped
+ * one-time move of `Download/IRISLocalAI` (1.10.0 – 2.0.0) to `Download/IRIDIS`. With scoped
  * storage the new package (com.iridis) only sees files the old package created when it holds
  * 全部文件访问; otherwise the old folder looks empty and the user is told to move it by hand.
  * Pure decision logic, unit-tested; the app does the file work with [WorkspaceMigration].
@@ -269,8 +272,8 @@ interface ExternalFiles {
     data class Entry(val name: String, val isDir: Boolean, val size: Long)
     fun list(relDir: String): List<Entry>?
     fun read(relPath: String, maxBytes: Long): ByteArray?
-    /** 1.10.6: overwrite (or create) a file through the grant; false = not possible. */
+    /** overwrite (or create) a file through the grant; false = not possible. */
     fun write(relPath: String, bytes: ByteArray): Boolean = false
-    /** 1.10.6: delete a file through the grant; false = not possible. */
+    /** delete a file through the grant; false = not possible. */
     fun delete(relPath: String): Boolean = false
 }

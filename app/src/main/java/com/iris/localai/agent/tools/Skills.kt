@@ -1,22 +1,25 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 
-/** 1.12.0: one skill: a folder with a SKILL.md (agentskills.io layout). */
+/** one skill: a folder with a SKILL.md (agentskills.io layout). */
 data class SkillInfo(
     val name: String, val description: String, val source: String, val body: () -> String,
     /** Other files of the skill, relative to its folder. */
     val files: () -> List<String> = { emptyList() },
-    /** 2.1.1: text of one of [files] (null = missing, too big or outside the skill folder). */
+    /** text of one of [files] (null = missing, too big or outside the skill folder). */
     val readFile: (String) -> String? = { null },
 )
 
 /**
- * 1.12.0 Skills: instructions the model loads only when a task needs them, so they cost almost no
+ * Skills: instructions the model loads only when a task needs them, so they cost almost no
  * prompt (one line each). Built-in skills ship in the APK (assets/skills, read-only); the user adds their
  * own as `skills/<name>/SKILL.md` in the app's resource root (a same-named user skill wins).
- * 2.1.1: that root is Download/IRIDIS (filesDir/iridis in 应用私有目录 mode), outside the agent
+ * that root is Download/IRIDIS (filesDir/iridis in 应用私有目录 mode), outside the agent
  * workspace, so the file tools can neither read nor change a skill; the [SkillTool] reads its
  * SKILL.md and, with `file`, one of its other files (the model can then write a copy into the
  * workspace to run it).

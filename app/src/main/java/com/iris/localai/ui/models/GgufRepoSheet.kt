@@ -1,5 +1,9 @@
 package com.iris.localai.ui.models
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.MnnHub
+import com.iris.localai.ui.components.CheckRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,23 +43,23 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 
-/** 2.2.16 「在线搜索模型」 texts (unit-tested). */
+/** 「在线搜索模型」 texts (unit-tested). */
 object SearchText {
-    val OPEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d2c548)
-    val HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_03e899)
-    val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8c8980)
-    val MAIN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_22fc16)
-    val NO_GGUF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_691d85)
-    val VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_93f6a8)
+    val OPEN: String get() = I18n.s(R.string.models_d2c548)
+    val HINT: String get() = I18n.s(R.string.models_03e899)
+    val EMPTY: String get() = I18n.s(R.string.models_8c8980)
+    val MAIN: String get() = I18n.s(R.string.models_22fc16)
+    val NO_GGUF: String get() = I18n.s(R.string.models_691d85)
+    val VISION: String get() = I18n.s(R.string.models_93f6a8)
 
     fun stats(h: GgufSearch.RepoHit): String = listOfNotNull(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.models_cbd50e, count(h.downloads)), h.updated.takeIf { it.isNotEmpty() }?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.models_56ffb4, it) },
+        I18n.s(R.string.models_cbd50e, count(h.downloads)), h.updated.takeIf { it.isNotEmpty() }?.let { I18n.s(R.string.models_56ffb4, it) },
     ).joinToString(" · ")
 
-    fun modeHint(m: GgufSearch.Browse, q: String): String = (if (q.isNotBlank()) com.iris.localai.I18n.s(com.iris.localai.R.string.models_45e86f, q) else "") + when (m) {
-        GgufSearch.Browse.HOT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_1c57f4)
-        GgufSearch.Browse.NEW -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_fbdc63)
-        GgufSearch.Browse.FIT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_f07455)
+    fun modeHint(m: GgufSearch.Browse, q: String): String = (if (q.isNotBlank()) I18n.s(R.string.models_45e86f, q) else "") + when (m) {
+        GgufSearch.Browse.HOT -> I18n.s(R.string.models_1c57f4)
+        GgufSearch.Browse.NEW -> I18n.s(R.string.models_fbdc63)
+        GgufSearch.Browse.FIT -> I18n.s(R.string.models_f07455)
     }
 
     /** "约 4.2B 参数 · Q4–Q8 约 2.2–4.2 GB · qwen3" (null when the size is unknown). */
@@ -64,18 +68,18 @@ object SearchText {
         val p = h.params / 1e9
         val ps = if (p >= 1) String.format(java.util.Locale.US, "%.1fB", p) else String.format(java.util.Locale.US, "%.0fM", h.params / 1e6)
         val gb = { b: Long -> String.format(java.util.Locale.US, "%.1f", b / 1073741824.0) }
-        return com.iris.localai.I18n.s(com.iris.localai.R.string.models_4d544f, ps, gb(r.first), gb(r.last)) + (h.arch?.let { " · $it" } ?: "")
+        return I18n.s(R.string.models_4d544f, ps, gb(r.first), gb(r.last)) + (h.arch?.let { " · $it" } ?: "")
     }
 
     fun count(n: Long): String = when {
-        n >= 100_000_000 -> String.format(java.util.Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.models_51364d), n / 1e8)
-        n >= 10_000 -> String.format(java.util.Locale.US, com.iris.localai.I18n.s(com.iris.localai.R.string.models_80b156), n / 1e4)
+        n >= 100_000_000 -> String.format(java.util.Locale.US, I18n.s(R.string.models_51364d), n / 1e8)
+        n >= 10_000 -> String.format(java.util.Locale.US, I18n.s(R.string.models_80b156), n / 1e4)
         else -> n.toString()
     }
 }
 
 /**
- * 2.2.17 C: one online GGUF repo (from 热门 / 最新 / 适合本机 / search on 下载模型): pick a file
+ * C: one online GGUF repo (from 热门 / 最新 / 适合本机 / search on 下载模型): pick a file
  * (quant, size, 内存够用/偏紧), optionally the vision projector, licence and source. The list itself
  * is on the 下载模型 page.
  */
@@ -91,16 +95,16 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
         val visionFile = st.files?.projectors?.let { ps -> ps.firstOrNull { "f16" in it.name.lowercase() } ?: ps.firstOrNull() }
         Column(Modifier.padding(horizontal = IrisDimens.space16), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
             Text(
-                listOf(repo.id.substringBefore('/'), if (repo.site == GgufSearch.Site.MS) com.iris.localai.I18n.s(com.iris.localai.R.string.models_76bc06) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_f4bd50), SearchText.stats(repo)).joinToString(" · "),
+                listOf(repo.id.substringBefore('/'), if (repo.site == GgufSearch.Site.MS) I18n.s(R.string.models_76bc06) else I18n.s(R.string.models_f4bd50), SearchText.stats(repo)).joinToString(" · "),
                 style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val files = st.files
-            // 2.3.5: licence line dropped (noise); gated repos still say so below.
-            if (st.filesLoading) Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fc70c), style = IrisType.caption, color = c.textSecondary)
+            // licence line dropped (noise); gated repos still say so below.
+            if (st.filesLoading) Text(I18n.s(R.string.models_1fc70c), style = IrisType.caption, color = c.textSecondary)
             st.filesError?.let { Text(it, style = IrisType.caption, color = c.danger) }
             if (files != null) {
                 if (files.gated) {
-                    Text(com.iris.localai.data.MnnHub.GATED, style = IrisType.caption, color = c.danger)
+                    Text(MnnHub.GATED, style = IrisType.caption, color = c.danger)
                 } else if (files.choices.isEmpty()) {
                     Text(SearchText.NO_GGUF, style = IrisType.caption, color = c.textTertiary)
                 } else {
@@ -108,7 +112,7 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                     val ram = remember { vm.availRam() }
                     Text(SearchText.MAIN, style = IrisType.caption, color = c.textSecondary)
                     if (hubActive) Text(DownloadText.ONE_AT_A_TIME, style = IrisType.caption, color = c.warning)
-                    // 2.3.5: rows are just quant + size + fit. The file name only shows when two files share a
+                    // rows are just quant + size + fit. The file name only shows when two files share a
                     // quant, and then only the part that differs (common prefix / ".gguf" trimmed).
                     val dupQuants = remember(files) { files.choices.groupingBy { it.quant }.eachCount().filter { it.key != null && it.value > 1 }.keys }
                     val prefix = remember(files) {
@@ -124,11 +128,11 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
                                     Text(ch.quant ?: ch.title, style = IrisType.rowStrong, color = if (best) c.accent else c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     Text(
                                         listOfNotNull(Format.bytes(ch.size), if (ram > 0) GgufSearch.fitHint(ch.size, ram) else null, variant)
-                                            .joinToString(" · ") + if (!ch.complete) com.iris.localai.I18n.s(com.iris.localai.R.string.models_1366d0) else "",
+                                            .joinToString(" · ") + if (!ch.complete) I18n.s(R.string.models_1366d0) else "",
                                         style = IrisType.caption, color = c.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9), {
+                                IrisButton(I18n.s(R.string.settings_f26ef9), {
                                     vm.downloadGguf(ch, if (withVision) projector else null)
                                     vm.closeRepo()
                                 }, style = IrisButtonStyle.Tonal, compact = true, enabled = !hubActive && ch.complete)
@@ -140,7 +144,7 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
         }
         // full-width row (its own 16 dp padding)
         visionFile?.takeIf { st.files?.gated == false && st.files?.choices?.isNotEmpty() == true }?.let { projector ->
-            com.iris.localai.ui.components.CheckRow(
+            CheckRow(
                 SearchText.VISION, withVision, subtitle = Format.bytes(projector.size),
             ) { withVision = !withVision }
         }

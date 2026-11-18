@@ -1,5 +1,9 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.agent.tools.WebFetchTool
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -7,7 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import java.net.URLEncoder
 
 /**
- * 1.12.0: which search service web_search uses (设置 › 智能体 › 联网搜索). 2.0.0: GOOGLE_BROWSER
+ * which search service web_search uses (设置 › 智能体 › 联网搜索). 2.0.0: GOOGLE_BROWSER
  * (the default) and BING_BROWSER search in the in-app browser like on the phone; [short] is the
  * picker's label.
  */
@@ -21,14 +25,14 @@ enum class SearchProvider(val label: String, val short: String) {
 
     companion object {
         val DEFAULT = GOOGLE_BROWSER
-        /** 2.5.6: the picker lists these three; AUTO/BING/DUCKDUCKGO stay readable and show as 必应. */
+        /** the picker lists these three; AUTO/BING/DUCKDUCKGO stay readable and show as 必应. */
         val LISTED = listOf(GOOGLE_BROWSER, BING_BROWSER, SEARXNG)
         fun shownAs(p: SearchProvider): SearchProvider = if (p in LISTED) p else BING_BROWSER
         fun parse(s: String?): SearchProvider = entries.firstOrNull { it.name.equals(s?.trim(), true) } ?: DEFAULT
     }
 }
 
-/** 1.11.1: one search hit. */
+/** one search hit. */
 data class SearchHit(val title: String, val url: String, val snippet: String, val source: String = "", val date: String = "")
 
 /**
@@ -47,17 +51,17 @@ object WebSearchTool : AgentTool {
     override val defaultPermission: Permission = Permission.ALLOW
 
     override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        // 2.2.2: one web tool — a url reads that page (the former web_fetch).
-        if (Args.str(args, "url", "link", "href") != null && Args.str(args, "query", "q") == null) return com.iris.localai.agent.WebFetchTool.run(args, env)
+        // one web tool — a url reads that page (the former web_fetch).
+        if (Args.str(args, "url", "link", "href") != null && Args.str(args, "query", "q") == null) return WebFetchTool.run(args, env)
         val q = query(args)?.trim()
             ?: throw IllegalArgumentException("缺少参数 query")
         if (q.isEmpty()) throw IllegalArgumentException("缺少参数 query")
         val news = Args.bool(args, "news") ?: SearchText.looksLikeNews(q)
-        // 2.0.0: 谷歌/必应（浏览器） search in the shared in-app browser; a captcha (or no readable
+        // 谷歌/必应（浏览器） search in the shared in-app browser; a captcha (or no readable
         // results) falls back to Bing over HTTP for this query, with the reason in the output.
         var notice: String? = null
         var blocked: String? = null
-        // 2.5.6: news goes to Bing's news feed first (dated articles, not portal home pages).
+        // news goes to Bing's news feed first (dated articles, not portal home pages).
         if (news && env.fetcher != null) {
             val nh = runCatching { SearchText.newsFeed(env.fetcher, q) }.getOrDefault(emptyList())
             if (nh.isNotEmpty()) return ok(q, "必应新闻", nh, null, env)
@@ -83,7 +87,7 @@ object WebSearchTool : AgentTool {
 
     private val QUERY_KEYS = arrayOf("query", "q", "keywords", "keyword", "text", "search")
 
-    /** 2.1.8: the query; a list of words (`"query": ["三体", "小说"]`) is joined with spaces. */
+    /** the query; a list of words (`"query": ["三体", "小说"]`) is joined with spaces. */
     internal fun query(args: JsonObject): String? = QUERY_KEYS.firstNotNullOfOrNull { k ->
         when (val v = args[k]) {
             is JsonArray -> v.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p !is JsonNull }?.content?.trim() }
@@ -96,7 +100,7 @@ object WebSearchTool : AgentTool {
     private fun ok(q: String, engine: String, hits: List<SearchHit>, notice: String?, env: ToolEnv, blocked: String? = null): ToolResult {
         val text = (notice?.let { "$it\n" } ?: "") + SearchText.render(q, hits)
         val summary = "$engine · ${hits.size} 条结果" + (blocked?.let { " · $it" } ?: "")
-        return ToolResult(true, com.iris.localai.agent.capTokens(text, env.outputTokens), summary)
+        return ToolResult(true, com.iris.localai.agent.tools.capTokens(text, env.outputTokens), summary)
     }
 }
 
@@ -115,7 +119,7 @@ object SearchText {
         return if (news) "https://www.bing.com/news/search?q=$e&format=rss" else "https://www.bing.com/search?format=rss&q=$e"
     }
 
-    /** 2.5.6: Bing news RSS, newest first; a bare 「新闻」 asks for today's headlines. */
+    /** Bing news RSS, newest first; a bare 「新闻」 asks for today's headlines. */
     fun newsFeed(f: WebFetcher, q: String): List<SearchHit> {
         val bare = q.replace(NEWS, "").replace(Regex("[\\s最近期今日今天的一下帮我找看]+"), "").isEmpty()
         val query = if (bare) "今日要闻" else q
@@ -131,11 +135,11 @@ object SearchText {
 
     fun htmlUrl(q: String): String = "https://www.bing.com/search?q=" + URLEncoder.encode(q, "UTF-8")
 
-    /** 1.11.1 behaviour: Bing only. */
+    /** behaviour: Bing only. */
     fun search(f: WebFetcher, q: String, news: Boolean): List<SearchHit> = search(f, q, news, SearchProvider.AUTO, "").second
 
     /**
-     * 1.12.0: searches with [provider]; AUTO tries Bing, then DuckDuckGo. Returns the provider that
+     * searches with [provider]; AUTO tries Bing, then DuckDuckGo. Returns the provider that
      * answered (label) and its hits.
      */
     fun search(f: WebFetcher, q: String, news: Boolean, provider: SearchProvider, searxUrl: String): Pair<String, List<SearchHit>> {
@@ -181,7 +185,7 @@ object SearchText {
             val href = decode(m.groupValues[1].ifEmpty { m.groupValues[3] })
             val title = clean(m.groupValues[2].ifEmpty { m.groupValues[4] })
             val url = ddgRealUrl(href)
-            // 2.5.2: ads (duckduckgo.com/y.js) and links that did not unwrap are not results
+            // ads (duckduckgo.com/y.js) and links that did not unwrap are not results
             if (title.isEmpty() || !url.startsWith("http") || WebText.isEngineLink(url)) null
             else SearchHit(title, url, WebText.clip(snippets.getOrNull(i).orEmpty(), SNIPPET_CHARS))
         }.distinctBy { it.url }
@@ -228,23 +232,23 @@ object SearchText {
     }.distinctBy { it.url }.toList()
 
     /** Unwraps Bing's click-tracking links (`/ck/a?…&u=a1<base64url>`, `apiclick.aspx?…&url=`). */
-    fun realUrl(u: String): String = WebText.unwrapRedirect(u) // 2.5.2: one unwrapper (checks the decoded target is http/https)
+    fun realUrl(u: String): String = WebText.unwrapRedirect(u) // one unwrapper (checks the decoded target is http/https)
 
     private fun decode(s: String) = s.replace("&amp;", "&")
 
-    /** 2.5.2: entities are decoded once inside [HtmlText.toText] (a second pass turned "&amp;#39;" into "'"). */
+    /** entities are decoded once inside [HtmlText.toText] (a second pass turned "&amp;#39;" into "'"). */
     fun clean(s: String): String = HtmlText.toText(cdata(s)).replace('\n', ' ').replace(Regex("\\s+"), " ").trim()
 
     /** "Fri, 16 Oct 2026 00:51:55 GMT" → "16 Oct 2026". */
     fun shortDate(s: String): String = Regex("\\d{1,2} \\w{3} \\d{4}").find(s)?.value.orEmpty()
 
-    /** 2.5.6: the expanded card without the model-facing instruction and notes. */
+    /** the expanded card without the model-facing instruction and notes. */
     fun forPeople(tool: String, detail: String): String =
         if (tool != "web_search" || !detail.contains("Search results for")) detail
         else detail.substringAfter("Search results for").substringAfter('\n').trimStart('\n')
 
     fun render(q: String, hits: List<SearchHit>): String = buildString {
-        // 2.1.7: tells the model to answer from the snippets (it used to read "read a page for
+        // tells the model to answer from the snippets (it used to read "read a page for
         // details" as the next step and kept fetching until the step limit).
         append("Search results for \"").append(q).append("\" (today is ").append(java.time.LocalDate.now()).append("; answer from these, citing them inline as [1], [2]; web_fetch a url only if more detail is needed):\n")
         hits.forEachIndexed { i, h ->
@@ -257,7 +261,7 @@ object SearchText {
         }
     }.trimEnd()
 
-    /** 1.11.1: a request that needs the internet (news, weather, prices, "search …"). */
+    /** a request that needs the internet (news, weather, prices, "search …"). */
     private val NEEDS_WEB = Regex("(?i)新闻|新聞|头条|热搜|天气|天氣|气温|汇率|匯率|股价|股價|比分|最新|今天.*(发生|消息)|搜一下|搜索|搜搜|查一下.*(网|网上)|上网|联网|\\bnews\\b|weather|search the web|latest")
 
     fun needsWeb(text: String): Boolean = NEEDS_WEB.containsMatchIn(text)
@@ -266,7 +270,7 @@ object SearchText {
     val NETWORK_TOOLS = setOf("web_search", "web_fetch", "browser")
 }
 
-/** 1.11.1: the notice shown when the user asks for something online that the current mode cannot reach. Pure. */
+/** the notice shown when the user asks for something online that the current mode cannot reach. Pure. */
 object NetworkHint {
     const val CHAT_MODE = "对话模式不能联网：点输入框左上角的「智能体」即可搜索新闻、天气等最新信息"
     const val TOOLS_OFF = "联网工具都已关闭，模型无法上网：可在 设置 › 智能体 › 工具与权限 里开启「联网搜索」"

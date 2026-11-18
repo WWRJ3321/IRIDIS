@@ -1,7 +1,13 @@
 package com.iris.localai.data
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.edge0.Edge0Assets
+import com.iris.localai.engine.edge0.Edge0Support
+import com.iris.localai.util.HintLog
+import com.iris.localai.util.io.ParallelDownload
 import android.os.StatFs
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -33,10 +39,10 @@ class MnnHub(private val repo: ModelRepository) {
         val file: String = "",
         val active: Boolean = false,
         val error: String? = null,
-        /** 2.2.16: source in use (「魔搭 ModelScope」…) and the last switch notice. */
+        /** source in use (「魔搭 ModelScope」…) and the last switch notice. */
         val source: String = "",
         val notice: String? = null,
-        /** 2.2.17 C: stopped by 「暂停」; the .part files stay and 「继续」 resumes them. */
+        /** C: stopped by 「暂停」; the .part files stay and 「继续」 resumes them. */
         val paused: Boolean = false,
     ) {
         val progress: Float get() = if (totalBytes > 0) (doneBytes.toDouble() / totalBytes).toFloat().coerceIn(0f, 1f) else 0f
@@ -59,35 +65,35 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var lastRequest: Pair<String, DownloadSource>? = null
 
     suspend fun download(input: String, source: DownloadSource, demote: DownloadSource? = null, file: String? = null): LocalModel = withContext(Dispatchers.IO) {
-        val repoId = MnnModels.parseRepoId(input) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81c8d3))
+        val repoId = MnnModels.parseRepoId(input) ?: throw IOException(I18n.s(R.string.data_81c8d3))
         val name = ModelFiles.sanitizeFileName(repoId.substringAfter('/'))
         val modelsDir = repo.modelsDir // resolved once: shared Download/IRIDIS/models when available
         val target = File(modelsDir, name)
-        if (target.exists() || repo.find(name) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, name))
+        if (target.exists() || repo.find(name) != null) throw IOException(I18n.s(R.string.data_f95dbe, name))
         val partName = name + ModelRepository.PART_SUFFIX
-        if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
+        if (!repo.claimPart(partName)) throw IOException(I18n.s(R.string.data_b3ea5f, repoId))
         repo.unholdParts(); curParts = listOf(partName); curDir = modelsDir
-        _state.value = State(repoId = repoId, active = true, file = com.iris.localai.I18n.s(com.iris.localai.R.string.data_864643))
+        _state.value = State(repoId = repoId, active = true, file = I18n.s(R.string.data_864643))
         try {
-            // 2.2.16: list the repo on every candidate source (自动: in parallel, the listing doubles as the
+            // list the repo on every candidate source (自动: in parallel, the listing doubles as the
             // speed probe); files then come from the ranked sources, each falling through to the next.
             val (order, all) = listAll(repoId, source, demote)
             sources = order
-            // 2.4.4: one named file (a chip-specific NPU build) instead of the repo's generic one.
+            // one named file (a chip-specific NPU build) instead of the repo's generic one.
             if (file != null) {
-                val hit = all.firstOrNull { it.type == "file" && it.path == file } ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_file_missing, file, repoId))
+                val hit = all.firstOrNull { it.type == "file" && it.path == file } ?: throw IOException(I18n.s(R.string.mtk244_file_missing, file, repoId))
                 repo.releasePart(partName)
                 return@withContext downloadSingle(order, repoId, hit.path, hit.size)
             }
-            // 2.6.5: an Edge0 asset repo — the whole folder (each file chunked + sha256), only on i8mm phones.
-            val edge0 = com.iris.localai.engine.edge0.Edge0Assets.isFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())
-            if (edge0 && !com.iris.localai.engine.edge0.Edge0Support.deviceOk()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_unsupported))
-            // 1.12.1: a LiteRT-LM repo (litert-community/…) — download its one generic .litertlm file.
+            // an Edge0 asset repo — the whole folder (each file chunked + sha256), only on i8mm phones.
+            val edge0 = Edge0Assets.isFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())
+            if (edge0 && !Edge0Support.deviceOk()) throw IOException(I18n.s(R.string.e265_unsupported))
+            // a LiteRT-LM repo (litert-community/…) — download its one generic .litertlm file.
             if (!edge0) pickLiteRtFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
                 repo.releasePart(partName)
                 return@withContext downloadSingle(order, repoId, path, size)
             }
-            // 2.2.12: a GGUF repo (no MNN set) — download its one Q4 .gguf file.
+            // a GGUF repo (no MNN set) — download its one Q4 .gguf file.
             if (!edge0 && !MnnModels.isModelFileSet(all.filter { it.type == "file" && '/' !in it.path }.map { it.path }.toSet())) {
                 pickGgufFile(all.filter { it.type == "file" }.map { it.path to it.size })?.let { (path, size) ->
                     repo.releasePart(partName)
@@ -96,14 +102,14 @@ class MnnHub(private val repo: ModelRepository) {
             }
             val files = all.filter { it.type == "file" && MnnModels.shouldCopy(it.path) }
             if (!edge0 && !MnnModels.isModelFileSet(files.filter { '/' !in it.path }.map { it.path }.toSet())) {
-                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_5f9c4b, repoId))
+                throw IOException(I18n.s(R.string.data_5f9c4b, repoId))
             }
             val total = files.sumOf { it.size }
             val part = File(modelsDir, partName).apply { mkdirs() }
             val have = files.sumOf { f -> File(part, f.path).takeIf { it.exists() }?.length()?.coerceAtMost(f.size) ?: 0L }
             val free = StatFs(modelsDir.absolutePath).availableBytes
             if (free < total - have + 256L * 1024 * 1024) {
-                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
+                throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
             }
             var done = have
             _state.value = _state.value.copy(totalBytes = total, doneBytes = done)
@@ -116,7 +122,7 @@ class MnnHub(private val repo: ModelRepository) {
                 fetch(urlsFor(repoId, f.path, order), out, f.size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
                 done = before + f.size
             }
-            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+            if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
             lastDone = repoId; _state.value = State()
         } catch (t: Throwable) {
             _state.value = stopped(repoId, t)
@@ -126,7 +132,7 @@ class MnnHub(private val repo: ModelRepository) {
         }
         repo.refresh()
         LocalModel(target.name, target.absolutePath, MnnModels.folderSize(target),
-            if (com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(target)) ModelFormat.EDGE0 else ModelFormat.MNN)
+            if (Edge0Assets.isAssetDir(target)) ModelFormat.EDGE0 else ModelFormat.MNN)
     }
 
     /** One .litertlm file into models/ (resumable through its .part), listed only when complete. */
@@ -134,14 +140,14 @@ class MnnHub(private val repo: ModelRepository) {
         val fileName = ModelFiles.sanitizeFileName(path.substringAfterLast('/'))
         val modelsDir = repo.modelsDir
         val target = File(modelsDir, fileName)
-        if (target.exists() || repo.find(fileName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, fileName))
+        if (target.exists() || repo.find(fileName) != null) throw IOException(I18n.s(R.string.data_f95dbe, fileName))
         val partName = fileName + ModelRepository.PART_SUFFIX
-        if (!repo.claimPart(partName)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, repoId))
+        if (!repo.claimPart(partName)) throw IOException(I18n.s(R.string.data_b3ea5f, repoId))
         curParts = listOf(partName); curDir = modelsDir
         try {
             val have = HttpDownload.partFile(target).takeIf { it.exists() }?.length() ?: 0L
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < size - have + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(size - have), Format.bytes(free)))
+            if (free < size - have + 256L * 1024 * 1024) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(size - have), Format.bytes(free)))
             _state.value = _state.value.copy(totalBytes = size, doneBytes = have, file = fileName)
             // fetchOnce writes target.part and renames it when complete, so a half file is never listed.
             fetch(urlsFor(repoId, path, order), target, size) { got -> _state.value = _state.value.copy(doneBytes = got) }
@@ -175,13 +181,13 @@ class MnnHub(private val repo: ModelRepository) {
         }
         val lat = results.associate { (s, ms0, r) -> s to (if (r.isSuccess && r.getOrThrow().isNotEmpty()) ms0 else null) }
         val ranked = if (chosen == DownloadSource.AUTO && demote == null) DownloadSources.rank(order, lat) else order
-        // 2.6.7: 列目录本身就是测速——记下来，后面同仓库的文件不再另测；详情里显示「测速 …」
+        // 列目录本身就是测速——记下来，后面同仓库的文件不再另测；详情里显示「测速 …」
         lat.forEach { (s, m) -> DownloadSources.remember(s, repoId, m) }
         DownloadSources.log(DownloadSources.SPEED, "$repoId " + DownloadSources.speedLine(order, lat))
         if (order.size > 1) _state.value = _state.value.copy(notice = DownloadSources.speedLine(order, lat))
         val first = ranked.firstNotNullOfOrNull { s -> results.first { it.first == s }.third.getOrNull()?.takeIf { it.isNotEmpty() } }
-            ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_d66ab7, repoId) + results.joinToString("\n") { (s, _, r) ->
-                com.iris.localai.I18n.s(com.iris.localai.R.string.data_a4f150, s.label) + (r.exceptionOrNull()?.let { DownloadSources.describe(it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_e67a89))
+            ?: throw IOException(I18n.s(R.string.data_d66ab7, repoId) + results.joinToString("\n") { (s, _, r) ->
+                I18n.s(R.string.data_a4f150, s.label) + (r.exceptionOrNull()?.let { DownloadSources.describe(it) } ?: I18n.s(R.string.data_e67a89))
             })
         return ranked to first
     }
@@ -208,7 +214,7 @@ class MnnHub(private val repo: ModelRepository) {
         val conn = HttpDownload.open("$base/api/models/$repoId/tree/main?recursive=true", 0, timeoutMs = 6_000)
         try {
             val code = conn.responseCode
-            if (code == HttpURLConnection.HTTP_NOT_FOUND || code == 401) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_a69177, repoId))
+            if (code == HttpURLConnection.HTTP_NOT_FOUND || code == 401) throw IOException(I18n.s(R.string.data_a69177, repoId))
             if (code != HttpURLConnection.HTTP_OK) throw IOException("HTTP $code")
             val body = conn.inputStream.bufferedReader().use { it.readText() }
             return json.decodeFromString<List<TreeEntry>>(body)
@@ -220,7 +226,7 @@ class MnnHub(private val repo: ModelRepository) {
     private suspend fun fetch(cands: List<SourceUrl>, target: File, expected: Long, onBytes: (Long) -> Unit) {
         DownloadSources.fetchAny(
             cands, target, expected, onBytes,
-            fetch = { u, t, e, b -> com.iris.localai.util.ParallelDownload.fetch(u, t, e, b) }, // 2.5.6: 多线程分块 + sha256
+            fetch = { u, t, e, b -> ParallelDownload.fetch(u, t, e, b) }, // 多线程分块 + sha256
             onSource = { c -> _state.value = _state.value.copy(source = c.label) },
             onSwitch = { msg -> _state.value = _state.value.copy(notice = msg) },
         )
@@ -238,7 +244,7 @@ class MnnHub(private val repo: ModelRepository) {
         }
     }
 
-    /** 2.2.16 「换源重试」: the failed download again, its first source moved to the end (resumes the .part files). */
+    /** 「换源重试」: the failed download again, its first source moved to the end (resumes the .part files). */
     fun retryOtherSource(@Suppress("UNUSED_PARAMETER") scope: kotlinx.coroutines.CoroutineScope, @Suppress("UNUSED_PARAMETER") onDone: suspend (LocalModel) -> Unit) {
         val failed = DownloadSource.CONCRETE.firstOrNull { it.label == _state.value.source } ?: sources.firstOrNull()
         retry?.invoke(failed ?: DownloadSource.HF_MIRROR)
@@ -247,7 +253,7 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var retry: ((DownloadSource?) -> Unit)? = null
 
     /**
-     * 2.2.16 「在线搜索模型」: one GGUF (all parts of a split one) plus an optional vision projector, from a
+     * 「在线搜索模型」: one GGUF (all parts of a split one) plus an optional vision projector, from a
      * search hit, into models/ — same resumable, source-switching fetch; listed once every file is complete.
      * [files] = (remote path, size, local name); the first one is the model.
      */
@@ -265,11 +271,11 @@ class MnnHub(private val repo: ModelRepository) {
     private suspend fun downloadGguf(hit: GgufSearch.RepoHit, files: List<Triple<String, Long, String>>, source: DownloadSource, demote: DownloadSource?): LocalModel = withContext(Dispatchers.IO) {
         if (hit.gated) throw IOException(GATED)
         val mainName = files.first().third
-        // 2.3.5: every GGUF download (main + shards + mmproj) goes into models/<name>/
+        // every GGUF download (main + shards + mmproj) goes into models/<name>/
         val modelsDir = File(repo.modelsDir, GgufFolder.folderFor(mainName)).apply { mkdirs() }
-        if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, mainName))
+        if (File(modelsDir, mainName).exists() || repo.find(mainName) != null) throw IOException(I18n.s(R.string.data_f95dbe, mainName))
         val claimed = files.map { it.third + ModelRepository.PART_SUFFIX }
-        if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b3ea5f, hit.id)) }
+        if (!claimed.all { repo.claimPart(it) }) { claimed.forEach { repo.releasePart(it) }; throw IOException(I18n.s(R.string.data_b3ea5f, hit.id)) }
         repo.unholdParts(); curParts = claimed; curDir = modelsDir
         val total = files.sumOf { it.second }
         _state.value = State(repoId = hit.id, active = true, totalBytes = total, file = mainName)
@@ -279,7 +285,7 @@ class MnnHub(private val repo: ModelRepository) {
                 if (t.exists() && t.length() == size) size else HttpDownload.partFile(t).takeIf { it.exists() }?.length()?.coerceAtMost(size) ?: 0L
             }
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < total - have + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
+            if (free < total - have + 256L * 1024 * 1024) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(total - have), Format.bytes(free)))
             var done = have
             _state.value = _state.value.copy(doneBytes = done)
             // the model's parts and the projector are written with .part first; the main file goes last so the
@@ -316,7 +322,7 @@ class MnnHub(private val repo: ModelRepository) {
     fun cancel() { pausing = false; job?.cancel(); if (_state.value.paused) { repo.unholdParts(); _state.value = State() } }
 
     /**
-     * 2.6.3: 「清除」 on a paused download: deletes what it already wrote (.part files, segments, an
+     * 「清除」 on a paused download: deletes what it already wrote (.part files, segments, an
      * emptied model folder) and clears the card. Returns the bytes freed (0 when nothing was paused).
      */
     fun discard(): Long {
@@ -328,17 +334,17 @@ class MnnHub(private val repo: ModelRepository) {
         return freed
     }
 
-    /** 2.2.17 C 「暂停」: stop, keep the progress; [resume] continues from the .part files on the same sources. */
+    /** C 「暂停」: stop, keep the progress; [resume] continues from the .part files on the same sources. */
     fun pause() { if (job?.isActive == true) { pausing = true; job?.cancel() } }
     fun resume() { if (job?.isActive != true) retry?.invoke(null) }
 
     @Volatile private var pausing = false
-    /** 2.4.4: repo of the last download that finished (for the 「下载完成」 notification). */
+    /** repo of the last download that finished (for the 「下载完成」 notification). */
     @Volatile var lastDone: String? = null; private set
 
-    /** 2.3.1: `.part` names of the current download; held in [ModelRepository] while paused so cleanup keeps them. */
+    /** `.part` names of the current download; held in [ModelRepository] while paused so cleanup keeps them. */
     @Volatile private var curParts: List<String> = emptyList()
-    /** 2.6.3: the folder [curParts] live in (models/ or models/<name>/ for GGUF). */
+    /** the folder [curParts] live in (models/ or models/<name>/ for GGUF). */
     @Volatile private var curDir: File? = null
 
     /** State after a download ended with [t]: paused, cancelled (cleared) or failed. */
@@ -346,16 +352,16 @@ class MnnHub(private val repo: ModelRepository) {
         val cur = _state.value
         return if (t is kotlinx.coroutines.CancellationException) {
             if (pausing) { pausing = false; repo.holdParts(curParts); State(repoId = repoId, doneBytes = cur.doneBytes, totalBytes = cur.totalBytes, source = cur.source, paused = true) } else State()
-        } else State(repoId = repoId, error = t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200), source = cur.source)
-            .also { com.iris.localai.util.HintLog.add(repoId + com.iris.localai.I18n.s(com.iris.localai.R.string.data_b25c4c) + it.error, com.iris.localai.util.HintLog.Source.DOWNLOAD) }
+        } else State(repoId = repoId, error = t.message ?: I18n.s(R.string.data_65e200), source = cur.source)
+            .also { HintLog.add(repoId + I18n.s(R.string.data_b25c4c) + it.error, HintLog.Source.DOWNLOAD) }
     }
 
     fun clearError() { if (!_state.value.active) { if (_state.value.paused) repo.unholdParts(); _state.value = State() } }
 
     companion object {
-        val GATED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.data_6a6291)
+        val GATED: String get() = I18n.s(R.string.data_6a6291)
 
-        /** 2.2.12: the Q4 .gguf of a GGUF repo (Q4_K_M, else Q4_0, else any Q4); no mmproj. Pure. */
+        /** the Q4 .gguf of a GGUF repo (Q4_K_M, else Q4_0, else any Q4); no mmproj. Pure. */
         fun pickGgufFile(files: List<Pair<String, Long>>): Pair<String, Long>? {
             val g = files.filter { it.first.endsWith(".gguf", ignoreCase = true) && '/' !in it.first && !it.first.contains("mmproj", ignoreCase = true) }
             return g.firstOrNull { it.first.contains("Q4_K_M", true) } ?: g.firstOrNull { it.first.contains("Q4_0", true) }

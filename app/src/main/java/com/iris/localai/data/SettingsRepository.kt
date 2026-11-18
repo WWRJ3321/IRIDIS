@@ -1,5 +1,18 @@
 package com.iris.localai.data
 
+import com.iris.localai.engine.Backend
+import com.iris.localai.engine.geniex.GenieX
+import com.iris.localai.engine.geniex.GgufEngineRule
+import com.iris.localai.engine.resources.CoolDown
+import com.iris.localai.engine.resources.ResourcePlanner
+import com.iris.localai.engine.resources.ResourceTier
+import com.iris.localai.engine.resources.ThermalCutoff
+import com.iris.localai.engine.resources.ThermalGovernor
+import com.iris.localai.engine.resources.TierProfiles
+import com.iris.localai.files.FileViewStyle
+import com.iris.localai.ui.theme.BackgroundImage
+import com.iris.localai.ui.theme.IrisPalette
+import com.iris.localai.ui.theme.IrisStyle
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,7 +45,7 @@ class SettingsRepository(context: Context) {
     }
 
     /**
-     * 1.7.8 (设置整理): 「恢复默认」 on 设置 › 生成 — sampling, answer length and reasoning budget only.
+     * 设置整理: 「恢复默认」 on 设置 › 生成 — sampling, answer length and reasoning budget only.
      * Keys and default values are unchanged; what used to be reset together with them (context
      * length, load options, default backends) now has its own reset on its own page.
      */
@@ -46,7 +59,7 @@ class SettingsRepository(context: Context) {
         )
     }
 
-    /** 1.7.8: 「恢复默认」 on 设置 › 模型与加载 — default backends and load options. */
+    /** 「恢复默认」 on 设置 › 模型与加载 — default backends and load options. */
     fun resetLoadOptions() = update {
         val d = AppSettings()
         it.copy(
@@ -56,13 +69,13 @@ class SettingsRepository(context: Context) {
         )
     }
 
-    /** 2.5.6: 「恢复默认」 of 加载选项 on 设置 › 生成 (backends stay; they live on 模型与加载). */
+    /** 「恢复默认」 of 加载选项 on 设置 › 生成 (backends stay; they live on 模型与加载). */
     fun resetLoadTuning() = update {
         val d = AppSettings()
         it.copy(flashAttention = d.flashAttention, kvQuant = d.kvQuant, kvCacheType = d.kvCacheType.takeIf { k -> k >= 0 } ?: if (d.kvQuant) 1 else 0, batchSize = d.batchSize, useMmap = d.useMmap, warmup = d.warmup)
     }
 
-    /** 1.7.8: 「恢复默认」 on 设置 › 上下文与记忆. */
+    /** 「恢复默认」 on 设置 › 上下文与记忆. */
     fun resetContext() = update {
         val d = AppSettings()
         it.copy(
@@ -100,16 +113,16 @@ fun AppSettings.sanitized(): AppSettings {
         threads = threads.coerceIn(0, 12),
         powerMode = powerMode.coerceIn(0, 2),
         targetTps = targetTps.coerceIn(0, 60),
-        thermalLimitC = com.iris.localai.engine.ThermalGovernor.sanitize(thermalLimitC),
-        thermalCutoffC = com.iris.localai.engine.ThermalCutoff.sanitize(thermalCutoffC),
-        coolPauseC = com.iris.localai.engine.CoolDown.sanitize(coolPauseC),
+        thermalLimitC = ThermalGovernor.sanitize(thermalLimitC),
+        thermalCutoffC = ThermalCutoff.sanitize(thermalCutoffC),
+        coolPauseC = CoolDown.sanitize(coolPauseC),
         liteRtBackend = liteRtBackend.coerceIn(0, 2),
         mnnBackend = mnnBackend.coerceIn(0, 1),
         idleUnloadMinutes = idleUnloadMinutes.coerceIn(0, 240),
         apiPort = apiPort.coerceIn(1024, 65535),
         ttsSpeed = ttsSpeed.clampOr(0.5f, 2f, d.ttsSpeed),
         ttsSpeakerId = ttsSpeakerId.coerceIn(0, 102),
-        asrLanguage = asrLanguage.takeIf { it.isNotBlank() && it != "ja" && it != "ko" } ?: d.asrLanguage, // 2.0.1: 日语 / 韩语 removed
+        asrLanguage = asrLanguage.takeIf { it.isNotBlank() && it != "ja" && it != "ko" } ?: d.asrLanguage, // 日语 / 韩语 removed
         asrPack = asrPack.ifBlank { d.asrPack },
         ttsPack = ttsPack.ifBlank { d.ttsPack },
         lastModelFile = lastModelFile?.takeIf { it.isNotBlank() },
@@ -117,16 +130,16 @@ fun AppSettings.sanitized(): AppSettings {
         bargeInSensitivity = bargeInSensitivity.coerceIn(0, 2),
         cloneStepsFast = cloneStepsFast.coerceIn(2, 8),
         cloneStepsFine = cloneStepsFine.coerceIn(6, 32),
-        // 1.7.8: three tiers (「全部」 removed); a stale 3 lands on HIGH (= 2), see migrated().
-        resourceTier = resourceTier.coerceIn(-1, com.iris.localai.engine.ResourceTier.entries.size - 1),
-        tierProfiles = com.iris.localai.engine.TierProfiles.sanitize(tierProfiles),
+        // three tiers (「全部」 removed); a stale 3 lands on HIGH (= 2), see migrated().
+        resourceTier = resourceTier.coerceIn(-1, ResourceTier.entries.size - 1),
+        tierProfiles = TierProfiles.sanitize(tierProfiles),
         thinkingBudget = thinkingBudget.coerceIn(0, 32768),
         thinkLevel = thinkLevel.coerceIn(0, 3),
         defaultBackends = defaultBackends.filter { (k, v) ->
-            ModelFormat.entries.any { it.name == k } && com.iris.localai.engine.Backend.parse(v) != null
+            ModelFormat.entries.any { it.name == k } && Backend.parse(v) != null
         },
         kvCacheType = kvCacheType.coerceIn(-1, 2),
-        ggufEngine = com.iris.localai.engine.geniex.GenieX.parseEngine(ggufEngine) ?: d.ggufEngine,
+        ggufEngine = GenieX.parseEngine(ggufEngine) ?: d.ggufEngine,
         repeatLastN = repeatLastN.coerceIn(0, 2048),
         presencePenalty = presencePenalty.clampOr(-2f, 2f, d.presencePenalty),
         frequencyPenalty = frequencyPenalty.clampOr(-2f, 2f, d.frequencyPenalty),
@@ -136,18 +149,18 @@ fun AppSettings.sanitized(): AppSettings {
         contextKeepTurns = contextKeepTurns.coerceIn(1, 64),
         summaryTriggerPercent = summaryTriggerPercent.coerceIn(40, 95),
         visualEffects = visualEffects.coerceIn(-1, 2),
-        themePalette = themePalette.takeIf { com.iris.localai.ui.theme.IrisPalette.isValid(it) } ?: d.themePalette,
-        uiStyle = uiStyle.takeIf { com.iris.localai.ui.theme.IrisStyle.isValid(it) } ?: d.uiStyle,
-        backgroundImage = backgroundImage.takeIf { com.iris.localai.ui.theme.BackgroundImage.isValidName(it) } ?: "",
-        backgroundBlur = backgroundBlur.coerceIn(0, com.iris.localai.ui.theme.BackgroundImage.MAX_BLUR_DP),
-        backgroundScrim = backgroundScrim.coerceIn(0, com.iris.localai.ui.theme.BackgroundImage.MAX_SCRIM),
-        fileViewStyle = com.iris.localai.files.FileViewStyle.parse(fileViewStyle).name,
+        themePalette = themePalette.takeIf { IrisPalette.isValid(it) } ?: d.themePalette,
+        uiStyle = uiStyle.takeIf { IrisStyle.isValid(it) } ?: d.uiStyle,
+        backgroundImage = backgroundImage.takeIf { BackgroundImage.isValidName(it) } ?: "",
+        backgroundBlur = backgroundBlur.coerceIn(0, BackgroundImage.MAX_BLUR_DP),
+        backgroundScrim = backgroundScrim.coerceIn(0, BackgroundImage.MAX_SCRIM),
+        fileViewStyle = FileViewStyle.parse(fileViewStyle).name,
     )
 }
 
 /**
  * One-time moves of ≤ 1.7.0 settings (idempotent; a fresh install goes through it too):
- *  - 功耗档位 / 速率 target → resource tier ([com.iris.localai.engine.ResourcePlanner.migrateLegacy]);
+ *  - 功耗档位 / 速率 target → resource tier ([com.iris.localai.engine.resources.ResourcePlanner.migrateLegacy]);
  *  - the scattered backend switches → one default backend per engine (GGUF OpenCL switch → GPU,
  *    LiteRT 自动/CPU/GPU, MNN CPU/OpenCL); NPU files still default to NPU through 自动;
  *  - KV Q8 switch → KV cache type; glass switch → 视觉效果 (on = 均衡, off = 省电);
@@ -156,11 +169,11 @@ fun AppSettings.sanitized(): AppSettings {
 fun AppSettings.migrated(): AppSettings {
     var s = this
     if (s.resourceTier < 0) {
-        s = s.copy(resourceTier = com.iris.localai.engine.ResourcePlanner.migrateLegacy(s.powerMode, s.targetTps).ordinal)
+        s = s.copy(resourceTier = ResourcePlanner.migrateLegacy(s.powerMode, s.targetTps).ordinal)
     }
-    // 1.7.8: 「全部」 (ordinal 3) was removed → 高.
-    if (s.resourceTier >= com.iris.localai.engine.ResourceTier.entries.size) {
-        s = s.copy(resourceTier = com.iris.localai.engine.ResourceTier.HIGH.ordinal)
+    // 「全部」 (ordinal 3) was removed → 高.
+    if (s.resourceTier >= ResourceTier.entries.size) {
+        s = s.copy(resourceTier = ResourceTier.HIGH.ordinal)
     }
     if (!s.backendsMigrated) {
         val m = s.defaultBackends.toMutableMap()
@@ -172,18 +185,18 @@ fun AppSettings.migrated(): AppSettings {
         if (s.mnnBackend == 1) m.putIfAbsent(ModelFormat.MNN.name, "GPU")
         s = s.copy(defaultBackends = m, backendsMigrated = true)
     }
-    // 2.2.16: hf-mirror was only the default; 自动 now picks 魔搭 / hf-mirror / HF. A chosen HF 官方 stays.
+    // hf-mirror was only the default; 自动 now picks 魔搭 / hf-mirror / HF. A chosen HF 官方 stays.
     if (!s.downloadSourceMigrated) {
         s = s.copy(downloadSource = if (s.downloadSource == DownloadSource.HF_MIRROR) DownloadSource.AUTO else s.downloadSource, downloadSourceMigrated = true)
     }
     if (s.kvCacheType < 0) s = s.copy(kvCacheType = if (s.kvQuant) 1 else 0)
     if (s.visualEffects < 0) s = s.copy(visualEffects = if (s.glassEffects) 1 else 0)
-    // 2.1.3: 「GGUF 默认引擎 = GenieX」 is gone; the backend decides (NPU = GenieX). Keep the user's choice as the GGUF default backend.
-    if (com.iris.localai.engine.geniex.GenieX.parseEngine(s.ggufEngine) == com.iris.localai.engine.geniex.GenieX.ENGINE_GENIEX) {
-        val b = com.iris.localai.engine.geniex.GgufEngineRule.migrateDefaultBackend(s.ggufEngine, s.defaultBackends[ModelFormat.GGUF.name])
+    // 「GGUF 默认引擎 = GenieX」 is gone; the backend decides (NPU = GenieX). Keep the user's choice as the GGUF default backend.
+    if (GenieX.parseEngine(s.ggufEngine) == GenieX.ENGINE_GENIEX) {
+        val b = GgufEngineRule.migrateDefaultBackend(s.ggufEngine, s.defaultBackends[ModelFormat.GGUF.name])
         s = s.copy(
             defaultBackends = if (b != null) s.defaultBackends + (ModelFormat.GGUF.name to b) else s.defaultBackends,
-            ggufEngine = com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
+            ggufEngine = GenieX.ENGINE_LLAMA,
         )
     }
     return s

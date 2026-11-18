@@ -1,7 +1,10 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
- * 2.5.1: MoE 专家按需加载（专家张量留 CPU / mmap 按需读盘）与激活专家数的决策，纯函数便于测试。
+ * MoE 专家按需加载（专家张量留 CPU / mmap 按需读盘）与激活专家数的决策，纯函数便于测试。
  *  - 设置 null = 自动：模型是 MoE 且常规内存预检不是 OK（TIGHT 或 SHORT）时开启（2.5.2：原先只在 SHORT 开，TIGHT 时会直接 OOM）；true/false = 用户指定（非 MoE 一律不开）。
  *  - 激活专家数 0 = 模型默认；>0 时 clamp 到 [1, min(32, expert_count)]，非 MoE 返回 0。
  */
@@ -16,14 +19,14 @@ object MoeLoad {
         return setting.coerceIn(1, minOf(MAX_EXPERTS_UI, info.expertCount))
     }
 
-    /** 2.5.4: LES 只支持 qwen35moe（MiniCPM-V 4.7 / Qwen3.5 MoE 架构）。 */
+    /** LES 只支持 qwen35moe（MiniCPM-V 4.7 / Qwen3.5 MoE 架构）。 */
     const val LES_ARCH = "qwen35moe"
 
     fun lesSupported(info: GgufQuant.Info?): Boolean = info?.moe == true && info.arch == LES_ARCH
 
     /**
-     * 2.5.4: LES 设置 null = 自动：专家按需加载生效时开；true/false = 用户指定（架构不符一律不开）。
-     * 2.5.6: 自动时后端是 GPU 就不开（LES 只走 CPU，会让 GPU 失效）；用户手动打开仍照开。
+     * LES 设置 null = 自动：专家按需加载生效时开；true/false = 用户指定（架构不符一律不开）。
+     * 自动时后端是 GPU 就不开（LES 只走 CPU，会让 GPU 失效）；用户手动打开仍照开。
      */
     fun lesActive(setting: Boolean?, info: GgufQuant.Info?, moeActive: Boolean, gpu: Boolean = false): Boolean =
         lesSupported(info) && (setting ?: (moeActive && !gpu))

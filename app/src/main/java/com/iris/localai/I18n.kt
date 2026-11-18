@@ -7,7 +7,7 @@ import android.os.Build
 import android.os.LocaleList
 
 /**
- * 2.3.1 多语言界面. App UI strings live in res/values-xx/strings.xml; code reads them through [s] so
+ * 多语言界面. App UI strings live in res/values-xx/strings.xml; code reads them through [s] so
  * view models, notifications and object constants (which have no Composable scope) work too.
  *
  * Language choice: Android 13+ uses the system per-app language (LocaleManager, also shown in
@@ -40,10 +40,10 @@ object I18n {
         if (bootLang == null) bootLang = runCatching { res.getString(R.string.lang_code) }.getOrNull()
     }
 
-    /** 2.3.1: UI language this process started in. Enum labels and object-level texts are read once and keep it. */
+    /** UI language this process started in. Enum labels and object-level texts are read once and keep it. */
     @Volatile private var bootLang: String? = null
 
-    /** 2.3.1: the language changed since the process started → MainActivity restarts the process so cached labels follow. */
+    /** the language changed since the process started → MainActivity restarts the process so cached labels follow. */
     fun langChangedSinceStart(): Boolean = ::app.isInitialized && bootLang != null && runCatching { res.getString(R.string.lang_code) }.getOrNull() != bootLang
 
     private val res: Resources get() = override ?: app.resources

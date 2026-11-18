@@ -1,10 +1,16 @@
 package com.iris.localai.voice
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.workspace.StorageLayout
+import com.iris.localai.data.DownloadSources
+import com.iris.localai.data.ModelDirs
+import com.iris.localai.data.ModelStorage
 import android.content.Context
 import android.os.StatFs
 import com.iris.localai.data.DownloadSource
 import com.iris.localai.data.Format
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,18 +29,18 @@ enum class VoiceKind { ASR, TTS, CLONE }
 
 /** A downloadable voice model: a pinned Hugging Face repo revision and the files we need from it. */
 enum class VoicePack(val id: String, val kind: VoiceKind, val title: String, val blurb: String) {
-    ASR_SENSEVOICE("sense-voice-int8", VoiceKind.ASR, "SenseVoice Small", com.iris.localai.I18n.s(com.iris.localai.R.string.voice_80950b)),
-    ASR_PARAFORMER("paraformer-zh-int8", VoiceKind.ASR, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_66f8a9), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_d3afd9)),
-    ASR_QWEN3("qwen3-asr-0.6b-int8", VoiceKind.ASR, "Qwen3-ASR 0.6B", com.iris.localai.I18n.s(com.iris.localai.R.string.voice_618272)),
-    ASR_ZIPFORMER_CTC("zipformer-ctc-zh-int8-2025-07-03", VoiceKind.ASR, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_b091cf), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_2e1e7e)),
-    TTS_KOKORO("kokoro-int8-multi-lang-v1_1", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_163e32), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_36f40b)),
-    TTS_KOKORO_HQ("kokoro-multi-lang-v1_1", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_15f869), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_4645e0)),
-    TTS_MELO("vits-melo-tts-zh_en", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_03ace1), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_b0fd88)),
-    TTS_PIPER_XIAOYA("vits-piper-zh_CN-xiao_ya-medium", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c3ab69), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_e027fa)),
-    TTS_MATCHA_BAKER("matcha-icefall-zh-baker", VoiceKind.TTS, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_522e83), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_39a7d1)),
-    CLONE_ZIPVOICE("zipvoice-distill-int8-zh-en", VoiceKind.CLONE, com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c767d0), com.iris.localai.I18n.s(com.iris.localai.R.string.voice_c92641));
+    ASR_SENSEVOICE("sense-voice-int8", VoiceKind.ASR, "SenseVoice Small", I18n.s(R.string.voice_80950b)),
+    ASR_PARAFORMER("paraformer-zh-int8", VoiceKind.ASR, I18n.s(R.string.voice_66f8a9), I18n.s(R.string.voice_d3afd9)),
+    ASR_QWEN3("qwen3-asr-0.6b-int8", VoiceKind.ASR, "Qwen3-ASR 0.6B", I18n.s(R.string.voice_618272)),
+    ASR_ZIPFORMER_CTC("zipformer-ctc-zh-int8-2025-07-03", VoiceKind.ASR, I18n.s(R.string.voice_b091cf), I18n.s(R.string.voice_2e1e7e)),
+    TTS_KOKORO("kokoro-int8-multi-lang-v1_1", VoiceKind.TTS, I18n.s(R.string.voice_163e32), I18n.s(R.string.voice_36f40b)),
+    TTS_KOKORO_HQ("kokoro-multi-lang-v1_1", VoiceKind.TTS, I18n.s(R.string.voice_15f869), I18n.s(R.string.voice_4645e0)),
+    TTS_MELO("vits-melo-tts-zh_en", VoiceKind.TTS, I18n.s(R.string.voice_03ace1), I18n.s(R.string.voice_b0fd88)),
+    TTS_PIPER_XIAOYA("vits-piper-zh_CN-xiao_ya-medium", VoiceKind.TTS, I18n.s(R.string.voice_c3ab69), I18n.s(R.string.voice_e027fa)),
+    TTS_MATCHA_BAKER("matcha-icefall-zh-baker", VoiceKind.TTS, I18n.s(R.string.voice_522e83), I18n.s(R.string.voice_39a7d1)),
+    CLONE_ZIPVOICE("zipvoice-distill-int8-zh-en", VoiceKind.CLONE, I18n.s(R.string.voice_c767d0), I18n.s(R.string.voice_c92641));
 
-    /** 2.6.12: 非商用许可的语音包不再提供下载；已装的照常可用、可删除。 */
+    /** 非商用许可的语音包不再提供下载；已装的照常可用、可删除。 */
     val delisted: Boolean get() = this == TTS_PIPER_XIAOYA || this == TTS_MATCHA_BAKER || this == CLONE_ZIPVOICE
 
     /** Single-voice packs: the speaker id is ignored. */
@@ -95,7 +101,7 @@ sealed interface PackState {
  * Downloads voice models file-by-file from a pinned revision (resumable with HTTP Range,
  * verified by size). A pack is usable only after every file is complete and a marker is
  * written, so a half-finished download is never loaded.
- * 2.1.1: like the text models ([com.iris.localai.data.ModelDirs]) new packs go to the public
+ * like the text models ([com.iris.localai.data.ModelDirs]) new packs go to the public
  * `Download/IRIDIS/voice` when 全部文件访问 is granted, else to the app-specific `files/voice`;
  * an installed pack is found in either ([VoiceDirs]).
  */
@@ -106,7 +112,7 @@ class VoiceModelStore(private val context: Context) {
     val privateRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice").apply { mkdirs() }
 
     /** Re-evaluated on every call, so granting 全部文件访问 later switches new downloads to the shared folder. */
-    fun location(): com.iris.localai.data.ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateRoot, com.iris.localai.agent.StorageLayout.VOICE)
+    fun location(): ModelDirs.Location = ModelStorage.location(privateRoot, StorageLayout.VOICE)
 
     /** Where new packs are written right now. */
     val root: File get() = location().dir
@@ -152,7 +158,7 @@ class VoiceModelStore(private val context: Context) {
         val need = m.totalBytes - have + (m.archive?.size?.times(16)?.div(10) ?: 0L) + 64L * 1024 * 1024
         try {
             if (free < need) {
-                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
+                throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
             }
             var done = have
             publish(pack, PackState.Downloading(done, m.totalBytes))
@@ -183,7 +189,7 @@ class VoiceModelStore(private val context: Context) {
                     verify(archiveFile, a.sha256)
                     TarBz2.extract(archiveFile, dir, a.strip, a.skip)
                     val missing = a.required.filterNot { File(dir, it).exists() }
-                    if (missing.isNotEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.voice_f59128, missing.joinToString()))
+                    if (missing.isNotEmpty()) throw IOException(I18n.s(R.string.voice_f59128, missing.joinToString()))
                     File(dir, ARCHIVE_DONE).writeText(a.sha256)
                     archiveFile.delete()
                 }
@@ -191,7 +197,7 @@ class VoiceModelStore(private val context: Context) {
             File(dir, MARKER).writeText(m.revision.ifEmpty { "1" })
             publish(pack, PackState.Installed)
         } catch (t: Throwable) {
-            publish(pack, if (t is kotlinx.coroutines.CancellationException) stateOnDisk(pack) else PackState.Failed(t.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)))
+            publish(pack, if (t is kotlinx.coroutines.CancellationException) stateOnDisk(pack) else PackState.Failed(t.message ?: I18n.s(R.string.data_65e200)))
             throw t
         }
     }
@@ -201,7 +207,7 @@ class VoiceModelStore(private val context: Context) {
         val got = Sha256.of(file)
         if (!got.equals(sha256, ignoreCase = true)) {
             file.delete()
-            throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.voice_077027, file.name))
+            throw IOException(I18n.s(R.string.voice_077027, file.name))
         }
     }
 
@@ -212,12 +218,12 @@ class VoiceModelStore(private val context: Context) {
 
     private fun publish(pack: VoicePack, s: PackState) = _states.update { it + (pack to s) }
 
-    /** 2.2.16: Hugging Face files go through the download sources (自动 / 魔搭 / hf-mirror / HF, falling through). */
+    /** Hugging Face files go through the download sources (自动 / 魔搭 / hf-mirror / HF, falling through). */
     @Volatile private var source: DownloadSource = DownloadSource.AUTO
 
     private suspend fun fetch(url: String, target: File, expected: Long, onBytes: (Long) -> Unit) {
-        com.iris.localai.data.DownloadSources.fetchAny(
-            com.iris.localai.data.DownloadSources.resolve(url, source), target, expected, onBytes,
+        DownloadSources.fetchAny(
+            DownloadSources.resolve(url, source), target, expected, onBytes,
             fetch = { u, t, e, b -> HttpDownload.fetchOnce(u, t, e, b) }, attemptsPerSource = 3,
         )
     }
@@ -235,7 +241,7 @@ class VoiceModelStore(private val context: Context) {
     }
 }
 
-/** 2.1.1: where a voice pack lives across the shared and private folders. Pure, unit-tested. */
+/** where a voice pack lives across the shared and private folders. Pure, unit-tested. */
 object VoiceDirs {
     /** First folder of [dirs] with a complete [id] (its [marker] present), else `writeDir/id`. */
     fun packDir(dirs: List<File>, writeDir: File, id: String, marker: String): File =

@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 /**
- * 2.2.3: GUI OCR fallback with ML Kit text recognition (Chinese + Latin, bundled model: works
+ * GUI OCR fallback with ML Kit text recognition (Chinese + Latin, bundled model: works
  * offline, no Play Services download). Lines are mapped from the (downscaled) screenshot back to
  * screen pixels. Any failure yields no lines.
  */
@@ -30,7 +30,7 @@ object GuiOcrProvider {
             recognizer ?: TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build()).also { recognizer = it }
         }
 
-    /** 2.4.0: last screenshot's grid and lines (screen px), so an unchanged area is not recognised again. */
+    /** last screenshot's grid and lines (screen px), so an unchanged area is not recognised again. */
     private class Last(val grid: OcrDiff.Grid, val lines: List<OcrLine>, val at: Long)
     @Volatile private var last: Last? = null
     private const val MAX_AGE_MS = 60_000L

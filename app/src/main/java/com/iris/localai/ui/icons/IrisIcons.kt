@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
 /**
- * 1.14.1: IRIS's own feature icons — one 24 grid, 1.75 stroke, round caps and joins, no fills except
+ * IRIS's own feature icons — one 24 grid, 1.75 stroke, round caps and joins, no fills except
  * where the shape is the meaning (外观's half-filled circle). Tinted by Icon() like Material icons.
  * Preview sheet: work/icons/sheet.png (generated from the same path strings).
  */
@@ -34,7 +34,7 @@ object IrisIcons {
     val Think: ImageVector by lazy { icon("Think", "M9.5 18h5 M10.5 21h3 M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z") }
 
     /** 长期记忆 */
-    /** 2.3.0 ③ 翻译: 文 + A with a swap arc. */
+    /** 翻译: 文 + A with a swap arc. */
     val Translate: ImageVector by lazy { icon("Translate", "M4 5h8 M8 3v2 M10 5c-.6 3-2.6 5.6-5.5 7 M6.5 8.5c1 1.6 2.4 2.8 4 3.5", "M12.5 21l4-10 4 10 M14 17.5h5", "M3 16c0 2.8 2.2 5 5 5") }
     val Memory: ImageVector by lazy { icon("Memory", "M5 5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2V5z M5 19a2 2 0 0 0 2 2h12v-4 M10 3v6.5l2-1.5 2 1.5V3") }
 
@@ -75,7 +75,7 @@ object IrisIcons {
     val Clock: ImageVector by lazy { icon("Clock", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 7.5V12l3 2") }
 
     /** 对话 */
-    /** 2.3.2 角色卡 */
+    /** 角色卡 */
     val Person: ImageVector by lazy { icon("Person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4.5 20a7.5 7.5 0 0 1 15 0") }
     val Chat: ImageVector by lazy { icon("Chat", "M6 5h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-6l-4.5 3.5V17H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z") }
 
@@ -88,7 +88,7 @@ object IrisIcons {
     /** 视觉效果 */
     val Eye: ImageVector by lazy { icon("Eye", "M2.5 12C4.8 7.6 8.1 5.5 12 5.5s7.2 2.1 9.5 6.5c-2.3 4.4-5.6 6.5-9.5 6.5S4.8 16.4 2.5 12z M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z") }
 
-    /** 2.1.7: 隐藏 (API Key show/hide) — the eye, struck through. */
+    /** 隐藏 (API Key show/hide) — the eye, struck through. */
     val EyeOff: ImageVector by lazy { icon("EyeOff", "M2.5 12C4.8 7.6 8.1 5.5 12 5.5s7.2 2.1 9.5 6.5c-2.3 4.4-5.6 6.5-9.5 6.5S4.8 16.4 2.5 12z M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z M4 4l16 16") }
 
     /** 存储空间 (1.14.3): a storage cylinder, three stacked platters. */
@@ -125,13 +125,13 @@ object IrisIcons {
     /** 设置 (2.1, sliders) */
     val Settings: ImageVector by lazy { icon("Settings", "M4 7h9 M17 7h3 M15 4.5v5 M4 17h3 M11 17h9 M9 14.5v5") }
 
-    /** 2.1.4 自定义背景 (picture) */
+    /** 自定义背景 (picture) */
     val Image: ImageVector by lazy { icon("Image", "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3.5 16.5l5-5 4 4 2.5-2.5 5.5 5.5 M15.5 8.5h0.01") }
 
-    /** 2.1.4 selected swatch */
+    /** selected swatch */
     val Check: ImageVector by lazy { icon("Check", "M5 12.5l4.5 4.5L19 7.5") }
 
-    /** 2.1.4 移除背景 */
+    /** 移除背景 */
     val Trash: ImageVector by lazy { icon("Trash", "M4 7h16 M9.5 7V4.5h5V7 M6.5 7l1 12.5h9l1-12.5 M10 11v5 M14 11v5") }
 
     // ---- 2.2 rich rendering (网页预览 / 图片查看) ----

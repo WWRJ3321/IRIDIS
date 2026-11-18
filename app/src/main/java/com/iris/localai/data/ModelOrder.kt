@@ -1,6 +1,6 @@
 package com.iris.localai.data
 
-/** 2.2.2: models in the user's saved order; ones never ordered keep their name order at the end. */
+/** models in the user's saved order; ones never ordered keep their name order at the end. */
 object ModelOrder {
     fun <T : Any> apply(list: List<T>, order: List<String>, key: (T) -> String): List<T> {
         if (order.isEmpty()) return list

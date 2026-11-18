@@ -1,5 +1,13 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.engine.load.SlowLoadHint
+import com.iris.localai.ui.components.IrisButton
+import com.iris.localai.ui.components.IrisButtonStyle
+import com.iris.localai.ui.glass.GlassBackdrop
+import com.iris.localai.ui.motion.RollingText
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.util.diagnostics.Activity
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Eject
@@ -129,26 +137,26 @@ import com.iris.localai.ui.motion.motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 2.4.1: split out of ChatScreen.kt unchanged — banners and the activity indicator over the chat.
+// split out of ChatScreen.kt unchanged — banners and the activity indicator over the chat.
 
 /**
- * 1.9.0: a GPU load past [com.iris.localai.engine.SlowLoadHint.NOTICE_SECS] explains the wait and
+ * a GPU load past [com.iris.localai.engine.load.SlowLoadHint.NOTICE_SECS] explains the wait and
  * offers 「改用 CPU」 (applied by reloading as soon as the running load returns).
  */
 @Composable
-internal fun SlowLoadBanner(engine: EngineState, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onUseCpu: () -> Unit) {
+internal fun SlowLoadBanner(engine: EngineState, backdrop: GlassBackdrop, onUseCpu: () -> Unit) {
     val c = Iris.colors
     val loading = engine as? EngineState.Loading
     val secs = loadingSeconds(engine)
-    val text = loading?.takeIf { it.applyingTier == null }?.let { com.iris.localai.engine.SlowLoadHint.notice(it.backend, secs) }
+    val text = loading?.takeIf { it.applyingTier == null }?.let { SlowLoadHint.notice(it.backend, secs) }
     var dismissedFor by remember { mutableStateOf<Long?>(null) }
     val visible = text != null && dismissedFor != loading?.since
     AnimatedVisibility(visible = visible, enter = fadeIn(IrisMotion.enter()), exit = fadeOut(IrisMotion.standard())) {
         // 2.0.x: one compact card — text, 「改用 CPU」, and × (was two text buttons under the text).
         BannerCard(backdrop, Modifier.padding(bottom = IrisDimens.space8).fillMaxWidth()) {
             Text(text.orEmpty(), style = IrisType.secondary, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            com.iris.localai.ui.components.IrisButton(com.iris.localai.engine.SlowLoadHint.ACTION, { dismissedFor = loading?.since; onUseCpu() }, style = com.iris.localai.ui.components.IrisButtonStyle.Text, compact = true)
-            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), size = IrisDimens.space32, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
+            IrisButton(SlowLoadHint.ACTION, { dismissedFor = loading?.since; onUseCpu() }, style = IrisButtonStyle.Text, compact = true)
+            PressableIcon(Icons.Outlined.Close, I18n.s(R.string.ui_b15d91), size = IrisDimens.space32, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
         }
     }
 }
@@ -159,7 +167,7 @@ internal fun SlowLoadBanner(engine: EngineState, backdrop: com.iris.localai.ui.g
  */
 @Composable
 internal fun BannerCard(
-    backdrop: com.iris.localai.ui.glass.GlassBackdrop,
+    backdrop: GlassBackdrop,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
@@ -170,7 +178,7 @@ internal fun BannerCard(
         modifier
             .glass(backdrop, shape, GlassStyle(tint = c.glassTintOpaque))
             .border(IrisDimens.hairline, c.outline.copy(alpha = 0.5f), shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick, onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c335e9)) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick, onClickLabel = I18n.s(R.string.chat_c335e9)) else Modifier)
             .padding(start = IrisDimens.space12, end = IrisDimens.space12, top = IrisDimens.space8, bottom = IrisDimens.space8)
             .heightIn(min = IrisDimens.space32),
         verticalAlignment = Alignment.CenterVertically,
@@ -189,11 +197,11 @@ internal fun BannerCard(
  * never flicker. While a model loads it carries 「取消」.
  */
 @Composable
-internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.util.Activity?, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onCancelLoad: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ActivityIndicator(engine: EngineState, activity: Activity?, backdrop: GlassBackdrop, onCancelLoad: () -> Unit, modifier: Modifier = Modifier) {
     val c = Iris.colors
     val loading = engine as? EngineState.Loading
     val target: String? = when {
-        loading != null -> if (loading.applyingTier != null) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_213e62) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2040f7, loading.model.displayName)
+        loading != null -> if (loading.applyingTier != null) I18n.s(R.string.chat_213e62) else I18n.s(R.string.chat_2040f7, loading.model.displayName)
         else -> activity?.label
     }
     val since = loading?.since ?: activity?.since ?: 0L
@@ -201,7 +209,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
     var shown by remember { mutableStateOf(target) }
     var shownSince by remember { mutableLongStateOf(since) }
     LaunchedEffect(target, since) {
-        if (target != null && shown != null && target != shown) delay(com.iris.localai.util.Activity.DWELL_MS)
+        if (target != null && shown != null && target != shown) delay(Activity.DWELL_MS)
         shown = target; shownSince = since
     }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -214,7 +222,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
             Row(
                 Modifier
                     .glass(backdrop, IrisRadius.pillShape, GlassStyle(tint = Iris.colors.glassTintOpaque))
-                    .padding(start = com.iris.localai.ui.theme.IrisSpace.S, end = if (loading != null && loading.applyingTier == null) com.iris.localai.ui.theme.IrisSpace.XS else com.iris.localai.ui.theme.IrisSpace.S)
+                    .padding(start = IrisSpace.S, end = if (loading != null && loading.applyingTier == null) IrisSpace.XS else IrisSpace.S)
                     .heightIn(min = 22.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -227,15 +235,15 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
                 ) { l -> Text(l, style = tnum, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 val pct = loading?.progress?.takeIf { it > 0.01f && it < 1f }?.let { " ${(it * 100).toInt()}%" }.orEmpty()
                 val secs = ((now - shownSince) / 1000).coerceAtLeast(0)
-                val tail = pct + if (secs >= 2) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8f0d77, secs) else ""
-                if (tail.isNotEmpty()) com.iris.localai.ui.motion.RollingText(tail, style = tnum, color = c.textTertiary)
+                val tail = pct + if (secs >= 2) I18n.s(R.string.chat_8f0d77, secs) else ""
+                if (tail.isNotEmpty()) RollingText(tail, style = tnum, color = c.textTertiary)
                 if (loading != null && loading.applyingTier == null) {
                     Spacer(Modifier.size(4.dp))
                     // Fits the 22 dp capsule (a 36 dp IrisButton overflowed the fixed-height row).
                     Text(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2), style = IrisType.caption, color = c.accent,
-                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e60d2), onClick = onCancelLoad)
-                            .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = com.iris.localai.ui.theme.IrisSpace.XS),
+                        I18n.s(R.string.chat_625fb2), style = IrisType.caption, color = c.accent,
+                        modifier = Modifier.clip(IrisRadius.pillShape).clickable(onClickLabel = I18n.s(R.string.chat_6e60d2), onClick = onCancelLoad)
+                            .padding(horizontal = IrisSpace.S, vertical = IrisSpace.XS),
                     )
                 }
             }
@@ -244,29 +252,29 @@ internal fun ActivityIndicator(engine: EngineState, activity: com.iris.localai.u
 }
 
 /** Dismissible notice above the composer; keeps showing the last text while it animates out. */
-/** 2.3.4: one-time 「已切回普通对话，是否换回原模型 X？」 with a 换回 action; leaves by itself after a few seconds. */
+/** one-time 「已切回普通对话，是否换回原模型 X？」 with a 换回 action; leaves by itself after a few seconds. */
 @Composable
-internal fun ModelRestoreBanner(model: com.iris.localai.data.LocalModel?, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onBack: () -> Unit, onDismiss: () -> Unit) {
+internal fun ModelRestoreBanner(model: LocalModel?, backdrop: GlassBackdrop, onBack: () -> Unit, onDismiss: () -> Unit) {
     val c = Iris.colors
     LaunchedEffect(model) { if (model != null) { kotlinx.coroutines.delay(8_000L); onDismiss() } }
     AnimatedVisibility(visible = model != null, enter = fadeIn(), exit = fadeOut()) {
         Box(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space8), contentAlignment = Alignment.Center) {
             BannerCard(backdrop, Modifier.widthIn(max = 520.dp), onClick = onDismiss) {
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.mr234_hint, model?.displayName.orEmpty()), style = IrisType.secondary, color = c.text,
+                Text(I18n.s(R.string.mr234_hint, model?.displayName.orEmpty()), style = IrisType.secondary, color = c.text,
                     maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                androidx.compose.material3.TextButton(onClick = onBack) { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.mr234_back), color = c.accent) }
+                androidx.compose.material3.TextButton(onClick = onBack) { Text(I18n.s(R.string.mr234_back), color = c.accent) }
             }
         }
     }
 }
 
 @Composable
-internal fun NoticeBanner(notice: String?, backdrop: com.iris.localai.ui.glass.GlassBackdrop, onDismiss: () -> Unit) {
+internal fun NoticeBanner(notice: String?, backdrop: GlassBackdrop, onDismiss: () -> Unit) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     var last by remember { mutableStateOf(notice) }
     if (notice != null) last = notice
-    // 1.12.0: iOS-style toast — centred, wraps its text, opaque frosted card with continuous
+    // iOS-style toast — centred, wraps its text, opaque frosted card with continuous
     // corners and a soft shadow; springs up from below with a slight scale, and leaves by itself
     // after a few seconds (longer for longer text). Tap to close earlier.
     LaunchedEffect(notice) {

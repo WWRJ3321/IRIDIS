@@ -1,6 +1,7 @@
 package com.iris.localai.data
 
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.engine.load.MemoryPreflight
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -21,7 +22,7 @@ import java.net.URL
 import java.net.URLEncoder
 
 /**
- * 2.2.16 「在线搜索模型」 (PocketPal-style): GGUF repos on Hugging Face (api/models?filter=gguf, through
+ * 「在线搜索模型」 (PocketPal-style): GGUF repos on Hugging Face (api/models?filter=gguf, through
  * hf-mirror.com or huggingface.co per the download source) and ModelScope (dolphin model search with
  * the `libraries contains gguf` criterion, checked 2026-11-02). Parsing is pure and unit-tested.
  */
@@ -46,7 +47,7 @@ object GgufSearch {
         val sizeRange: LongRange? get() = if (params > 0) (params * 57 / 100)..(params * 107 / 100) else null
     }
 
-    /** 2.2.16 browse tabs (shown when the page opens; search uses 热门 order). */
+    /** browse tabs (shown when the page opens; search uses 热门 order). */
     enum class Browse(val label: String) { HOT("热门"), NEW("最新"), FIT("适合本机") }
 
     /** One page of a browse / search; [hfNext] = HF cursor query ("" = first page, null = no more). */
@@ -194,11 +195,11 @@ object GgufSearch {
 
     /** RAM hint for a model of [bytes] against [availBytes] (4K context, CPU), reusing the load preflight. */
     fun fitHint(bytes: Long, availBytes: Long): String {
-        val v = com.iris.localai.engine.MemoryPreflight.check(availBytes, bytes, 4096, gpu = false)
+        val v = MemoryPreflight.check(availBytes, bytes, 4096, gpu = false)
         return when (v.level) {
-            com.iris.localai.engine.MemoryPreflight.Level.OK -> "内存够用"
-            com.iris.localai.engine.MemoryPreflight.Level.TIGHT -> "内存偏紧"
-            com.iris.localai.engine.MemoryPreflight.Level.SHORT -> "内存可能不够"
+            MemoryPreflight.Level.OK -> "内存够用"
+            MemoryPreflight.Level.TIGHT -> "内存偏紧"
+            MemoryPreflight.Level.SHORT -> "内存可能不够"
         }
     }
 
@@ -296,7 +297,7 @@ object GgufSearch {
     }
 
     /** Urls for one file of [hit] (HF: through the download sources incl. 魔搭 when mapped; 魔搭 hit: 魔搭 only). */
-    /** 2.5.1: 同一次下载里取另一个 HF 仓库的文件（如投影在非 i1 仓库），路径写作 "hf-repo:<owner/name>::<file>"。 */
+    /** 同一次下载里取另一个 HF 仓库的文件（如投影在非 i1 仓库），路径写作 "hf-repo:<owner/name>::<file>"。 */
     private const val CROSS = "hf-repo:"
     fun crossRepoPath(repoId: String, file: String): String = "$CROSS$repoId::$file"
 

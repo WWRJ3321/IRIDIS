@@ -1,5 +1,11 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.content.Context
 import java.io.File
 import java.io.InputStream
@@ -9,11 +15,11 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
- * 1.12.0 backup: conversations, memory, history index, per-model configs and settings in one zip
+ * backup: conversations, memory, history index, per-model configs and settings in one zip
  * (no models, voice packs, or attachments — those are large and re-downloadable).
  * Restore writes the same paths back; the app then restarts so every repository re-reads them.
  *
- * 2.1.0 (IRIDIS, applicationId com.iridis): the new package cannot read the old one's private data,
+ * (IRIDIS, applicationId com.iridis): the new package cannot read the old one's private data,
  * so this zip is the way across. It now carries a [MANIFEST] (format + version, checked on import),
  * the workspace skills (`workspace/skills/…`) and, unless asked for, no API key. The old
  * [MARKER] is still written, and zips from 1.12.0 – 2.0.0 (marker only) still import.
@@ -57,10 +63,10 @@ object Backup {
     /** Parses and validates a manifest; throws [IllegalArgumentException] with a Chinese message. */
     fun parseManifest(text: String): Manifest {
         val m = runCatching { json.decodeFromString(Manifest.serializer(), text) }
-            .getOrElse { throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_10f88b)) }
-        if (m.format != FORMAT) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_4cb4dd))
-        if (m.formatVersion < 1) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_bfb93b))
-        if (m.formatVersion > FORMAT_VERSION) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_c7042d, m.formatVersion))
+            .getOrElse { throw IllegalArgumentException(I18n.s(R.string.util_10f88b)) }
+        if (m.format != FORMAT) throw IllegalArgumentException(I18n.s(R.string.util_4cb4dd))
+        if (m.formatVersion < 1) throw IllegalArgumentException(I18n.s(R.string.util_bfb93b))
+        if (m.formatVersion > FORMAT_VERSION) throw IllegalArgumentException(I18n.s(R.string.util_c7042d, m.formatVersion))
         return m
     }
 
@@ -127,7 +133,7 @@ object Backup {
         }
         val m = manifest
         if (m != null) return Info(m, n, legacy = false)
-        if (!marked) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_584fd2))
+        if (!marked) throw IllegalArgumentException(I18n.s(R.string.util_584fd2))
         return Info(Manifest(formatVersion = 1, app = "IRIS LocalAI", files = n, includesApiKey = true), n, legacy = true)
     }
 
@@ -150,7 +156,7 @@ object Backup {
                     if (e.name == MARKER) { marked = true; continue }
                     if (e.name == MANIFEST) { parseManifest(zip.readBytes().toString(Charsets.UTF_8)); marked = true; continue }
                     if (e.isDirectory) continue
-                    // 1.13.0: no "..", and the file must stay inside its own item folder.
+                    // no "..", and the file must stay inside its own item folder.
                     if (e.name.split('/', '\\').any { it == ".." }) continue
                     if (e.name.startsWith(SKILLS_PREFIX)) {
                         val sr = skillsRoot ?: continue
@@ -173,7 +179,7 @@ object Backup {
                     staged += tmp to dest; n++
                 }
             }
-            if (!marked) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_584fd2))
+            if (!marked) throw IllegalArgumentException(I18n.s(R.string.util_584fd2))
             // Replace whole folders so deleted conversations do not come back half-merged.
             ITEMS.filter { item -> staged.any { (_, d) -> d.path.startsWith(File(root, item).path) } }
                 .map { File(root, it) }.filter { it.isDirectory }.forEach { it.deleteRecursively() }
@@ -191,7 +197,7 @@ object Backup {
     }
 }
 
-/** 1.12.0: the app's own log lines (IrisLoad, IrisGen, IrisAgent …) for bug reports, no adb needed. */
+/** the app's own log lines (IrisLoad, IrisGen, IrisAgent …) for bug reports, no adb needed. */
 object LogExport {
     fun collect(maxLines: Int = 20_000): String {
         val p = ProcessBuilder("logcat", "-d", "-v", "time", "-t", maxLines.toString(), "--pid=" + android.os.Process.myPid()).redirectErrorStream(true).start()

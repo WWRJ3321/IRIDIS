@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.iris.localai.engine.NpuState
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +17,7 @@ import java.security.MessageDigest
 import java.util.zip.ZipFile
 
 /**
- * 2.2.0: the GenieX native runtime ([GenieX.VERSION]; 0.10.0 = QAIRT 2.50 since 2.4.1), installed on demand (the APK carries only the SDK's
+ * the GenieX native runtime ([GenieX.VERSION]; 0.10.0 = QAIRT 2.50 since 2.4.1), installed on demand (the APK carries only the SDK's
  * Kotlin classes; every GenieX .so is excluded from packaging in app/build.gradle.kts).
  *
  * Install: Maven Central (aliyun mirror as fallback) `geniex-android-<VERSION>.aar` → size + SHA-256 of
@@ -70,7 +70,7 @@ class GenieXRuntime private constructor(context: Context) : GenieXSupport {
         GenieXLibs.unsupportedReason(manufacturer, soc)?.let { return NpuState.Unsupported(it) }
         return when (val c = check()) {
             GenieXLibs.Check.Ok -> NpuState.Installed
-            // 2.4.1: an older runtime (0.8.0 = QAIRT 2.45) on disk → 「重新下载」 instead of a plain first install.
+            // an older runtime (0.8.0 = QAIRT 2.45) on disk → 「重新下载」 instead of a plain first install.
             GenieXLibs.Check.NotInstalled -> GenieXLibs.oldRuntime(dir.parentFile?.list().orEmpty().toList(), dir.name)
                 ?.let { NpuState.NeedsRepair(GenieXLibs.oldRuntimeReason(it)) } ?: NpuState.NotInstalled
             is GenieXLibs.Check.Broken -> NpuState.NeedsRepair(c.reason)

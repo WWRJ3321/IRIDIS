@@ -1,5 +1,7 @@
 package com.iris.localai.data
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import java.util.Calendar
 import java.util.Locale
 
@@ -25,15 +27,15 @@ object Format {
         val today = startOfDay(now)
         val day = 24L * 3600 * 1000
         return when {
-            ts >= today -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_800dfd)
-            ts >= today - day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_2f8d6f)
-            ts >= today - 7 * day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_b08715)
-            ts >= today - 30 * day -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_fc5752)
+            ts >= today -> I18n.s(R.string.data_800dfd)
+            ts >= today - day -> I18n.s(R.string.data_2f8d6f)
+            ts >= today - 7 * day -> I18n.s(R.string.data_b08715)
+            ts >= today - 30 * day -> I18n.s(R.string.data_fc5752)
             else -> {
                 val c = Calendar.getInstance().apply { timeInMillis = ts }
                 val n = Calendar.getInstance().apply { timeInMillis = now }
-                if (c.get(Calendar.YEAR) == n.get(Calendar.YEAR)) com.iris.localai.I18n.s(com.iris.localai.R.string.data_69d5be, c.get(Calendar.MONTH) + 1)
-                else com.iris.localai.I18n.s(com.iris.localai.R.string.data_b8949d, c.get(Calendar.YEAR))
+                if (c.get(Calendar.YEAR) == n.get(Calendar.YEAR)) I18n.s(R.string.data_69d5be, c.get(Calendar.MONTH) + 1)
+                else I18n.s(R.string.data_b8949d, c.get(Calendar.YEAR))
             }
         }
     }

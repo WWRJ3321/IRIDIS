@@ -3,7 +3,7 @@ package com.iris.localai.server
 import java.security.MessageDigest
 
 /**
- * 2.1.7 API 可自定 Key: the local API's access check, pure so it can be unit-tested.
+ * API 可自定 Key: the local API's access check, pure so it can be unit-tested.
  *
  * - key empty → no key needed (old behaviour), but a browser page (Origin header, also `null`
  *   from sandboxed iframes / file: pages) is refused (1.13.0), and so is a Host other than

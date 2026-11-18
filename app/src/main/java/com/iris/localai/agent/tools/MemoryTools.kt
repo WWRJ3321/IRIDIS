@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import com.iris.localai.memory.ItemsEdit
 import com.iris.localai.memory.MemoryDocs
 import com.iris.localai.memory.MemoryItem
@@ -26,7 +29,7 @@ fun interface HistorySearch {
     fun search(query: String, conversationId: String?, limit: Int, exclude: Set<String>): List<RecallHit>
 }
 
-/** 1.10.0: search earlier messages and tool steps (BM25-ranked snippets). */
+/** search earlier messages and tool steps (BM25-ranked snippets). */
 object RecallTool : AgentTool {
     override val group = ToolGroup.MEMORY
     override val name = "recall"
@@ -56,7 +59,7 @@ object RecallTool : AgentTool {
     }
 }
 
-/** 1.10.0: add / replace / remove entries of USER.md or MEMORY.md (bounded, outside the workspace). */
+/** add / replace / remove entries of USER.md or MEMORY.md (bounded, outside the workspace). */
 object MemoryTool : AgentTool {
     override val group = ToolGroup.MEMORY
     override val name = "memory"

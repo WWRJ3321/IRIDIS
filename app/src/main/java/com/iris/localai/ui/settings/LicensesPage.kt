@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -38,7 +40,7 @@ import kotlinx.serialization.json.JsonPrimitive
 /** One bundled third-party license: `assets/licenses/index.json` entry. */
 data class LicenseEntry(val name: String, val license: String, val file: String, val url: String)
 
-/** 1.14.7: reads `assets/licenses/index.json`; a missing or malformed file gives an empty list. */
+/** reads `assets/licenses/index.json`; a missing or malformed file gives an empty list. */
 object LicenseIndex {
     const val DIR = "licenses"
     const val INDEX = "$DIR/index.json"
@@ -83,16 +85,16 @@ fun LicensesPage(onBack: () -> Unit, onOpenFile: ((String) -> Unit)? = null) {
         LicenseTextPage(open, onBack = { openFile = null })
         return
     }
-    // 2.5.0 Beta6: as a route (onOpenFile != null) the back gesture belongs to MainActivity's PredictiveBackHandler.
+    // as a route (onOpenFile != null) the back gesture belongs to MainActivity's PredictiveBackHandler.
     if (onOpenFile == null) BackHandler(onBack = onBack)
-    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4236d8), onBack) {
+    SubpageScaffold(I18n.s(R.string.settings_4236d8), onBack) {
         ScrollBody {
             val list = entries
             when {
                 list == null -> {}
-                list.isEmpty() -> PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ee089e))
+                list.isEmpty() -> PageDescription(I18n.s(R.string.settings_ee089e))
                 else -> {
-                    PageDescription(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_a638b9))
+                    PageDescription(I18n.s(R.string.settings_a638b9))
                     SettingsGroup {
                         list.forEachIndexed { i, e ->
                             if (i > 0) Divider()
@@ -111,12 +113,12 @@ fun LicensesPage(onBack: () -> Unit, onOpenFile: ((String) -> Unit)? = null) {
     }
 }
 
-/** 2.5.0 Beta6: the license file the LICENSE_TEXT route shows (process-level, like KbEditorNav). */
+/** the license file the LICENSE_TEXT route shows (process-level, like KbEditorNav). */
 object LicenseNav {
     var file by mutableStateOf<String?>(null)
 }
 
-/** 2.5.0 Beta6: 许可证 › 单个许可证全文 as a real route. */
+/** 许可证 › 单个许可证全文 as a real route. */
 @Composable
 fun LicenseTextRoute(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -142,14 +144,14 @@ private fun LicenseTextPage(entry: LicenseEntry, onBack: () -> Unit) {
     val context = LocalContext.current
     val c = Iris.colors
     val text by produceState<String?>(null, entry.file) {
-        value = withContext(Dispatchers.IO) { LicenseIndex.text(context, entry.file) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2cd607, entry.file)
+        value = withContext(Dispatchers.IO) { LicenseIndex.text(context, entry.file) } ?: I18n.s(R.string.settings_2cd607, entry.file)
     }
     SubpageScaffold(entry.name, onBack) {
         ScrollBody {
             if (entry.license.isNotBlank()) PageDescription(entry.license)
             if (entry.url.isNotBlank()) {
                 IrisButton(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e910f), {
+                    I18n.s(R.string.settings_9e910f), {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(entry.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     },
                     style = IrisButtonStyle.Text, compact = true,

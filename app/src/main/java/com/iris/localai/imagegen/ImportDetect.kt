@@ -7,7 +7,7 @@ import java.io.EOFException
 import java.io.InputStream
 
 /**
- * 2.7.0: 通用导入。读文件头（safetensors 的 JSON 头 / GGUF 的元数据与张量表）判断每个文件是什么，
+ * 通用导入。读文件头（safetensors 的 JSON 头 / GGUF 的元数据与张量表）判断每个文件是什么，
  * 不按模型牌子列预设。架构本身由 sd.cpp 按张量名识别，这里只决定每个文件走哪个参数
  * （model / diffusion_model / clip_l / clip_g / t5xxl / llm / vae）和默认步数、CFG。
  */
@@ -86,7 +86,7 @@ object ImportDetect {
 
     private val IMAGE_GGUF_ARCH = setOf("sd1", "sd2", "sdxl", "sd3", "flux", "flux2", "z_image", "qwen_image", "chroma", "anima", "wan", "lumina2")
 
-    /** 2.6.12 的 NPU 包文件名（[AnimaQnnFiles.NAMES]）。 */
+    /** 的 NPU 包文件名（[AnimaQnnFiles.NAMES]）。 */
     fun isNpuFile(fileName: String) = fileName in AnimaQnnFiles.NAMES
 
     fun role(fileName: String, head: FileHead?): FileRole {

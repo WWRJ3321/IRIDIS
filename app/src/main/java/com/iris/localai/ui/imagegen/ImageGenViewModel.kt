@@ -1,5 +1,32 @@
 package com.iris.localai.ui.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.IrisApp
+import com.iris.localai.R
+import com.iris.localai.engine.GenEvent
+import com.iris.localai.engine.PromptMessage
+import com.iris.localai.engine.Requester
+import com.iris.localai.imagegen.AnimaQnnFiles
+import com.iris.localai.imagegen.Defaults
+import com.iris.localai.imagegen.Family
+import com.iris.localai.imagegen.FileHead
+import com.iris.localai.imagegen.FileRole
+import com.iris.localai.imagegen.ImageGenEngines
+import com.iris.localai.imagegen.ImageGenFiles
+import com.iris.localai.imagegen.ImageSeed
+import com.iris.localai.imagegen.ImportArch
+import com.iris.localai.imagegen.ImportDetect
+import com.iris.localai.imagegen.ImportedImage
+import com.iris.localai.imagegen.ImportedImages
+import com.iris.localai.imagegen.PromptExpand
+import com.iris.localai.imagegen.PromptTag
+import com.iris.localai.imagegen.PromptTags
+import com.iris.localai.imagegen.SdLog
+import com.iris.localai.imagegen.SdProgress
+import com.iris.localai.imagegen.SdRules
+import com.iris.localai.imagegen.TagCat
+import com.iris.localai.imagegen.TagLibrary
+import com.iris.localai.imagegen.TagStore
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -25,40 +52,40 @@ import java.io.File
 
 /** Chinese copy of the 生图 page (tests read these). */
 object ImageGenText {
-    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)
-    val DOWNLOADED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
-    val NOT_DOWNLOADED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_336189)
-    val DOWNLOAD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
-    val NOT_DOWNLOADED_ERROR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_28b159)
-    val EXTRACTING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_973e8a)
-    val DELETE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
-    val DELETE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_bb7a2e)
-    val RETRY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b7da7)
-    val PROMPT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_68a756)
-    val NEGATIVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9576af)
-    val REF_IMAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_477f3a)
-    val STRENGTH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a27088)
-    val NO_IMG2IMG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_b37ef6)
-    val STEPS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_896303)
+    val TITLE: String get() = I18n.s(R.string.chat_19a9bc)
+    val DOWNLOADED: String get() = I18n.s(R.string.imagegen_9719fe)
+    val NOT_DOWNLOADED: String get() = I18n.s(R.string.imagegen_336189)
+    val DOWNLOAD: String get() = I18n.s(R.string.settings_f26ef9)
+    val NOT_DOWNLOADED_ERROR: String get() = I18n.s(R.string.imagegen_28b159)
+    val EXTRACTING: String get() = I18n.s(R.string.imagegen_973e8a)
+    val DELETE: String get() = I18n.s(R.string.chat_2f4aad)
+    val DELETE_TITLE: String get() = I18n.s(R.string.imagegen_bb7a2e)
+    val RETRY: String get() = I18n.s(R.string.models_3b7da7)
+    val PROMPT: String get() = I18n.s(R.string.imagegen_68a756)
+    val NEGATIVE: String get() = I18n.s(R.string.imagegen_9576af)
+    val REF_IMAGE: String get() = I18n.s(R.string.imagegen_477f3a)
+    val STRENGTH: String get() = I18n.s(R.string.imagegen_a27088)
+    val NO_IMG2IMG: String get() = I18n.s(R.string.imagegen_b37ef6)
+    val STEPS: String get() = I18n.s(R.string.imagegen_896303)
     const val CFG = "CFG"
-    val SEED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_0e9bf6)
-    val GENERATE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4dfe70)
-    val CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)
-    val CANCELLED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_2111cc)
-    val SAVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb)
-    val SHARE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48)
-    val TO_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_bf1781)
-    val HISTORY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_c827d8)
-    val SELF_CHECK: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_328b2c)
-    val RUN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_4c763b)
-    val COPY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab)
-    val FIXED_SIZE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_e23c9e)
-    /** 2.4.1: sd.cpp models — which processor the next image uses, and the switches. */
-    val SD_ON_GPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_on_gpu)
-    val SD_ON_CPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_on_cpu)
-    val SD_GPU_CRASHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_gpu_crashed)
-    val RETRY_GPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_retry_gpu)
-    val USE_CPU: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.sd241_use_cpu)
+    val SEED: String get() = I18n.s(R.string.imagegen_0e9bf6)
+    val GENERATE: String get() = I18n.s(R.string.settings_4dfe70)
+    val CANCEL: String get() = I18n.s(R.string.chat_625fb2)
+    val CANCELLED: String get() = I18n.s(R.string.imagegen_2111cc)
+    val SAVE: String get() = I18n.s(R.string.settings_be5fbb)
+    val SHARE: String get() = I18n.s(R.string.files_c31f48)
+    val TO_CHAT: String get() = I18n.s(R.string.imagegen_bf1781)
+    val HISTORY: String get() = I18n.s(R.string.imagegen_c827d8)
+    val SELF_CHECK: String get() = I18n.s(R.string.imagegen_328b2c)
+    val RUN: String get() = I18n.s(R.string.imagegen_4c763b)
+    val COPY: String get() = I18n.s(R.string.ui_79d3ab)
+    val FIXED_SIZE: String get() = I18n.s(R.string.imagegen_e23c9e)
+    /** sd.cpp models — which processor the next image uses, and the switches. */
+    val SD_ON_GPU: String get() = I18n.s(R.string.sd241_on_gpu)
+    val SD_ON_CPU: String get() = I18n.s(R.string.sd241_on_cpu)
+    val SD_GPU_CRASHED: String get() = I18n.s(R.string.sd241_gpu_crashed)
+    val RETRY_GPU: String get() = I18n.s(R.string.sd241_retry_gpu)
+    val USE_CPU: String get() = I18n.s(R.string.sd241_use_cpu)
 }
 
 data class ImageGenUi(
@@ -73,45 +100,45 @@ data class ImageGenUi(
     val steps: Int = ImageCatalog.SD15_QNN.defaultSteps,
     val cfg: Float = ImageCatalog.SD15_QNN.defaultCfg,
     val seed: String = "",
-    /** 2.5.2: the seed the last image actually used (shown with the result; the field is never overwritten). */
+    /** the seed the last image actually used (shown with the result; the field is never overwritten). */
     val lastSeed: Long? = null,
     val running: Boolean = false,
     val step: Int = 0,
     val total: Int = 0,
-    /** 2.4.2: load / step / decode phase of the running generation, and when it started. */
-    val progress: com.iris.localai.imagegen.SdProgress.State = com.iris.localai.imagegen.SdProgress.State(),
+    /** load / step / decode phase of the running generation, and when it started. */
+    val progress: SdProgress.State = SdProgress.State(),
     val startedAt: Long = 0L,
     val error: String? = null,
     val result: String? = null,
     val history: List<String> = emptyList(),
-    /** 2.4.3: disk used by [history]. */
+    /** disk used by [history]. */
     val historyBytes: Long = 0L,
     val report: String? = null,
-    /** 2.4.1: sd.cpp — the GPU crashed last time (runs on the CPU until 「重试 GPU」). */
+    /** sd.cpp — the GPU crashed last time (runs on the CPU until 「重试 GPU」). */
     val sdGpuCrashed: Boolean = false,
-    /** 2.4.1: sd.cpp — the next image runs on the CPU (crash or 「改用 CPU」). */
+    /** sd.cpp — the next image runs on the CPU (crash or 「改用 CPU」). */
     val sdOnCpu: Boolean = false,
-    /** 2.4.3: the app died during an NPU (sdq) run. */
+    /** the app died during an NPU (sdq) run. */
     val sdHtpCrashed: Boolean = false,
-    /** 2.4.3: the last error was the memory check (offer 「仍然生成」). */
+    /** the last error was the memory check (offer 「仍然生成」). */
     val lowMem: Boolean = false,
     /** Model id -> running / failed download (from [ImageGenDownloader.states]). */
     val downloads: Map<String, ImageDl> = emptyMap(),
-    /** 2.6.8: 低内存模式 / 提示词扩写（存在智能体设置里，与 generate_image 共用）。 */
+    /** 低内存模式 / 提示词扩写（存在智能体设置里，与 generate_image 共用）。 */
     val lowMemMode: Boolean = false,
     val expand: Boolean = true,
-    /** 2.6.8: 标签库（内置 + 自定义）与当前分类。 */
-    val tags: List<com.iris.localai.imagegen.PromptTag> = com.iris.localai.imagegen.PromptTags.BUILTIN,
-    val tagCat: com.iris.localai.imagegen.TagCat = com.iris.localai.imagegen.TagCat.SUBJECT,
-    /** 2.6.8: 正在扩写；上一张实际用的（扩写后）提示词。 */
+    /** 标签库（内置 + 自定义）与当前分类。 */
+    val tags: List<PromptTag> = PromptTags.BUILTIN,
+    val tagCat: TagCat = TagCat.SUBJECT,
+    /** 正在扩写；上一张实际用的（扩写后）提示词。 */
     val expanding: Boolean = false,
     val usedPrompt: String? = null,
-    /** 2.6.8: 等待用户确认许可的模型（首次下载前）。 */
+    /** 等待用户确认许可的模型（首次下载前）。 */
     val licenseAsk: String? = null,
-    /** 2.6.9: 导入进度（0..1，null = 没在导入）与正在复制的文件名。 */
+    /** 导入进度（0..1，null = 没在导入）与正在复制的文件名。 */
     val importing: Float? = null,
     val importFile: String = "",
-    /** 2.6.9: 模型清单版本（导入 / 改名 / 删除后 +1，让页面重读 catalog）。 */
+    /** 模型清单版本（导入 / 改名 / 删除后 +1，让页面重读 catalog）。 */
     val catalogRev: Int = 0,
 ) {
     val model: ImageModel get() = ImageCatalog.byId(modelId) ?: ImageCatalog.SD15_QNN
@@ -121,15 +148,15 @@ data class ImageGenUi(
 
     fun request(): ImageRequest = ImageRequest(
         prompt = prompt, negative = negative, width = width, height = height, steps = steps, cfg = cfg,
-        // 2.5.2: empty field = a new random seed on every call (one call per generation); a typed seed stays fixed.
-        seed = com.iris.localai.imagegen.ImageSeed.pick(seed),
+        // empty field = a new random seed on every call (one call per generation); a typed seed stays fixed.
+        seed = ImageSeed.pick(seed),
         initImagePath = initImage?.takeIf { img2imgSupported }, strength = strength, lowMem = lowMemMode,
     ).normalize(model)
 }
 
 class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = ImageGenRepository(app)
-    private val engines = com.iris.localai.imagegen.ImageGenEngines.get(app)
+    private val engines = ImageGenEngines.get(app)
     private val engine: ImageGenEngine = engines
     private val _ui = MutableStateFlow(ImageGenUi())
     val ui: StateFlow<ImageGenUi> = _ui.asStateFlow()
@@ -137,7 +164,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     val catalog: List<ImageModel> get() = repo.catalog
 
-    private val container = (app as com.iris.localai.IrisApp).container
+    private val container = (app as IrisApp).container
     private val downloader = container.imageGenDownloader
 
     private val agentSettings = container.agent.settings
@@ -149,7 +176,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             agentSettings.settings.collect { a -> _ui.update { it.copy(lowMemMode = a.imageLowMem, expand = a.imagePromptExpand) } }
         }
         viewModelScope.launch {
-            val t = withContext(Dispatchers.IO) { com.iris.localai.imagegen.TagLibrary.tags(app) }
+            val t = withContext(Dispatchers.IO) { TagLibrary.tags(app) }
             _ui.update { it.copy(tags = t) }
         }
         viewModelScope.launch {
@@ -166,10 +193,10 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     /** Starts (or resumes) [m]'s download in the app scope with the 下载源 from 设置. */
     fun download(m: ImageModel) {
         if (m.files.isEmpty()) return
-        // 2.6.8: 非商用许可的模型，首次下载前先确认
+        // 非商用许可的模型，首次下载前先确认
         if (m.licenseUrl.isNotEmpty() && !prefs.getBoolean("license:" + m.id, false)) { _ui.update { it.copy(licenseAsk = m.id) }; return }
-        // 2.2.16: after a failure the button is 「换源重试」 (the source that failed goes last; .part files resume)
-        val failed = downloader.states.value[m.id] is com.iris.localai.imagegen.ImageDl.Failed
+        // after a failure the button is 「换源重试」 (the source that failed goes last; .part files resume)
+        val failed = downloader.states.value[m.id] is ImageDl.Failed
         downloader.clearError(m.id)
         viewModelScope.launch {
             val root = withContext(Dispatchers.IO) { repo.downloadRoot(m) }
@@ -185,7 +212,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteModel(m: ImageModel) {
         viewModelScope.launch {
             val ok = downloader.delete(m, withContext(Dispatchers.IO) { repo.roots() })
-            if (!ok) _ui.update { it.copy(error = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066)) }
+            if (!ok) _ui.update { it.copy(error = I18n.s(R.string.agent_acf066)) }
             if (m.imported) _ui.update { it.copy(catalogRev = it.catalogRev + 1) }
             refresh()
         }
@@ -201,14 +228,14 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 2.4.1 「重试 GPU」: forget the last GPU crash (and a 「改用 CPU」 choice). */
+    /** 「重试 GPU」: forget the last GPU crash (and a 「改用 CPU」 choice). */
     fun retryGpu() {
         engines.sdEngine().clearGpuCrash()
         _ui.update { it.copy(error = null) }
         refresh()
     }
 
-    /** 2.4.1 「改用 CPU」: slower, but needs only the compute buffers (weights stay mmapped). */
+    /** 「改用 CPU」: slower, but needs only the compute buffers (weights stay mmapped). */
     fun useCpu() {
         engines.sdEngine().setPreferCpu(true)
         _ui.update { it.copy(error = null) }
@@ -217,7 +244,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun edit(f: (ImageGenUi) -> ImageGenUi) = _ui.update(f)
 
-    /** 2.6.8: 许可确认（同意后开始下载，之后不再问）。 */
+    /** 许可确认（同意后开始下载，之后不再问）。 */
     fun acceptLicense(accept: Boolean) {
         val id = _ui.value.licenseAsk ?: return
         _ui.update { it.copy(licenseAsk = null) }
@@ -229,35 +256,35 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun setLowMem(on: Boolean) = agentSettings.update { it.copy(imageLowMem = on) }
     fun setExpand(on: Boolean) = agentSettings.update { it.copy(imagePromptExpand = on) }
 
-    /** 2.6.8 标签库：点标签追加到提示词（负面类追加到负面词）。 */
-    fun useTag(t: com.iris.localai.imagegen.PromptTag) = _ui.update {
+    /** 标签库：点标签追加到提示词（负面类追加到负面词）。 */
+    fun useTag(t: PromptTag) = _ui.update {
         val text = t.text(it.model.tagStyle)
-        if (t.cat == com.iris.localai.imagegen.TagCat.NEGATIVE) it.copy(negative = com.iris.localai.imagegen.PromptTags.append(it.negative, text))
-        else it.copy(prompt = com.iris.localai.imagegen.PromptTags.append(it.prompt, text))
+        if (t.cat == TagCat.NEGATIVE) it.copy(negative = PromptTags.append(it.negative, text))
+        else it.copy(prompt = PromptTags.append(it.prompt, text))
     }
 
-    fun addTag(cat: com.iris.localai.imagegen.TagCat, zh: String, en: String) = changeTags { com.iris.localai.imagegen.TagStore.add(it, cat, zh, en) }
-    fun removeTag(t: com.iris.localai.imagegen.PromptTag) = changeTags { com.iris.localai.imagegen.TagStore.remove(it, t) }
+    fun addTag(cat: TagCat, zh: String, en: String) = changeTags { TagStore.add(it, cat, zh, en) }
+    fun removeTag(t: PromptTag) = changeTags { TagStore.remove(it, t) }
     /** 恢复内置标签（清掉隐藏，保留自定义）。 */
     fun resetTags() = changeTags { it.copy(hidden = emptySet()) }
 
-    private fun changeTags(f: (com.iris.localai.imagegen.TagStore.Data) -> com.iris.localai.imagegen.TagStore.Data) {
+    private fun changeTags(f: (TagStore.Data) -> TagStore.Data) {
         val app = getApplication<Application>()
         viewModelScope.launch {
             val t = withContext(Dispatchers.IO) {
-                val d = f(com.iris.localai.imagegen.TagLibrary.load(app))
-                com.iris.localai.imagegen.TagLibrary.save(app, d)
-                com.iris.localai.imagegen.PromptTags.merged(d.custom, d.hidden)
+                val d = f(TagLibrary.load(app))
+                TagLibrary.save(app, d)
+                PromptTags.merged(d.custom, d.hidden)
             }
             _ui.update { it.copy(tags = t) }
         }
     }
 
     /**
-     * 2.6.8 提示词扩写：有已加载的文本模型就让它改写（最多 45 秒、256 token、不思考），失败/超时/没加载用规则模板。
+     * 提示词扩写：有已加载的文本模型就让它改写（最多 45 秒、256 token、不思考），失败/超时/没加载用规则模板。
      */
     private suspend fun expandPrompt(prompt: String, model: ImageModel): String {
-        val ex = com.iris.localai.imagegen.PromptExpand
+        val ex = PromptExpand
         if (!ex.needed(prompt)) return prompt
         val eng = container.engine
         if (eng.readyModel != null && eng.busy.value == null) {
@@ -265,9 +292,9 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 kotlinx.coroutines.withTimeoutOrNull(45_000L) {
                     val sb = StringBuilder()
                     val sampling = eng.samplingFor(true).copy(maxNewTokens = 256, contextShift = false)
-                    eng.generate(listOf(com.iris.localai.engine.PromptMessage(com.iris.localai.engine.PromptMessage.SYSTEM, ex.system(model.tagStyle)),
-                        com.iris.localai.engine.PromptMessage(com.iris.localai.engine.PromptMessage.USER, prompt)), sampling, com.iris.localai.engine.Requester.CHAT).collect { ev ->
-                        if (ev is com.iris.localai.engine.GenEvent.Piece) sb.append(ev.text)
+                    eng.generate(listOf(PromptMessage(PromptMessage.SYSTEM, ex.system(model.tagStyle)),
+                        PromptMessage(PromptMessage.USER, prompt)), sampling, Requester.CHAT).collect { ev ->
+                        if (ev is GenEvent.Piece) sb.append(ev.text)
                     }
                     sb.toString()
                 }
@@ -280,7 +307,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun selectModel(m: ImageModel) {
         _ui.update {
             val old = it.model
-            // 2.2.12: a model's suggested prompt / negative fill fields that are empty or still the previous model's default
+            // a model's suggested prompt / negative fill fields that are empty or still the previous model's default
             fun pick(cur: String, oldDefault: String, newDefault: String) =
                 if (cur.isBlank() || (oldDefault.isNotEmpty() && cur == oldDefault)) newDefault else cur
             it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = m.fixedSize ?: it.width, height = m.fixedSize ?: it.height,
@@ -306,13 +333,13 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.getOrNull() ?: -1L
 
-    /** 2.7.0: 选中的一批文件读头后的识别结果（对话框显示每个文件的用途，并填默认步数 / CFG）。 */
+    /** 选中的一批文件读头后的识别结果（对话框显示每个文件的用途，并填默认步数 / CFG）。 */
     data class ImportPlan(
-        val files: List<Triple<Uri, String, com.iris.localai.imagegen.FileRole>>,
+        val files: List<Triple<Uri, String, FileRole>>,
         val npu: Boolean = false,
         val main: Uri? = null,
-        val family: com.iris.localai.imagegen.Family = com.iris.localai.imagegen.Family.DIT,
-        val defaults: com.iris.localai.imagegen.Defaults = com.iris.localai.imagegen.Defaults(20, 7f, false),
+        val family: Family = Family.DIT,
+        val defaults: Defaults = Defaults(20, 7f, false),
         /** 复用已下载的文本编码器 / VAE（相对路径，空 = 不复用）。 */
         val reuseLlm: String = "",
         val reuseVae: String = "",
@@ -320,42 +347,42 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     suspend fun inspect(uris: List<Uri>): ImportPlan = withContext(Dispatchers.IO) {
-        val det = com.iris.localai.imagegen.ImportDetect
+        val det = ImportDetect
         val app = getApplication<Application>()
-        val heads = HashMap<Uri, com.iris.localai.imagegen.FileHead?>()
+        val heads = HashMap<Uri, FileHead?>()
         val files = uris.distinct().map { u ->
             val n = nameOf(u)
             val h = if (det.isNpuFile(n)) null else runCatching { app.contentResolver.openInputStream(u)?.use { det.readHead(n, it.buffered(1 shl 16)) } }.getOrNull()
             heads[u] = h
             Triple(u, n, det.role(n, h))
         }
-        if (files.any { it.third == com.iris.localai.imagegen.FileRole.NPU }) return@withContext ImportPlan(files, npu = true, defaults = com.iris.localai.imagegen.Defaults(8, 1f, true))
-        fun s(id: Int, vararg a: Any) = com.iris.localai.I18n.s(id, *a)
-        files.firstOrNull { it.third == com.iris.localai.imagegen.FileRole.UNKNOWN }?.let { return@withContext ImportPlan(files, error = s(com.iris.localai.R.string.ig27_unknown, it.second)) }
-        val mains = files.filter { it.third == com.iris.localai.imagegen.FileRole.CHECKPOINT || it.third == com.iris.localai.imagegen.FileRole.DIFFUSION }
-        if (mains.size != 1) return@withContext ImportPlan(files, error = s(if (mains.isEmpty()) com.iris.localai.R.string.ig27_no_main else com.iris.localai.R.string.ig27_two_main))
+        if (files.any { it.third == FileRole.NPU }) return@withContext ImportPlan(files, npu = true, defaults = Defaults(8, 1f, true))
+        fun s(id: Int, vararg a: Any) = I18n.s(id, *a)
+        files.firstOrNull { it.third == FileRole.UNKNOWN }?.let { return@withContext ImportPlan(files, error = s(R.string.ig27_unknown, it.second)) }
+        val mains = files.filter { it.third == FileRole.CHECKPOINT || it.third == FileRole.DIFFUSION }
+        if (mains.size != 1) return@withContext ImportPlan(files, error = s(if (mains.isEmpty()) R.string.ig27_no_main else R.string.ig27_two_main))
         val m = mains[0]
         val fam = det.family(m.third, heads[m.first])
         val root = repo.modelsLocation().dir
         val (rl, rv) = det.reusePaths(fam)
         val roles = files.map { it.third }.toSet()
-        val enc = roles.any { it == com.iris.localai.imagegen.FileRole.LLM || it == com.iris.localai.imagegen.FileRole.T5 || it == com.iris.localai.imagegen.FileRole.CLIP_L || it == com.iris.localai.imagegen.FileRole.CLIP_G }
+        val enc = roles.any { it == FileRole.LLM || it == FileRole.T5 || it == FileRole.CLIP_L || it == FileRole.CLIP_G }
         val reuseLlm = if (!enc && rl.isNotEmpty() && File(root, rl).isFile) rl else ""
-        val reuseVae = if (com.iris.localai.imagegen.FileRole.VAE !in roles && rv.isNotEmpty() && File(root, rv).isFile) rv else ""
+        val reuseVae = if (FileRole.VAE !in roles && rv.isNotEmpty() && File(root, rv).isFile) rv else ""
         var err: String? = null
-        if (m.third == com.iris.localai.imagegen.FileRole.DIFFUSION && ((!enc && reuseLlm.isEmpty()) || (com.iris.localai.imagegen.FileRole.VAE !in roles && reuseVae.isEmpty())))
-            err = s(com.iris.localai.R.string.ig269_need_parts)
+        if (m.third == FileRole.DIFFUSION && ((!enc && reuseLlm.isEmpty()) || (FileRole.VAE !in roles && reuseVae.isEmpty())))
+            err = s(R.string.ig269_need_parts)
         val total = files.sumOf { sizeOf(it.first).coerceAtLeast(0L) } + listOf(reuseLlm, reuseVae).filter { it.isNotEmpty() }.sumOf { File(root, it).length() }
         val mem = runCatching { android.app.ActivityManager.MemoryInfo().also { (app.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }.totalMem }.getOrDefault(0L)
-        if (err == null && det.tooBig(total, mem)) err = s(com.iris.localai.R.string.ig27_too_big, String.format(java.util.Locale.US, "%.1f", total / 1e9))
+        if (err == null && det.tooBig(total, mem)) err = s(R.string.ig27_too_big, String.format(java.util.Locale.US, "%.1f", total / 1e9))
         ImportPlan(files, main = m.first, family = fam, defaults = det.defaults(fam, m.second), reuseLlm = reuseLlm, reuseVae = reuseVae, error = err)
     }
 
-    /** 2.7.0: 按 [inspect] 的识别结果复制文件并登记（不按牌子分）。 */
+    /** 按 [inspect] 的识别结果复制文件并登记（不按牌子分）。 */
     fun importAuto(plan: ImportPlan, name: String, steps: Int, cfg: Float) {
         if (plan.npu) { importNpuPack(name, plan.files.map { it.first }, steps); return }
         if (_ui.value.importing != null || plan.error != null || plan.main == null) return
-        val imp = com.iris.localai.imagegen.ImportedImages
+        val imp = ImportedImages
         viewModelScope.launch {
             val id = imp.newId()
             val root = withContext(Dispatchers.IO) { repo.modelsLocation().dir }
@@ -366,7 +393,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                     var done = 0L
                     fun copy(uri: Uri, fn0: String, idx: Int): String {
                         val fn = imp.safeFileName(fn0)
-                        if (!imp.acceptable(fn)) throw IllegalArgumentException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_ext, fn))
+                        if (!imp.acceptable(fn)) throw IllegalArgumentException(I18n.s(R.string.ig269_bad_ext, fn))
                         dir.mkdirs()
                         val out = File(dir, fn).let { if (it.exists()) File(dir, "$idx-$fn") else it }
                         val part = File(dir, out.name + ".part")
@@ -383,16 +410,16 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                                     if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
                                 }
                             }
-                        } ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
-                        if (!part.renameTo(out)) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                        } ?: throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
+                        if (!part.renameTo(out)) throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
                         return "$id/${out.name}"
                     }
                     _ui.update { it.copy(importing = 0f) }
-                    val rel = HashMap<com.iris.localai.imagegen.FileRole, String>()
+                    val rel = HashMap<FileRole, String>()
                     plan.files.forEachIndexed { i, (u, n, r) -> rel[r] = copy(u, n, i) }
-                    val mainRel = rel[FR.CHECKPOINT] ?: rel[FR.DIFFUSION]!!
+                    val mainRel = rel[FR.CHECKPOINT] ?: rel[FR.DIFFUSION] ?: error("缺少主模型文件")
                     val isCkpt = rel.containsKey(FR.CHECKPOINT)
-                    imp.put(com.iris.localai.imagegen.ImportedImage(
+                    imp.put(ImportedImage(
                         id = id, name = imp.cleanName(name, imp.nameFromFile(mainRel.substringAfterLast('/'))), arch = imp.AUTO,
                         diffusion = if (isCkpt) "" else mainRel, llm = rel[FR.LLM] ?: plan.reuseLlm, vae = rel[FR.VAE] ?: plan.reuseVae,
                         steps = steps.coerceIn(1, 100), cfg = cfg.coerceIn(0f, 30f),
@@ -408,22 +435,22 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             if (err == null) imp.get(id)?.toModel()?.let { m ->
                 selectModel(m)
                 // 引擎库（libiris_sd.so）没下过就补下；权重本身不下载
-                if (!withContext(Dispatchers.IO) { com.iris.localai.imagegen.ImageGenFiles.isDownloaded(root, m) }) download(m)
+                if (!withContext(Dispatchers.IO) { ImageGenFiles.isDownloaded(root, m) }) download(m)
             }
         }
     }
 
-    /** 2.6.12: 导入 Anima NPU 包：多选的文件里只收包内约定的文件名，复制进 `<id>/`。 */
+    /** 导入 Anima NPU 包：多选的文件里只收包内约定的文件名，复制进 `<id>/`。 */
     fun importNpuPack(name: String, uris: List<Uri>, steps: Int) {
         if (_ui.value.importing != null) return
-        val imp = com.iris.localai.imagegen.ImportedImages
+        val imp = ImportedImages
         viewModelScope.launch {
             val id = imp.newId()
             val root = withContext(Dispatchers.IO) { repo.modelsLocation().dir }
             val dir = File(root, id)
             val err = withContext(Dispatchers.IO) {
                 runCatching {
-                    val picked = uris.map { it to nameOf(it) }.filter { it.second in com.iris.localai.imagegen.AnimaQnnFiles.NAMES }.distinctBy { it.second }
+                    val picked = uris.map { it to nameOf(it) }.filter { it.second in AnimaQnnFiles.NAMES }.distinctBy { it.second }
                     val total = picked.sumOf { sizeOf(it.first).coerceAtLeast(0L) }.coerceAtLeast(1L)
                     var done = 0L
                     dir.mkdirs()
@@ -443,13 +470,13 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                                     if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
                                 }
                             }
-                        } ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
-                        if (!part.renameTo(File(dir, fn))) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig269_bad_file, fn))
+                        } ?: throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
+                        if (!part.renameTo(File(dir, fn))) throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
                     }
-                    val miss = com.iris.localai.imagegen.AnimaQnnFiles(dir).missing()
-                    if (miss.isNotEmpty()) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_missing, miss.joinToString()))
-                    val a = com.iris.localai.imagegen.ImportArch.ANIMA_NPU
-                    imp.put(com.iris.localai.imagegen.ImportedImage(id, imp.cleanName(name, com.iris.localai.I18n.s(com.iris.localai.R.string.ig27_npu)), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
+                    val miss = AnimaQnnFiles(dir).missing()
+                    if (miss.isNotEmpty()) throw IllegalStateException(I18n.s(R.string.ig270_npu_missing, miss.joinToString()))
+                    val a = ImportArch.ANIMA_NPU
+                    imp.put(ImportedImage(id, imp.cleanName(name, I18n.s(R.string.ig27_npu)), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
                     null
                 }.exceptionOrNull()
             }
@@ -462,7 +489,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun renameImported(m: ImageModel, name: String) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { com.iris.localai.imagegen.ImportedImages.rename(m.id, name) }
+            withContext(Dispatchers.IO) { ImportedImages.rename(m.id, name) }
             _ui.update { it.copy(catalogRev = it.catalogRev + 1) }
         }
     }
@@ -479,7 +506,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                     out.path
                 }.getOrNull()
             }
-            _ui.update { it.copy(initImage = path, error = if (path == null) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a7f86a) else null) }
+            _ui.update { it.copy(initImage = path, error = if (path == null) I18n.s(R.string.imagegen_a7f86a) else null) }
         }
     }
 
@@ -489,33 +516,33 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
         val req0 = s.request()
         val model = s.model
-        // 2.5.6: 关了风险提示弹窗 = 跳过内存预检，直接生成
+        // 关了风险提示弹窗 = 跳过内存预检，直接生成
         if (!container.settings.current.warnPopups) engines.sdEngine().forceOnce = true
         _ui.update { it.copy(running = true, step = 0, total = req0.steps, error = null, lowMem = false, lastSeed = null, usedPrompt = null,
-            progress = com.iris.localai.imagegen.SdProgress.State(), startedAt = System.currentTimeMillis()) }
+            progress = SdProgress.State(), startedAt = System.currentTimeMillis()) }
         job = viewModelScope.launch {
-            // 2.6.8: 扩写在卸载文本模型之前（要用它）。
+            // 扩写在卸载文本模型之前（要用它）。
             val req = if (s.expand && req0.initImagePath == null) {
                 _ui.update { it.copy(expanding = true) }
                 val p = expandPrompt(req0.prompt, model)
                 _ui.update { it.copy(expanding = false, usedPrompt = p.takeIf { x -> x != req0.prompt }) }
-                req0.copy(prompt = p, negative = com.iris.localai.imagegen.PromptExpand.negative(req0.negative, model.tagStyle))
+                req0.copy(prompt = p, negative = PromptExpand.negative(req0.negative, model.tagStyle))
             } else req0
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
-            if (model.backend == com.iris.localai.imagegen.Backend.QNN || model.backend == com.iris.localai.imagegen.Backend.SDCPP) runCatching { container.engine.unload(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)) }
+            if (model.backend == Backend.QNN || model.backend == Backend.SDCPP) runCatching { container.engine.unload(I18n.s(R.string.chat_19a9bc)) }
             val r = withContext(Dispatchers.Default) {
                 engine.generate(req, model) { step, total ->
-                    _ui.update { it.copy(step = step, total = total, progress = com.iris.localai.imagegen.SdProgress.next(it.progress, step, total, req.steps)) }
+                    _ui.update { it.copy(step = step, total = total, progress = SdProgress.next(it.progress, step, total, req.steps)) }
                 }
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
             saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, lastSeed = req.seed, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
-                .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName, lowMem = e is com.iris.localai.imagegen.SdRules.LowMemory) } }
-            if (model.backend == com.iris.localai.imagegen.Backend.SDCPP) refresh()
+                .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName, lowMem = e is SdRules.LowMemory) } }
+            if (model.backend == Backend.SDCPP) refresh()
         }
     }
 
-    /** 2.4.3 「仍然生成」: run once past the memory check. */
+    /** 「仍然生成」: run once past the memory check. */
     fun generateAnyway() {
         engines.sdEngine().forceOnce = true
         generate()
@@ -528,16 +555,16 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         _ui.update { it.copy(running = false, expanding = false, error = ImageGenText.CANCELLED) }
     }
 
-    /** 2.4.2: recent sd.cpp log lines for a bug report (copied by the page). */
-    suspend fun sdLog(): String = withContext(Dispatchers.IO) { com.iris.localai.imagegen.SdLog.recent() }
+    /** recent sd.cpp log lines for a bug report (copied by the page). */
+    suspend fun sdLog(): String = withContext(Dispatchers.IO) { SdLog.recent() }
 
-    /** 2.5.2: a history image shown as the result: its seed is in its own parameters, not [ImageGenUi.lastSeed]. */
+    /** a history image shown as the result: its seed is in its own parameters, not [ImageGenUi.lastSeed]. */
     fun showResult(path: String) = _ui.update { it.copy(result = path, lastSeed = if (path == it.result) it.lastSeed else null) }
 
-    /** 2.4.3: parameters embedded in a history image (prompt, seed, size …), null when it has none. */
-    suspend fun params(path: String): com.iris.localai.imagegen.ImageGenFiles.Params? = withContext(Dispatchers.IO) { repo.params(path) }
+    /** parameters embedded in a history image (prompt, seed, size …), null when it has none. */
+    suspend fun params(path: String): ImageGenFiles.Params? = withContext(Dispatchers.IO) { repo.params(path) }
 
-    /** 2.4.3 「删除」 in the history (one image or a multi-select), after the page's confirm dialog. */
+    /** 「删除」 in the history (one image or a multi-select), after the page's confirm dialog. */
     fun deleteHistory(paths: Collection<String>) {
         if (paths.isEmpty()) return
         viewModelScope.launch {
@@ -554,10 +581,10 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * 2.4.3 「用这组参数」: fills prompt / negative / steps / CFG / seed / size from a history image.
+     * 「用这组参数」: fills prompt / negative / steps / CFG / seed / size from a history image.
      * Switches to its model when that model is still in the catalog; the size is kept for fixed-size models.
      */
-    fun reuse(p: com.iris.localai.imagegen.ImageGenFiles.Params) {
+    fun reuse(p: ImageGenFiles.Params) {
         val target = p.modelId?.let { id -> ImageCatalog.byId(id) }?.takeIf { m -> catalog.any { it.id == m.id } }
         if (target != null && target.id != _ui.value.modelId) selectModel(target)
         _ui.update { u ->

@@ -1,5 +1,12 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.DownloadSources
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -15,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * 2.5.6: 多线程分块下载 + sha256 校验（大模型下载慢、断线、文件坏）。
+ * 多线程分块下载 + sha256 校验（大模型下载慢、断线、文件坏）。
  *
  * `<target>.part` 仍然只是「已下完的连续前缀」，所以续传、换源、进度和旧版完全一样；
  * 前缀之后的块由 [threads] 个连接并行下到 `<target>.part.s<起点>`，块按顺序拼回 `.part`。
@@ -56,12 +63,12 @@ object ParallelDownload {
         val ranged: Boolean
         try {
             val code = probe.responseCode
-            if (code == HttpURLConnection.HTTP_NOT_FOUND) throw com.iris.localai.data.DownloadSources.NotFound(com.iris.localai.I18n.s(com.iris.localai.R.string.util_89463f))
-            if (code == 401 || code == 403) throw com.iris.localai.data.DownloadSources.NotFound(com.iris.localai.I18n.s(com.iris.localai.R.string.util_795bfa, code))
+            if (code == HttpURLConnection.HTTP_NOT_FOUND) throw DownloadSources.NotFound(I18n.s(R.string.util_89463f))
+            if (code == 401 || code == 403) throw DownloadSources.NotFound(I18n.s(R.string.util_795bfa, code))
             ranged = code == HttpURLConnection.HTTP_PARTIAL
             if (ranged) {
                 val total = HttpDownload.remoteTotal(probe.getHeaderField("Content-Range"), -1L, true, 0)
-                if (total != null && total != expected) throw com.iris.localai.data.DownloadSources.SizeMismatch(com.iris.localai.I18n.s(com.iris.localai.R.string.util_cb7e72, total, expected))
+                if (total != null && total != expected) throw DownloadSources.SizeMismatch(I18n.s(R.string.util_cb7e72, total, expected))
             }
         } finally {
             probe.disconnect()
@@ -81,7 +88,7 @@ object ParallelDownload {
         }
         val progress = AtomicLong(offset + plan.sumOf { r -> segFile(target, r.first).takeIf { it.exists() }?.length()?.coerceAtMost(r.last - r.first + 1) ?: 0L })
         val lastReport = AtomicLong(progress.get())
-        val throttle = com.iris.localai.util.io.ProgressThrottle()
+        val throttle = ProgressThrottle()
         onBytes(progress.get())
         val done = BooleanArray(plan.size)
         var nextAppend = 0
@@ -119,7 +126,7 @@ object ParallelDownload {
                 try {
                     val conn = HttpDownload.open(url0, r.first + have, r.last)
                     try {
-                        if (conn.responseCode != HttpURLConnection.HTTP_PARTIAL) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_7f9f79, url0))
+                        if (conn.responseCode != HttpURLConnection.HTTP_PARTIAL) throw IOException(I18n.s(R.string.util_7f9f79, url0))
                         RandomAccessFile(seg, "rw").use { raf ->
                             raf.seek(have)
                             var written = have
@@ -135,7 +142,7 @@ object ParallelDownload {
                                     if (p - lastReport.get() >= REPORT_EVERY && throttle.ready()) { lastReport.set(p); onBytes(p) }
                                 }
                             }
-                            if (written != len) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, written, len, seg.name))
+                            if (written != len) throw IOException(I18n.s(R.string.util_8b8d88, written, len, seg.name))
                         }
                     } finally {
                         conn.disconnect()
@@ -166,9 +173,9 @@ object ParallelDownload {
             }
         }
         flush()
-        if (part.length() != expected) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, part.length(), expected, target.name))
+        if (part.length() != expected) throw IOException(I18n.s(R.string.util_8b8d88, part.length(), expected, target.name))
         HttpDownload.verify(part, sha)
-        if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, target.name))
+        if (!part.renameTo(target)) throw IOException(I18n.s(R.string.util_310b87, target.name))
         onBytes(expected)
     }
 }

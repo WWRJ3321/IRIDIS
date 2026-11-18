@@ -1,5 +1,9 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.LocalReduceMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -35,9 +39,9 @@ import com.iris.localai.ui.theme.IrisType
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
-/** 2.6.0: pure helpers of the 思考档位 bar (tested in V260Test). */
+/** pure helpers of the 思考档位 bar (tested in V260Test). */
 object ThinkLevelBar {
-    /** 2.6.1: 低 中 高 only — on / off stays the pill's tap (user: 点一下开、点一下关，长按只调档位). */
+    /** 低 中 高 only — on / off stays the pill's tap (user: 点一下开、点一下关，长按只调档位). */
     const val SEGMENTS = 3
     const val SEGMENT_DP = 52
     const val HEIGHT_DP = 40
@@ -52,9 +56,9 @@ object ThinkLevelBar {
     fun current(thinking: Boolean, level: Int): Int = if (level in 1..3) level else 2
 
     fun labels(): List<String> = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_low),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_mid),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.think_lv_high),
+        I18n.s(R.string.think_lv_low),
+        I18n.s(R.string.think_lv_mid),
+        I18n.s(R.string.think_lv_high),
     )
 }
 
@@ -122,22 +126,22 @@ internal fun ThinkPill(
                 }
             },
         )
-        // 2.6.1: same pop as IrisMenu (加模型 / 加角色 menus): fade + scale from the pill-side corner, Snappy in, Quick out.
+        // same pop as IrisMenu (加模型 / 加角色 menus): fade + scale from the pill-side corner, Snappy in, Quick out.
         val shown = remember { androidx.compose.animation.core.MutableTransitionState(false) }
         shown.targetState = open
         if (shown.currentState || shown.targetState) {
-            val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
+            val reduce = LocalReduceMotion.current
             val dy = with(density) { (ThinkLevelBar.HEIGHT_DP + ThinkLevelBar.GAP_DP).dp.roundToPx() }
             val origin = androidx.compose.ui.graphics.TransformOrigin(0.15f, 1f)
             Popup(alignment = Alignment.TopStart, offset = IntOffset(0, -dy)) {
               androidx.compose.animation.AnimatedVisibility(
                 visibleState = shown,
-                enter = if (reduce) androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.IrisMotion.Quick.float())
-                else androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeIn)) +
-                    androidx.compose.animation.scaleIn(com.iris.localai.ui.motion.IrisMotion.Snappy.float(), initialScale = 0.86f, transformOrigin = origin),
-                exit = if (reduce) androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.IrisMotion.Quick.float())
-                else androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeOut)) +
-                    androidx.compose.animation.scaleOut(com.iris.localai.ui.motion.IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
+                enter = if (reduce) androidx.compose.animation.fadeIn(IrisMotion.Quick.float())
+                else androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.motionSpec(IrisMotion.FadeIn)) +
+                    androidx.compose.animation.scaleIn(IrisMotion.Snappy.float(), initialScale = 0.86f, transformOrigin = origin),
+                exit = if (reduce) androidx.compose.animation.fadeOut(IrisMotion.Quick.float())
+                else androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.motionSpec(IrisMotion.FadeOut)) +
+                    androidx.compose.animation.scaleOut(IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
               ) {
                 val c = Iris.colors
                 Row(

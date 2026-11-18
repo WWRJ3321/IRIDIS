@@ -1,7 +1,9 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
 
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 import android.content.Context
-import com.iris.localai.util.CrashReporter
+import com.iris.localai.util.diagnostics.CrashReporter
 
 /** Persists [LoadCrashGate] across process deaths. The native crash itself never returns to Kotlin. */
 class StartupLoadGuard(context: Context) {

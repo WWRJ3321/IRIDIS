@@ -1,5 +1,6 @@
 package com.iris.localai.service
 
+import com.iris.localai.I18n
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,12 +17,12 @@ import androidx.lifecycle.lifecycleScope
 import com.iris.localai.IrisApp
 import com.iris.localai.R
 import com.iris.localai.engine.EngineState
-import com.iris.localai.engine.LoadKeepAlivePolicy
+import com.iris.localai.engine.load.LoadKeepAlivePolicy
 import com.iris.localai.ui.MainActivity
 import kotlinx.coroutines.launch
 
 /**
- * 1.10.3: keeps IRIS running while a LiteRT-LM model compiles for the GPU / NPU
+ * keeps IRIS running while a LiteRT-LM model compiles for the GPU / NPU
  * ([LoadKeepAlivePolicy]): foreground notification 「正在加载模型」 + a partial wake lock, so the
  * system does not freeze or kill the app halfway through the compile (which would leave the GPU
  * cache unfinished and make the next load compile again). Stops itself as soon as the load ends.
@@ -32,7 +33,7 @@ class LoadKeepAliveService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, com.iris.localai.I18n.s(com.iris.localai.R.string.service_a3db60), NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(CHANNEL, I18n.s(R.string.service_a3db60), NotificationManager.IMPORTANCE_LOW))
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:model-load")
             .apply { setReferenceCounted(false); acquire(MAX_WAKE_MS) }
@@ -105,7 +106,7 @@ class LoadKeepAliveService : LifecycleService() {
 
 /** Notification wording (unit-tested). */
 object LoadKeepAliveText {
-    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.service_e79aea)
+    val TITLE: String get() = I18n.s(R.string.service_e79aea)
 
     fun text(model: String?, backend: String?): String =
         "${model ?: "模型"}${backend?.let { " · $it" } ?: ""} · 编译完成前请让 IRIDIS 保持运行"

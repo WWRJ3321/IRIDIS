@@ -6,9 +6,9 @@ import com.iris.localai.ui.markdown.InlineParser
 import com.iris.localai.ui.markdown.MarkdownParser
 import com.iris.localai.ui.markdown.MdBlock
 import com.iris.localai.ui.markdown.MdInline
-import com.iris.localai.util.SentenceSplitter
-import com.iris.localai.util.StreamingThinkSplitter
-import com.iris.localai.util.ThinkParser
+import com.iris.localai.util.streaming.SentenceSplitter
+import com.iris.localai.util.thinking.StreamingThinkSplitter
+import com.iris.localai.util.thinking.ThinkParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

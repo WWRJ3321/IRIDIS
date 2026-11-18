@@ -1,7 +1,9 @@
 package com.iris.localai.data
 
+import com.iris.localai.engine.NpuIds
+
 /**
- * 2.5.0 Beta6: 按机型推荐模型 — one chat model for this phone, from its total RAM and chip class, shown at
+ * 按机型推荐模型 — one chat model for this phone, from its total RAM and chip class, shown at
  * the top of 下载模型 › 推荐 for a new user. Pure (unit-tested by source checks); the app passes
  * ActivityManager.MemoryInfo.totalMem and Build.SOC_MANUFACTURER / SOC_MODEL.
  */
@@ -23,8 +25,8 @@ object DeviceRecommend {
 
     /** Chip class from Build.SOC_MODEL ("SM8750", "MT6991"…); UNKNOWN when it says nothing useful. */
     fun chip(manufacturer: String?, soc: String?): Chip {
-        // 2.5.5: 平板版型号（MT8910 = 天玑 9500）先换成手机版型号再分级
-        val s = soc.orEmpty().lowercase().trim().let { raw -> com.iris.localai.engine.NpuIds.SOC_ALIAS[raw.takeWhile(Char::isLetterOrDigit)] ?: raw }
+        // 平板版型号（MT8910 = 天玑 9500）先换成手机版型号再分级
+        val s = soc.orEmpty().lowercase().trim().let { raw -> NpuIds.SOC_ALIAS[raw.takeWhile(Char::isLetterOrDigit)] ?: raw }
         val num = Regex("\\d{3,4}").find(s)?.value?.toIntOrNull()
         return when (vendor(manufacturer, soc)) {
             Vendor.QUALCOMM -> when {
@@ -73,7 +75,7 @@ object DeviceRecommend {
     fun pick(totalBytes: Long, chip: Chip): RecommendedCatalog.Item? = pickId(totalBytes, chip)?.let(RecommendedCatalog::byId)
 
     /**
-     * 2.5.1: 额外推荐（不替换 [pickId]）：12 GB 机 Gemma 4 19B REAP IQ3_XXS，16 GB 及以上 Q4_0（MoE，建议开专家按需加载）。
+     * 额外推荐（不替换 [pickId]）：12 GB 机 Gemma 4 19B REAP IQ3_XXS，16 GB 及以上 Q4_0（MoE，建议开专家按需加载）。
      * 按 [ramGb] 档位判断；入门芯片不推荐。
      */
     fun extraIds(totalBytes: Long, chip: Chip): List<String> {

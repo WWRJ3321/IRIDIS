@@ -1,5 +1,6 @@
 package com.iris.localai.agent.gui
 
+import com.iris.localai.agent.core.ToolCallParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -28,7 +29,7 @@ sealed interface GuiAction {
     data class DoubleTap(val at: NPoint) : GuiAction
     data class Swipe(val from: NPoint, val to: NPoint, val durationMs: Long = DEFAULT_SWIPE_MS) : GuiAction
     /**
-     * 2.3.0 (after Mika's scroll tool): scroll the list under [at] (null = the main list) so the content
+     * after Mika's scroll tool: scroll the list under [at] (null = the main list) so the content
      * in [dir] comes into view (DOWN = further down the page). The device tries the list's own
      * accessibility scroll first, then a swipe. [until] = keep scrolling until a text shows up (or the end).
      */
@@ -122,7 +123,7 @@ object CoordMap {
         return NPoint((x / scale).toFloat().coerceIn(0f, 1f), (y / scale).toFloat().coerceIn(0f, 1f))
     }
 
-    /** 2.3.0: the finger swipe that shows the content in [dir] (content down = finger up). */
+    /** the finger swipe that shows the content in [dir] (content down = finger up). */
     fun scrollSwipe(dir: SwipeDir, at: NPoint? = null): GuiAction.Swipe = swipe(
         when (dir) { SwipeDir.UP -> SwipeDir.DOWN; SwipeDir.DOWN -> SwipeDir.UP; SwipeDir.LEFT -> SwipeDir.RIGHT; SwipeDir.RIGHT -> SwipeDir.LEFT }, at,
     )
@@ -161,8 +162,8 @@ object GuiActionParser {
     }
 
     private fun parseAction(raw: String, profile: GuiProfile): GuiAction? {
-        // 2.2.14: actions only outside reasoning (unclosed <think> / lone </think> too).
-        val stripped = com.iris.localai.agent.ToolCallParser.outsideThink(THINK.replace(raw, ""))
+        // actions only outside reasoning (unclosed <think> / lone </think> too).
+        val stripped = ToolCallParser.outsideThink(THINK.replace(raw, ""))
         TOOL_CALL.find(stripped)?.let { return fromMobileUse(it.groupValues[1].trim(), profile) }
         val answer = ANSWER.find(stripped)?.groupValues?.get(1)?.trim() ?: stripped
         CALL.find(answer)?.let { m -> return fromAutoGlm(answer.substring(m.range.first), profile) }

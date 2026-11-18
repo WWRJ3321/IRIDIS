@@ -1,5 +1,15 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.web.SearchText
+import com.iris.localai.ui.components.IrisDialog
+import com.iris.localai.ui.components.ScrollSafeFold
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.markdown.ImageThumbnail
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.IrisElevation
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedVisibility
@@ -26,7 +36,6 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,10 +50,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.iris.localai.agent.AgentStep
-import com.iris.localai.agent.AgentTools
-import com.iris.localai.agent.StepStatus
-import com.iris.localai.agent.UserDecision
+import com.iris.localai.agent.core.AgentStep
+import com.iris.localai.agent.tools.AgentTools
+import com.iris.localai.agent.core.StepStatus
+import com.iris.localai.agent.core.UserDecision
 import com.iris.localai.ui.components.IrisButton
 import com.iris.localai.ui.components.IrisButtonStyle
 import com.iris.localai.ui.components.TypingDots
@@ -57,49 +66,49 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 
-/** 1.9.0: Chinese status words of a step card (unit-tested). */
+/** Chinese status words of a step card (unit-tested). */
 object StepText {
     fun status(s: StepStatus): String = when (s) {
-        StepStatus.RUNNING -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_46e386)
-        StepStatus.ASKING -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_70f361)
-        StepStatus.OK -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_769d88)
-        StepStatus.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_acd5cb)
-        StepStatus.DENIED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_81233d)
+        StepStatus.RUNNING -> I18n.s(R.string.agent_46e386)
+        StepStatus.ASKING -> I18n.s(R.string.agent_70f361)
+        StepStatus.OK -> I18n.s(R.string.agent_769d88)
+        StepStatus.ERROR -> I18n.s(R.string.imagegen_acd5cb)
+        StepStatus.DENIED -> I18n.s(R.string.agent_81233d)
     }
 
     fun label(tool: String): String = AgentTools.byName(tool)?.label ?: tool
 
-    /** 2.1.0: a plan step drawn as a checklist (from [AgentStep.plan], never from its result text). */
+    /** a plan step drawn as a checklist (from [AgentStep.plan], never from its result text). */
     fun isPlan(step: AgentStep): Boolean = (step.tool == "plan" || step.tool == "todo") && step.plan?.steps?.isNotEmpty() == true
 
-    /** 2.1.0: the card header — 计划 · 标题 · 1/5, 搜索「q」…; old saved steps keep label + args. */
+    /** the card header — 计划 · 标题 · 1/5, 搜索「q」…; old saved steps keep label + args. */
     fun header(step: AgentStep): String {
         val p = step.plan
-        if (isPlan(step) && p != null) return listOfNotNull(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0debf5), p.title.takeIf { it.isNotBlank() }, "${p.done}/${p.steps.size}").joinToString(" · ")
-        if (step.tool == "plan" || step.tool == "todo") return step.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0debf5) }
+        if (isPlan(step) && p != null) return listOfNotNull(I18n.s(R.string.agent_0debf5), p.title.takeIf { it.isNotBlank() }, "${p.done}/${p.steps.size}").joinToString(" · ")
+        if (step.tool == "plan" || step.tool == "todo") return step.title.ifBlank { I18n.s(R.string.agent_0debf5) }
         if (step.title.isNotBlank()) return step.title
         return label(step.tool) + if (step.args.isNotBlank()) "  " + step.args else ""
     }
 
-    val PLAN_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9af3f4)
+    val PLAN_HINT: String get() = I18n.s(R.string.agent_9af3f4)
 }
 
 /** The tool steps of one agent reply, above its answer. */
 @Composable
 fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (AgentStep) -> Unit = {}) {
     if (steps.isEmpty()) return
-    // 1.12.0: long runs (search → fetch → write …) no longer push the answer off screen: finished
+    // long runs (search → fetch → write …) no longer push the answer off screen: finished
     // earlier steps fold into one 「已执行 N 步」 row; the newest steps always stay visible.
     val keep = StepFold.visible(steps.size)
     var expanded by rememberSaveable(steps.first().id) { mutableStateOf(false) }
-    // 2.6.3 (#10): no animateContentSize on the whole column any more — the earlier steps open in a
+    // no animateContentSize on the whole column any more — the earlier steps open in a
     // ScrollSafeFold (snaps while the list moves, tall bodies do not grow frame by frame).
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
         val hiddenCount = steps.size - keep
         if (hiddenCount > 0) {
             val hidden = steps.take(hiddenCount)
             StepFoldRow(StepFold.summary(hidden, expanded), expanded) { expanded = !expanded }
-            com.iris.localai.ui.components.ScrollSafeFold(visible = expanded) {
+            ScrollSafeFold(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                     hidden.forEach { st ->
                         androidx.compose.runtime.key(st.id) {
@@ -110,7 +119,7 @@ fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (Ag
                 }
             }
         }
-        // 1.13.3: think → write → tool card → think … in the order it happened.
+        // think → write → tool card → think … in the order it happened.
         steps.drop(hiddenCount.coerceAtLeast(0)).forEach { st ->
             androidx.compose.runtime.key(st.id) {
                 if (st.lead.isNotBlank()) lead(st)
@@ -120,24 +129,24 @@ fun AgentSteps(steps: List<AgentStep>, streaming: Boolean, lead: @Composable (Ag
     }
 }
 
-/** 1.12.0: how many step cards stay unfolded, and the fold row's text. Pure (tested). */
+/** how many step cards stay unfolded, and the fold row's text. Pure (tested). */
 object StepFold {
     const val KEEP = 2
     fun visible(total: Int): Int = if (total <= KEEP + 1) total else KEEP
     fun summary(hidden: List<AgentStep>, expanded: Boolean): String {
-        if (expanded) return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_63855c, hidden.size)
+        if (expanded) return I18n.s(R.string.agent_63855c, hidden.size)
         val failed = hidden.count { it.status == StepStatus.ERROR || it.status == StepStatus.DENIED }
-        val names = hidden.map { StepText.label(it.tool) }.distinct().take(3).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566))
-        return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_64db29, hidden.size, names) + if (failed > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bb83aa, failed) else ""
+        val names = hidden.map { StepText.label(it.tool) }.distinct().take(3).joinToString(I18n.s(R.string.agent_b50566))
+        return I18n.s(R.string.agent_64db29, hidden.size, names) + if (failed > 0) I18n.s(R.string.agent_bb83aa, failed) else ""
     }
 }
 
 @Composable
 private fun StepFoldRow(text: String, expanded: Boolean, onClick: () -> Unit) {
     val c = Iris.colors
-    val turn by animateFloatAsState(if (expanded) 180f else 0f, com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Snappy), label = "foldChevron")
+    val turn by animateFloatAsState(if (expanded) 180f else 0f, com.iris.localai.ui.motion.motionSpec(IrisMotion.Snappy), label = "foldChevron")
     Row(
-        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape).clickable(onClickLabel = if (expanded) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde), onClick = onClick)
+        Modifier.fillMaxWidth().clip(IrisRadius.mediumShape).clickable(onClickLabel = if (expanded) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.components_e2edde), onClick = onClick)
             .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -153,7 +162,7 @@ private fun StepFoldRow(text: String, expanded: Boolean, onClick: () -> Unit) {
 fun AgentStepCard(step: AgentStep, streaming: Boolean) {
     val c = Iris.colors
     var open by rememberSaveable(step.id) { mutableStateOf(false) }
-    val turn by animateFloatAsState(if (open) 180f else 0f, com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Snappy), label = "stepChevron")
+    val turn by animateFloatAsState(if (open) 180f else 0f, com.iris.localai.ui.motion.motionSpec(IrisMotion.Snappy), label = "stepChevron")
     val live = streaming && (step.status == StepStatus.RUNNING || step.status == StepStatus.ASKING)
     val plan = step.plan?.takeIf { StepText.isPlan(step) }
     val planStep = step.tool == "plan" || step.tool == "todo"
@@ -166,7 +175,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
         StepStatus.ASKING -> Icons.AutoMirrored.Outlined.HelpOutline to c.accent
         StepStatus.RUNNING -> Icons.Outlined.Build to c.textSecondary
     }
-    // 1.14.0: the moment a step finishes it says so — the icon pops with a light tick, a failure
+    // the moment a step finishes it says so — the icon pops with a light tick, a failure
     // shakes with a heavier one (iOS-style "it worked / it didn't").
     val haptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     var prevStatus by androidx.compose.runtime.remember(step.id) { mutableStateOf(step.status) }
@@ -178,12 +187,12 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
         if (was != StepStatus.RUNNING && was != StepStatus.ASKING) return@LaunchedEffect
         when (step.status) {
             StepStatus.OK -> {
-                haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.STEP_DONE)
-                pop.snapTo(0.5f); pop.animateTo(1f, com.iris.localai.ui.motion.IrisMotion.Rebound.float())
+                haptic.perform(FeedbackEvent.STEP_DONE)
+                pop.snapTo(0.5f); pop.animateTo(1f, IrisMotion.Rebound.float())
             }
             StepStatus.ERROR -> {
-                haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.ERROR)
-                for (x in listOf(5f, -4f, 3f, 0f)) shake.animateTo(x, com.iris.localai.ui.motion.IrisMotion.Press.float())
+                haptic.perform(FeedbackEvent.ERROR)
+                for (x in listOf(5f, -4f, 3f, 0f)) shake.animateTo(x, IrisMotion.Press.float())
             }
             else -> {}
         }
@@ -194,8 +203,8 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
             .graphicsLayer { translationX = shake.value * density }
             .clip(IrisRadius.mediumShape)
             .background(c.surfaceVariant)
-            .clickable(enabled = expandable, onClickLabel = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { open = !open }
-            .padding(horizontal = IrisDimens.space12, vertical = com.iris.localai.ui.theme.IrisSpace.S),
+            .clickable(enabled = expandable, onClickLabel = if (open) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.components_e2edde)) { open = !open }
+            .padding(horizontal = IrisDimens.space12, vertical = IrisSpace.S),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(IrisDimens.space16).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.pulse(live, min = 0.4f))
@@ -211,7 +220,7 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                 )
             }
         }
-        // 2.5.8: 生图进行中 → 方框流动色 + 进度条
+        // 生图进行中 → 方框流动色 + 进度条
         val generating = step.tool == "generate_image" && step.status == StepStatus.RUNNING
         if (generating) ImageGenLiveCard(step.result.ifBlank { StepText.status(step.status) })
         if (step.result.isNotBlank() && plan == null && !generating) {
@@ -220,24 +229,24 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                 modifier = Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space2),
             )
         }
-        // 2.1.7: pictures the step made (generate_image), tap → full-screen viewer.
+        // pictures the step made (generate_image), tap → full-screen viewer.
         if (step.images.isNotEmpty()) {
             Row(Modifier.padding(start = IrisDimens.space24, top = IrisDimens.space6), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-                // 2.6.2: 生图单张与等待方框同尺寸（168dp），不再缩成小框
+                // 生图单张与等待方框同尺寸（168dp），不再缩成小框
                 val big = step.tool == "generate_image" && step.images.size == 1
-                step.images.take(4).forEach { if (big) com.iris.localai.ui.markdown.ImageThumbnail(it, 168.dp) else com.iris.localai.ui.markdown.ImageThumbnail(it) }
+                step.images.take(4).forEach { if (big) ImageThumbnail(it, 168.dp) else ImageThumbnail(it) }
             }
         }
-        if (plan != null) com.iris.localai.ui.components.ScrollSafeFold(open) {
+        if (plan != null) ScrollSafeFold(open) {
             Column(Modifier.padding(top = IrisDimens.space6).fillMaxWidth()) {
                 if (plan.title.isNotBlank()) Text(plan.title, style = IrisType.labelSmall, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(StepText.PLAN_HINT, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space2, bottom = IrisDimens.space8))
                 plan.steps.forEachIndexed { i, ps -> FlowNode(i + 1, ps.text, ps.status, first = i == 0, last = i == plan.steps.lastIndex) }
             }
-        } else if (!planStep) com.iris.localai.ui.components.ScrollSafeFold(open) {
+        } else if (!planStep) ScrollSafeFold(open) {
             SelectionContainer {
                 Text(
-                    com.iris.localai.agent.SearchText.forPeople(step.tool, step.detail).take(4000), style = IrisType.monoSmall, color = c.text,
+                    SearchText.forPeople(step.tool, step.detail).take(4000), style = IrisType.monoSmall, color = c.text,
                     modifier = Modifier
                         .padding(top = IrisDimens.space8)
                         .fillMaxWidth()
@@ -245,14 +254,14 @@ fun AgentStepCard(step: AgentStep, streaming: Boolean) {
                         .background(c.codeBackground)
                         .heightIn(max = 280.dp)
                         .verticalScroll(rememberScrollState())
-                        .padding(com.iris.localai.ui.theme.IrisSpace.S),
+                        .padding(IrisSpace.S),
                 )
             }
         }
     }
 }
 
-/** 2.4.5 (Issue #9): what tapping outside / back does to the tool confirmation. Pure. */
+/** Issue #9: what tapping outside / back does to the tool confirmation. Pure. */
 object PermissionAskFold {
     enum class Action { COLLAPSE, DENY }
     /** With a pill to bring it back the dialog folds away; it never answers 拒绝 on the user's behalf. */
@@ -261,52 +270,42 @@ object PermissionAskFold {
 
 /**
  * In-chat confirmation for a tool whose permission is 询问: 允许一次 / 总是允许 / 拒绝.
- * 2.4.5 (#9): with [onCollapse], tapping outside or back folds it into [AgentPermissionPill] (the
+ * with [onCollapse], tapping outside or back folds it into [AgentPermissionPill] (the
  * agent keeps waiting) instead of answering 拒绝.
  */
 @Composable
 fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, alwaysPrefix: String? = null, onCollapse: (() -> Unit)? = null, onAnswer: (UserDecision) -> Unit) {
     val c = Iris.colors
-    AlertDialog(
+    IrisDialog(
         // Without a pill, dismissing counts as 拒绝: the agent must never hang on a hidden dialog.
-        onDismissRequest = {
+        onDismiss = {
             when (PermissionAskFold.onDismiss(onCollapse != null)) {
                 PermissionAskFold.Action.COLLAPSE -> onCollapse?.invoke()
                 PermissionAskFold.Action.DENY -> onAnswer(UserDecision.DENY)
             }
         },
-        modifier = Modifier.largeSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
-        shape = IrisRadius.dialogShape,
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        tonalElevation = 0.dp,
-        title = {
-            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7bdbd6, toolLabel), style = IrisType.title, color = c.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        title = I18n.s(R.string.agent_7bdbd6, toolLabel),
+        actions = {
+            IrisButton(I18n.s(R.string.agent_31a39e), { onAnswer(UserDecision.ALLOW_ONCE) }, modifier = Modifier.fillMaxWidth())
+            IrisButton(alwaysPrefix?.let { I18n.s(R.string.agent_0d2227, it.take(24)) } ?: I18n.s(R.string.agent_60f7e7), { onAnswer(UserDecision.ALWAYS_ALLOW) }, style = IrisButtonStyle.Tonal, modifier = Modifier.fillMaxWidth())
+            IrisButton(I18n.s(R.string.agent_7173f8), { onAnswer(UserDecision.DENY) }, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth())
         },
-        text = {
-            Column(Modifier.fillMaxWidth()) {
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc6cc8, toolName), style = IrisType.secondary, color = c.textSecondary)
-                Spacer(Modifier.size(IrisDimens.space8))
-                Box(
-                    Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
-                        .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
-                ) {
-                    Text(preview, style = IrisType.monoSmall, color = c.text)
-                }
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Text(I18n.s(R.string.agent_dc6cc8, toolName), style = IrisType.secondary, color = c.textSecondary)
+            Spacer(Modifier.size(IrisDimens.space8))
+            Box(
+                Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
+                    .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(IrisSpace.S),
+            ) {
+                Text(preview, style = IrisType.monoSmall, color = c.text)
             }
-        },
-        confirmButton = {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_31a39e), { onAnswer(UserDecision.ALLOW_ONCE) }, modifier = Modifier.fillMaxWidth())
-                IrisButton(alwaysPrefix?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0d2227, it.take(24)) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_60f7e7), { onAnswer(UserDecision.ALWAYS_ALLOW) }, style = IrisButtonStyle.Tonal, modifier = Modifier.fillMaxWidth())
-                IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7173f8), { onAnswer(UserDecision.DENY) }, style = IrisButtonStyle.Tonal, destructive = true, modifier = Modifier.fillMaxWidth())
-            }
-        },
-        dismissButton = null,
-    )
+        }
+    }
 }
 
 /**
- * 2.4.5 (#9): the folded tool confirmation — a small pill in the bottom-right corner above the
+ * the folded tool confirmation — a small pill in the bottom-right corner above the
  * composer. Tapping it opens the dialog again; the agent waits until the user picks 允许 or 拒绝.
  */
 @Composable
@@ -317,17 +316,17 @@ fun AgentPermissionPill(toolLabel: String, bottom: androidx.compose.ui.unit.Dp, 
     androidx.compose.ui.window.Popup(alignment = Alignment.BottomEnd, offset = offset) {
         Row(
             Modifier
-                .largeSurface(IrisRadius.pillShape, com.iris.localai.ui.theme.IrisElevation.menu)
+                .largeSurface(IrisRadius.pillShape, IrisElevation.menu)
                 .clip(IrisRadius.pillShape)
                 .background(c.accent)
-                .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.ask245_reopen), onClick = onClick)
+                .clickable(onClickLabel = I18n.s(R.string.ask245_reopen), onClick = onClick)
                 .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space8),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = c.onAccent, modifier = Modifier.size(IrisDimens.space16).pulse(true, min = 0.5f))
             Spacer(Modifier.width(IrisDimens.space6))
             Text(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.ask245_pill, toolLabel), style = IrisType.labelSmall, color = c.onAccent,
+                I18n.s(R.string.ask245_pill, toolLabel), style = IrisType.labelSmall, color = c.onAccent,
                 maxLines = 2, modifier = Modifier.widthIn(max = 200.dp),
             )
         }

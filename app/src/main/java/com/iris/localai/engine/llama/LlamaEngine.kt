@@ -1,5 +1,16 @@
 package com.iris.localai.engine.llama
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.Backend
+import com.iris.localai.engine.ChannelThink
+import com.iris.localai.engine.LengthRule
+import com.iris.localai.engine.resources.LiveApply
+import com.iris.localai.engine.resources.LiveResourcePolicy
+import com.iris.localai.engine.resources.NativeThreadPolicy
+import com.iris.localai.engine.resources.PendingLive
+import com.iris.localai.engine.resources.ResourcePlan
+import com.iris.localai.engine.resources.ThermalGovernor
 import com.iris.localai.data.GenerationStats
 import com.iris.localai.data.LocalModel
 import com.iris.localai.engine.EngineException
@@ -31,7 +42,7 @@ import java.util.concurrent.Executors
  */
 class LlamaEngine(private val context: android.content.Context? = null) : InferenceEngine {
 
-    /** 2.2.15: which native library this engine drives (switched to [LlamaJnis.htp] for an NPU load). */
+    /** which native library this engine drives (switched to [LlamaJnis.htp] for an NPU load). */
     @Volatile private var jni: LlamaJni = LlamaJnis.cpuGpu
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -40,22 +51,22 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     private val handleLock = Any()
     @Volatile private var handle = 0L
     @Volatile private var loaded = false
-    /** 2.2.17: a projector is loaded for the current model. */
+    /** a projector is loaded for the current model. */
     @Volatile private var visionLoaded = false
-    /** 2.5.0-beta9: MTP speculative decoding is on for the loaded model (native status "active …"). */
+    /** MTP speculative decoding is on for the loaded model (native status "active …"). */
     @Volatile private var mtpActive = false
-    /** 2.5.4: LES 状态（"off" / "on" / "skip: …"）；on 时原生层强制 CPU。 */
+    /** LES 状态（"off" / "on" / "skip: …"）；on 时原生层强制 CPU。 */
     @Volatile var lesStatus: String = "off"
         private set
     @Volatile private var active: Request? = null
 
     // ---- 1.7.2: mid-reply resource-tier switch (CPU backend only) ----
     /** Backend the loaded model really runs on. */
-    @Volatile private var activeBackend: com.iris.localai.engine.Backend = com.iris.localai.engine.Backend.CPU
+    @Volatile private var activeBackend: Backend = Backend.CPU
     /** Plan the running reply currently uses (start plan, then the last live switch). */
-    @Volatile private var runningPlan: com.iris.localai.engine.ResourcePlan? = null
+    @Volatile private var runningPlan: ResourcePlan? = null
     /** Java-side thread priority still to apply on the decoding thread (also updates Android's task profile). */
-    private val pendingPriority = com.iris.localai.engine.PendingLive<Int>()
+    private val pendingPriority = PendingLive<Int>()
 
     private class Request {
         @Volatile var cancelled = false
@@ -64,7 +75,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     private fun ensureHandle(npu: Boolean = false): Long {
         LlamaNative.unavailableReason?.let { throw EngineException(it) }
         val want = if (npu) {
-            val ctx = context ?: throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fabc89))
+            val ctx = context ?: throw EngineException(I18n.s(R.string.engine_fabc89))
             LlamaHtpRuntime.ensureLoaded(ctx)?.let { throw EngineException(it) }
             LlamaJnis.htp
         } else LlamaJnis.cpuGpu
@@ -78,20 +89,20 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
 
     override suspend fun load(model: LocalModel, config: LoadConfig, onProgress: (Float) -> Unit): ModelDetails =
         withContext(nativeThread) {
-            val npu = config.backend == com.iris.localai.engine.Backend.NPU
+            val npu = config.backend == Backend.NPU
             val h = ensureHandle(npu)
             loaded = false
             visionLoaded = false
-            com.iris.localai.engine.NativeThreadPolicy.apply(config.resources)
-            // 2.2.15: NPU = libiris_lhtp.so, where the only offload device is the Hexagon HTP ("GPU" type in ggml).
-            val gpu = config.backend == com.iris.localai.engine.Backend.GPU || npu
+            NativeThreadPolicy.apply(config.resources)
+            // NPU = libiris_lhtp.so, where the only offload device is the Hexagon HTP ("GPU" type in ggml).
+            val gpu = config.backend == Backend.GPU || npu
             val path = model.path.toByteArray(Charsets.UTF_8)
             val listener = LoadProgressListener { p -> onProgress(p); true }
-            // 2.5.0-beta9: MTP is set up inside the load; any failure there falls back to normal decoding.
+            // MTP is set up inside the load; any failure there falls back to normal decoding.
             jni.setMtp(h, if (npu) 0 else config.mtpDraft.coerceIn(0, 8))
-            // 2.5.1: MoE 专家按需加载（专家留 CPU、mmap 不预读）+ 激活专家数
+            // MoE 专家按需加载（专家留 CPU、mmap 不预读）+ 激活专家数
             jni.setMoe(h, config.moeCpu, config.expertUsed.coerceIn(0, 32))
-            // 2.5.4: LES（只在 CPU/GPU 库；manifest 写在 cache/les）
+            // LES（只在 CPU/GPU 库；manifest 写在 cache/les）
             val lesDir = context?.let { java.io.File(it.cacheDir, "les").apply { mkdirs() }.path }
             jni.setLes(h, config.les && !npu && lesDir != null, (lesDir ?: "").toByteArray(Charsets.UTF_8))
             val err = jni.load(
@@ -106,9 +117,9 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             if (config.mtpDraft > 0) android.util.Log.i(LOG_TAG, "MTP ${model.fileName}: $mtp")
             lesStatus = if (config.les && !npu) jni.lesStatus(h) else "off"
             if (config.les) android.util.Log.i(LOG_TAG, "LES ${model.fileName}: $lesStatus")
-            val accel = if (npu) com.iris.localai.engine.Backend.NPU else com.iris.localai.engine.Backend.GPU
+            val accel = if (npu) Backend.NPU else Backend.GPU
             val lesOn = lesStatus == "on"
-            activeBackend = if (gpu && !lesOn) accel else com.iris.localai.engine.Backend.CPU
+            activeBackend = if (gpu && !lesOn) accel else Backend.CPU
             val m = runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }
                 .getOrDefault(NativeMeta())
             // No OpenCL device: llama.cpp silently stays on the CPU. Report it as a GPU failure so
@@ -116,21 +127,21 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             if (gpu && !lesOn && m.gpu.isBlank()) {
                 loaded = false
                 jni.unload(h)
-                throw EngineException(if (npu) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1ac99d) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4b134d))
+                throw EngineException(if (npu) I18n.s(R.string.engine_1ac99d) else I18n.s(R.string.engine_4b134d))
             }
-            // 2.2.17: vision projector via mtmd (GPU when the model is on the GPU, CPU otherwise / on failure).
+            // vision projector via mtmd (GPU when the model is on the GPU, CPU otherwise / on failure).
             // A projector that fails to load leaves the model text-only; it never fails the load.
             var vision = false
             var visionNote: String? = null
             config.mmprojPath?.let { mp ->
-                // 2.4.4: never on Adreno's OpenCL — the vision encoder there could hang the GPU and freeze
+                // never on Adreno's OpenCL — the vision encoder there could hang the GPU and freeze
                 // the whole phone (群友 iQOO Neo11, 9B + mmproj). CPU encodes one picture in seconds.
-                // 2.4.5: 设置 › 模型与加载「识图用 GPU」 lifts that rule (off by default).
+                // 设置 › 模型与加载「识图用 GPU」 lifts that rule (off by default).
                 val projGpu = VisionGpu.useGpu(gpu, npu, m.gpu, config.mmprojGpu)
                 val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), projGpu) }
-                    .getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
+                    .getOrElse { I18n.s(R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
                 if (e == null) vision = true
-                else { visionNote = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
+                else { visionNote = I18n.s(R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
             }
             visionLoaded = vision
             val vm = if (vision) runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }.getOrDefault(m) else m
@@ -149,27 +160,27 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                     m.gpu.isBlank() -> "CPU · llama.cpp"
                     npu -> "NPU · ${m.gpu} · llama.cpp Hexagon"
                     else -> "GPU · ${m.gpu} · OpenCL"
-                } + (if (mtpActive) " · MTP" else "") + if (vision && vm.vision) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fba350) + (if (vm.visionGpu) "GPU" else "CPU") else "",
-                activeBackend = if (m.gpu.isNotBlank()) accel else com.iris.localai.engine.Backend.CPU,
+                } + (if (mtpActive) " · MTP" else "") + if (vision && vm.vision) I18n.s(R.string.engine_fba350) + (if (vm.visionGpu) "GPU" else "CPU") else "",
+                activeBackend = if (m.gpu.isNotBlank()) accel else Backend.CPU,
             )
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun generate(history: List<PromptMessage>, params: SamplingConfig): Flow<GenEvent> = channelFlow {
         if (!loaded) {
-            send(GenEvent.Done(StopReason.ERROR, null, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)))
+            send(GenEvent.Done(StopReason.ERROR, null, I18n.s(R.string.chat_5d0468)))
             return@channelFlow
         }
         val req = Request()
         active = req
-        val channel = com.iris.localai.engine.ChannelThink()
+        val channel = ChannelThink()
         // The native call blocks and cannot be interrupted; if the collector goes away (e.g. during
         // a long prefill that emits nothing), ask native code to stop this request.
         invokeOnClose { cause -> if (cause != null) cancelRequest(req) }
         // Encode on the caller's thread so the single native thread only runs native work.
         val roles = Array(history.size) { history[it].role.toByteArray(Charsets.UTF_8) }
         val contents = Array(history.size) { history[it].content.toByteArray(Charsets.UTF_8) }
-        // 2.2.17: pictures of one message (the newest that has any) go through mtmd.
+        // pictures of one message (the newest that has any) go through mtmd.
         val imageMsg = if (visionLoaded) MmprojPairing.imageMessage(history.map { it.images }) else -1
         val images = if (imageMsg >= 0) Array(history[imageMsg].images.size) { history[imageMsg].images[it].toByteArray(Charsets.UTF_8) } else null
         val floats = floatArrayOf(
@@ -192,10 +203,10 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 if (params.threads > 0) jni.setThreads(h, params.threads)
                 // ggml creates its worker threads per graph from this thread: they inherit the
                 // tier's cores and priority, so a tier change applies from the next reply on.
-                com.iris.localai.engine.NativeThreadPolicy.apply(params.resources)
+                NativeThreadPolicy.apply(params.resources)
                 pendingPriority.clear()
                 runningPlan = params.resources
-                com.iris.localai.engine.ThermalGovernor.beginReply()
+                ThermalGovernor.beginReply()
                 val sink = PieceSink { bytes ->
                     // Runs on this (decoding) thread between two llama_decode calls: the native side
                     // applies threads / cores / nice right before the next decode; the Java priority
@@ -206,7 +217,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                             "Java priority -> ${android.os.Process.getThreadPriority(android.os.Process.myTid())}" +
                             if (ok) "" else " (setThreadPriority failed)")
                     }
-                    com.iris.localai.engine.ThermalGovernor.pace { req.cancelled }
+                    ThermalGovernor.pace { req.cancelled }
                     // Unlimited buffer: trySend only fails once the collector is gone → stop generating.
                     !req.cancelled && channel.push(String(bytes, Charsets.UTF_8)).let { t -> t.isEmpty() || trySend(GenEvent.Piece(t)).isSuccess }
                 }
@@ -219,7 +230,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         }
         channel.push("", final = true).takeIf { it.isNotEmpty() }?.let { send(GenEvent.Piece(it)) }
         if (result == null) {
-            send(GenEvent.Done(StopReason.ERROR, null, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)))
+            send(GenEvent.Done(StopReason.ERROR, null, I18n.s(R.string.chat_5d0468)))
             return@channelFlow
         }
         val s = runCatching { json.decodeFromString(NativeStats.serializer(), result) }.getOrDefault(NativeStats())
@@ -230,8 +241,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             3 -> StopReason.CONTEXT_FULL
             else -> StopReason.ERROR
         }
-        // 1.7.8: a limit set by the remaining context is CONTEXT_FULL, not LENGTH (see LengthRule).
-        val reason = com.iris.localai.engine.LengthRule.reason(reported, s.generatedTokens, params.maxNewTokens, params.contextShift)
+        // a limit set by the remaining context is CONTEXT_FULL, not LENGTH (see LengthRule).
+        val reason = LengthRule.reason(reported, s.generatedTokens, params.maxNewTokens, params.contextShift)
         val stats = GenerationStats(
             promptTokens = s.promptTokens,
             reusedTokens = s.reusedTokens,
@@ -243,7 +254,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
             kvUsed = s.kvUsed,
         )
         MtpStats.logLine(s.draftedTokens, s.acceptedTokens, s.generatedTokens, s.generateUs)?.let { android.util.Log.i(LOG_TAG, it) }
-        // 2.5.0-beta10: a draft / verify / rollback error turns MTP off natively for this session (GPU is experimental).
+        // a draft / verify / rollback error turns MTP off natively for this session (GPU is experimental).
         if (mtpActive) {
             val h = handle
             val now = if (h != 0L) jni.mtpStatus(h) else "off"
@@ -254,8 +265,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         }
         if (s.liveSwitches > 0) android.util.Log.i(LOG_TAG, "reply finished with ${s.liveSwitches} live switch(es) applied by the decoder")
         val error = s.error.ifBlank { null } ?: when (reason) {
-            StopReason.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c95271)
-            StopReason.CONTEXT_FULL -> com.iris.localai.engine.LengthRule.contextFullMessage(s.generatedTokens, params.maxNewTokens)
+            StopReason.ERROR -> I18n.s(R.string.engine_c95271)
+            StopReason.CONTEXT_FULL -> LengthRule.contextFullMessage(s.generatedTokens, params.maxNewTokens)
             else -> null
         }
         send(GenEvent.Done(reason, stats, error))
@@ -274,17 +285,17 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         }
     }
 
-    override fun liveApplyMode(): com.iris.localai.engine.LiveApply =
-        if (activeBackend == com.iris.localai.engine.Backend.CPU) com.iris.localai.engine.LiveApply.IMMEDIATE
-        else com.iris.localai.engine.LiveApply.NEXT_REPLY
+    override fun liveApplyMode(): LiveApply =
+        if (activeBackend == Backend.CPU) LiveApply.IMMEDIATE
+        else LiveApply.NEXT_REPLY
 
     /**
-     * 1.7.2: hands a new tier to the running reply. Never blocks and never calls into llama while a
+     * hands a new tier to the running reply. Never blocks and never calls into llama while a
      * decode runs: the request is parked and the decoding thread applies it before its next decode.
      */
-    override fun applyResourcesLive(plan: com.iris.localai.engine.ResourcePlan): Boolean {
-        if (!loaded || active == null || liveApplyMode() != com.iris.localai.engine.LiveApply.IMMEDIATE) return false
-        val change = com.iris.localai.engine.LiveResourcePolicy.liveChange(runningPlan, plan) ?: return true
+    override fun applyResourcesLive(plan: ResourcePlan): Boolean {
+        if (!loaded || active == null || liveApplyMode() != LiveApply.IMMEDIATE) return false
+        val change = LiveResourcePolicy.liveChange(runningPlan, plan) ?: return true
         synchronized(handleLock) {
             val h = handle
             if (h == 0L) return false
@@ -293,8 +304,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         }
         android.util.Log.i(LOG_TAG, "live switch requested: ${plan.tier.label} threads=${change.threads} " +
             "cpus=${if (change.cpus.isEmpty()) "all" else change.cpus.joinToString(",")} nice=${change.nice}" +
-            com.iris.localai.engine.LiveResourcePolicy.deferredParts(runningPlan, plan, com.iris.localai.engine.LiveApply.IMMEDIATE)
-                .takeIf { it.isNotEmpty() }?.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566), prefix = "; next reply only: ").orEmpty())
+            LiveResourcePolicy.deferredParts(runningPlan, plan, LiveApply.IMMEDIATE)
+                .takeIf { it.isNotEmpty() }?.joinToString(I18n.s(R.string.agent_b50566), prefix = "; next reply only: ").orEmpty())
         runningPlan = plan
         return true
     }
@@ -356,7 +367,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         val shiftedTokens: Int = 0,
         val kvUsed: Int = 0,
         val liveSwitches: Int = 0,
-        /** 2.5.0-beta9: MTP draft tokens verified / accepted in this reply (0 without MTP). */
+        /** MTP draft tokens verified / accepted in this reply (0 without MTP). */
         val draftedTokens: Int = 0,
         val acceptedTokens: Int = 0,
         val stop: Int = 4,
@@ -381,13 +392,13 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
 }
 
 
-/** 2.4.4: where the vision projector (mtmd) runs. Pure, unit-tested. */
+/** where the vision projector (mtmd) runs. Pure, unit-tested. */
 object VisionGpu {
     /** The GPU llama.cpp reports is a Qualcomm Adreno (OpenCL backend): the projector stays on the CPU. */
     fun adrenoOpenCl(gpuName: String?): Boolean = gpuName.orEmpty().let { it.contains("adreno", ignoreCase = true) || it.contains("qualcomm", ignoreCase = true) }
 
     /**
-     * 2.4.5: does the projector go to the GPU? Only when the model itself is on the GPU (not NPU); on
+     * does the projector go to the GPU? Only when the model itself is on the GPU (not NPU); on
      * Adreno only when the user turned on 识图用 GPU ([allowAdreno]).
      */
     fun useGpu(modelOnGpu: Boolean, npu: Boolean, gpuName: String?, allowAdreno: Boolean): Boolean =

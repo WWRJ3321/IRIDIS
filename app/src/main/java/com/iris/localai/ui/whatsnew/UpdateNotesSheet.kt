@@ -30,7 +30,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
 
 /**
- * 2.5.5: 此次更新（[history] = false：只当前版本，底部「更新历史」展开全部）/ 更新历史（全部版本）。
+ * 此次更新（[history] = false：只当前版本，底部「更新历史」展开全部）/ 更新历史（全部版本）。
  */
 @Composable
 fun UpdateNotesSheet(current: String, history: Boolean, onDismiss: () -> Unit) {

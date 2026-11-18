@@ -1,5 +1,11 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.memory.MemoryTarget
+import com.iris.localai.ui.components.IrisDialog
+import com.iris.localai.ui.components.IrisRadio
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Eject
@@ -128,7 +134,7 @@ import com.iris.localai.ui.motion.motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 2.4.1: split out of ChatScreen.kt unchanged — empty state, 记住这条 dialog, queued bubble, menu texts.
+// split out of ChatScreen.kt unchanged — empty state, 记住这条 dialog, queued bubble, menu texts.
 
 @Composable
 internal fun ChatEmptyState(
@@ -155,17 +161,17 @@ internal fun ChatEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // 2.2.5: the mark is decorative again (tap-to-load removed); it still breathes while a model loads.
+        // the mark is decorative again (tap-to-load removed); it still breathes while a model loads.
         Icon(
             painterResource(R.drawable.ic_iris_mark), null,
             tint = c.text,
             modifier = Modifier
-                .padding(com.iris.localai.ui.theme.IrisSpace.XS)
+                .padding(IrisSpace.XS)
                 .size(44.dp)
                 .pulse(engine is EngineState.Loading, min = 0.35f, periodMs = 1100),
         )
         Spacer(Modifier.height(IrisDimens.space20))
-        Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_61295b), style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
+        Text(I18n.s(R.string.chat_61295b), style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
     }
 }
 
@@ -182,14 +188,14 @@ fun loadingSeconds(engine: EngineState): Long {
 @Composable
 internal fun RememberDialog(
     initial: String,
-    suggested: com.iris.localai.memory.MemoryTarget,
-    onSave: (String, com.iris.localai.memory.MemoryTarget) -> Unit,
+    suggested: MemoryTarget,
+    onSave: (String, MemoryTarget) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(initial) }
     var target by remember { mutableStateOf(suggested) }
-    com.iris.localai.ui.components.IrisDialog(
-        onDismiss = onDismiss, title = VersionText.REMEMBER, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f7d9d3),
+    IrisDialog(
+        onDismiss = onDismiss, title = VersionText.REMEMBER, confirmText = I18n.s(R.string.chat_f7d9d3),
         confirmEnabled = text.isNotBlank(),
         onConfirm = { onSave(text, target); onDismiss() },
     ) {
@@ -197,55 +203,55 @@ internal fun RememberDialog(
             androidx.compose.material3.OutlinedTextField(
                 text, { text = it },
                 minLines = 2, maxLines = 6,
-                textStyle = com.iris.localai.ui.theme.IrisType.body.copy(color = com.iris.localai.ui.theme.Iris.colors.text),
-                shape = com.iris.localai.ui.theme.IrisRadius.mediumShape,
+                textStyle = IrisType.body.copy(color = Iris.colors.text),
+                shape = IrisRadius.mediumShape,
                 colors = com.iris.localai.ui.components.irisTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.S))
-            com.iris.localai.memory.MemoryTarget.entries.forEach { t ->
+            Spacer(Modifier.height(IrisSpace.S))
+            MemoryTarget.entries.forEach { t ->
                 Row(
-                    Modifier.fillMaxWidth().clip(com.iris.localai.ui.theme.IrisRadius.smallShape)
-                        .clickable { target = t }.padding(vertical = com.iris.localai.ui.theme.IrisSpace.S, horizontal = com.iris.localai.ui.theme.IrisSpace.XS),
+                    Modifier.fillMaxWidth().clip(IrisRadius.smallShape)
+                        .clickable { target = t }.padding(vertical = IrisSpace.S, horizontal = IrisSpace.XS),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    com.iris.localai.ui.components.IrisRadio(selected = target == t)
-                    Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
-                    Text(t.label, style = com.iris.localai.ui.theme.IrisType.body, color = com.iris.localai.ui.theme.Iris.colors.text)
+                    IrisRadio(selected = target == t)
+                    Spacer(Modifier.width(IrisSpace.S))
+                    Text(t.label, style = IrisType.body, color = Iris.colors.text)
                 }
             }
         }
     }
 }
 
-/** 2.1.7: a message waiting to be answered (or read by the 智能体); tap cancels it. */
+/** a message waiting to be answered (or read by the 智能体); tap cancels it. */
 @Composable
 internal fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCancel: () -> Unit) {
-    val c = com.iris.localai.ui.theme.Iris.colors
+    val c = Iris.colors
     Box(modifier.fillMaxWidth().padding(start = 52.dp), contentAlignment = Alignment.CenterEnd) {
         Column(horizontalAlignment = Alignment.End) {
             Box(
                 Modifier
-                    .clip(com.iris.localai.ui.theme.IrisRadius.bubbleShape)
+                    .clip(IrisRadius.bubbleShape)
                     .background(c.surfaceVariant.copy(alpha = 0.55f))
-                    .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9ad32d)) { onCancel() }
-                    .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M, vertical = com.iris.localai.ui.theme.IrisSpace.S),
+                    .clickable(onClickLabel = I18n.s(R.string.chat_9ad32d)) { onCancel() }
+                    .padding(horizontal = IrisSpace.M, vertical = IrisSpace.S),
             ) {
-                Text(q.text, style = com.iris.localai.ui.theme.IrisType.message, color = c.textSecondary)
+                Text(q.text, style = IrisType.message, color = c.textSecondary)
             }
-            Row(Modifier.padding(top = com.iris.localai.ui.theme.IrisSpace.XS, end = com.iris.localai.ui.theme.IrisSpace.XS), verticalAlignment = Alignment.CenterVertically) {
-                Icon(com.iris.localai.ui.icons.IrisIcons.Clock, null, tint = c.textTertiary, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.XS))
+            Row(Modifier.padding(top = IrisSpace.XS, end = IrisSpace.XS), verticalAlignment = Alignment.CenterVertically) {
+                Icon(IrisIcons.Clock, null, tint = c.textTertiary, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(IrisSpace.XS))
                 Text(
-                    (if (q.forAgent) SendIntent.QUEUED_AGENT_LABEL else SendIntent.QUEUED_LABEL) + com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6edc06),
-                    style = com.iris.localai.ui.theme.IrisType.labelSmall, color = c.textTertiary,
+                    (if (q.forAgent) SendIntent.QUEUED_AGENT_LABEL else SendIntent.QUEUED_LABEL) + I18n.s(R.string.chat_6edc06),
+                    style = IrisType.labelSmall, color = c.textTertiary,
                 )
             }
         }
     }
 }
 
-/** 2.2.16: the home model menu's single entry to the merged page (unit-tested). */
+/** the home model menu's single entry to the merged page (unit-tested). */
 object ModelMenuText {
-    val MODELS_AND_LOADING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_035516)
+    val MODELS_AND_LOADING: String get() = I18n.s(R.string.chat_035516)
 }

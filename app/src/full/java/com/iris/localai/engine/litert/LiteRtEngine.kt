@@ -1,5 +1,21 @@
 package com.iris.localai.engine.litert
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.HistoryMatch
+import com.iris.localai.engine.LiteRtMtp
+import com.iris.localai.engine.NpuIds
+import com.iris.localai.engine.NpuLog
+import com.iris.localai.engine.NpuRetry
+import com.iris.localai.engine.NpuState
+import com.iris.localai.engine.load.CacheSnapshot
+import com.iris.localai.engine.load.GpuCacheDiag
+import com.iris.localai.engine.load.LiteRtCacheFiles
+import com.iris.localai.engine.load.LiteRtLoadKey
+import com.iris.localai.engine.load.LoadTelemetry
+import com.iris.localai.engine.resources.NativeThreadPolicy
+import com.iris.localai.engine.resources.ThermalGovernor
+import com.iris.localai.util.VisionModels
 import android.content.Context
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
@@ -59,7 +75,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
     @Volatile private var live: Conversation? = null
     private var maxTokens = 4096
     private var backend = ""
-    /** 2.5.0-beta10: 「此模型文件不含 MTP…」 when MTP was asked for but only plain decoding initialised. */
+    /** 「此模型文件不含 MTP…」 when MTP was asked for but only plain decoding initialised. */
     private var mtpNote: String? = null
     private val isNpu: Boolean get() = backend.startsWith("NPU")
 
@@ -73,28 +89,28 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
             val npuFile = NpuModels.targetSoc(model.fileName) != null
             val npuKv = if (npuFile) NpuModels.kvCapacity(model.fileName) else null
             // NPU graphs have a fixed KV size; never request more than they were compiled with.
-            // 1.10.2: one pure rule (LiteRtLoadKey) — only the file and its 上下文长度, so the cache stays valid.
-            // 2.0: files without _ekvNNNN get their family's compiled KV size (Gemma 4 NPU: 4096), not 1024;
+            // one pure rule (LiteRtLoadKey) — only the file and its 上下文长度, so the cache stays valid.
+            // files without _ekvNNNN get their family's compiled KV size (Gemma 4 NPU: 4096), not 1024;
             // LiteRT-LM 0.18 does not report the KV size after load, so the file name is all we have.
-            maxTokens = com.iris.localai.engine.LiteRtLoadKey.maxNumTokens(config.contextLength, npuFile, npuKv, com.iris.localai.engine.NpuIds.defaultKv(model.fileName))
+            maxTokens = LiteRtLoadKey.maxNumTokens(config.contextLength, npuFile, npuKv, NpuIds.defaultKv(model.fileName))
             val cacheRoot = java.io.File(context.filesDir, CACHE_DIR).apply { mkdirs() }
             migrateOldCacheOnce(cacheRoot)
             val modelFile = java.io.File(model.path)
-            fun snapshot(): com.iris.localai.engine.CacheSnapshot? =
+            fun snapshot(): CacheSnapshot? =
                 if (config.backend == com.iris.localai.engine.Backend.NPU) null else runCatching {
-                    com.iris.localai.engine.LiteRtCacheFiles.snapshot(
+                    LiteRtCacheFiles.snapshot(
                         cacheRoot.listFiles().orEmpty().filter { it.isFile }.map { it.name to it.length() },
                         model.fileName, modelFile.lastModified(), modelFile.length(), config.backend,
                     )
                 }.getOrNull()
             val cacheBefore = snapshot()
-            // 1.10.3: the whole cache dir for this model, before / after initialize and after close (adb logcat -s IrisLoad).
+            // the whole cache dir for this model, before / after initialize and after close (adb logcat -s IrisLoad).
             fun logCache(stage: String) {
                 if (config.backend == com.iris.localai.engine.Backend.NPU) return
                 runCatching {
                     android.util.Log.i(
-                        com.iris.localai.engine.LoadTelemetry.TAG,
-                        com.iris.localai.engine.GpuCacheDiag.logLine(
+                        LoadTelemetry.TAG,
+                        GpuCacheDiag.logLine(
                             stage, cacheRoot.path, cacheRoot.canWrite(),
                             cacheRoot.listFiles().orEmpty().filter { it.isFile }.map { it.name to it.length() },
                             model.fileName, modelFile.lastModified(), modelFile.length(),
@@ -106,7 +122,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
             loadedCacheLog = { stage -> logCache(stage) }
             val errors = StringBuilder()
             val npuModel = NpuModels.targetSoc(model.fileName)
-            // 1.7.1: exactly the backend EngineManager asked for; the manager walks the fallback chain.
+            // exactly the backend EngineManager asked for; the manager walks the fallback chain.
             val candidates: List<Pair<String, () -> Backend>> = when (config.backend) {
                 com.iris.localai.engine.Backend.NPU -> {
                     if (npuModel == null) throw EngineException("通用 .litertlm 模型不能在 NPU 上运行，需要 NPU 编译版（文件名带 _sm8750）")
@@ -122,7 +138,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 }
             }
             // XNNPACK / dispatch threads are created during init and inherit this thread's cores + priority.
-            com.iris.localai.engine.NativeThreadPolicy.apply(config.resources)
+            NativeThreadPolicy.apply(config.resources)
             // Engine init is one blocking native call (GPU: shader compile, can take minutes).
             // Creep the bar toward 90% so the UI never looks frozen at 5%.
             val ticker = Thread {
@@ -136,22 +152,22 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 } catch (_: InterruptedException) {}
             }.apply { isDaemon = true; start() }
             try {
-            // 1.10.12: multimodal .litertlm files (Gemma 3n / 4, VLMs) get a vision backend so attached
+            // multimodal .litertlm files (Gemma 3n / 4, VLMs) get a vision backend so attached
             // images can be read; a file without a vision section that refuses it loads text-only.
-            val wantVision = com.iris.localai.util.VisionModels.litertMayHaveVision(model.fileName)
-            // 2.5.0-beta10: MTP (speculative decoding with the file's drafter) first when asked; an old
+            val wantVision = VisionModels.litertMayHaveVision(model.fileName)
+            // MTP (speculative decoding with the file's drafter) first when asked; an old
             // file without a drafter or any init failure retries the whole chain with the flag off.
             var mtpOn = false
             var mtpFallback = false
-            spec@ for (spec in com.iris.localai.engine.LiteRtMtp.attempts(config.litertMtp)) {
+            spec@ for (spec in LiteRtMtp.attempts(config.litertMtp)) {
             if (!spec && config.litertMtp) {
                 mtpFallback = true
                 android.util.Log.w("IrisResource", "litert MTP: init with speculative decoding failed, plain decoding for ${model.fileName}: ${errors.toString().trim().take(400)}")
             }
             outer@ for ((name, make) in candidates) {
-                val kvs: List<Int?> = if (name == "NPU") com.iris.localai.engine.NpuRetry.kvAttempts(npuKv) else listOf(maxTokens)
+                val kvs: List<Int?> = if (name == "NPU") NpuRetry.kvAttempts(npuKv) else listOf(maxTokens)
                 for ((kvIndex, kv) in kvs.withIndex()) {
-                if (kvIndex > 0 && !com.iris.localai.engine.NpuRetry.isAllocFailure(errors.toString())) break
+                if (kvIndex > 0 && !NpuRetry.isAllocFailure(errors.toString())) break
                 for (vision in if (wantVision && name != "NPU") listOf(true, false) else listOf(false)) {
                 var e: Engine? = null
                 try {
@@ -170,7 +186,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                     e.initialize()
                     engine = e
                     visionOn = vision
-                    backend = if (name == "NPU") (if (com.iris.localai.engine.NpuIds.isMediatekTarget(npuModel)) "NPU · NeuroPilot · LiteRT-LM" else "NPU · Hexagon · LiteRT-LM") else "$name · LiteRT-LM"
+                    backend = if (name == "NPU") (if (NpuIds.isMediatekTarget(npuModel)) "NPU · NeuroPilot · LiteRT-LM" else "NPU · Hexagon · LiteRT-LM") else "$name · LiteRT-LM"
                     if (name == "NPU" && kv != null) maxTokens = kv
                     mtpOn = spec
                     break@spec
@@ -184,7 +200,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
             }
             }
             if (engine != null && config.litertMtp) android.util.Log.i("IrisResource", "litert MTP ${model.fileName}: " + if (mtpOn) "active" else "fallback (plain decoding)")
-            mtpNote = if (engine != null && mtpFallback && !mtpOn) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_litert_no_mtp) else null
+            mtpNote = if (engine != null && mtpFallback && !mtpOn) I18n.s(R.string.v2510_litert_no_mtp) else null
             } finally {
                 ticker.interrupt()
             }
@@ -194,7 +210,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 throw EngineException(
                     when {
                         npuModel != null ->
-                            (if (com.iris.localai.engine.NpuIds.isMediatekTarget(npuModel)) com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_init_failed) + "\n$msg"
+                            (if (NpuIds.isMediatekTarget(npuModel)) I18n.s(R.string.mtk244_init_failed) + "\n$msg"
                             else "NPU 初始化失败。常见原因：系统 DSP 固件与运行库版本不兼容，或模型不是为本机芯片编译的。\n$msg") +
                                 "── 设备 ──\n" + npuDeviceInfo(modelFile) +
                                 npuLogTail().let { if (it.isEmpty()) "\n（没有读到原生日志）" else "\n── 原生日志 ──\n$it" }
@@ -218,7 +234,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 hasChatTemplate = true,
                 backend = backend,
                 activeBackend = config.backend,
-                // 1.7.9: LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() has no arguments).
+                // LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() has no arguments).
                 gpuHint = if (config.backend == com.iris.localai.engine.Backend.GPU) "unsupported" else null,
                 fallbackNote = mtpNote,
                 cacheBefore = cacheBefore,
@@ -234,7 +250,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
             while (true) {
             val t0 = System.currentTimeMillis()
             var emitted = false
-            // 1.10.6: kept outside the try so a soft stop (cancel()) can record the partial reply.
+            // kept outside the try so a soft stop (cancel()) can record the partial reply.
             val reply = StringBuilder()
             softStop = false
             val outcome: Triple<StopReason, GenerationStats?, String?>? = try {
@@ -248,7 +264,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                     runCatching { conversation?.close() }
                     fun config(thinking: ThinkingConfig?) = ConversationConfig(
                         systemInstruction = system.takeIf { it.isNotBlank() }?.let { Contents.of(it) },
-                        initialMessages = com.iris.localai.engine.HistoryMatch.seedTurns(turns.dropLast(1)).map {
+                        initialMessages = HistoryMatch.seedTurns(turns.dropLast(1)).map {
                             if (it.role == PromptMessage.USER) Message.user(it.content) else Message.model(it.content)
                         },
                         // NPU graphs use their built-in sampler; Gallery passes null for NPU too.
@@ -277,7 +293,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 var failure: Throwable? = null
                 live = conv
                 val finished = CompletableDeferred<Unit>()
-                com.iris.localai.engine.ThermalGovernor.beginReply()
+                ThermalGovernor.beginReply()
                 run {
                     fun finish() { finished.complete(Unit) }
                     fun emit(s: String) {
@@ -285,7 +301,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                         if (firstTokenAt == 0L) firstTokenAt = System.currentTimeMillis()
                         emitted = true
                         chars += s.length
-                        com.iris.localai.engine.ThermalGovernor.pace()
+                        ThermalGovernor.pace()
                         trySend(GenEvent.Piece(s))
                     }
                     val images = if (visionOn) last.images.filter { java.io.File(it).isFile } else emptyList()
@@ -334,7 +350,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                     GenerationStats(
                         generatedTokens = genTokens,
                         prefillMs = if (firstTokenAt > 0) firstTokenAt - t0 else 0,
-                        // 1.13.1: the runtime's own decode rate when it reports one (wall time from the
+                        // the runtime's own decode rate when it reports one (wall time from the
                         // first streamed piece included callback / UI delays and the stop drain).
                         generateMs = bench?.takeIf { it.lastDecodeTokensPerSecond > 0.0 && it.lastDecodeTokenCount > 0 }
                             ?.let { b -> (genTokens * 1000.0 / b.lastDecodeTokensPerSecond).toLong().coerceAtLeast(1L) }
@@ -349,7 +365,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
                 val m = rootMessage(t)
                 when {
                     "cancel" in m.lowercase() -> {
-                        // 1.10.6: a soft stop (the agent cut a finished tool call, or the user's stop
+                        // a soft stop (the agent cut a finished tool call, or the user's stop
                         // button) keeps the conversation and its KV cache: the next turn that extends
                         // this history is answered without re-prefilling everything.
                         if (softStop && conversation?.isAlive == true) {
@@ -380,7 +396,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
     }.buffer(Channel.UNLIMITED)
 
     override fun cancel() {
-        // 1.10.6: soft stop. The running turn ends as CANCELLED and records its partial reply,
+        // soft stop. The running turn ends as CANCELLED and records its partial reply,
         // so the conversation (and its KV cache) is reused by the next turn (see generate).
         softStop = live != null
         runCatching { live?.cancelProcess() }
@@ -398,7 +414,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
 
     override suspend fun unload() = withContext(worker) { closeAll() }
 
-    /** 1.10.3: logs the cache dir of the loaded model again (after close: does the runtime write on close?). */
+    /** logs the cache dir of the loaded model again (after close: does the runtime write on close?). */
     @Volatile private var loadedCacheLog: ((String) -> Unit)? = null
 
     private fun closeAll() {
@@ -414,7 +430,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
     }
 
     /**
-     * 1.0.5 and earlier kept compiled caches in cacheDir; move them once (1.10.2: a marker file
+     * and earlier kept compiled caches in cacheDir; move them once (1.10.2: a marker file
      * instead of listing cacheDir on every load). Only files whose name looks like a LiteRT-LM
      * cache (`…mldrift…` / `…xnnpack…`) are moved, never anything else in cacheDir.
      */
@@ -423,7 +439,7 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
         if (marker.exists()) return
         runCatching {
             context.cacheDir.listFiles()?.forEach { f ->
-                if (f.isFile && com.iris.localai.engine.LiteRtCacheFiles.kindOf(f.name.lowercase()) != null) {
+                if (f.isFile && LiteRtCacheFiles.kindOf(f.name.lowercase()) != null) {
                     val dst = java.io.File(cacheRoot, f.name)
                     if (!dst.exists()) f.renameTo(dst)
                 }
@@ -434,17 +450,17 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
 
     /** Backend for a model AOT-compiled for a Qualcomm NPU. Such files cannot fall back to CPU/GPU. */
     private fun npuBackend(fileName: String, target: String): Pair<String, () -> Backend> {
-        if (com.iris.localai.engine.NpuIds.isMediatekTarget(target)) return mediatekBackend(target)
+        if (NpuIds.isMediatekTarget(target)) return mediatekBackend(target)
         val rt = QualcommNpuRuntime.get(context)
         if (rt.arch == null) throw EngineException("这是高通 NPU 专用模型（$target），但本机芯片不支持。请改用通用 .litertlm 版本。")
-        // 2.0: one rule with the backend picker (NpuIds): an _sm8750 file runs on SM8750 / SM8750P / SM8750-AB.
-        if (!com.iris.localai.engine.NpuIds.socMatches(target, rt.socId)) {
+        // one rule with the backend picker (NpuIds): an _sm8750 file runs on SM8750 / SM8750P / SM8750-AB.
+        if (!NpuIds.socMatches(target, rt.socId)) {
             throw EngineException("这个 NPU 模型是为 ${target.uppercase()} 编译的，本机是 ${rt.socId.uppercase()}，无法运行。请下载带 _${rt.socId} 的版本。")
         }
         if (!rt.isInstalled) {
             val st = rt.refreshState()
             throw EngineException(
-                if (st is com.iris.localai.engine.NpuState.NeedsRepair)
+                if (st is NpuState.NeedsRepair)
                     "高通 NPU 运行库不完整（${st.reason}），需要修复。请到 设置 › 模型与后端 › NPU 运行库 点「修复」重新下载后再加载。"
                 else "NPU 模型需要高通 NPU 运行库 QAIRT 2.50（约 71 MB 下载；旧版运行库与当前引擎不匹配，需重新下载）。请到 设置 › 模型与后端 › NPU 运行库 下载后再加载。",
             )
@@ -460,15 +476,15 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
     }
 
     /**
-     * 2.4.4 (Issue #6): a model AOT-compiled for a MediaTek NPU (`_mt6991`). The dispatch library ships
+     * Issue #6: a model AOT-compiled for a MediaTek NPU (`_mt6991`). The dispatch library ships
      * in the APK and is copied on demand; the NeuroPilot driver is the phone's own.
      */
     private fun mediatekBackend(target: String): Pair<String, () -> Backend> {
         val rt = MediaTekNpuRuntime.get(context)
         val here = rt.socId
-            ?: throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_not_mtk, target.uppercase(), "${android.os.Build.SOC_MANUFACTURER} ${android.os.Build.SOC_MODEL}".trim()))
-        if (!com.iris.localai.engine.NpuIds.socMatches(target, here)) {
-            throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_wrong_soc, target.uppercase(), here.uppercase(), here))
+            ?: throw EngineException(I18n.s(R.string.mtk244_not_mtk, target.uppercase(), "${android.os.Build.SOC_MANUFACTURER} ${android.os.Build.SOC_MODEL}".trim()))
+        if (!NpuIds.socMatches(target, here)) {
+            throw EngineException(I18n.s(R.string.mtk244_wrong_soc, target.uppercase(), here.uppercase(), here))
         }
         rt.ensureInstalled()
         rt.refreshState()
@@ -490,10 +506,10 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
      * and trimmed text rather than exact strings; otherwise the KV cache was never reused.
      */
     private fun sameHistory(a: List<PromptMessage>?, b: List<PromptMessage>): Boolean =
-        com.iris.localai.engine.HistoryMatch.same(a, b)
+        HistoryMatch.same(a, b)
 
     /**
-     * 2.1.1: the Kotlin exception only says "Failed to allocate tensors"; the real reason (QNN error
+     * the Kotlin exception only says "Failed to allocate tensors"; the real reason (QNN error
      * code, FastRPC / rpcmem failure, skel not found…) is in this process's logcat. Keep the last
      * matching lines so the error card itself shows it, without exporting diagnostics.
      */
@@ -503,10 +519,10 @@ class LiteRtEngine(private val context: Context) : InferenceEngine {
         )
         val lines = p.inputStream.bufferedReader().use { r -> r.readLines() }
         p.waitFor()
-        com.iris.localai.engine.NpuLog.relevant(lines, max).ifEmpty { com.iris.localai.engine.NpuLog.fallback(lines, max) }
+        NpuLog.relevant(lines, max).ifEmpty { NpuLog.fallback(lines, max) }
     }.getOrDefault("")
 
-    /** 2.1.2: what a remote diagnosis needs, in one block under the NPU error. */
+    /** what a remote diagnosis needs, in one block under the NPU error. */
     private fun npuDeviceInfo(modelFile: java.io.File): String = runCatching {
         val am = context.getSystemService(android.app.ActivityManager::class.java)
         val mi = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }

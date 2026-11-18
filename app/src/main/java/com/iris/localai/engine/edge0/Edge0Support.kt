@@ -3,7 +3,7 @@ package com.iris.localai.engine.edge0
 import java.io.File
 
 /**
- * 2.6.5 (实验): Edge0-35B (edge0-infer) runs only on arm64 CPUs with i8mm (armv8.6-a: 骁龙 8 Gen 2 /
+ * 实验: Edge0-35B (edge0-infer) runs only on arm64 CPUs with i8mm (armv8.6-a: 骁龙 8 Gen 2 /
  * 天玑 9200 及以后). libiris_edge0.so is built for armv8.6-a+dotprod+i8mm+fp16, so it is never even
  * loaded on other phones. Pure parts unit-tested (V265Test).
  */

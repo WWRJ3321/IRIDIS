@@ -1,5 +1,9 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -47,8 +51,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.iris.localai.agent.Plan
-import com.iris.localai.agent.PlanStatus
+import com.iris.localai.agent.tools.Plan
+import com.iris.localai.agent.tools.PlanStatus
 import com.iris.localai.ui.components.PressableIcon
 import com.iris.localai.ui.components.pulse
 import com.iris.localai.ui.glass.GlassBackdrop
@@ -60,7 +64,7 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 
 /**
- * 1.14.0 计划卡片: the conversation's plan above the composer — one line (计划 · 2/5 · 当前步骤)
+ * 计划卡片: the conversation's plan above the composer — one line (计划 · 2/5 · 当前步骤)
  * that opens into a vertical flow: a node per step joined by a line, the current one breathing,
  * finished ones drawing their check. Finishing the whole plan gives a success haptic.
  */
@@ -75,7 +79,7 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
         val progress by animateFloatAsState(if (p.steps.isEmpty()) 0f else p.done.toFloat() / p.steps.size, IrisMotion.Gentle.float(), label = "planProgress")
         var lastDone by remember { mutableStateOf(p.done) }
         LaunchedEffect(p.done, p.finished) {
-            if (p.done > lastDone) haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.STEP_DONE)
+            if (p.done > lastDone) haptic.perform(FeedbackEvent.STEP_DONE)
             lastDone = p.done
         }
         Column(
@@ -86,14 +90,14 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                 .clip(IrisRadius.mediumShape),
         ) {
             Row(
-                Modifier.fillMaxWidth().clickable(onClickLabel = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f31259) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8ef0f6)) { open = !open }
+                Modifier.fillMaxWidth().clickable(onClickLabel = if (open) I18n.s(R.string.agent_f31259) else I18n.s(R.string.agent_8ef0f6)) { open = !open }
                     .padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space4, bottom = IrisDimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ProgressRing(progress, done = p.finished, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(IrisDimens.space8))
                 Text(
-                    if (p.finished) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bb6f66, p.steps.size) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_678b16, p.done, p.steps.size),
+                    if (p.finished) I18n.s(R.string.agent_bb6f66, p.steps.size) else I18n.s(R.string.agent_678b16, p.done, p.steps.size),
                     style = IrisType.labelSmall, color = if (p.finished) c.success else c.text, maxLines = 1,
                 )
                 val cur = p.current
@@ -103,12 +107,12 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                     modifier = Modifier.weight(1f),
                 )
                 Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = turn })
-                PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ed1da1), size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
+                PressableIcon(Icons.Outlined.Close, I18n.s(R.string.agent_ed1da1), size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
             }
             AnimatedVisibility(open, enter = IrisMotion.expand(), exit = IrisMotion.collapse()) {
                 Column(
                     Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())
-                        .padding(start = IrisDimens.space12, end = IrisDimens.space12, bottom = com.iris.localai.ui.theme.IrisSpace.S),
+                        .padding(start = IrisDimens.space12, end = IrisDimens.space12, bottom = IrisSpace.S),
                 ) {
                     if (p.title.isNotBlank()) Text(p.title, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(bottom = IrisDimens.space6))
                     p.steps.forEachIndexed { i, st -> FlowNode(i + 1, st.text, st.status, first = i == 0, last = i == p.steps.lastIndex) }

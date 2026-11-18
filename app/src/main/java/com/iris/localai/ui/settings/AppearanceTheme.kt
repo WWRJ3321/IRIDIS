@@ -1,5 +1,10 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisRadius
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.foundation.horizontalScroll
 import com.iris.localai.ui.theme.swatchGradient
 
@@ -32,23 +37,23 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisPalette
 import com.iris.localai.ui.theme.IrisType
 
-/** 2.1.4 外观 copy. */
+/** 外观 copy. */
 object AppearanceText {
-    val PALETTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_56fad7)
-    val BACKGROUND_NONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_90a050)
-    val BACKGROUND_SET: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_74d7bb)
-    val BACKGROUND_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_776483)
-    val BLUR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e3cb6)
-    val SCRIM: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ed865)
-    val REMOVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_621ba4)
+    val PALETTE: String get() = I18n.s(R.string.settings_56fad7)
+    val BACKGROUND_NONE: String get() = I18n.s(R.string.settings_90a050)
+    val BACKGROUND_SET: String get() = I18n.s(R.string.settings_74d7bb)
+    val BACKGROUND_FAILED: String get() = I18n.s(R.string.settings_776483)
+    val BLUR: String get() = I18n.s(R.string.settings_9e3cb6)
+    val SCRIM: String get() = I18n.s(R.string.settings_9ed865)
+    val REMOVE: String get() = I18n.s(R.string.settings_621ba4)
 }
 
 /** 配色: one round swatch per [IrisPalette]; the selected one carries a ring and a check mark. */
 @Composable
 fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
     val c = Iris.colors
-    Column(Modifier.fillMaxWidth().padding(bottom = com.iris.localai.ui.theme.IrisSpace.M)) {
-        SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = com.iris.localai.ui.icons.IrisIcons.Contrast)
+    Column(Modifier.fillMaxWidth().padding(bottom = IrisSpace.M)) {
+        SettingsRow(I18n.s(R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = IrisIcons.Contrast)
         Row(
             Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = IrisDimens.rowPadding).selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
@@ -58,7 +63,7 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
                 val isSel = p == selected
                 Column(
                     Modifier
-                        .clip(com.iris.localai.ui.theme.IrisRadius.smallShape)
+                        .clip(IrisRadius.smallShape)
                         .selectable(selected = isSel, role = Role.RadioButton, onClick = { onSelect(p) })
                         .padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space6),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -72,7 +77,7 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
                             .then(p.swatchGradient?.let { g -> Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(g)) } ?: Modifier.background(p.colors(c.isDark).accent)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isSel) Icon(com.iris.localai.ui.icons.IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp))
+                        if (isSel) Icon(IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp))
                     }
                     Spacer(Modifier.height(IrisDimens.space4))
                     Text(

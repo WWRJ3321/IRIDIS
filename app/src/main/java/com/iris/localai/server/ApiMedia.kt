@@ -11,7 +11,7 @@ import kotlinx.serialization.json.longOrNull
 import java.util.Base64
 
 /**
- * 2.6.4: what the multimodal API endpoints need from the app (生图 + 朗读), injected so [ApiRoutes]
+ * what the multimodal API endpoints need from the app (生图 + 朗读), injected so [ApiRoutes]
  * stays testable. Null in [ApiRoutes] = those endpoints answer 501.
  */
 interface ApiMedia {
@@ -43,7 +43,7 @@ data class ApiImageGen(
 /** Parsed /v1/audio/speech body. */
 data class ApiSpeech(val input: String, val speed: Float = 1f, val format: String = "wav")
 
-/** 2.6.4: pure helpers for images sent in chat (image_url) and the media endpoints. */
+/** pure helpers for images sent in chat (image_url) and the media endpoints. */
 object ApiImages {
     const val MAX_BYTES = 10 * 1024 * 1024
     const val MAX_IMAGES = 4

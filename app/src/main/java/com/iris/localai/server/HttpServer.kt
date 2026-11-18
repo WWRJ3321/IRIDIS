@@ -124,7 +124,7 @@ class HttpServer(
                 } catch (e: IOException) {
                     return
                 }
-                // 2.0.0: a client that closes its connection cancels its request — also while it waits in
+                // a client that closes its connection cancels its request — also while it waits in
                 // the generation queue or for a non-streamed reply, where no write would notice. Before,
                 // an abandoned (timed-out, retried) request kept generating to max_tokens and held the
                 // engine, so the in-app chat and every later request queued behind it.
@@ -179,7 +179,7 @@ class HttpServer(
      *  inside the connection permit, so memory stays bounded by MAX_CONNECTIONS × MAX_BODY. */
     private fun readBody(head: HttpRequest, length: Int, input: InputStream, out: OutputStream): HttpRequest {
         val body = ByteArray(length)
-        // 2.0.0: curl (bodies over 1 KiB / 1 MiB) and some HTTP stacks wait for this before sending the body.
+        // curl (bodies over 1 KiB / 1 MiB) and some HTTP stacks wait for this before sending the body.
         if (body.isNotEmpty() && head.headers["expect"]?.equals("100-continue", ignoreCase = true) == true) {
             out.write("HTTP/1.1 100 Continue\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
             out.flush()
@@ -225,7 +225,7 @@ class HttpServer(
         private const val TAG = "HttpServer"
         private const val MAX_CONNECTIONS = 8
         private const val MAX_HEAD = 16 * 1024
-        private const val MAX_BODY = 16L * 1024 * 1024 // 2.6.4: 8 → 16 MB for base64 images
+        private const val MAX_BODY = 16L * 1024 * 1024 // 8 → 16 MB for base64 images
         private const val READ_TIMEOUT_MS = 30_000
         /** Whole request line + headers must arrive within this (per-read timeout alone allows trickling). */
         private const val HEAD_TIMEOUT_MS = 10_000
@@ -236,7 +236,7 @@ class HttpServer(
             return "{\"error\":{\"message\":${jsonString(message)},\"type\":\"$type\"}}"
         }
 
-        /** 2.0.0: Ollama clients read `error` as a string (`{"error":"…"}`); OpenAI ones expect the object. */
+        /** Ollama clients read `error` as a string (`{"error":"…"}`); OpenAI ones expect the object. */
         fun errorBody(path: String, status: Int, message: String): String =
             if (path.startsWith("/api/")) "{\"error\":${jsonString(message)}}" else errorJson(message, status)
 
@@ -260,7 +260,7 @@ class HttpServer(
         }
 
         /**
-         * 2.0.0: CORS preflight. The fixed list (Authorization, Content-Type) made browsers reject
+         * CORS preflight. The fixed list (Authorization, Content-Type) made browsers reject
          * the OpenAI JS SDK (it sends x-stainless-* headers) and any client with an extra header;
          * the requested headers are echoed back, restricted to header-name characters.
          */
@@ -299,7 +299,7 @@ class HttpResponder(private val out: OutputStream, private val cors: Boolean = t
 
     fun empty(status: Int) = send(status, "text/plain", ByteArray(0))
 
-    /** 2.6.4: a binary body (audio from /v1/audio/speech). */
+    /** a binary body (audio from /v1/audio/speech). */
     fun bytes(status: Int, contentType: String, body: ByteArray) = send(status, contentType, body)
 
     /** CORS preflight answer (OPTIONS): echoes the requested headers, see [HttpServer.corsAllowHeaders]. */
@@ -331,7 +331,7 @@ class HttpResponder(private val out: OutputStream, private val cors: Boolean = t
         out.flush()
     }
 
-    /** 2.4.6: a non-streaming JSON body, or its tail after [ApiKeepAlive] already sent the head + whitespace. */
+    /** a non-streaming JSON body, or its tail after [ApiKeepAlive] already sent the head + whitespace. */
     fun finishJson(status: Int, body: String) = if (committed) chunk(body) else json(status, body)
 
     @Throws(IOException::class)

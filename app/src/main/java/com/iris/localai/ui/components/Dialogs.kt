@@ -1,5 +1,13 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.IrisElevation
+import com.iris.localai.ui.theme.IrisFontSize
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.ui.theme.LocalReduceMotion
+import com.iris.localai.ui.theme.SmoothRoundedShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -50,6 +58,36 @@ import com.iris.localai.ui.theme.IrisType
 val IrisColors.floatingSurface get() = if (isDark) surfaceElevated else surface
 
 /**
+ * 同一外观的对话框，按钮由调用方竖排给出（多于两个选项时用，如智能体权限确认）。
+ */
+@Composable
+fun IrisDialog(
+    onDismiss: () -> Unit,
+    title: String,
+    actions: @Composable ColumnScope.() -> Unit,
+    content: @Composable (() -> Unit)? = null,
+) {
+    val c = Iris.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.largeSurface(IrisRadius.dialogShape, IrisElevation.menu),
+        shape = IrisRadius.dialogShape,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        tonalElevation = 0.dp,
+        titleContentColor = c.text,
+        textContentColor = c.textSecondary,
+        title = {
+            Text(title, style = IrisType.title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        },
+        text = content?.let { body -> { Box(Modifier.fillMaxWidth()) { body() } } },
+        confirmButton = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8), content = actions)
+        },
+        dismissButton = null,
+    )
+}
+
+/**
  * One dialog look for the whole app. 1.8.0 (HyperOS): centred title, continuous 30 dp corners,
  * two equal-width pill buttons along the bottom (取消 grey, confirm blue; destructive = red text).
  */
@@ -59,7 +97,7 @@ fun IrisDialog(
     title: String,
     confirmText: String,
     onConfirm: () -> Unit,
-    dismissText: String? = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2),
+    dismissText: String? = I18n.s(R.string.chat_625fb2),
     destructive: Boolean = false,
     confirmEnabled: Boolean = true,
     onDismissClick: () -> Unit = onDismiss,
@@ -68,7 +106,7 @@ fun IrisDialog(
     val c = Iris.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.largeSurface(IrisRadius.dialogShape, com.iris.localai.ui.theme.IrisElevation.menu),
+        modifier = Modifier.largeSurface(IrisRadius.dialogShape, IrisElevation.menu),
         shape = IrisRadius.dialogShape,
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         tonalElevation = 0.dp,
@@ -120,7 +158,7 @@ fun TextInputDialog(
     initial: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
-    confirmText: String = com.iris.localai.I18n.s(com.iris.localai.R.string.components_38cf16),
+    confirmText: String = I18n.s(R.string.components_38cf16),
     placeholder: String? = null,
     singleLine: Boolean = true,
     allowEmpty: Boolean = false,
@@ -149,7 +187,7 @@ fun TextInputDialog(
 }
 
 /**
- * 1.10.10: one text-field look for the whole app (iOS / HyperOS): a filled grey field with
+ * one text-field look for the whole app (iOS / HyperOS): a filled grey field with
  * continuous corners and no outline; focus shows only the blue cursor + a faint accent rim,
  * an error a red rim. Every input (dialogs, memory, voice clone, API port) uses it.
  */
@@ -179,8 +217,8 @@ fun irisTextFieldColors() = Iris.colors.let { c ->
 }
 
 /**
- * 1.10.10: one popup-menu look (long-press menus on messages and history): continuous corners, lifted surface.
- * 1.13.0: own popup instead of Material DropdownMenu — its window clipped the shadow into a hard grey
+ * one popup-menu look (long-press menus on messages and history): continuous corners, lifted surface.
+ * own popup instead of Material DropdownMenu — its window clipped the shadow into a hard grey
  * band and the menu covered its anchor. The card now sits [MenuGeometry.GAP] beside the anchor (below,
  * or above when there is no room), inside a transparent margin wide enough for the soft shadow, and
  * scales/fades in from the anchor-side corner.
@@ -188,7 +226,7 @@ fun irisTextFieldColors() = Iris.colors.let { c ->
 @Composable
 fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val c = Iris.colors
-    val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
+    val reduce = LocalReduceMotion.current
     val visible = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     visible.targetState = expanded
     if (!visible.currentState && !visible.targetState) return
@@ -217,17 +255,17 @@ fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
     ) {
         androidx.compose.animation.AnimatedVisibility(
             visibleState = visible,
-            enter = if (reduce) androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.IrisMotion.Quick.float())
-            else androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeIn)) +
-                androidx.compose.animation.scaleIn(com.iris.localai.ui.motion.IrisMotion.Snappy.float(), initialScale = 0.86f, transformOrigin = origin),
-            exit = if (reduce) androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.IrisMotion.Quick.float())
-            else androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.FadeOut)) +
-                androidx.compose.animation.scaleOut(com.iris.localai.ui.motion.IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
+            enter = if (reduce) androidx.compose.animation.fadeIn(IrisMotion.Quick.float())
+            else androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.motionSpec(IrisMotion.FadeIn)) +
+                androidx.compose.animation.scaleIn(IrisMotion.Snappy.float(), initialScale = 0.86f, transformOrigin = origin),
+            exit = if (reduce) androidx.compose.animation.fadeOut(IrisMotion.Quick.float())
+            else androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.motionSpec(IrisMotion.FadeOut)) +
+                androidx.compose.animation.scaleOut(IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
         ) {
             Box(Modifier.padding(MenuGeometry.MARGIN)) {
                 Column(
                     Modifier
-                        .glassSurface(IrisRadius.largeShape, com.iris.localai.ui.theme.IrisElevation.menu)
+                        .glassSurface(IrisRadius.largeShape, IrisElevation.menu)
                         .width(androidx.compose.foundation.layout.IntrinsicSize.Max)
                         .widthIn(min = MenuGeometry.MIN_WIDTH)
                         .padding(vertical = IrisDimens.space4),
@@ -238,7 +276,7 @@ fun IrisMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
     }
 }
 
-/** 1.13.0: where an [IrisMenu] goes (pure, unit-tested). Sizes include the transparent shadow margin. */
+/** where an [IrisMenu] goes (pure, unit-tested). Sizes include the transparent shadow margin. */
 object MenuGeometry {
     val MARGIN = IrisDimens.space20
     val GAP = IrisDimens.space6
@@ -264,7 +302,7 @@ fun IrisMenuItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
     val c = Iris.colors
     val tint = if (destructive) c.danger else c.text
     androidx.compose.material3.DropdownMenuItem(
-        text = { Text(text, style = IrisType.body.copy(fontSize = com.iris.localai.ui.theme.IrisFontSize.M), color = tint) },
+        text = { Text(text, style = IrisType.body.copy(fontSize = IrisFontSize.M), color = tint) },
         leadingIcon = icon?.let { i -> { androidx.compose.material3.Icon(i, null, Modifier.size(IrisDimens.iconMedium), tint = if (destructive) c.danger else c.textSecondary) } },
         onClick = onClick,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = IrisDimens.space16),
@@ -286,7 +324,7 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        // 2.2.6 root-cause fix: the 2.2.5 sheet painted its surface through `modifier`
+        // root-cause fix: the 2.2.5 sheet painted its surface through `modifier`
         // (largeSurface = clip + background) with a Transparent container. ModalBottomSheet applies
         // `modifier` OUTSIDE its anchoredDraggable offset, so that background/clip sat at the
         // un-offset (top) position: a white wash above the sheet, a see-through sheet body (the
@@ -297,11 +335,11 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
         scrimColor = LARGE_SCRIM,
         contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
         tonalElevation = 0.dp,
-        shape = com.iris.localai.ui.theme.SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp),
+        shape = SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp),
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = com.iris.localai.ui.theme.IrisSpace.S, bottom = IrisDimens.space6)
+                    .padding(top = IrisSpace.S, bottom = IrisDimens.space6)
                     .size(width = 36.dp, height = IrisDimens.space4)
                     .background(c.textTertiary.copy(alpha = 0.4f), IrisRadius.pillShape),
             )

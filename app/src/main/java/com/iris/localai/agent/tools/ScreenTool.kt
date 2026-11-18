@@ -1,16 +1,20 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.engine.PromptMessage
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.JsonObject
 
-/** 2.1.9: why the GUI agent cannot run now (each one has its own guide in the chat). */
+/** why the GUI agent cannot run now (each one has its own guide in the chat). */
 enum class GuiBlocker { A11Y_OFF, NO_MODEL, NO_VISION, BUSY }
 
-/** 2.1.9: how a `screen` run ended, as told to the model and shown on the step card. */
+/** how a `screen` run ended, as told to the model and shown on the step card. */
 enum class GuiTaskStatus(val label: String) { DONE("完成"), FAILED("失败"), TAKEN_OVER("用户接管"), STOPPED("已停止") }
 
 data class GuiTaskResult(val status: GuiTaskStatus, val message: String, val steps: Int = 0)
 
-/** 2.1.9: the backing of `screen` (Android: GuiAgentRunner). Null in [ToolEnv] = not available. */
+/** the backing of `screen` (Android: GuiAgentRunner). Null in [ToolEnv] = not available. */
 interface GuiTaskBackend {
     /** Why a run cannot start now, or null. Showing the matching guide in the chat is the backend's job. */
     fun blocker(): GuiBlocker?
@@ -58,7 +62,7 @@ object ScreenTool : SuspendTool {
     override suspend fun runSuspend(args: JsonObject, env: ToolEnv, progress: (String) -> Unit): ToolResult {
         val task = Args.str(args, "task", "goal", "instruction", "text", "query")?.trim()?.takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("缺少参数 task")
-        // 2.1.9: 「打开微信」 only → launch it directly (no screen loop, no vision model needed).
+        // 「打开微信」 only → launch it directly (no screen loop, no vision model needed).
         LaunchIntent.appName(task)?.let { app -> env.phone?.let { p -> return openApp(app, p) } }
         val gui = env.gui ?: return ToolResult(false, "Error: screen control is not available", "不可用")
         gui.blocker()?.let { b -> val t = blockerText(b); return ToolResult(false, "Error: $t", t.substringBefore('：')) }
@@ -69,7 +73,7 @@ object ScreenTool : SuspendTool {
 }
 
 /**
- * 2.1.9: whether a message in 对话 mode (智能体 off) asks to operate the phone; such a turn goes through
+ * whether a message in 对话 mode (智能体 off) asks to operate the phone; such a turn goes through
  * the 智能体 with `screen` once (智能体 mode stays off). Narrow on purpose: false positives cost a turn.
  */
 object GuiIntent {
@@ -85,12 +89,12 @@ object GuiIntent {
 
     fun looksLikePhoneTask(text: String): Boolean = text.length <= 200 && PHONE_UI.containsMatchIn(text.trim())
 
-    /** 2.1.9: prompt-only hint on the newest request when it is a phone-UI task (small models picked `phone` and lost the task). */
+    /** prompt-only hint on the newest request when it is a phone-UI task (small models picked `phone` and lost the task). */
     const val HINT = "（这是手机界面操作：调用 screen，task 用用户原话。）"
 
-    fun withHint(messages: List<com.iris.localai.engine.PromptMessage>, screenOn: Boolean): List<com.iris.localai.engine.PromptMessage> {
+    fun withHint(messages: List<PromptMessage>, screenOn: Boolean): List<PromptMessage> {
         if (!screenOn) return messages
-        val i = messages.indexOfLast { it.role == com.iris.localai.engine.PromptMessage.USER && !it.content.startsWith("<tool_response>") }
+        val i = messages.indexOfLast { it.role == PromptMessage.USER && !it.content.startsWith("<tool_response>") }
         if (i < 0 || !looksLikePhoneTask(messages[i].content) || messages[i].content.contains(HINT)) return messages
         return messages.mapIndexed { idx, m -> if (idx == i) m.copy(content = m.content.trimEnd() + "\n\n" + HINT) else m }
     }

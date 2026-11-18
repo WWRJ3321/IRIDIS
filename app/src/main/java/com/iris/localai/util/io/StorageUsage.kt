@@ -1,12 +1,23 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.ModelRepository
+import com.iris.localai.engine.llama.MmprojPairing
+import com.iris.localai.engine.load.ModelCache
+import com.iris.localai.imagegen.ImageCatalog
+import com.iris.localai.knowledge.KbEmbedModels
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 
 /**
- * 1.14.3 设置 › 存储空间: how much the app keeps on disk, by category. Pure (java.io / java.nio only,
+ * 设置 › 存储空间: how much the app keeps on disk, by category. Pure (java.io / java.nio only,
  * no Android types) so the whole scan runs on plain temp folders in V1143StorageTest; the screen
  * builds [Paths] from the real app directories (StorageViewModel.paths) and calls [scan] on
  * Dispatchers.IO.
@@ -17,13 +28,13 @@ import java.nio.file.attribute.BasicFileAttributes
 object StorageUsage {
 
     enum class Category(val title: String) {
-        MODELS(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1)),
-        MODEL_CACHE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_034fcf)),
-        VOICE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_589dad)),
-        WORKSPACE(com.iris.localai.I18n.s(com.iris.localai.R.string.util_772bfe)),
-        CHATS(com.iris.localai.I18n.s(com.iris.localai.R.string.util_71f3e3)),
-        CACHE_LOGS(com.iris.localai.I18n.s(com.iris.localai.R.string.util_f12faf)),
-        OTHER(com.iris.localai.I18n.s(com.iris.localai.R.string.util_0d98c7)),
+        MODELS(I18n.s(R.string.chat_8000f1)),
+        MODEL_CACHE(I18n.s(R.string.util_034fcf)),
+        VOICE(I18n.s(R.string.util_589dad)),
+        WORKSPACE(I18n.s(R.string.util_772bfe)),
+        CHATS(I18n.s(R.string.util_71f3e3)),
+        CACHE_LOGS(I18n.s(R.string.util_f12faf)),
+        OTHER(I18n.s(R.string.util_0d98c7)),
     }
 
     /** Stable ids of the entries the screen attaches actions to. */
@@ -31,9 +42,9 @@ object StorageUsage {
         const val MODEL_PREFIX = "model:"
         const val MODEL_LEFTOVER = "model:leftover"
         const val MODEL_LEFTOVER_SHARED = "model:leftover-shared"
-        /** 2.5.0-beta9: downloaded image-generation models (models/imagegen), never a leftover. */
+        /** downloaded image-generation models (models/imagegen), never a leftover. */
         const val IMAGEGEN = "model:imagegen"
-        /** 2.5.1: 已隐藏的生图模型（sd15-mnn，MNN CPU）残留，仅可删除。 */
+        /** 已隐藏的生图模型（sd15-mnn，MNN CPU）残留，仅可删除。 */
         const val IMAGEGEN_HIDDEN = "model:imagegen-hidden"
         const val CACHE_PREFIX = "cache:"
         const val CACHE_ORPHAN = "cache:orphan"
@@ -73,7 +84,7 @@ object StorageUsage {
         val files: Int = 0,
         val count: Int? = null,
         val external: Boolean = false,
-        /** 2.3.1: a model entry whose size includes a paired vision projector (mmproj). */
+        /** a model entry whose size includes a paired vision projector (mmproj). */
         val withProjector: Boolean = false,
     )
 
@@ -103,12 +114,12 @@ object StorageUsage {
         val name: String get() = file.name
     }
 
-    /** 2.5.0-beta9: image-generation models folder inside the models dirs (= last part of ImageGenFiles.MODELS_SUB). */
+    /** image-generation models folder inside the models dirs (= last part of ImageGenFiles.MODELS_SUB). */
     const val IMAGEGEN_DIR = "imagegen"
-    /** 2.5.1: 已隐藏的生图模型目录（SD15_MNN_ID；2.6.10 加 ANIMA_OLD_ID）。 */
-    val HIDDEN_IMAGE_DIRS = setOf(com.iris.localai.imagegen.ImageCatalog.SD15_MNN_ID, com.iris.localai.imagegen.ImageCatalog.ANIMA_OLD_ID)
+    /** 已隐藏的生图模型目录（SD15_MNN_ID；2.6.10 加 ANIMA_OLD_ID）。 */
+    val HIDDEN_IMAGE_DIRS = setOf(ImageCatalog.SD15_MNN_ID, ImageCatalog.ANIMA_OLD_ID)
 
-    /** 2.5.1: [imgDirs] 下已隐藏生图模型的目录（存在的）。 */
+    /** [imgDirs] 下已隐藏生图模型的目录（存在的）。 */
     fun hiddenImageDirs(imgDirs: List<File>): List<File> =
         imgDirs.flatMap { d -> HIDDEN_IMAGE_DIRS.map { File(d, it) } }.filter { it.isDirectory }
 
@@ -118,7 +129,7 @@ object StorageUsage {
     fun isPartialName(name: String): Boolean {
         val n = name.lowercase()
         return PARTIAL_SUFFIXES.any { n.endsWith(it) } || n.startsWith(".tmp") || n.startsWith(".pending-") ||
-            com.iris.localai.data.ModelRepository.SEG_RE.matches(n) // 2.5.6
+            ModelRepository.SEG_RE.matches(n) // 2.5.6
     }
 
     /**
@@ -127,7 +138,7 @@ object StorageUsage {
      */
     fun companions(model: String, siblings: Collection<String>): Set<String> {
         val out = siblings.filter { com.iris.localai.data.companionOf(model, it) }.toMutableSet()
-        com.iris.localai.engine.llama.MmprojPairing.pick(model, siblings)?.let { out += it }
+        MmprojPairing.pick(model, siblings)?.let { out += it }
         return out
     }
 
@@ -151,12 +162,12 @@ object StorageUsage {
         val owned = pairedIn(dir, models).values.flatten().map { canon(it) }.toSet()
         return dir.listFiles().orEmpty()
             .filter { f -> canon(f) !in owned && models.none { isUnder(it.path, f) || isUnder(f, it.path) } && f.name != ".nomedia" &&
-                !(f.name == IMAGEGEN_DIR && f.isDirectory) }  // 2.5.0-beta9: 生图模型 have their own entry
+                !(f.name == IMAGEGEN_DIR && f.isDirectory) }  // 生图模型 have their own entry
             .map { f ->
                 val kind = when {
                     isPartialName(f.name) -> LeftoverKind.PARTIAL
                     com.iris.localai.data.isProjectorFile(f.name) -> LeftoverKind.PROJECTOR
-                    com.iris.localai.knowledge.KbEmbedModels.isEmbedName(f.name) -> LeftoverKind.EMBED // 2.7.0: 知识库嵌入模型不是「无法识别」
+                    KbEmbedModels.isEmbedName(f.name) -> LeftoverKind.EMBED // 知识库嵌入模型不是「无法识别」
                     else -> LeftoverKind.UNKNOWN
                 }
                 Leftover(f, sizeOf(f), kind, active = kind == LeftoverKind.PARTIAL && f.name in protectedParts, shared = shared)
@@ -192,11 +203,11 @@ object StorageUsage {
         val externalCache: File?,
         val logFiles: List<File>,
         val restoreStage: File,
-        /** 2.1.0: `Download/IRIDIS/models` (outside the app's storage: listed, not in the total); null = not used. */
+        /** `Download/IRIDIS/models` (outside the app's storage: listed, not in the total); null = not used. */
         val sharedModelsDir: File? = null,
-        /** 2.1.1: user skills — `Download/IRIDIS/skills` beside the workspace (inside it before). */
+        /** user skills — `Download/IRIDIS/skills` beside the workspace (inside it before). */
         val skillsDir: File = File(workspace, SKILLS_DIR),
-        /** 2.1.1: 知识库 files (`Download/IRIDIS/knowledge`); null = not listed. */
+        /** 知识库 files (`Download/IRIDIS/knowledge`); null = not listed. */
         val knowledgeDir: File? = null,
         /** Children of [cacheDir] that belong to other categories or are live (never cleared as 「缓存」). */
         val cacheKeep: Set<String> = CACHE_KEEP,
@@ -256,9 +267,9 @@ object StorageUsage {
     /** Caches in [litertRoot] / [mnnRoot] that belong to [fileName] (same rules as engine.ModelCache). */
     fun modelCacheUsage(litertRoot: File, mnnRoot: File, fileName: String): Usage {
         val lit = litertRoot.listFiles().orEmpty()
-            .filter { it.isFile && com.iris.localai.engine.ModelCache.belongs(it.name, fileName) }
+            .filter { it.isFile && ModelCache.belongs(it.name, fileName) }
             .fold(Usage.ZERO) { acc, f -> acc + usage(f) }
-        return lit + usage(File(mnnRoot, com.iris.localai.engine.ModelCache.mnnDirName(fileName)).takeIf { it.isDirectory })
+        return lit + usage(File(mnnRoot, ModelCache.mnnDirName(fileName)).takeIf { it.isDirectory })
     }
 
     /**
@@ -266,10 +277,10 @@ object StorageUsage {
      * LiteRT load markers (`.loading-…`) of a missing model are included; other hidden files are not.
      */
     fun orphanCaches(litertRoot: File, mnnRoot: File, fileNames: Collection<String>): List<File> {
-        val mnnDirs = fileNames.map { com.iris.localai.engine.ModelCache.mnnDirName(it) }.toSet()
+        val mnnDirs = fileNames.map { ModelCache.mnnDirName(it) }.toSet()
         val lit = litertRoot.listFiles().orEmpty().filter { f ->
             f.isFile && fileNames.none { n ->
-                com.iris.localai.engine.ModelCache.belongs(f.name, n) || f.name.endsWith("-$n")
+                ModelCache.belongs(f.name, n) || f.name.endsWith("-$n")
             } && (!f.name.startsWith(".") || f.name.startsWith(".loading-"))
         }
         val mnn = mnnRoot.listFiles().orEmpty().filter { it.isDirectory && it.name !in mnnDirs }
@@ -304,9 +315,9 @@ object StorageUsage {
             val own = leftovers(p.modelsDir, models, protectedParts, shared = false)
             val shr = leftovers(sharedDir, models, protectedParts, shared = true)
             leftoverList += own; leftoverList += shr
-            // 2.5.0-beta9: image models (models/imagegen, private and shared) as one entry; managed in 生图.
+            // image models (models/imagegen, private and shared) as one entry; managed in 生图.
             val imgDirs = listOfNotNull(File(p.modelsDir, IMAGEGEN_DIR), sharedDir?.let { File(it, IMAGEGEN_DIR) }).filter { it.isDirectory }
-            // 2.5.1: 已隐藏的生图模型（sd15-mnn）单列一行可删除，不计入「生图模型」
+            // 已隐藏的生图模型（sd15-mnn）单列一行可删除，不计入「生图模型」
             val hiddenDirs = hiddenImageDirs(imgDirs)
             val hidden = hiddenDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }
             val img = imgDirs.fold(Usage.ZERO) { a, f -> a + usage(f) }.let { Usage(it.bytes - hidden.bytes, it.files - hidden.files) }
@@ -315,12 +326,12 @@ object StorageUsage {
             val sharedLeftover = shr.sumOf { it.bytes }
             groups += Group(Category.MODELS, list.sortedByDescending { it.bytes } +
                 listOfNotNull(
-                    Entry(Ids.IMAGEGEN, com.iris.localai.I18n.s(com.iris.localai.R.string.v259_imagegen_models), img.bytes, img.files, count = imgCount,
+                    Entry(Ids.IMAGEGEN, I18n.s(R.string.v259_imagegen_models), img.bytes, img.files, count = imgCount,
                         external = imgDirs.isNotEmpty() && imgDirs.all { outside(it) }).takeIf { img.files > 0 },
                     Entry(Ids.IMAGEGEN_HIDDEN, "Stable Diffusion 1.5 (CPU)", hidden.bytes, hidden.files,
                         external = hiddenDirs.isNotEmpty() && hiddenDirs.all { outside(it) }).takeIf { hidden.files > 0 },
-                    Entry(Ids.MODEL_LEFTOVER, com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f70b9), leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
-                    Entry(Ids.MODEL_LEFTOVER_SHARED, com.iris.localai.I18n.s(com.iris.localai.R.string.util_45d2eb), sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
+                    Entry(Ids.MODEL_LEFTOVER, I18n.s(R.string.settings_6f70b9), leftover, own.size, count = own.size, external = outside(p.modelsDir)).takeIf { own.isNotEmpty() },
+                    Entry(Ids.MODEL_LEFTOVER_SHARED, I18n.s(R.string.util_45d2eb), sharedLeftover, shr.size, count = shr.size, external = true).takeIf { shr.isNotEmpty() },
                 ))
         }
 
@@ -334,15 +345,15 @@ object StorageUsage {
             val opencl = usage(p.openclCache)
             val npu = usage(p.npuRuntime)
             groups += Group(Category.MODEL_CACHE, per.sortedByDescending { it.bytes } + listOfNotNull(
-                Entry(Ids.CACHE_ORPHAN, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1a637f), orphan.bytes, orphan.files).takeIf { orphan.files > 0 },
-                Entry(Ids.CACHE_OPENCL, com.iris.localai.I18n.s(com.iris.localai.R.string.util_237874), opencl.bytes, opencl.files).takeIf { opencl.files > 0 },
-                Entry(Ids.CACHE_NPU, com.iris.localai.I18n.s(com.iris.localai.R.string.util_e55c25), npu.bytes, npu.files).takeIf { npu.files > 0 },
+                Entry(Ids.CACHE_ORPHAN, I18n.s(R.string.util_1a637f), orphan.bytes, orphan.files).takeIf { orphan.files > 0 },
+                Entry(Ids.CACHE_OPENCL, I18n.s(R.string.util_237874), opencl.bytes, opencl.files).takeIf { opencl.files > 0 },
+                Entry(Ids.CACHE_NPU, I18n.s(R.string.util_e55c25), npu.bytes, npu.files).takeIf { npu.files > 0 },
             ))
         }
 
         // 语音模型 — each downloaded pack (complete or partial), cloned voices, anything else in the voice dir.
         run {
-            // 2.1.1: a pack may be in Download/IRIDIS/voice (outside the app's storage: listed, not in the total).
+            // a pack may be in Download/IRIDIS/voice (outside the app's storage: listed, not in the total).
             val list = voices.mapNotNull { v -> val u = usage(v.dir); if (u.files > 0) Entry(Ids.VOICE_PREFIX + v.id, v.label, u.bytes, u.files, external = outside(v.dir)) else null }
             val clones = usage(p.voiceClones)
             val cloneCount = p.voiceClones.listFiles().orEmpty().count { it.isDirectory }
@@ -350,8 +361,8 @@ object StorageUsage {
             val other = (sizeOf(p.voiceRoot) - inRoot -
                 (if (isUnder(p.voiceClones, p.voiceRoot)) clones.bytes else 0L)).coerceAtLeast(0)
             groups += Group(Category.VOICE, list.sortedByDescending { it.bytes } + listOfNotNull(
-                Entry(Ids.VOICE_CLONES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_689281), clones.bytes, clones.files, count = cloneCount).takeIf { clones.files > 0 },
-                Entry(Ids.VOICE_OTHER, com.iris.localai.I18n.s(com.iris.localai.R.string.util_98b920), other, external = outside(p.voiceRoot)).takeIf { other > 0 },
+                Entry(Ids.VOICE_CLONES, I18n.s(R.string.util_689281), clones.bytes, clones.files, count = cloneCount).takeIf { clones.files > 0 },
+                Entry(Ids.VOICE_OTHER, I18n.s(R.string.util_98b920), other, external = outside(p.voiceRoot)).takeIf { other > 0 },
             ))
         }
 
@@ -370,12 +381,12 @@ object StorageUsage {
             val undo = usage(p.undo)
             val mem = usage(p.memory)
             groups += Group(Category.WORKSPACE, listOfNotNull(
-                Entry(Ids.WS_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_9371cb), ws.bytes, ws.files, external = ext),
-                Entry(Ids.WS_SKILLS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_699143), skills.bytes, skills.files, count = skillCount, external = outside(skillsDir)).takeIf { skills.files > 0 },
-                kb?.let { Entry(Ids.WS_KNOWLEDGE, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e4333), kbUsage.bytes, kbUsage.files, count = kbUsage.files, external = outside(it)) }?.takeIf { kbUsage.files > 0 },
-                Entry(Ids.WS_PRIVATE, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1f6d24), priv.bytes, priv.files).takeIf { priv.files > 0 },
-                Entry(Ids.WS_UNDO, com.iris.localai.I18n.s(com.iris.localai.R.string.util_10f81c), undo.bytes, undo.files).takeIf { undo.files > 0 },
-                Entry(Ids.WS_MEMORY, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), mem.bytes, mem.files).takeIf { mem.files > 0 },
+                Entry(Ids.WS_FILES, I18n.s(R.string.agent_9371cb), ws.bytes, ws.files, external = ext),
+                Entry(Ids.WS_SKILLS, I18n.s(R.string.chat_699143), skills.bytes, skills.files, count = skillCount, external = outside(skillsDir)).takeIf { skills.files > 0 },
+                kb?.let { Entry(Ids.WS_KNOWLEDGE, I18n.s(R.string.agent_7e4333), kbUsage.bytes, kbUsage.files, count = kbUsage.files, external = outside(it)) }?.takeIf { kbUsage.files > 0 },
+                Entry(Ids.WS_PRIVATE, I18n.s(R.string.util_1f6d24), priv.bytes, priv.files).takeIf { priv.files > 0 },
+                Entry(Ids.WS_UNDO, I18n.s(R.string.util_10f81c), undo.bytes, undo.files).takeIf { undo.files > 0 },
+                Entry(Ids.WS_MEMORY, I18n.s(R.string.agent_de49f7), mem.bytes, mem.files).takeIf { mem.files > 0 },
             ))
         }
 
@@ -387,9 +398,9 @@ object StorageUsage {
             val att = usage(p.attachments)
             val idx = p.historyDb.fold(Usage.ZERO) { a, f -> a + usage(f) }
             groups += Group(Category.CHATS, listOfNotNull(
-                Entry(Ids.CHATS, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362), conv.bytes, conv.files, count = count),
-                Entry(Ids.ATTACHMENTS, com.iris.localai.I18n.s(com.iris.localai.R.string.util_c9a6ee), att.bytes, att.files, count = att.files),
-                Entry(Ids.HISTORY_INDEX, com.iris.localai.I18n.s(com.iris.localai.R.string.util_6e9c11), idx.bytes, idx.files).takeIf { idx.files > 0 },
+                Entry(Ids.CHATS, I18n.s(R.string.chat_859362), conv.bytes, conv.files, count = count),
+                Entry(Ids.ATTACHMENTS, I18n.s(R.string.util_c9a6ee), att.bytes, att.files, count = att.files),
+                Entry(Ids.HISTORY_INDEX, I18n.s(R.string.util_6e9c11), idx.bytes, idx.files).takeIf { idx.files > 0 },
             ))
         }
 
@@ -399,16 +410,16 @@ object StorageUsage {
             val logs = p.logFiles.fold(Usage.ZERO) { a, f -> a + usage(f) }
             val stage = usage(p.restoreStage)
             groups += Group(Category.CACHE_LOGS, listOfNotNull(
-                Entry(Ids.CACHE_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_b0d417), cache.bytes, cache.files),
-                Entry(Ids.LOG_FILES, com.iris.localai.I18n.s(com.iris.localai.R.string.util_b9dad5), logs.bytes, logs.files).takeIf { logs.files > 0 },
-                Entry(Ids.RESTORE_STAGE, com.iris.localai.I18n.s(com.iris.localai.R.string.util_1d0149), stage.bytes, stage.files).takeIf { stage.files > 0 },
+                Entry(Ids.CACHE_FILES, I18n.s(R.string.util_b0d417), cache.bytes, cache.files),
+                Entry(Ids.LOG_FILES, I18n.s(R.string.util_b9dad5), logs.bytes, logs.files).takeIf { logs.files > 0 },
+                Entry(Ids.RESTORE_STAGE, I18n.s(R.string.util_1d0149), stage.bytes, stage.files).takeIf { stage.files > 0 },
             ))
         }
 
         // 其他 — settings, databases, WebView data, …: what the total has that no category claimed.
         val claimed = groups.sumOf { it.appBytes }
         val other = (total - claimed).coerceAtLeast(0)
-        groups += Group(Category.OTHER, listOf(Entry(Ids.OTHER, com.iris.localai.I18n.s(com.iris.localai.R.string.util_30bbce), other)))
+        groups += Group(Category.OTHER, listOf(Entry(Ids.OTHER, I18n.s(R.string.util_30bbce), other)))
         return Report(total, groups, leftoverList)
     }
 

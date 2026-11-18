@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">Antwort hat das Längenlimit erreicht, Inhalt unvollständig; nichts geschrieben</string>
     <string name="ask245_pill">Wartet auf dich: %1$s</string>
     <string name="ask245_reopen">Bestätigung öffnen</string>
-    <string name="vg245_title">GPU für Bilderkennung</string>
+    <string name="vg245_title">Bilderkennung (mmproj)</string>
     <string name="vg245_off">mmproj auf Snapdragon per CPU. Nach Neuladen</string>
     <string name="vg245_on">Schnellere Bilderkennung; kann auf manchen Geräten hängen. Nach Neuladen</string>
     <string name="mtk245_qwen_purpose">Dimensity-9500-NPU-Build, 4K Kontext, nur Text (Beta)</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">Modell zu groß (ca. %1$s GB) für den Speicher dieses Telefons</string>
     <string name="ig27_start">Lade zuerst ein Modell herunter oder tippe am Ende auf „Modell importieren“, um eigene Dateien zu nutzen</string>
     <string name="st27_embed">Suchmodell der Wissensdatenbank</string>
+    <string name="engine_cl_off">GPU (OpenCL) wurde nach dem letzten Absturz beim Laden zur Sicherheit deaktiviert</string>
+    <string name="models_gpu_recheck">GPU erneut prüfen</string>
+    <string name="models_gpu_recheck_ok">Erneut geprüft: GPU ist verfügbar.</string>
+    <string name="models_gpu_recheck_restart">GPU wieder aktiviert; App neu starten, damit es wirkt.</string>
+    <string name="models_gpu_recheck_none">Weiterhin kein OpenCL-Treiber gefunden.</string>
+    <string name="vg27b_note">Für normale GGUF-Modelle hier CPU oder GPU für die Bilderkennung wählen. Läuft das Modell auf der NPU (GenieX), übernimmt GenieX die Bilderkennung automatisch; diese Einstellung gilt dann nicht. Wirkt nach Neuladen.</string>
 </resources>

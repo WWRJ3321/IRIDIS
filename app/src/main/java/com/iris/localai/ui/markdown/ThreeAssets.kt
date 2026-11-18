@@ -6,7 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * 2.2.17: Three.js r170 (MIT) bundled in `assets/three/` so model-written 3D scenes run in the
+ * Three.js r170 (MIT) bundled in `assets/three/` so model-written 3D scenes run in the
  * offline HTML preview. Any CDN URL that points at the `three` package (jsDelivr, unpkg, cdnjs,
  * esm.sh, Skypack, JSPM), whatever version it asks for, is served from the app; every other
  * external script stays blocked ([HtmlSandbox]).
@@ -99,11 +99,11 @@ object ThreeAssets {
     private val MODULE_FILES = setOf("three.module.js", "three.module.min.js", "three.core.js", "three.core.min.js", "three.mjs")
     private val CLASSIC_FILES = setOf("three.js", "three.min.js", "three.cjs")
 
-    /** 2.4.1: bundled paths that are not files in `assets/` but built at runtime ([open]). */
+    /** bundled paths that are not files in `assets/` but built at runtime ([open]). */
     val GENERATED: Set<String> = setOf(CLASSIC)
 
     /**
-     * 2.4.1: the classic build from the ES module: the module body wrapped in an IIFE, its single trailing
+     * the classic build from the ES module: the module body wrapped in an IIFE, its single trailing
      * `export{a as B,…}` turned into `THREE = Object.assign(THREE || {}, {B:a,…})` on `self`/`globalThis`.
      * Byte-identical to the three.min.js shipped up to 2.4.0. Null when [module] does not look like the module build.
      */

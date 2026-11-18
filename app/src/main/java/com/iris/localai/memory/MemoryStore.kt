@@ -5,7 +5,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.UUID
 
-/** 2.2.9: one remembered fact (replaces the lines of USER.md / MEMORY.md). */
+/** one remembered fact (replaces the lines of USER.md / MEMORY.md). */
 @Serializable
 data class MemoryItem(
     val id: String = UUID.randomUUID().toString(),

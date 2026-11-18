@@ -1,7 +1,12 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
- * 2.2.14: before a load, compare free RAM with what the model needs (weights + KV cache + a
+ * before a load, compare free RAM with what the model needs (weights + KV cache + a
  * fixed overhead; a GPU load also copies the weights into GPU buffers). Never blocks: a tight
  * fit only produces a warning that suggests a smaller model / tier, a shorter context or CPU.
  * Works next to the 2.2.13 crash memory (safe mode), not instead of it.
@@ -21,7 +26,7 @@ object MemoryPreflight {
             (if (gpu) modelBytes else 0L)
 
     /**
-     * 2.5.1: 专家按需加载（MoE）时的内存需求：非专家张量 + 专家张量的 25%（常驻热点页）+ KV；
+     * 专家按需加载（MoE）时的内存需求：非专家张量 + 专家张量的 25%（常驻热点页）+ KV；
      * GPU 只额外拷贝非专家部分。[extraBytes] 为 mmproj 等其它文件。
      */
     fun needMoe(nonExpertBytes: Long, expertBytes: Long, extraBytes: Long, contextLength: Int, gpu: Boolean): Long {
@@ -41,12 +46,12 @@ object MemoryPreflight {
         }
         if (level == Level.OK) return Verdict(level, need, availBytes, null)
         val tip = buildList {
-            if (gpu) add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f))
-            if (contextLength > 2048) add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ea59f5, maxOf(2048, contextLength / 2)))
-            add(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0e6914))
-        }.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566))
-        val head = if (level == Level.SHORT) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8b435d) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6c66e0)
-        return Verdict(level, need, availBytes, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ece637, head, gb(need), gb(availBytes), tip))
+            if (gpu) add(I18n.s(R.string.engine_52746f))
+            if (contextLength > 2048) add(I18n.s(R.string.engine_ea59f5, maxOf(2048, contextLength / 2)))
+            add(I18n.s(R.string.engine_0e6914))
+        }.joinToString(I18n.s(R.string.agent_b50566))
+        val head = if (level == Level.SHORT) I18n.s(R.string.engine_8b435d) else I18n.s(R.string.engine_6c66e0)
+        return Verdict(level, need, availBytes, I18n.s(R.string.engine_ece637, head, gb(need), gb(availBytes), tip))
     }
 
     fun gb(b: Long): String = String.format(java.util.Locale.US, "%.1f GB", b / (1024.0 * MB))

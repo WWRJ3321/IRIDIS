@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * 2.6.12: 用户导入的 Anima NPU 包（QNN context binary，HTP v79 / 骁龙 8 Elite）放在一个文件夹里。
+ * 用户导入的 Anima NPU 包（QNN context binary，HTP v79 / 骁龙 8 Elite）放在一个文件夹里。
  * 文件名与切分方式是包本身的约定：文本编码器 text.bin（Qwen3-0.6B + 6 层 adapter → 256×1024 上下文），
  * 扩散模型四段 part0..3.bin（每段 7 层），解码器 dec.bin（taew2_1），以及 CPU 上查的两张词表和两个分词器。
  */

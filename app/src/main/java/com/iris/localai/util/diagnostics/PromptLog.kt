@@ -1,9 +1,13 @@
-package com.iris.localai.util
+package com.iris.localai.util.diagnostics
 
+import com.iris.localai.util.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import com.iris.localai.engine.PromptMessage
 
 /**
- * 1.10.6: every prompt sent to the model for a reply (each 智能体 step is one call), kept in memory
+ * every prompt sent to the model for a reply (each 智能体 step is one call), kept in memory
  * for 「查看提示内容」. Newest [maxReplies] replies only; cleared when the app restarts. Pure, unit-tested.
  */
 class PromptLog(private val maxReplies: Int = 30, private val maxCallsPerReply: Int = 16) {

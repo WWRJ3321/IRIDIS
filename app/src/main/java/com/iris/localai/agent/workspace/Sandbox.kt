@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.workspace
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -7,7 +10,7 @@ import java.io.File
 class SandboxException(message: String) : Exception(message)
 
 /**
- * 1.9.0: every path a tool touches resolves inside the app-private workspace
+ * every path a tool touches resolves inside the app-private workspace
  * (`filesDir/workspace/`). Rejected: `..` segments, `~`, NUL, absolute paths outside the root and
  * anything whose canonical path (symlinks resolved) leaves the root. Pure JVM, unit-tested.
  */
@@ -46,12 +49,12 @@ class WorkspaceSandbox(root: File) {
 @Serializable
 data class UndoMeta(
     val path: String, val existed: Boolean, val action: String, val time: Long,
-    /** 1.10.0: workspace root the snapshot belongs to ("" = 1.9.0, the private workspace). */
+    /** workspace root the snapshot belongs to ("" = 1.9.0, the private workspace). */
     val root: String = "",
 )
 
 /**
- * 1.9.0: snapshot of a file taken right before write_file / edit_file / delete_file changes it.
+ * snapshot of a file taken right before write_file / edit_file / delete_file changes it.
  * 「撤销上次修改」 restores the newest one (repeatable, up to [max] steps back). Stored outside
  * the workspace ([dir] = filesDir/agent-undo) so tools can never see or edit their own undo data.
  */
@@ -77,7 +80,7 @@ class UndoStore(private val dir: File, private val max: Int = 20) {
         all.dropLast(max).forEach { old -> File(dir, "$old.meta").delete(); File(dir, "$old.bin").delete() }
     }
 
-    /** 1.10.6: snapshot of a file only reachable through the SAF grant ([before] = its bytes, null = new file). */
+    /** snapshot of a file only reachable through the SAF grant ([before] = its bytes, null = new file). */
     fun snapshotBytes(sandbox: WorkspaceSandbox, file: File, before: ByteArray?, action: String, now: Long = System.currentTimeMillis()) = synchronized(lock) {
         val ids = entries()
         val id = (ids.lastOrNull() ?: 0L) + 1
@@ -102,7 +105,7 @@ class UndoStore(private val dir: File, private val max: Int = 20) {
         val meta = runCatching { json.decodeFromString(UndoMeta.serializer(), metaFile.readText()) }.getOrNull()
         try {
             if (meta == null) return "撤销记录已损坏，已丢弃"
-            // 1.10.0: never restore into a different workspace location than the one it came from.
+            // never restore into a different workspace location than the one it came from.
             if (meta.root.isNotEmpty() && meta.root != sandbox.root.path) return "这条撤销记录属于另一个工作区位置（${meta.root}），已丢弃"
             val target = sandbox.resolve(meta.path)
             if (meta.existed) {

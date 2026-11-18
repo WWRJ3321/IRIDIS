@@ -1,5 +1,9 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisCorner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -43,18 +47,18 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
 import kotlinx.coroutines.delay
 
-/** 2.3.0 ③ 本地翻译: texts (unit-tested). */
+/** 本地翻译: texts (unit-tested). */
 object TranslateText {
-    val TRANSLATE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)
-    val SHOW_ORIGINAL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7fa213)
-    val SHOW_TRANSLATION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_284fd4)
-    val CLOSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_bab184)
-    val TRANSLATING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d03cc1)
-    val UNDO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_107cac)
-    val DRAFT_AUTO: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_a72abb)
-    val DRAFT_ZH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1501c2)
-    val DRAFT_EN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_aa8715)
-    fun header(target: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8254a7, target)
+    val TRANSLATE: String get() = I18n.s(R.string.chat_8b3607)
+    val SHOW_ORIGINAL: String get() = I18n.s(R.string.chat_7fa213)
+    val SHOW_TRANSLATION: String get() = I18n.s(R.string.chat_284fd4)
+    val CLOSE: String get() = I18n.s(R.string.chat_bab184)
+    val TRANSLATING: String get() = I18n.s(R.string.chat_d03cc1)
+    val UNDO: String get() = I18n.s(R.string.chat_107cac)
+    val DRAFT_AUTO: String get() = I18n.s(R.string.chat_a72abb)
+    val DRAFT_ZH: String get() = I18n.s(R.string.chat_1501c2)
+    val DRAFT_EN: String get() = I18n.s(R.string.chat_aa8715)
+    fun header(target: String) = I18n.s(R.string.chat_8254a7, target)
 }
 
 @Composable
@@ -78,12 +82,12 @@ internal fun TranslationBlock(id: String, modifier: Modifier = Modifier) {
         Column(
             modifier
                 .padding(top = IrisDimens.space6)
-                .background(c.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(com.iris.localai.ui.theme.IrisCorner.S))
+                .background(c.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(IrisCorner.S))
                 .padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space4, bottom = IrisDimens.space8),
             verticalArrangement = Arrangement.spacedBy(IrisDimens.space4),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(com.iris.localai.ui.icons.IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
+                Icon(IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(IrisDimens.space6))
                 Text(TranslateText.header(t.target.label), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
                 if (t.running) TypingDots()
@@ -92,7 +96,7 @@ internal fun TranslationBlock(id: String, modifier: Modifier = Modifier) {
                     { translator.toggleOriginal(id) }, style = IrisButtonStyle.Text, compact = true,
                 )
                 if (!t.folded && t.text.isNotEmpty()) PressableIcon(
-                    if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cee9c3),
+                    if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) I18n.s(R.string.chat_52e6ab) else I18n.s(R.string.chat_cee9c3),
                     size = 32.dp, iconSize = 16.dp, tint = c.textSecondary,
                 ) { clipboard.setText(AnnotatedString(t.text)); copied = true }
                 PressableIcon(Icons.Outlined.Close, TranslateText.CLOSE, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary) { translator.close(id) }

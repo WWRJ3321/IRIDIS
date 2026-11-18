@@ -3,10 +3,10 @@ package com.iris.localai.agent.gui
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
-/** 2.2.9: a cheap fingerprint of what is on screen (tree hash) and the foreground app. */
+/** a cheap fingerprint of what is on screen (tree hash) and the foreground app. */
 data class ScreenState(val hash: Int, val pkg: String?)
 
-/** 2.2.9: hash of the visible accessibility tree (text, description, bounds, checked/focused). Pure. */
+/** hash of the visible accessibility tree (text, description, bounds, checked/focused). Pure. */
 object ScreenFingerprint {
     fun of(tree: UiNode?): ScreenState? {
         tree ?: return null
@@ -23,7 +23,7 @@ object ScreenFingerprint {
     }
 }
 
-/** 2.2.9: wait until the screen stops changing instead of a fixed delay. */
+/** wait until the screen stops changing instead of a fixed delay. */
 object StableWait {
     const val POLL_MS = 150L
     const val MIN_MS = 250L
@@ -52,7 +52,7 @@ object StableWait {
     }
 }
 
-/** 2.2.9: the line the model reads after each action about whether it had an effect. Pure. */
+/** the line the model reads after each action about whether it had an effect. Pure. */
 object ChangeReport {
     const val CHANGED = "画面已变化"
     const val UNCHANGED = "画面没有变化，操作可能没生效"
@@ -69,7 +69,7 @@ object ChangeReport {
 }
 
 /**
- * 2.2.9 loop guard: the same action (points within [tolerance] of the screen, ~20/1000) repeated
+ * loop guard: the same action (points within [tolerance] of the screen, ~20/1000) repeated
  * [warnAt] times in a row with no screen change → a hint to try another way; [stopAt] → stop. Pure.
  */
 class LoopGuard(private val warnAt: Int = 3, private val stopAt: Int = 6, private val tolerance: Float = 0.02f) {
@@ -107,7 +107,7 @@ class LoopGuard(private val warnAt: Int = 3, private val stopAt: Int = 6, privat
     }
 }
 
-/** 2.2.9: whether a field took the typed text (fields may reformat spaces, add a hint or cut at a max length). Pure. */
+/** whether a field took the typed text (fields may reformat spaces, add a hint or cut at a max length). Pure. */
 object TypeCheck {
     fun took(now: String?, typed: String): Boolean {
         val n = now.orEmpty().filterNot { it.isWhitespace() }

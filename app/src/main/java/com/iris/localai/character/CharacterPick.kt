@@ -1,6 +1,6 @@
 package com.iris.localai.character
 
-/** 2.3.3: what picking a card (or 「无角色」) in the top-bar 角色 dropdown does. Pure, unit-tested. */
+/** what picking a card (or 「无角色」) in the top-bar 角色 dropdown does. Pure, unit-tested. */
 object CharacterPick {
     enum class Action { NONE, NEW_PLAIN, APPLY_IN_PLACE, NEW_WITH_CARD }
 

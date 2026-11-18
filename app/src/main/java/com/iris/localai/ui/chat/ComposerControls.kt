@@ -1,5 +1,10 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.theme.IrisDarkColors
+import com.iris.localai.ui.theme.IrisLightColors
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -26,7 +31,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import com.iris.localai.engine.ResourceTier
+import com.iris.localai.engine.resources.ResourceTier
 import com.iris.localai.ui.components.pressScale
 import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.motion.motionSpec
@@ -35,15 +40,15 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 
 /**
- * 1.10.1: the composer's speed choice. Display names only — each one IS an existing resource tier
+ * the composer's speed choice. Display names only — each one IS an existing resource tier
  * (the `resourceTier` setting, the same one the model sheet's 资源档位 and 设置 › 性能与资源 edit),
  * so all three stay in sync. [ResourceTier]'s own label / short / hint are unchanged (logs,
  * telemetry and the 1.7.6 tests use them).
  */
 enum class SpeedLevel(val label: String, val tier: ResourceTier) {
-    LOW(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_af7e96), ResourceTier.LOW),       // 省电
-    FAST(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8f1208), ResourceTier.MEDIUM),   // 中
-    MAX(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_64fe2c), ResourceTier.HIGH);      // 高
+    LOW(I18n.s(R.string.chat_af7e96), ResourceTier.LOW),       // 省电
+    FAST(I18n.s(R.string.chat_8f1208), ResourceTier.MEDIUM),   // 中
+    MAX(I18n.s(R.string.chat_64fe2c), ResourceTier.HIGH);      // 高
 
     companion object {
         /** Tier ordinal (as stored in settings) → speed. Out-of-range ordinals follow [ResourceTier.of]. */
@@ -58,7 +63,7 @@ enum class SpeedLevel(val label: String, val tier: ResourceTier) {
 }
 
 /**
- * 1.10.1: pill toggles under the text field (HyperOS / iOS). On = HyperOS blue with white text,
+ * pill toggles under the text field (HyperOS / iOS). On = HyperOS blue with white text,
  * off = grey; 36 dp high. Pure values so they can be unit-tested.
  */
 object ComposerPillStyle {
@@ -66,25 +71,27 @@ object ComposerPillStyle {
     const val MIN_WIDTH_DP = 52f
     const val H_PADDING_DP = 14f
     const val DISABLED_ALPHA = 0.4f
-    /** 1.10.2: the small 「智能体」 pill in the card's top-left corner (same colours, smaller). */
+    /** the small 「智能体」 pill in the card's top-left corner (same colours, smaller). */
     const val COMPACT_HEIGHT_DP = 28f
     const val COMPACT_MIN_WIDTH_DP = 0f
     const val COMPACT_H_PADDING_DP = 10f
-    val ON_LIGHT = Color(0xFF0D84FF)
-    val ON_DARK = Color(0xFF3482FF)
-    val ON_TEXT = Color(0xFFFFFFFF)
-    val OFF_LIGHT = Color(0xFFEBEBEF)
-    val OFF_DARK = Color(0xFF2C2C2E)
-    val OFF_TEXT_LIGHT = Color(0xFF3C3C43)
-    val OFF_TEXT_DARK = Color(0xFFE5E5EA)
+    // 取自主题令牌（不再写死颜色）；界面上由调用方传入当前主题的 accent / surfaceVariant / text。
+    val ON_LIGHT = IrisLightColors.accent
+    val ON_DARK = IrisDarkColors.accent
+    val ON_TEXT = IrisLightColors.onAccent
+    val OFF_LIGHT = IrisLightColors.surfaceVariant
+    val OFF_DARK = IrisDarkColors.surfaceVariant
+    val OFF_TEXT_LIGHT = IrisLightColors.text
+    val OFF_TEXT_DARK = IrisDarkColors.text
 
-    /** 2.2.5: on = the theme's brand accent (was hard-coded blue while the send button followed the theme). */
-    fun background(on: Boolean, dark: Boolean, accent: Color? = null): Color = when {
+    /** on = the theme's brand accent (was hard-coded blue while the send button followed the theme). */
+    fun background(on: Boolean, dark: Boolean, accent: Color? = null, off: Color? = null): Color = when {
         on -> accent ?: if (dark) ON_DARK else ON_LIGHT
-        else -> if (dark) OFF_DARK else OFF_LIGHT
+        else -> off ?: if (dark) OFF_DARK else OFF_LIGHT
     }
 
-    fun content(on: Boolean, dark: Boolean, onAccent: Color? = null): Color = if (on) (onAccent ?: ON_TEXT) else if (dark) OFF_TEXT_DARK else OFF_TEXT_LIGHT
+    fun content(on: Boolean, dark: Boolean, onAccent: Color? = null, offText: Color? = null): Color =
+        if (on) (onAccent ?: ON_TEXT) else offText ?: if (dark) OFF_TEXT_DARK else OFF_TEXT_LIGHT
 }
 
 /**
@@ -102,17 +109,17 @@ internal fun ComposerPill(
     icon: ImageVector? = null,
     trailingIcon: ImageVector? = null,
     onDisabledClick: (() -> Unit)? = null,
-    /** 1.10.2: the small top-left variant (28 dp, 13 sp). */
+    /** the small top-left variant (28 dp, 13 sp). */
     compact: Boolean = false,
-    /** 2.6.0: taps handled by the caller's own gesture (思考 long-press bar). */
+    /** taps handled by the caller's own gesture (思考 long-press bar). */
     customGesture: Boolean = false,
 ) {
     val c = Iris.colors
     val dark = c.isDark
     val on = selected && enabled
     val interaction = remember { MutableInteractionSource() }
-    val bg by animateColorAsState(ComposerPillStyle.background(on, dark, Iris.colors.accent), motionSpec(IrisMotion.Color), label = "pillBg")
-    val fg by animateColorAsState(ComposerPillStyle.content(on, dark, Iris.colors.onAccent), motionSpec(IrisMotion.Color), label = "pillFg")
+    val bg by animateColorAsState(ComposerPillStyle.background(on, dark, Iris.colors.accent, Iris.colors.surfaceVariant), motionSpec(IrisMotion.Color), label = "pillBg")
+    val fg by animateColorAsState(ComposerPillStyle.content(on, dark, Iris.colors.onAccent, Iris.colors.text), motionSpec(IrisMotion.Color), label = "pillFg")
     val a = if (enabled) 1f else ComposerPillStyle.DISABLED_ALPHA
     val clickable = (enabled || onDisabledClick != null) && !customGesture
     Row(
@@ -125,7 +132,7 @@ internal fun ComposerPill(
             .semantics {
                 if (toggle) {
                     role = Role.Switch
-                    stateDescription = if (on) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9db7a8) else if (enabled) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9c5850) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d1e4a7)
+                    stateDescription = if (on) I18n.s(R.string.chat_9db7a8) else if (enabled) I18n.s(R.string.chat_9c5850) else I18n.s(R.string.chat_d1e4a7)
                 }
             }
             .clickable(
@@ -136,7 +143,7 @@ internal fun ComposerPill(
             )
             .padding(horizontal = (if (compact) ComposerPillStyle.COMPACT_H_PADDING_DP else ComposerPillStyle.H_PADDING_DP).dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (compact) com.iris.localai.ui.theme.IrisSpace.XS else com.iris.localai.ui.theme.IrisSpace.XS, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) IrisSpace.XS else IrisSpace.XS, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = fg.copy(alpha = a), modifier = Modifier.size(if (compact) 14.dp else 16.dp))
         Text(text, style = if (compact) IrisType.labelSmall else IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = fg.copy(alpha = a), maxLines = 1)

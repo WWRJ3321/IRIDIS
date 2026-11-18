@@ -1,12 +1,11 @@
 package com.iris.localai.ui.agent
 
-import androidx.compose.animation.core.LinearEasing
+import com.iris.localai.ui.motion.IrisMotion
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +33,7 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 
 /**
- * 2.5.8: 智能体生图进行中：方形占位框里颜色不停流动 + 进度条（读进度文案里的 “步/总步”，没有就不定进度）。
+ * 智能体生图进行中：方形占位框里颜色不停流动 + 进度条（读进度文案里的 “步/总步”，没有就不定进度）。
  */
 object ImageGenLive {
     private val STEP = Regex("(\\d+)\\s*/\\s*(\\d+)")
@@ -48,7 +47,7 @@ object ImageGenLive {
     }
 
     /**
-     * 2.6.7: 循环调色板上的连续取色（t∈[0,1)，首尾相接）。之前光斑颜色按 (phase*4).toInt() 整格跳，
+     * 循环调色板上的连续取色（t∈[0,1)，首尾相接）。之前光斑颜色按 (phase*4).toInt() 整格跳，
      * 每 1 秒突变一次 = 闪烁；现在相邻颜色线性插值，t 走一圈回到原色。纯函数，单测覆盖。
      */
     fun cyclicArgb(palette: List<Int>, t: Float): Int {
@@ -69,13 +68,13 @@ object ImageGenLive {
 fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
     val c = Iris.colors
     val t = rememberInfiniteTransition(label = "imggen")
-    // 2.6.7: 一个连续相位驱动全部（无 Reverse 折返、无整格换色），颜色平滑过渡、不闪
-    val phase by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "phase")
-    val palette = remember(c.accent) {
-        listOf(c.accent, Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF06B6D4), Color(0xFFF59E0B)).map { it.toArgb() }
+    // 一个连续相位驱动全部（无 Reverse 折返、无整格换色），颜色平滑过渡、不闪
+    val phase by t.animateFloat(0f, 1f, infiniteRepeatable(IrisMotion.linearLoop(IrisMotion.IMAGE_GEN_FLOW_MS), RepeatMode.Restart), label = "phase")
+    val palette = remember(c) {
+        listOf(c.accent, c.onAccentContainer, c.danger, c.success, c.warning).map { it.toArgb() }
     }
     val target = ImageGenLive.progressOf(line)
-    val shown by animateFloatAsState(target ?: 0f, label = "p")
+    val shown by animateFloatAsState(target ?: 0f, IrisMotion.Gentle.float(), label = "p")
     Column(modifier.padding(start = IrisDimens.space24, top = IrisDimens.space6)) {
         Canvas(Modifier.size(168.dp).clip(IrisRadius.mediumShape)) {
             val w = size.width

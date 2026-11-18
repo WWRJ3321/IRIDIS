@@ -1,23 +1,23 @@
 package com.iris.localai.knowledge
 
-import com.iris.localai.agent.ExternalFiles
+import com.iris.localai.agent.workspace.ExternalFiles
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlinx.serialization.Serializable
 
-/** 2.2.9: a file of the 知识库 page. [indexed] = the index holds its current version. */
+/** a file of the 知识库 page. [indexed] = the index holds its current version. */
 data class KbFileInfo(val path: String, val size: Long, val chunks: Int, val indexed: Boolean, val cites: Int)
 
 @Serializable
 data class KbStat(
     val count: Int = 0,
     val lastAt: Long = 0,
-    /** 2.2.9 F: citations in the week starting at [weekStart] (「本周引用 M 次」). */
+    /** F: citations in the week starting at [weekStart] (「本周引用 M 次」). */
     val weekStart: Long = 0,
     val week: Int = 0,
 )
 
-/** 2.2.9 F: calendar weeks (Monday 00:00, device zone) for 「本周引用 M 次」. */
+/** F: calendar weeks (Monday 00:00, device zone) for 「本周引用 M 次」. */
 object KbWeek {
     fun start(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Long =
         java.util.Calendar.getInstance(zone).apply {
@@ -46,7 +46,7 @@ object KbWeek {
 data class KbStats(val files: Map<String, KbStat> = emptyMap())
 
 /**
- * 2.1.0 知识库: `knowledge/` in the app's resource root (2.1.1: Download/IRIDIS/knowledge, beside — not inside —
+ * 知识库: `knowledge/` in the app's resource root (2.1.1: Download/IRIDIS/knowledge, beside — not inside —
  * the agent workspace, so only kb_search reads it; filesDir/iridis/knowledge in 应用私有目录 mode). The index is a
  * JSON file in app storage ([indexFile]); it is brought up to date on demand (before a search, or
  * from 重建索引) by comparing each file's size and mtime. Files only visible through the SAF grant
@@ -67,14 +67,14 @@ class KnowledgeBase(
 
     fun dir(): File = File(root(), FOLDER)
 
-    /** 2.5.1 向量检索 (wired at app start; null = BM25 only, e.g. in unit tests). */
+    /** 向量检索 (wired at app start; null = BM25 only, e.g. in unit tests). */
     @Volatile var semantic: KbSemantic? = null
 
-    /** 2.3.3: 知识库回收站 (knowledge/.trash), purged after 30 days. */
+    /** 知识库回收站 (knowledge/.trash), purged after 30 days. */
     val trash = KbTrash { dir() }
     private var lastPurge = 0L
 
-    /** 2.3.4: reference-only removals (SAF / content:// files are never deleted, only hidden). */
+    /** reference-only removals (SAF / content:// files are never deleted, only hidden). */
     val refs = KbRefs(File(indexFile.parentFile ?: File("."), "kb-hidden-refs.txt"))
 
     fun trashItems(): List<KbTrash.Item> = synchronized(lock) { purgeTrash(); (trash.list() + refs.items()).sortedByDescending { it.deletedAt } }
@@ -100,7 +100,7 @@ class KnowledgeBase(
         val out = LinkedHashMap<String, KbSourceFile>()
         var unsupported = 0
         val d = dir()
-        // 2.3.3: hidden folders (the .trash recycle bin) are never indexed.
+        // hidden folders (the .trash recycle bin) are never indexed.
         d.walkTopDown().maxDepth(4).onEnter { it == d || !it.name.startsWith(".") }.filter { it.isFile }.forEach { f ->
             val rel = f.relativeTo(d).path.replace(File.separatorChar, '/')
             if (KbFormats.supported(f.name) && f.length() <= KbFormats.maxBytes(f.name, MAX_BYTES)) out[rel] = KbSourceFile(rel, f.length(), f.lastModified())
@@ -120,7 +120,7 @@ class KnowledgeBase(
             }
             walk("", 0)
         }
-        // 2.3.4: references the user removed (file left untouched) stay out of the index.
+        // references the user removed (file left untouched) stay out of the index.
         val hidden = refs.hidden()
         return out.values.filter { it.path !in hidden }.sortedBy { it.path.lowercase() } to unsupported
     }
@@ -153,7 +153,7 @@ class KnowledgeBase(
             }
         }
         lastScan = System.currentTimeMillis()
-        if (plan.changed || force) semantic?.indexChanged() // 2.5.1: fill the new chunks' vectors in the background
+        if (plan.changed || force) semantic?.indexChanged() // fill the new chunks' vectors in the background
         val d = load()
         nonEmpty = d.files.any { it.chunks.isNotEmpty() }
         Status(d.files.size, d.files.sumOf { it.chunks.size }, unsupported)
@@ -181,13 +181,13 @@ class KnowledgeBase(
     /** Top [limit] chunks for [query]; refreshes the index first (at most every few seconds). */
     fun search(query: String, limit: Int, boostFiles: Collection<String> = emptyList()): List<KbHit> = ranker().search(query, limit, boostFiles)
 
-    /** 2.5.1: every indexed chunk (refreshed like [search]); the same list until the index changes. */
+    /** every indexed chunk (refreshed like [search]); the same list until the index changes. */
     fun allChunks(): List<KbChunk> = ranker().chunks
 
-    /** 2.2.9: idf of a token over the current index (for KbQuery.build). */
+    /** idf of a token over the current index (for KbQuery.build). */
     fun idf(token: String): Double = ranker().idf(token)
 
-    /** 2.2.9: a file's chunks as indexed (empty when unknown). */
+    /** a file's chunks as indexed (empty when unknown). */
     fun chunksOf(path: String): List<String> = synchronized(lock) { load().files.firstOrNull { it.path == path }?.chunks.orEmpty() }
 
     private fun ranker(): KbRanker {
@@ -221,7 +221,7 @@ class KnowledgeBase(
         saveStats(m)
     }
 
-    /** 2.2.9 F: citations this week, files still in the folder only. */
+    /** F: citations this week, files still in the folder only. */
     fun citesThisWeek(now: Long = System.currentTimeMillis()): Int = synchronized(lock) {
         val present = scan().first.map { it.path }.toSet()
         KbWeek.thisWeek(loadStats().filterKeys { it in present }.values, now)
@@ -241,7 +241,7 @@ class KnowledgeBase(
     fun delete(path: String): Boolean = synchronized(lock) {
         if (KbPaths.file(path) == null) return@synchronized false
         val f = File(dir(), path)
-        // 2.3.3: into the 回收站 when File access can move IRIDIS's copy. 2.3.4: anything else (SAF / content://,
+        // into the 回收站 when File access can move IRIDIS's copy. 2.3.4: anything else (SAF / content://,
         // possibly the user's own file) is never deleted — only its reference/index entry goes (restorable).
         val gone = (f.isFile && trash.put(path)) || refs.hide(path)
         if (!gone) return@synchronized false
@@ -342,7 +342,7 @@ class KnowledgeBase(
         val p = KbPaths.folder(path)?.takeIf { it.isNotEmpty() } ?: return@synchronized false
         val f = File(dir(), p)
         if (!f.isDirectory) return@synchronized false
-        // 2.3.4: never delete when the folder cannot go to the 回收站: hide its files' references instead.
+        // never delete when the folder cannot go to the 回收站: hide its files' references instead.
         if (!trash.put(p)) {
             val under = scan().first.map { it.path }.filter { KbPaths.under(it, p) }
             if (under.isEmpty() || !under.all { refs.hide(it) }) return@synchronized false

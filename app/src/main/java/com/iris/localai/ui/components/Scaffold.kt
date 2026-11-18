@@ -1,5 +1,6 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -52,7 +53,7 @@ import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.theme.irisPageBackground
 
 /**
- * 1.8.0 large title (HyperOS, with the iOS collapse): a subpage shows its title big, bold and
+ * large title (HyperOS, with the iOS collapse): a subpage shows its title big, bold and
  * left-aligned at the top of the scrolling body; as it scrolls under the top bar the small
  * centred title fades in. [collapse] is 0 (large title fully visible) … 1 (collapsed).
  */
@@ -78,7 +79,7 @@ object LargeTitleMath {
 
 }
 
-/** 2.2.4: height of the floating top bar a body scrolls under (status bar included); 0 = padded. */
+/** height of the floating top bar a body scrolls under (status bar included); 0 = padded. */
 private val LocalTopBarInset = compositionLocalOf { 0.dp }
 
 /**
@@ -103,7 +104,7 @@ fun SubpageScaffold(
     val inset = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
         IrisDimens.topBarHeight + IrisDimens.space8
     CompositionLocalProvider(LocalGlassHaze provides haze) {
-        // 2.5.0: the shared page skeleton (柔光 gradient / 经典 plain colour).
+        // the shared page skeleton (柔光 gradient / 经典 plain colour).
         Box(Modifier.fillMaxSize().then(Modifier.irisPageBackground()).horizontalCutoutPadding()) {
             CompositionLocalProvider(LocalLargeTitle provides state, LocalTopBarInset provides if (scrollUnder) inset else 0.dp) {
                 Box(
@@ -137,7 +138,7 @@ fun LargeTitle(modifier: Modifier = Modifier) {
     val inset = LocalTopBarInset.current
     Box(
         modifier.fillMaxWidth().padding(top = inset).height(IrisDimens.largeTitleHeight)
-            .padding(start = IrisDimens.groupGutter + com.iris.localai.ui.theme.IrisSpace.M, end = IrisDimens.pageGutter),
+            .padding(start = IrisDimens.groupGutter + IrisSpace.M, end = IrisDimens.pageGutter),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
@@ -217,7 +218,7 @@ fun CodeSurface(text: String, modifier: Modifier = Modifier) {
     ) {
         Text(
             text, style = IrisType.monoSmall, color = c.text, softWrap = false,
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.M),
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(IrisSpace.M),
         )
     }
 }
