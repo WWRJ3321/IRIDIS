@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -94,7 +95,7 @@ object ModelGuide {
     private val ZH = listOf(
         Section(NAME, "怎么读模型名", listOf(
             Item("例 1", "Gemma 4 26B A4B MXFP4：总共 260 亿参数的 MoE，每个字只用约 40 亿（A4B），权重是 4 位 MXFP4。"),
-            Item("顺序", "一般是 系列 → 参数量 → 用途 → 量化 → 格式，作者间略有不同。"),
+            Item("顺序", "系列 → 参数量 → 用途 → 量化 → 格式，各家略有不同。"),
         ), example = listOf(
             Part("Qwen3.5", "系列"), Part("9B", "90 亿参数"), Part("Instruct", "对话版"), Part("Q4_K_M", "4 位量化"), Part(".gguf", "格式"),
         )),
@@ -283,21 +284,21 @@ fun ModelGuidePage(onBack: () -> Unit) {
     }
 }
 
-/** 「Qwen3.5 | 9B | Instruct | Q4_K_M | .gguf」 as chips, each with its meaning underneath. */
-@OptIn(ExperimentalLayoutApi::class)
+/** 「Qwen3.5 | 9B | Instruct | Q4_K_M | .gguf」: one row per part, chip on the left and its meaning beside it (aligned columns). */
 @Composable
 private fun NameBreakdown(parts: List<ModelGuide.Part>) {
     val c = Iris.colors
-    FlowRow(
+    Column(
         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space8),
-        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
-        verticalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+        verticalArrangement = Arrangement.spacedBy(IrisDimens.space6),
     ) {
         parts.forEach { p ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(min = 48.dp)) {
-                Text(p.text, style = IrisType.monoSmall, color = c.accent,
-                    modifier = Modifier.clip(IrisRadius.smallShape).background(c.accentContainer).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space4))
-                Text(p.label, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(112.dp)) {
+                    Text(p.text, style = IrisType.secondary, fontWeight = FontWeight.SemiBold, color = c.accent, maxLines = 1,
+                        modifier = Modifier.clip(IrisRadius.smallShape).background(c.accentContainer).padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space2))
+                }
+                Text(p.label, style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.weight(1f))
             }
         }
     }

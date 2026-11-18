@@ -45,7 +45,7 @@ internal fun GenieXSection(vm: SettingsViewModel, gx: GenieXSupport) {
 }
 
 @Composable
-private fun GenieXRuntimeRow(gx: GenieXSupport, onInstall: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit) {
+internal fun GenieXRuntimeRow(gx: GenieXSupport, onInstall: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit) {
     LaunchedEffect(gx) { gx.refreshState() }
     val st by gx.state.collectAsState()
     val chip = gx.chipLabel
@@ -64,7 +64,7 @@ private fun GenieXRuntimeRow(gx: GenieXSupport, onInstall: () -> Unit, onCancel:
             I18n.s(R.string.settings_dc39b3, chip, mb(gx.downloadBytes), mb(gx.installedBytes)) +
                 (if (gx.qairtSupported) "" else I18n.s(R.string.settings_cd84be)) to (I18n.s(R.string.settings_f26ef9) to install)
         is NpuState.Downloading -> I18n.s(R.string.settings_2b5c7e, mb(s.downloaded), mb(s.total)) to (I18n.s(R.string.chat_625fb2) to onCancel)
-        NpuState.Installed -> I18n.s(R.string.settings_d58a87, chip, GenieX.VERSION) to (I18n.s(R.string.chat_2f4aad) to onDelete)
+        NpuState.Installed -> I18n.s(R.string.npu27_geniex_installed, GenieX.VERSION) to (I18n.s(R.string.chat_2f4aad) to onDelete)
         is NpuState.Failed -> s.message to (I18n.s(R.string.settings_132c5c) to install)
         is NpuState.NeedsRepair -> I18n.s(R.string.settings_5a6769, chip, s.reason) to (I18n.s(R.string.settings_f82661) to install)
     }

@@ -553,7 +553,7 @@
     <string name="settings_48b9fe">View the original licenses of third-party components</string>
     <string name="settings_843d86">Open-source components</string>
     <string name="settings_1b6949">Developer options</string>
-    <string name="settings_bdd372">MIT · GGUF inference · v1.0.0</string>
+    <string name="settings_bdd372">MIT · GGUF inference · 785322d</string>
     <string name="settings_fd49fd">Apache-2.0 (modified) · MNN inference · 3.6.1</string>
     <string name="settings_934216">Apache-2.0 · .litertlm inference · 0.18.0</string>
     <string name="settings_ac8dbd">Apache-2.0 · NPU scheduling layer</string>
@@ -583,7 +583,7 @@
     <string name="settings_132c5c">Retry</string>
     <string name="settings_501bdb">%1$s · Incomplete install, needs repair (%2$s). Download again to repair</string>
     <string name="settings_f82661">Repair</string>
-    <string name="settings_42e701">NPU runtime (Qualcomm Hexagon)</string>
+    <string name="settings_42e701">NPU runtime</string>
     <string name="settings_0ccfb8">Qualcomm NPU runtime license</string>
     <string name="settings_513cdf">This runtime (Qualcomm AI Engine Direct / QNN 2.50) is Qualcomm proprietary software, not part of this open-source project, and is downloaded from Maven Central. By downloading you agree to Qualcomm’s license terms.</string>
     <string name="settings_ad7951">Agree &amp; download</string>
@@ -855,7 +855,7 @@
     <string name="agent_2ca522">One thing per entry, e.g. Keep answers brief</string>
     <string name="agent_37f497">%1$s / %2$s chars</string>
     <string name="agent_84fa29">Context, memory and knowledge base</string>
-    <string name="agent_1415ca">When off, memory isn\'t injected and the agent can\'t use the Long-term memory tool</string>
+    <string name="agent_1415ca">Off: memory isn\'t added to prompts and the agent can\'t use it</string>
     <string name="agent_d63f7c">Add a memory snapshot to the agent\'s system prompt at the start of each new chat</string>
     <string name="agent_4edca2">Include the memory snapshot in Chat mode too (uses some context)</string>
     <string name="agent_1025dc">Memory stays on this device, up to 200 items. Say \"Remember: …\" in chat or tap \"Remember?\" to add. Takes effect in new chats.</string>
@@ -1150,7 +1150,7 @@
     <string name="settings_8c4fa6">All stored on this phone, never uploaded</string>
     <string name="settings_949d51">Advanced settings are in Developer options</string>
     <string name="settings_f7ccc4">Indexing and compression details are in About › Developer options</string>
-    <string name="settings_7f2a54">When you say things like \"I am…\" or \"from now on…\", a \"Remember?\" button appears below the reply; tap it to save</string>
+    <string name="settings_7f2a54">Shows “Remember?” under a reply when you mention a preference or fact about you</string>
     <string name="settings_65e375">Use knowledge base in replies</string>
     <string name="settings_cca5e7">When relevant, passages are passed to the model automatically and sources are cited below the reply</string>
     <string name="settings_1cd2f0">Recently remembered:</string>
@@ -1163,7 +1163,7 @@
     <string name="settings_fc69cd">KV shift</string>
     <string name="settings_6649d1">KV context shift</string>
     <string name="settings_0ab786">GenieX (Qualcomm)</string>
-    <string name="settings_9a3ae4">GGUF models use GenieX when NPU is selected. AI Hub QAIRT model folders can be imported directly and run on NPU only.</string>
+    <string name="settings_9a3ae4">GGUF on NPU runs via GenieX; QAIRT model folders can be imported directly.</string>
     <string name="settings_dc39b3">%1$s. Required by the GenieX engine; about %2$s MB download, keeps only the libraries this device uses, about %3$s MB installed</string>
     <string name="settings_cd84be">(QAIRT packages not supported on this device, GGUF only)</string>
     <string name="settings_d58a87">%1$s · Installed (GenieX %2$s)</string>
@@ -2081,7 +2081,7 @@
     <string name="think_lv_low">Low</string>
     <string name="think_lv_mid">Mid</string>
     <string name="think_lv_high">High</string>
-    <string name="about262_privacy">Chats, inference and voice all run on this device, and nothing is uploaded. The network is used only to: download models and voice packs; let the agent search or read web pages with its online tools; serve the local API if you turn it on.</string>
+    <string name="about262_privacy">Chats, inference and voice run on this device. It goes online only to download models, for the agent\'s web tools, or for the local API you turn on.</string>
     <string name="about262_bergamot">MPL-2.0 · Offline translation · main@9271618</string>
     <string name="kb262_embed_tap_dl">Not downloaded · tap to download</string>
     <string name="img262_edit">Edit</string>
@@ -2186,5 +2186,9 @@
     <string name="models_gpu_recheck_ok">Re-checked: GPU is available.</string>
     <string name="models_gpu_recheck_restart">GPU re-enabled; restart the app for it to take effect.</string>
     <string name="models_gpu_recheck_none">Still no OpenCL driver found.</string>
-    <string name="vg27b_note">For regular GGUF models, choose CPU or GPU for vision here. When the model runs on the NPU (GenieX), GenieX handles vision automatically and this setting does not apply. Applies after reload.</string>
+    <string name="vg27b_note">For regular GGUF vision; automatic on NPU</string>
+    <string name="npu27_section">NPU (Qualcomm)</string>
+    <string name="npu27_qnn_installed">Installed · QNN 2.50</string>
+    <string name="npu27_geniex_installed">Installed · GenieX %1$s</string>
+    <string name="ctx27_takeover">Chat follows Developer options; the agent still uses this</string>
 </resources>

@@ -31,6 +31,7 @@ import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.LocalReduceMotion
 
 /**
  * 智能体生图进行中：方形占位框里颜色不停流动 + 进度条（读进度文案里的 “步/总步”，没有就不定进度）。
@@ -67,29 +68,29 @@ object ImageGenLive {
 @Composable
 fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
     val c = Iris.colors
+    val reduce = LocalReduceMotion.current
     val t = rememberInfiniteTransition(label = "imggen")
-    // 一个连续相位驱动全部（无 Reverse 折返、无整格换色），颜色平滑过渡、不闪
-    val phase by t.animateFloat(0f, 1f, infiniteRepeatable(IrisMotion.linearLoop(IrisMotion.IMAGE_GEN_FLOW_MS), RepeatMode.Restart), label = "phase")
-    val palette = remember(c) {
-        listOf(c.accent, c.onAccentContainer, c.danger, c.success, c.warning).map { it.toArgb() }
-    }
+    // 单色调：主题色淡淡铺底 + 一道柔光斜扫（原来多色光斑流动，混色难看）。
+    val sweep by t.animateFloat(0f, 1f, infiniteRepeatable(IrisMotion.linearLoop(IrisMotion.IMAGE_GEN_SHIMMER_MS), RepeatMode.Restart), label = "sweep")
     val target = ImageGenLive.progressOf(line)
     val shown by animateFloatAsState(target ?: 0f, IrisMotion.Gentle.float(), label = "p")
     Column(modifier.padding(start = IrisDimens.space24, top = IrisDimens.space6)) {
         Canvas(Modifier.size(168.dp).clip(IrisRadius.mediumShape)) {
             val w = size.width
             val h = size.height
-            val tau = 2f * Math.PI.toFloat()
-            fun col(off: Float) = Color(ImageGenLive.cyclicArgb(palette, phase + off))
-            // 底色：整块填满（不留透明边，避免露出方框）
-            drawRect(col(0f))
-            // 三个大光斑沿圆周慢慢转，颜色连续变化；淡出到同色透明（不是黑色透明，边缘不发灰）
-            for (k in 0 until 3) {
-                val a = (phase + k / 3f) * tau
-                val center = Offset(w / 2 + kotlin.math.cos(a) * w * 0.32f, h / 2 + kotlin.math.sin(a * 1f) * h * 0.32f)
-                val cc = col(0.25f + k * 0.25f)
-                drawCircle(Brush.radialGradient(listOf(cc.copy(alpha = 0.85f), cc.copy(alpha = 0f)), center = center, radius = w * 0.62f),
-                    radius = w * 0.62f, center = center)
+            drawRect(c.surfaceVariant)
+            drawRect(Brush.linearGradient(
+                listOf(c.accent.copy(alpha = if (c.isDark) 0.10f else 0.06f), c.accent.copy(alpha = if (c.isDark) 0.22f else 0.16f)),
+                start = Offset.Zero, end = Offset(w, h),
+            ))
+            if (!reduce) {
+                // 光带从左上外侧扫到右下外侧；白色高光，深色主题更淡。
+                val x = -w + sweep * 3f * w
+                val hi = Color.White.copy(alpha = if (c.isDark) 0.10f else 0.45f)
+                drawRect(Brush.linearGradient(
+                    listOf(Color.Transparent, hi, Color.Transparent),
+                    start = Offset(x - w * 0.45f, 0f), end = Offset(x + w * 0.45f, h),
+                ))
             }
         }
         Spacer(Modifier.padding(top = IrisDimens.space6))

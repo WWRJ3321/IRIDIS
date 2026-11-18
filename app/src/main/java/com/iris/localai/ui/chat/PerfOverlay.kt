@@ -7,6 +7,8 @@ import com.iris.localai.engine.resources.ThermalGovernor
 import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -60,7 +62,11 @@ fun PerfOverlay(vm: ChatViewModel, generating: Boolean, modifier: Modifier = Mod
     val r = reading
     Column(
         modifier
-            .background(c.surfaceVariant.copy(alpha = 0.92f), IrisRadius.smallShape)
+            // near-opaque card with a hairline edge: it floats over the messages, so the text
+            // under it must not show through (it used to blend with the user's bubble).
+            .shadow(IrisDimens.space4, IrisRadius.smallShape, clip = false)
+            .background(c.surface.copy(alpha = 0.97f), IrisRadius.smallShape)
+            .border(IrisDimens.hairline, c.outline, IrisRadius.smallShape)
             .padding(horizontal = IrisSpace.S, vertical = IrisDimens.space6),
     ) {
         val style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight)

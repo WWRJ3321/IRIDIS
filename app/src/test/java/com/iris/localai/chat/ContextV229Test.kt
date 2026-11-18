@@ -50,7 +50,7 @@ class ContextV229Test {
         }
         assertFalse(ContextAssembly.devTakeover(ContextStrategy.TOKEN_BUDGET))
         for (st in ContextStrategy.entries.filter { it != ContextStrategy.TOKEN_BUDGET }) assertTrue(ContextAssembly.devTakeover(st))
-        assertEquals("已由开发者选项接管", ContextAssembly.TAKEOVER)
+        assertEquals("对话由开发者选项接管，智能体仍按此项", ContextAssembly.TAKEOVER)
     }
 
     @Test fun usageAndTidyTexts() {

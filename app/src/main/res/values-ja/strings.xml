@@ -553,7 +553,7 @@
     <string name="settings_48b9fe">各サードパーティコンポーネントのライセンス原文を表示</string>
     <string name="settings_843d86">オープンソースコンポーネント</string>
     <string name="settings_1b6949">開発者向けオプション</string>
-    <string name="settings_bdd372">MIT · GGUF 推論 · v1.0.0</string>
+    <string name="settings_bdd372">MIT · GGUF 推論 · 785322d</string>
     <string name="settings_fd49fd">Apache-2.0（改変あり）· MNN 推論 · 3.6.1</string>
     <string name="settings_934216">Apache-2.0 · .litertlm 推論 · 0.18.0</string>
     <string name="settings_ac8dbd">Apache-2.0 · NPU スケジューリング層</string>
@@ -583,7 +583,7 @@
     <string name="settings_132c5c">再試行</string>
     <string name="settings_501bdb">%1$s · インストールが不完全で修復が必要です（%2$s）。再ダウンロードで修復できます</string>
     <string name="settings_f82661">修復</string>
-    <string name="settings_42e701">NPU ランタイム（Qualcomm Hexagon）</string>
+    <string name="settings_42e701">NPU ランタイム</string>
     <string name="settings_0ccfb8">Qualcomm NPU ランタイムのライセンス</string>
     <string name="settings_513cdf">このランタイム（Qualcomm AI Engine Direct / QNN 2.50）は Qualcomm の独自ソフトウェアで、本プロジェクトのオープンソース部分ではなく、Maven Central からダウンロードされます。ダウンロードすると Qualcomm のライセンス条項に同意したものとみなされます。</string>
     <string name="settings_ad7951">同意してダウンロード</string>
@@ -855,7 +855,7 @@
     <string name="agent_2ca522">1件に1つ。例: 回答はなるべく簡潔に</string>
     <string name="agent_37f497">%1$s / %2$s 文字</string>
     <string name="agent_84fa29">コンテキスト・記憶・ナレッジベース</string>
-    <string name="agent_1415ca">オフにすると記憶は注入されず、エージェントは「長期記憶」ツールを使えません</string>
+    <string name="agent_1415ca">オフにすると記憶を注入せず、エージェントも記憶ツールを使えません</string>
     <string name="agent_d63f7c">新しい会話の開始時に記憶のスナップショットをエージェントのシステムプロンプトに入れる</string>
     <string name="agent_4edca2">チャットモードでも記憶スナップショットを含める（コンテキストを一部使用）</string>
     <string name="agent_1025dc">記憶は端末内のみに保存され、最大200件です。チャットで「覚えて：…」と言うか「覚える？」をタップすると追加され、新しい会話から反映されます。</string>
@@ -1150,7 +1150,7 @@
     <string name="settings_8c4fa6">すべてこのスマホに保存され、アップロードされません</string>
     <string name="settings_949d51">詳細設定は開発者向けオプションにあります</string>
     <string name="settings_f7ccc4">インデックスと圧縮の詳細は 情報 › 開発者向けオプション にあります</string>
-    <string name="settings_7f2a54">「私は…」「今後は…」のような発言があると、回答の下に「記憶する？」が表示され、タップすると保存されます</string>
+    <string name="settings_7f2a54">好みや自分のことを話すと、回答の下に「覚える？」を表示</string>
     <string name="settings_65e375">回答時にナレッジベースを参照</string>
     <string name="settings_cca5e7">関連する質問では該当箇所を自動でモデルに渡し、回答の下に出典を表示します</string>
     <string name="settings_1cd2f0">最近覚えたこと：</string>
@@ -1163,7 +1163,7 @@
     <string name="settings_fc69cd">KVシフト</string>
     <string name="settings_6649d1">KVコンテキストシフト</string>
     <string name="settings_0ab786">GenieX（Qualcomm）</string>
-    <string name="settings_9a3ae4">GGUFモデルでNPUを選ぶとGenieXで実行します。AI Hub QAIRTモデルのフォルダは直接インポートでき、NPUでのみ動作します。</string>
+    <string name="settings_9a3ae4">GGUF を NPU で使うと GenieX で動作。QAIRT モデルフォルダーはそのまま読み込めます。</string>
     <string name="settings_dc39b3">%1$s。GenieXエンジンに必要です。約%2$s MBをダウンロードし、この端末で使うライブラリだけを残します。インストール後は約%3$s MB</string>
     <string name="settings_cd84be">（この端末はQAIRTパッケージ非対応、GGUFのみ）</string>
     <string name="settings_d58a87">%1$s · インストール済み（GenieX %2$s）</string>
@@ -2081,7 +2081,7 @@
     <string name="think_lv_low">低</string>
     <string name="think_lv_mid">中</string>
     <string name="think_lv_high">高</string>
-    <string name="about262_privacy">会話・推論・音声はすべて端末内で処理し、内容はアップロードされません。ネットに接続するのは次の場合だけです：モデルや音声パックのダウンロード、エージェントのオンラインツールによる検索やウェブ閲覧、ローカル API をオンにしたとき。</string>
+    <string name="about262_privacy">会話・推論・音声はすべて端末内で完結。ネット接続はモデルのダウンロード、エージェントのウェブ検索、ローカル API を有効にした時だけ。</string>
     <string name="about262_bergamot">MPL-2.0 · オフライン翻訳 · main@9271618</string>
     <string name="kb262_embed_tap_dl">未ダウンロード · タップしてダウンロード</string>
     <string name="img262_edit">編集</string>
@@ -2186,5 +2186,9 @@
     <string name="models_gpu_recheck_ok">再検出しました：GPU は使用できます。</string>
     <string name="models_gpu_recheck_restart">GPU を再び有効にしました。アプリを再起動すると反映されます。</string>
     <string name="models_gpu_recheck_none">OpenCL ドライバが見つかりません。</string>
-    <string name="vg27b_note">通常の GGUF モデルの画像認識はここで CPU / GPU を選びます。モデルが NPU（GenieX）で動く場合は GenieX が自動で処理し、この設定は影響しません。再読み込みで有効。</string>
+    <string name="vg27b_note">通常の GGUF の画像認識用。NPU では自動</string>
+    <string name="npu27_section">NPU（Qualcomm）</string>
+    <string name="npu27_qnn_installed">インストール済み · QNN 2.50</string>
+    <string name="npu27_geniex_installed">インストール済み · GenieX %1$s</string>
+    <string name="ctx27_takeover">会話は開発者オプションに従い、エージェントはこの設定を使用</string>
 </resources>

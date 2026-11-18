@@ -148,7 +148,9 @@ internal fun ChatViewModel.compactIfNeeded(agentMode: Boolean, ready: EngineStat
     val eff = c.engine.effective(ready?.model)
     val baseSystem = if (agentMode) {
         val ag = c.agent.settings.current
-        AgentTools.all.filter { ag.isEnabled(it) }.let { t ->
+        // the tools the reply will really list (memory off / no image model drop theirs), so the
+        // fixed part is not over-counted and compaction does not start early.
+        AgentTools.enabled(ag, c.agent.history != null, ms.enabled, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached()).let { t ->
             agentSystem(t, cardSystem(conv, eff.systemPrompt, ready), ready?.model?.fileName)
         }
     } else withLang(cardSystem(conv, eff.systemPrompt, ready).trim())
