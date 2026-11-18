@@ -1,5 +1,11 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.core
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.context.ToolRollup
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import com.iris.localai.engine.PromptMessage
 import com.iris.localai.util.TokenEstimator
 import kotlinx.coroutines.CancellationException
@@ -22,28 +28,15 @@ data class AgentStep(
     val status: StepStatus = StepStatus.RUNNING,
     /** Tool output as the model saw it (capped), for the expanded card. */
     val detail: String = "",
-    /** 1.13.3: what the model thought/wrote in the turn that made this call (shown above the card). */
+    /** what the model thought/wrote in the turn that made this call (shown above the card). */
     val lead: String = "",
-    /** 2.1.0: the card header for people (搜索「q」, 读取 a.txt); [args] stays the model-facing form. */
+    /** the card header for people (搜索「q」, 读取 a.txt); [args] stays the model-facing form. */
     val title: String = "",
-    /** 2.1.0: the plan after a `plan` step, drawn as a checklist (never from [detail]). */
+    /** the plan after a `plan` step, drawn as a checklist (never from [detail]). */
     val plan: Plan? = null,
-    /** 2.1.7: workspace-relative pictures the step made (generate_image), drawn as thumbnails. */
+    /** workspace-relative pictures the step made (generate_image), drawn as thumbnails. */
     val images: List<String> = emptyList(),
 )
-
-/** 2.1.7: pictures of a reply's steps, appended to its text as markdown images. Pure. */
-object StepImages {
-    fun of(steps: List<AgentStep>): List<String> = steps.flatMap { it.images }.distinct()
-
-    /** [text] plus `![](path)` for each step image the text does not mention yet. */
-    fun appendTo(text: String, steps: List<AgentStep>): String {
-        val missing = of(steps).filter { !text.contains(it) }
-        if (missing.isEmpty()) return text
-        val md = missing.joinToString("\n") { "![]($it)" }
-        return if (text.isBlank()) md else "$text\n\n$md"
-    }
-}
 
 /**
  * The system prompt for 智能体 mode: compact (2.3: ≤ 600 estimated tokens with every tool on),
@@ -51,7 +44,7 @@ object StepImages {
  */
 object AgentPrompt {
     /**
-     * 1.10.12: how the model is told to call tools. Qwen-family models (Qwen2.5/3, Agents-A1,
+     * how the model is told to call tools. Qwen-family models (Qwen2.5/3, Agents-A1,
      * DeepSeek-R1-Distill-Qwen, Hermes) are trained on `<tool_call>{"name":…,"arguments":…}</tool_call>`;
      * everything else gets the neutral fenced block. The parser accepts both either way.
      */
@@ -61,16 +54,16 @@ object AgentPrompt {
         val n = modelName.orEmpty().lowercase()
         return if (QWEN_HINTS.any { n.contains(it) }) CallStyle.QWEN else CallStyle.FENCE
     }
-    /** 2.6.7: the 先问清楚 rule (one line; only when the switch is on). */
+    /** the 先问清楚 rule (one line; only when the switch is on). */
     const val ASK_FIRST = "- Task or image request missing key details (what, style, size, which file…)? Ask 1–2 short questions first and wait; don't guess. Clear requests: just do it."
 
     private val QWEN_HINTS = listOf("qwen", "agents-a1", "agents_a1", "hermes", "qwq", "minicpm4", "internlm3")
 
     /**
-     * 1.10.12: system prompt laid out after Claude Code's: who you are → rules → how to call tools
+     * system prompt laid out after Claude Code's: who you are → rules → how to call tools
      * (one concrete example) → tools → environment. Short imperative lines, one rule each.
      *
-     * 2.3 (预填充提速): ordered for KV-cache prefix reuse — everything that never changes within a
+     * 预填充提速: ordered for KV-cache prefix reuse — everything that never changes within a
      * conversation comes first and is byte-identical between turns (persona, rules, call format,
      * the enabled tools in a fixed order), then the semi-stable parts (skills, plan-mode switch,
      * the user's own instructions, the frozen long-term memory). Nothing volatile lives here: the
@@ -81,25 +74,25 @@ object AgentPrompt {
      */
     fun build(
         tools: List<AgentTool>, userSystem: String = "", style: CallStyle = CallStyle.FENCE,
-        /** 1.12.0: skills found in the workspace (listed only while the skill tool is on). */
+        /** skills found in the workspace (listed only while the skill tool is on). */
         skills: List<SkillInfo> = emptyList(),
-        /** 1.14.0 按需载入: [ActivateTool.LAZY] groups are listed by name only. */
+        /** 按需载入: [ActivateTool.LAZY] groups are listed by name only. */
         lazy: Boolean = false,
-        /** 1.14.0 计划模式: plan first, wait for the user's OK, then do it. */
+        /** 计划模式: plan first, wait for the user's OK, then do it. */
         planFirst: Boolean = false,
-        /** 2.3: the frozen long-term-memory block (last: semi-stable, after the user's instructions). */
+        /** the frozen long-term-memory block (last: semi-stable, after the user's instructions). */
         memory: String = "",
-        /** 2.6.7 先问清楚: vague task / image request → ask 1–2 short questions first. */
+        /** 先问清楚: vague task / image request → ask 1–2 short questions first. */
         askFirst: Boolean = false,
     ): String = buildString {
-        // 2.3: fixed tool order whatever the caller passes (byte-identical prefix for the KV cache).
+        // fixed tool order whatever the caller passes (byte-identical prefix for the KV cache).
         val tools = tools.distinct().sortedBy { t -> TOOL_ORDER.indexOf(t.name).let { if (it < 0) Int.MAX_VALUE else it } }
         append("You are IRIS, an AI agent on the user's Android phone.\n\n")
 
         append("# Rules\n")
         append("- Reply in Chinese, concise. Never claim actions you didn't take.\n")
         append("- Chat/simple questions: plain text with NO tool block (\"system\" is not a tool).\n")
-        // 2.1.7: "then report their findings" was lost in the 2.1.6 trim ("When done, answer briefly
+        // "then report their findings" was lost in the 2.1.6 trim ("When done, answer briefly
         // with what you did"): small models ended a news search with "已搜索" or nothing at all.
         append("- Use tools only if needed, then report their findings; fix a failed one once or say so.\n")
         if (askFirst) append(ASK_FIRST).append('\n')
@@ -108,7 +101,7 @@ object AgentPrompt {
         append("# Tool calls\n")
         append("Call a tool with ONLY this, then stop and wait:\n")
         if (style == CallStyle.QWEN) {
-            // 2.2.13: placeholder example — small models copied the old read_file("notes/todo.md") literally.
+            // placeholder example — small models copied the old read_file("notes/todo.md") literally.
             append("<tool_call>\n{\"name\": \"工具名\", \"arguments\": {\"参数\": \"值\"}}\n</tool_call>\n")
         } else {
             append("```tool\n{\"tool\": \"工具名\", \"args\": {\"参数\": \"值\"}}\n```\n")
@@ -118,9 +111,9 @@ object AgentPrompt {
         append("- Only the names below; asked about tools, reply in words.\n\n")
 
         if (tools.isNotEmpty()) {
-            // 1.12.0: grouped, one shared hint per group. Group order and tool order are fixed
+            // grouped, one shared hint per group. Group order and tool order are fixed
             // (enum order, then [AgentTools.all] order), so the text is identical turn after turn.
-            // 2.3: the time format once in the header (phone + schedule; also for activate'd groups).
+            // the time format once in the header (phone + schedule; also for activate'd groups).
             append("# Tools (? = optional")
             if (tools.any { it.promptLine.contains("time?") }) append("; time = ").append(TIME_FORMAT).append(", local")
             append(")\n")
@@ -159,14 +152,14 @@ object AgentPrompt {
     }.trimEnd()
 
     /**
-     * 2.3: the conversation's unfinished plan, added to the newest user turn of an agent run (it
+     * the conversation's unfinished plan, added to the newest user turn of an agent run (it
      * used to sit in the system prompt, where every plan update forced a full re-prefill). It is
      * re-added on every run, so compaction can still never drop it.
      */
     fun planNote(plan: Plan?): String? =
         plan?.takeIf { it.steps.isNotEmpty() && !it.finished }?.promptBlock()
 
-    /** 2.3: [planNote] appended to the last user message of [messages] (prompt only). */
+    /** [planNote] appended to the last user message of [messages] (prompt only). */
     fun withPlanNote(messages: List<PromptMessage>, plan: Plan?): List<PromptMessage> {
         val note = planNote(plan) ?: return messages
         val i = messages.indexOfLast { it.role == PromptMessage.USER }
@@ -176,7 +169,7 @@ object AgentPrompt {
 
     const val MAX_SKILLS_LISTED = 12
     const val SKILL_DESC_MAX = 100
-    /** 2.3: how phone / schedule take a time (stated once in the tools header). */
+    /** how phone / schedule take a time (stated once in the tools header). */
     const val TIME_FORMAT = "\"[yyyy-MM-dd ]HH:mm\""
     private val TOOL_ORDER: List<String> by lazy { (AgentTools.all + AgentTools.onDemand).map { it.name } }
 
@@ -186,22 +179,22 @@ object AgentPrompt {
 fun retryHint(error: String): String =
         "<tool_response>\nError: your tool call could not be read ($error). Reply again with exactly one tool call " +
             "in the format from the system prompt (valid JSON, double quotes), or answer without any tool.\n</tool_response>"
-    /** 1.13.0: the model wrote a 〔本轮已执行的工具〕 log itself — nothing ran. */
+    /** the model wrote a 〔本轮已执行的工具〕 log itself — nothing ran. */
     const val FAKE_LOG_HINT =
         "<tool_response>\nError: no tool ran. You wrote a tool log yourself and its results are invented. " +
             "That block in history is written by the app, never by you. If you need a tool, reply with exactly one real tool call " +
             "in the format from the system prompt; otherwise answer the user without that block.\n</tool_response>"
 
-    /** 1.10.4: silent retry hint after a call to a tool that does not exist. */
+    /** silent retry hint after a call to a tool that does not exist. */
     fun unknownToolHint(name: String, available: Set<String>): String =
         "<tool_response>\nError: there is no tool \"$name\". Do not guess tool names. Use one of: ${available.joinToString()} — or answer the user in plain text without any tool.\n</tool_response>"
 
     const val STEP_LIMIT = "Step limit reached. Do not call any more tools. Answer the user in Chinese now with what the tool results above show, and what is left."
     /**
-     * 2.1.7: added to the newest user turn when a reply came back empty (only thinking, a call
+     * added to the newest user turn when a reply came back empty (only thinking, a call
      * buried in unfinished thinking, or nothing): one more turn to give the actual answer.
      */
-    /** 2.2.2: the user picked [tool] with @ but the reply did not call it. */
+    /** the user picked [tool] with @ but the reply did not call it. */
     fun mustCall(tool: String): String = if (tool == "screen")
         "(The user picked the screen tool: you CAN operate this phone through it. Call screen now with the task in the user's words. Do not refuse or explain.)"
     else "(The user picked the $tool tool for this request. Call $tool now.)"
@@ -227,13 +220,13 @@ interface AgentCallbacks {
     fun onText(text: String) {}
     /** 总是允许 was chosen. */
     fun onAlwaysAllow(tool: AgentTool) {}
-    /** 1.12.0: 总是允许 for one call (remembers the whole tool). */
+    /** 总是允许 for one call (remembers the whole tool). */
     fun onAlwaysAllowCall(tool: AgentTool, call: ToolCall) = onAlwaysAllow(tool)
     /** A tool changed the workspace (write / edit / delete). */
     fun onWorkspaceChanged() {}
-    /** 1.10.0: the memory tool changed USER.md / MEMORY.md. */
+    /** the memory tool changed USER.md / MEMORY.md. */
     fun onMemoryChanged() {}
-    /** 2.1.7: a tool is about to run (permission granted) — voice speaks a short 「我查一下」. */
+    /** a tool is about to run (permission granted) — voice speaks a short 「我查一下」. */
     suspend fun beforeTool(tool: AgentTool, call: ToolCall) {}
 }
 
@@ -246,7 +239,7 @@ data class AgentOutcome(
     val stop: AgentStop,
     val error: String? = null,
     /**
-     * 1.10.6: the whole prompt of this run as the engine saw it (system, history, every tool call
+     * the whole prompt of this run as the engine saw it (system, history, every tool call
      * and result, and the final answer). The next 智能体 turn continues from it, so the engine's
      * KV cache is reused and the model keeps the tool results of earlier turns.
      */
@@ -254,7 +247,7 @@ data class AgentOutcome(
 )
 
 /**
- * 1.9.0 Pi-style minimal agent loop: model → parse → permission → execute → result appended →
+ * Pi-style minimal agent loop: model → parse → permission → execute → result appended →
  * again, until the model answers without a tool, [maxSteps] tool calls ran, or the coroutine is
  * cancelled (stop button; [CancellationException] propagates). A call that cannot be parsed is
  * retried once with an error hint. Older tool outputs are elided when the history outgrows
@@ -273,13 +266,13 @@ class AgentLoop(
     /** Runs a tool off the caller's thread (Dispatchers.IO in the app). */
     private val runTool: suspend (() -> ToolResult) -> ToolResult = { it() },
     /**
-     * 2.1.7: what the user added while the run was going (「用户补充：…」), read before every model
+     * what the user added while the run was going (「用户补充：…」), read before every model
      * step; it rides on the newest user-side message (not yet prefilled, so the KV prefix stays).
      */
     private val pendingNotes: () -> String? = { null },
-    /** 2.2.2: tools the user picked with @ for this turn; a reply that skips them is pushed once. */
+    /** tools the user picked with @ for this turn; a reply that skips them is pushed once. */
     private val requiredTools: List<String> = emptyList(),
-    /** 2.2.2: the user's own words, run as the `screen` task when the model still refuses. */
+    /** the user's own words, run as the `screen` task when the model still refuses. */
     private val userTask: String = "",
 ) {
     private val steps = ArrayList<AgentStep>()
@@ -293,10 +286,10 @@ class AgentLoop(
         var echoRetried = false
         var nudged = false
         var toolPushed = false
-        // 2.2.8: raw text of each unreadable call attempt (kept in the UI and logged), and the card of attempt 1.
+        // raw text of each unreadable call attempt (kept in the UI and logged), and the card of attempt 1.
         val failedRaw = ArrayList<String>()
         var retryStep: AgentStep? = null
-        // 2.2.5: the tolerant parser fallback recognises exactly the tools of this run.
+        // the tolerant parser fallback recognises exactly the tools of this run.
         ToolCallParser.knownTools = tools.map { it.name }.toSet()
         while (true) {
             currentCoroutineContext().ensureActive()
@@ -306,13 +299,13 @@ class AgentLoop(
             val turn = model.complete(msgs.toList()) { callbacks.onText(ToolCallParser.visibleText(it)) }
             android.util.Log.i(AGENT_TAG, "step $calls: llm=${System.currentTimeMillis() - tLlm0}ms msgs=${msgs.size} prompt~${msgs.sumOf { it.content.length / 4 }}tok raw=\"${turn.text.take(500).replace('\n', ' ')}\"")
             if (turn.error != null) return AgentOutcome(turn.text, steps.toList(), AgentStop.ERROR, turn.error)
-            // 2.1.7: a call written inside unfinished thinking (the stream is cut right after it, so
+            // a call written inside unfinished thinking (the stream is cut right after it, so
             // the think block never closes) used to leave an empty answer: run that call instead.
-            // 2.2.14: a call that only appears inside thinking is not run (was callInOpenThink).
+            // a call that only appears inside thinking is not run (was callInOpenThink).
             val answer = answerOf(turn.text)
             var parsed = ToolCallParser.fillMainArg(ToolCallParser.parse(answer), userTask)
             retryStep?.let { if (parsed !is ParsedReply.Malformed) { update(it.copy(result = "已重试")); retryStep = null } }
-            // 2.2.2: the user picked a tool (@screen) but the reply skips it — small local models
+            // the user picked a tool (@screen) but the reply skips it — small local models
             // often refuse. Push once; if it still refuses, run `screen` with the user's own words.
             val missing = requiredTools.firstOrNull { r -> tools.any { it.name == r } && steps.none { it.tool == r } }
             if (parsed is ParsedReply.Final && missing != null && calls < maxSteps) {
@@ -332,17 +325,17 @@ class AgentLoop(
             }
             when (val p = parsed) {
                 is ParsedReply.Final -> {
-                    // 1.13.0: the model wrote a fake tool log (copied from history) instead of calling.
-                    if (com.iris.localai.context.ToolRollup.hasEcho(answer) && !echoRetried) {
+                    // the model wrote a fake tool log (copied from history) instead of calling.
+                    if (ToolRollup.hasEcho(answer) && !echoRetried) {
                         echoRetried = true
                         android.util.Log.w(AGENT_TAG, "fake tool log in answer (silent retry)")
                         msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim())
                         msgs += PromptMessage(PromptMessage.USER, AgentPrompt.FAKE_LOG_HINT)
                         continue
                     }
-                    val clean = com.iris.localai.context.ToolRollup.stripEcho(answer.trim())
+                    val clean = ToolRollup.stripEcho(answer.trim())
                     if (clean.isBlank()) {
-                        // 2.1.7: an empty answer (thinking only / hit the length cap) showed the user
+                        // an empty answer (thinking only / hit the length cap) showed the user
                         // nothing after a search. One forced follow-up, then the results themselves.
                         if (!nudged) {
                             nudged = true
@@ -356,7 +349,7 @@ class AgentLoop(
                                 transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, answerOf(text).trim()))
                         }
                     }
-                    return AgentOutcome(ToolCallParser.stripCalls(com.iris.localai.context.ToolRollup.stripEcho(turn.text)), steps.toList(), AgentStop.DONE,
+                    return AgentOutcome(ToolCallParser.stripCalls(ToolRollup.stripEcho(turn.text)), steps.toList(), AgentStop.DONE,
                         transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, clean))
                 }
                 is ParsedReply.Malformed -> {
@@ -364,8 +357,8 @@ class AgentLoop(
                     logRaw(failedRaw.size, p.error, turn.text)
                     if (retried) {
                         // Second unreadable call in a row: stop and show what the model wrote.
-                        // 2.2.5: the unreadable markup is hidden; only the prose before it stays.
-                        // 2.2.8: the raw output of every failed attempt stays one tap away.
+                        // the unreadable markup is hidden; only the prose before it stays.
+                        // the raw output of every failed attempt stays one tap away.
                         retryStep?.let { update(it.copy(result = "重试后仍无法识别")); retryStep = null }
                         steps += AgentStep(tool = FORMAT_ERROR, title = "查看原始输出", result = p.error, status = StepStatus.ERROR,
                             detail = failedRaw.mapIndexed { i, r -> "── 第 ${i + 1} 次输出 ──\n${r.trim()}" }.joinToString("\n\n"))
@@ -373,7 +366,7 @@ class AgentLoop(
                         return AgentOutcome(ToolCallParser.stripCalls(p.before), steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
                     }
                     retried = true
-                    // 2.2.8: attempt 1 is kept (folded) instead of being replaced by attempt 2's stream.
+                    // attempt 1 is kept (folded) instead of being replaced by attempt 2's stream.
                     android.util.Log.w(AGENT_TAG, "malformed call (retry): ${p.error}")
                     AgentStep(tool = FORMAT_ERROR, title = "第 1 次输出（格式无法识别）", result = "工具格式不对，正在重试…",
                         status = StepStatus.ERROR, detail = turn.text.trim()).let { retryStep = it; publish(it) }
@@ -386,33 +379,33 @@ class AgentLoop(
                     if (calls >= maxSteps) return finishAtLimit(msgs, fixed, p)
                     calls++
                     var call = p.call
-                    // 1.10.4: a misnamed call (ls/cat/…) is fixed to a real tool silently.
+                    // a misnamed call (ls/cat/…) is fixed to a real tool silently.
                     val avail = tools.map { it.name }.toSet()
                     if (call.name !in avail) ToolCallParser.canonicalizeName(call.name, avail)?.let { fixed0 ->
                         android.util.Log.i(AGENT_TAG, "alias: ${call.name} -> $fixed0")
                         call = call.copy(name = fixed0)
                     }
-                    // 1.13.3: a skill called like a tool (daily-news{…}) → skill(name=daily-news).
+                    // a skill called like a tool (daily-news{…}) → skill(name=daily-news).
                     if (call.name !in avail && SkillTool.name in avail && env.skills?.find(call.name) != null) {
                         android.util.Log.i(AGENT_TAG, "skill as tool: ${call.name} -> skill")
                         call = call.copy(name = SkillTool.name, args = kotlinx.serialization.json.buildJsonObject { put("name", kotlinx.serialization.json.JsonPrimitive(call.name)) })
                     }
                     val tool = tools.firstOrNull { it.name == call.name }
-                    // 2.2.5: optional input files that do not exist (generate_image image="notes/x.png"
+                    // optional input files that do not exist (generate_image image="notes/x.png"
                     // invented by a small model) are dropped, so the call runs without them.
                     if (tool != null) call = call.copy(args = dropMissingInputs(tool.name, call.args, env))
                     var step = AgentStep(tool = call.name, args = Args.summary(call.args), lead = ToolCallParser.visibleText(turn.text).trim(),
                         title = StepTitle.of(call.name, call.args))
                     val stepStart = System.currentTimeMillis()
                     if (tool == null && !unknownRetried) {
-                        // 1.10.4: first unknown tool — silent retry with a hint, no red card.
+                        // first unknown tool — silent retry with a hint, no red card.
                         unknownRetried = true
                         android.util.Log.w(AGENT_TAG, "unknown tool \"${call.name}\" (silent retry); raw=${call.args.toString().take(200)}")
                         msgs += PromptMessage(PromptMessage.ASSISTANT, rawCall(answer, call))
                         msgs += PromptMessage(PromptMessage.USER, AgentPrompt.unknownToolHint(call.name, avail))
                         continue
                     }
-                    // 2.4.5 (#11): a write the length limit cut off saves its complete lines only, then
+                    // a write the length limit cut off saves its complete lines only, then
                     // asks for the rest with append=true (it used to save the cut text and say OK).
                     var cut: AgentOutput.Cut? = null
                     var cutNothing = false
@@ -429,7 +422,7 @@ class AgentLoop(
                     val status: StepStatus
                     if (cutNothing) {
                         result = ToolResult(false, AgentOutput.nothingNote(Args.str(call.args, "path", "file", "file_path", "filename")),
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.agent245_cut_nothing))
+                            I18n.s(R.string.agent245_cut_nothing))
                         status = StepStatus.ERROR
                     } else if (tool == null) {
                         // Still unknown after the retry: a gray note, not a red error card.
@@ -452,14 +445,14 @@ class AgentLoop(
                             callbacks.beforeTool(tool, call)
                             result = try {
                                 if (tool is SuspendTool) {
-                                    // 1.12.0: long-running tool (process_file) — progress goes into its card.
+                                    // long-running tool (process_file) — progress goes into its card.
                                     val running = step
                                     tool.runSuspend(call.args, env) { p -> update(running.copy(result = p)) }
                                 } else runTool { tool.run(call.args, env) }
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (t: Throwable) {
-                                // 1.12.0: a wrong-argument error carries the tool's full signature.
+                                // a wrong-argument error carries the tool's full signature.
                                 val usage = if (t is IllegalArgumentException) "\nUsage: ${tool.promptLine}" else ""
                                 ToolResult(false, "Error: ${t.message ?: t.javaClass.simpleName}$usage", (t.message ?: "执行失败").take(40))
                             }
@@ -475,12 +468,12 @@ class AgentLoop(
                             val appended = Args.bool(call.args, "append") == true
                             result = result.copy(
                                 output = result.output + "\n" + AgentOutput.continueNote(path, k, appended),
-                                summary = com.iris.localai.I18n.s(com.iris.localai.R.string.agent245_cut_saved, k.lines),
+                                summary = I18n.s(R.string.agent245_cut_saved, k.lines),
                             )
                         }
                     }
                     update(step.copy(result = result.summary, status = status, detail = result.output, plan = result.plan, images = result.images))
-                    // 1.10.6: the model's own text (cut at the end of its call), not a rewritten
+                    // the model's own text (cut at the end of its call), not a rewritten
                     // canonical block: it matches what the engine decoded, so the KV cache is kept.
                     msgs += PromptMessage(PromptMessage.ASSISTANT, rawCall(answer, call))
                     msgs += PromptMessage(PromptMessage.USER, AgentPrompt.toolResponse(call.name, result))
@@ -489,7 +482,7 @@ class AgentLoop(
         }
     }
 
-    /** 2.1.7: appends [note] to the newest user-side message (a tool result or the request), or adds one. */
+    /** appends [note] to the newest user-side message (a tool result or the request), or adds one. */
     private fun injectNote(msgs: MutableList<PromptMessage>, note: String) {
         val i = msgs.lastIndex
         if (i >= 0 && msgs[i].role == PromptMessage.USER) msgs[i] = msgs[i].copy(content = msgs[i].content.trimEnd() + "\n\n" + note.trim())
@@ -497,7 +490,7 @@ class AgentLoop(
         android.util.Log.i(AGENT_TAG, "user note injected (${note.length} chars)")
     }
 
-    /** 2.2.5: optional reference-file args per tool (inputs only — never output paths). */
+    /** optional reference-file args per tool (inputs only — never output paths). */
     private val OPTIONAL_INPUTS = mapOf(GenerateImageTool.name to listOf("image", "init_image", "image_path", "path"))
 
     private fun dropMissingInputs(tool: String, args: kotlinx.serialization.json.JsonObject, env: ToolEnv): kotlinx.serialization.json.JsonObject {
@@ -523,7 +516,7 @@ class AgentLoop(
             is ParsedReply.Call -> r.before
             is ParsedReply.Malformed -> r.before
         }
-        // 2.1.7: nothing said at the limit → the newest tool results instead of an empty bubble.
+        // nothing said at the limit → the newest tool results instead of an empty bubble.
         val said = if (r is ParsedReply.Final) r.text else text
         if (turn.error == null && said.isBlank()) text = closeThink(turn.text.takeIf { r is ParsedReply.Final }.orEmpty()) + fallbackAnswer(steps)
         return AgentOutcome(text, steps.toList(), AgentStop.MAX_STEPS, turn.error,
@@ -531,7 +524,7 @@ class AgentLoop(
     }
 
     /**
-     * 2.1.7: [note] added to the newest user message (a tool response or the request) rather than as
+     * [note] added to the newest user message (a tool response or the request) rather than as
      * a new message, so roles still alternate (Gemma-style templates reject two user turns).
      */
     private fun nudge(msgs: MutableList<PromptMessage>, note: String) {
@@ -543,7 +536,7 @@ class AgentLoop(
     /** The model's reply as written (already cut after its call); the canonical block if it is empty. */
     private fun rawCall(answer: String, call: ToolCall): String = answer.trim().ifEmpty { call.canonical() }
 
-    /** 2.2.8: the raw output of an unreadable call attempt, in logcat-sized pieces. */
+    /** the raw output of an unreadable call attempt, in logcat-sized pieces. */
     private fun logRaw(attempt: Int, error: String, raw: String) {
         android.util.Log.w(AGENT_TAG, "unreadable call attempt $attempt ($error), raw ${raw.length} chars:")
         raw.chunked(3000).forEachIndexed { i, c -> android.util.Log.w(AGENT_TAG, "raw[$attempt.$i] $c") }
@@ -551,7 +544,7 @@ class AgentLoop(
 
     private fun publish(s: AgentStep) {
         steps += s; callbacks.onSteps(steps.toList())
-        // 1.13.3: the turn's text now lives on the step (above its card); the live text starts over.
+        // the turn's text now lives on the step (above its card); the live text starts over.
         callbacks.onText("")
     }
 
@@ -612,7 +605,7 @@ class AgentLoop(
 
     companion object {
         const val FORMAT_ERROR = "格式错误"
-        /** 1.10.4: step timing + raw-output log tag (adb logcat -s IrisAgent). */
+        /** step timing + raw-output log tag (adb logcat -s IrisAgent). */
         const val AGENT_TAG = "IrisAgent"
         /** Characters of an earlier turn's tool output kept before it is stubbed out. */
         const val EARLIER_KEEP = 600
@@ -641,7 +634,7 @@ class AgentLoop(
         }
 
         /**
-         * 2.1.7: what the user sees when the model said nothing after its tools: the newest
+         * what the user sees when the model said nothing after its tools: the newest
          * successful tool output (search hits with snippets, page text), header and truncation
          * notes removed, capped; or a short note naming the tools that ran.
          */

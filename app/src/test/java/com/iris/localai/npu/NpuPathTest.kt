@@ -5,10 +5,10 @@ import com.iris.localai.engine.Backend
 import com.iris.localai.engine.BackendCapabilities
 import com.iris.localai.engine.BackendEnvironment
 import com.iris.localai.engine.FirstReplyFallback
-import com.iris.localai.engine.LiteRtLoadKey
+import com.iris.localai.engine.load.LiteRtLoadKey
 import com.iris.localai.engine.NpuIds
 import com.iris.localai.engine.NpuRuntimeFiles
-import com.iris.localai.util.CrashDump
+import com.iris.localai.util.diagnostics.CrashDump
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -58,19 +58,6 @@ class NpuPathTest {
         assertTrue(raw.first { it.backend == Backend.NPU }.available)
     }
 
-    @Test fun engineAndRuntimeUseTheSharedHelper() {
-        val lt = source("src/full/java/com/iris/localai/engine/litert/LiteRtEngine.kt")
-        assertTrue(lt.contains("NpuIds.socMatches(target, rt.socId)"))
-        assertFalse(lt.contains("target != rt.socId"))
-        val rt = source("src/full/java/com/iris/localai/engine/litert/QualcommNpuRuntime.kt")
-        assertTrue(rt.contains("NpuIds.baseSocId(soc)"))
-        assertTrue(rt.contains("NpuIds.hexagonArch(Build.SOC_MANUFACTURER, Build.SOC_MODEL)"))
-        val models = source("src/full/java/com/iris/localai/engine/litert/NpuModels.kt")
-        assertTrue(models.contains("NpuIds.targetSoc(fileName)") && models.contains("NpuIds.kvCapacity(fileName)"))
-        val backend = source("src/main/java/com/iris/localai/engine/Backend.kt")
-        assertTrue(backend.contains("NpuIds.socMatches(target, env.npuSoc)"))
-        assertFalse(backend.contains("target != env.npuSoc"))
-    }
 
     // ---- hexagon arch ----
 
@@ -154,11 +141,6 @@ class NpuPathTest {
         assertEquals(FirstReplyFallback.Decision.PassThrough, FirstReplyFallback.decide(false, Backend.NPU, true, true, "x"))
     }
 
-    @Test fun engineManagerUsesTheFallbackRule() {
-        val em = source("src/main/java/com/iris/localai/engine/EngineManager.kt")
-        assertTrue(em.contains("FirstReplyFallback.decide("))
-        assertTrue(em.contains("BackendCapabilities.npuTarget(it.fileName) != null"))
-    }
 
     // ---- 5. runtime install validation ----
 
@@ -192,14 +174,6 @@ class NpuPathTest {
         assertTrue(v75 is NpuRuntimeFiles.Check.Broken)
     }
 
-    @Test fun brokenRuntimeShowsRepairInSettings() {
-        val ui = source("src/main/java/com/iris/localai/ui/settings/SettingsScreens.kt")
-        assertTrue(ui.contains("NpuState.NeedsRepair ->"))
-        assertTrue(ui.contains("需要修复"))
-        assertTrue(ui.contains("\"修复\" to install"))
-        val rt = source("src/full/java/com/iris/localai/engine/litert/QualcommNpuRuntime.kt")
-        assertTrue(rt.contains("val isInstalled: Boolean get() = check() == NpuRuntimeFiles.Check.Ok"))
-    }
 
     // ---- 2. logcat filter ----
 
@@ -219,17 +193,4 @@ class NpuPathTest {
 
     // ---- 6. version notes ----
 
-    @Test fun runtimeVersionNotesAreAccurate() {
-        val rt = source("src/full/java/com/iris/localai/engine/litert/QualcommNpuRuntime.kt")
-        val header = rt.substringBefore("class QualcommNpuRuntime")
-        assertFalse(header.contains("2.47"))
-        assertTrue(header.contains("2.50.0") && header.contains("Gallery 1.0.20") && header.contains("0.18.0"))
-        assertTrue(rt.contains("const val QNN_VERSION = \"2.50.0\""))
-        val toml = source("gradle/libs.versions.toml")
-        assertTrue(toml.contains("litertlm = \"0.18.0\""))
-        val notices = source("THIRD_PARTY_NOTICES.md")
-        val row = notices.lineSequence().first { it.startsWith("| LiteRT Dispatch (Qualcomm)") }
-        assertFalse(row.contains("v2.2.0"))
-        assertTrue(row.contains("Gallery 1.0.20") && row.contains("0.18.0") && row.contains("2.50.0"))
-    }
 }

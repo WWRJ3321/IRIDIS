@@ -1,10 +1,12 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 /**
- * 2.1.8 「一发送就卡住」 safety net: a reply that shows no sign of life is ended with a reason
+ * 「一发送就卡住」 safety net: a reply that shows no sign of life is ended with a reason
  * instead of spinning forever.
  *
  * Armed when a reply starts, disarmed by its first model output. Until then every sign of progress
@@ -77,15 +79,15 @@ class ReplyWatchdog(private val now: () -> Long = System::currentTimeMillis) {
         fun message(phase: Phase, idleMs: Long): String {
             val s = idleMs / 1000
             return when (phase) {
-                Phase.MODEL -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_ccf33d, s)
-                Phase.PROMPT -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_efc79e, s)
+                Phase.MODEL -> I18n.s(R.string.chat_ccf33d, s)
+                Phase.PROMPT -> I18n.s(R.string.chat_efc79e, s)
             }
         }
     }
 }
 
 /**
- * 2.1.8: whether a reply runs — read from the raw sources. Before, ChatViewModel.busy() read the
+ * whether a reply runs — read from the raw sources. Before, ChatViewModel.busy() read the
  * derived `state` (combine … stateIn), which lags the source by a dispatch: right after a reply
  * ended it still said "generating", so the queue drain that runs at that moment skipped and a
  * 「待回复」 message waited forever. Pure.

@@ -1,13 +1,16 @@
 package com.iris.localai.agent.mcp
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.util.HintLog
 import android.content.Context
-import com.iris.localai.agent.AgentTool
-import com.iris.localai.agent.Permission
-import com.iris.localai.agent.ToolEnv
-import com.iris.localai.agent.ToolGroup
-import com.iris.localai.agent.ToolResult
-import com.iris.localai.agent.ToolRisk
-import com.iris.localai.agent.capTokens
+import com.iris.localai.agent.tools.AgentTool
+import com.iris.localai.agent.core.Permission
+import com.iris.localai.agent.tools.ToolEnv
+import com.iris.localai.agent.tools.ToolGroup
+import com.iris.localai.agent.tools.ToolResult
+import com.iris.localai.agent.tools.ToolRisk
+import com.iris.localai.agent.tools.capTokens
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +34,7 @@ data class McpServer(
     val checkedAt: Long = 0,
 )
 
-/** 2.6.2: one tool switch of one server (pure, unit-tested with 30+ tools). */
+/** one tool switch of one server (pure, unit-tested with 30+ tools). */
 object McpToggle {
     fun set(s: McpServer, tool: String, on: Boolean): McpServer =
         s.copy(disabledTools = if (on) s.disabledTools - tool else s.disabledTools + tool)
@@ -85,7 +88,7 @@ class McpSecrets(context: Context) {
 }
 
 /**
- * 2.3.0 ②: the user's remote MCP servers, their clients (one per server, kept for the app's
+ * the user's remote MCP servers, their clients (one per server, kept for the app's
  * life, re-initialized on failure), and the [AgentTool]s offered to the model.
  */
 class McpManager(context: Context) {
@@ -101,7 +104,7 @@ class McpManager(context: Context) {
         JsonRpc.json.decodeFromString(ListSerializer(McpServer.serializer()), prefs.getString("servers", null) ?: "[]")
     }.getOrDefault(emptyList())
 
-    /** 2.5.8: 编码放到单线程后台（工具多、schema 大时在主线程编码会卡到开关点不动）；界面立即用新值。 */
+    /** 编码放到单线程后台（工具多、schema 大时在主线程编码会卡到开关点不动）；界面立即用新值。 */
     private val saver = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "mcp-save").apply { isDaemon = true } }
 
     private fun save(list: List<McpServer>) {
@@ -112,7 +115,7 @@ class McpManager(context: Context) {
         }
     }
 
-    /** 2.5.8: 一次开/关某服务的全部工具。 */
+    /** 一次开/关某服务的全部工具。 */
     fun setAllTools(id: String, on: Boolean) = update(id) { s -> s.copy(disabledTools = if (on) emptySet() else s.tools.map { it.name }.toSet()) }
 
     fun update(id: String, f: (McpServer) -> McpServer) = save(_servers.value.map { if (it.id == id) f(it) else it })
@@ -142,7 +145,7 @@ class McpManager(context: Context) {
         val tools = client(s).listTools()
         update(id) { it.copy(tools = tools, checkedAt = System.currentTimeMillis()) }
         tools.size
-    }.onFailure { e -> com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cc1632, _servers.value.firstOrNull { it.id == id }?.name, McpClient.describe(e)), com.iris.localai.util.HintLog.Source.TOOL) }
+    }.onFailure { e -> HintLog.add(I18n.s(R.string.agent_cc1632, _servers.value.firstOrNull { it.id == id }?.name, McpClient.describe(e)), HintLog.Source.TOOL) }
 
     /** Every enabled tool of every enabled server, namespaced (before the cap). */
     fun enabledTools(): List<McpTool> {
@@ -185,10 +188,10 @@ class McpTool(
             manager.call(server, info.name, McpSchema.unflatten(args, info.schemaJson()))
         } catch (e: Exception) {
             val msg = McpClient.describe(e)
-            com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e7af6f, server.name, info.name, msg), com.iris.localai.util.HintLog.Source.TOOL)
+            HintLog.add(I18n.s(R.string.agent_e7af6f, server.name, info.name, msg), HintLog.Source.TOOL)
             return ToolResult(false, "Error: MCP server ${server.name}: $msg", msg.take(40))
         }
-        if (!r.ok) com.iris.localai.util.HintLog.add(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d88230, server.name, info.name, r.text.take(300)), com.iris.localai.util.HintLog.Source.TOOL)
+        if (!r.ok) HintLog.add(I18n.s(R.string.agent_d88230, server.name, info.name, r.text.take(300)), HintLog.Source.TOOL)
         val out = capTokens(r.text.ifBlank { if (r.ok) "(empty result)" else "error" }, env.outputTokens)
         return ToolResult(r.ok, if (r.ok) out else "Error: $out", McpResult.summary(r))
     }

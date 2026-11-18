@@ -1,10 +1,15 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.SettingsRepository
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import com.iris.localai.data.GpuPerfHint
 import com.iris.localai.data.TierProfile
 
 /**
- * 1.7.8: 资源档配置 — per backend kind (CPU / GPU), per tier: threads, cores, nice.
+ * 资源档配置 — per backend kind (CPU / GPU), per tier: threads, cores, nice.
  *
  * Pure functions (unit-tested in V178Test). Defaults are generated from the phone's core clusters:
  *
@@ -48,7 +53,7 @@ object TierProfiles {
         return if (cl.size >= 2) (all - cl.last().toSet()).sorted() else all
     }
 
-    /** 1.7.9: GPU 性能提示 default per tier — 省电 → low, 中 → normal, 高 → high. */
+    /** GPU 性能提示 default per tier — 省电 → low, 中 → normal, 高 → high. */
     fun defaultGpuHint(tier: ResourceTier): GpuPerfHint = when (tier) {
         ResourceTier.LOW -> GpuPerfHint.LOW
         ResourceTier.MEDIUM -> GpuPerfHint.NORMAL
@@ -56,7 +61,7 @@ object TierProfiles {
     }
 
     /**
-     * 1.7.9 migration: GPU entries saved by 1.7.8 have no gpuHint → the tier's default; CPU entries
+     * migration: GPU entries saved by 1.7.8 have no gpuHint → the tier's default; CPU entries
      * never carry one (the CPU set has no GPU).
      */
     fun withHintDefault(kind: ResourceBackendKind, tier: ResourceTier, p: TierProfile): TierProfile =
@@ -77,12 +82,12 @@ object TierProfiles {
             }
         }
         if (cl.size == 2) {
-            // 1.7.6 values for 省电/中 (2.0.3 widened 高, see below).
+            // values for 省电/中 (2.0.3 widened 高, see below).
             return when (tier) {
                 // The last core of the slower cluster: cpu0 takes most interrupts on Android.
                 ResourceTier.LOW -> TierProfile(1, listOf(slowest.max()), 10)
                 ResourceTier.MEDIUM -> TierProfile(minOf(2, slowest.size), slowest, 0)
-                // 2.0.3: 2 prime cores cannot saturate LPDDR5X on a 9B model (7.4 tok/s on 8 Elite).
+                // 2 prime cores cannot saturate LPDDR5X on a 9B model (7.4 tok/s on 8 Elite).
                 // 高 = the prime cores plus the fastest performance cores, cores − 2 threads (max 6),
                 // which measured clearly faster on device (8 Elite: 6 threads on cpu2-7).
                 ResourceTier.HIGH -> {
@@ -111,12 +116,12 @@ object TierProfiles {
         val out = ArrayList<String>(3)
         val all = allCores(topo).toSet()
         val cpus = p.cpus.distinct()
-        if (cpus.isEmpty()) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_06408f)
+        if (cpus.isEmpty()) out += I18n.s(R.string.engine_06408f)
         val missing = cpus.filter { it !in all }
         if (missing.isNotEmpty()) out += "本机没有 ${missing.joinToString("、") { "cpu$it" }}"
-        if (cpus.isNotEmpty() && p.threads !in 1..cpus.size) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b25e22, cpus.size)
-        if (cpus.isEmpty() && p.threads < 1) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_169dce)
-        if (p.nice !in NICE_MIN..NICE_MAX) out += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_cf98c5, NICE_MIN, NICE_MAX)
+        if (cpus.isNotEmpty() && p.threads !in 1..cpus.size) out += I18n.s(R.string.engine_b25e22, cpus.size)
+        if (cpus.isEmpty() && p.threads < 1) out += I18n.s(R.string.engine_169dce)
+        if (p.nice !in NICE_MIN..NICE_MAX) out += I18n.s(R.string.engine_cf98c5, NICE_MIN, NICE_MAX)
         return out
     }
 
@@ -160,10 +165,10 @@ object TierProfiles {
     }
 
     private fun clusterName(index: Int, count: Int): String = when {
-        count == 1 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927)
-        index == count - 1 -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_608e08)
-        index == 0 && count >= 3 -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_25c14e)
-        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_eef149)
+        count == 1 -> I18n.s(R.string.settings_9ee927)
+        index == count - 1 -> I18n.s(R.string.engine_608e08)
+        index == 0 && count >= 3 -> I18n.s(R.string.engine_25c14e)
+        else -> I18n.s(R.string.engine_eef149)
     }
 
     /** "超大核 ×2", "性能核 ×1", "全部核心 ×8", "核心 ×3". */
@@ -172,14 +177,14 @@ object TierProfiles {
         val all = cl.flatten().toSet()
         val set = cores.toSet()
         val name = when {
-            set == all || set.isEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9ee927)
+            set == all || set.isEmpty() -> I18n.s(R.string.settings_9ee927)
             else -> {
                 val idx = cl.indexOfFirst { it.containsAll(set) }
                 when {
                     idx >= 0 -> clusterName(idx, cl.size)
-                    cl.size >= 3 && set == (all - cl.last().toSet()) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_695c23)
-                    cl.size >= 3 && set == (all - cl.first().toSet()) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_eef149)
-                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
+                    cl.size >= 3 && set == (all - cl.last().toSet()) -> I18n.s(R.string.engine_695c23)
+                    cl.size >= 3 && set == (all - cl.first().toSet()) -> I18n.s(R.string.engine_eef149)
+                    else -> I18n.s(R.string.settings_976a3e)
                 }
             }
         }
@@ -188,7 +193,7 @@ object TierProfiles {
 
     /** "cpu0-5", "cpu5", "cpu0-2,6" for compact display. */
     fun cpuRange(cpus: List<Int>): String {
-        if (cpus.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a8b0c2)
+        if (cpus.isEmpty()) return I18n.s(R.string.agent_a8b0c2)
         val s = cpus.distinct().sorted()
         val parts = ArrayList<String>()
         var a = s[0]; var b = s[0]
@@ -196,9 +201,9 @@ object TierProfiles {
         parts += if (a == b) "$a" else "$a-$b"
         return "cpu" + parts.joinToString(",")
     }
-    /** 1.7.8: the one write path for a profile (validation + "equal to default = no entry"). */
+    /** the one write path for a profile (validation + "equal to default = no entry"). */
     fun store(
-        settings: com.iris.localai.data.SettingsRepository,
+        settings: SettingsRepository,
         kind: ResourceBackendKind,
         tier: ResourceTier,
         p: TierProfile,

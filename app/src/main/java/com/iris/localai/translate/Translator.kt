@@ -1,5 +1,7 @@
 package com.iris.localai.translate
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import android.util.Log
 import com.iris.localai.data.SettingsRepository
 import com.iris.localai.engine.EngineManager
@@ -45,7 +47,7 @@ data class MessageTranslation(
 )
 
 /**
- * 2.3.0 ③ 本地翻译. The loaded model translates with a short dedicated prompt (no tools, no
+ * 本地翻译. The loaded model translates with a short dedicated prompt (no tools, no
  * memory or conversation context, thinking off and stripped, streamed); without one, the offline
  * Bergamot engine translates paragraph by paragraph. See [EngineSelect].
  */
@@ -75,7 +77,7 @@ class Translator(
      * user-facing message when no engine can translate.
      */
     fun translate(text: String, targetSetting: String? = null): Flow<String> {
-        val target = LangDetect.target(text, targetSetting ?: settings.current.translateTarget, com.iris.localai.I18n.uiLang().substringBefore('-'))
+        val target = LangDetect.target(text, targetSetting ?: settings.current.translateTarget, I18n.uiLang().substringBefore('-'))
         val source = LangDetect.source(text, target)
         return when (val c = choose(source, target)) {
             is EngineChoice.Unavailable -> flow { throw IllegalStateException(c.message) }
@@ -83,7 +85,7 @@ class Translator(
         }
     }
 
-    fun targetFor(text: String): TransLang = LangDetect.target(text, settings.current.translateTarget, com.iris.localai.I18n.uiLang().substringBefore('-'))
+    fun targetFor(text: String): TransLang = LangDetect.target(text, settings.current.translateTarget, I18n.uiLang().substringBefore('-'))
 
     private fun viaModel(text: String, target: TransLang): Flow<String> = flow {
         val params = engine.samplingFor(disableThinking = true).copy(
@@ -109,7 +111,7 @@ class Translator(
         if (handle != 0L) { BergamotNative.nativeFree(handle); handle = 0L; loadedPack = null }
         val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
         val h = BergamotNative.nativeLoad(BergamotConfig.yaml(pack, packs.dir(pack), threads))
-        if (h == 0L) throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.translate_50b9cf))
+        if (h == 0L) throw IllegalStateException(I18n.s(R.string.translate_50b9cf))
         handle = h; loadedPack = pack
         h
     }
@@ -120,7 +122,7 @@ class Translator(
         val out = StringBuilder()
         Paragraphs.split(text).forEachIndexed { i, p ->
             if (i > 0) out.append('\n')
-            out.append(if (Paragraphs.passThrough(p)) p else BergamotNative.nativeTranslate(h, p.toByteArray()) ?: throw IllegalStateException(com.iris.localai.I18n.s(com.iris.localai.R.string.translate_c65060)))
+            out.append(if (Paragraphs.passThrough(p)) p else BergamotNative.nativeTranslate(h, p.toByteArray()) ?: throw IllegalStateException(I18n.s(R.string.translate_c65060)))
             emit(out.toString().trimEnd())
         }
     }.flowOn(Dispatchers.IO)
@@ -142,7 +144,7 @@ class Translator(
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                _messages.update { m -> m[id]?.let { m + (id to it.copy(running = false, error = e.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_032ee1))) } ?: m }
+                _messages.update { m -> m[id]?.let { m + (id to it.copy(running = false, error = e.message ?: I18n.s(R.string.chat_032ee1))) } ?: m }
             }
         }
     }

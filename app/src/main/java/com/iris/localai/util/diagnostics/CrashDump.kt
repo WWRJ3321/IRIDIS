@@ -1,5 +1,10 @@
-package com.iris.localai.util
+package com.iris.localai.util.diagnostics
 
+import com.iris.localai.BuildConfig
+import com.iris.localai.util.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.ContentValues
@@ -12,7 +17,7 @@ import java.io.BufferedReader
 import java.io.File
 
 /**
- * 1.8.0 crash diagnostics: exports the last native crash (tombstone), the load-stage log written
+ * crash diagnostics: exports the last native crash (tombstone), the load-stage log written
  * by libiris_mnn while a model loads, and a filtered logcat snapshot, so a SIGSEGV inside MNN while
  * loading a big model can be analysed without root / adb.
  *
@@ -61,8 +66,8 @@ object CrashDump {
         summary.append('\n')
             .append("device: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL)
             .append(" / Android ").append(Build.VERSION.RELEASE).append(" (sdk ").append(Build.VERSION.SDK_INT).append(")\n")
-            .append("app: ").append(com.iris.localai.BuildConfig.VERSION_NAME)
-            .append(" (").append(com.iris.localai.BuildConfig.VERSION_CODE).append(")\n")
+            .append("app: ").append(BuildConfig.VERSION_NAME)
+            .append(" (").append(BuildConfig.VERSION_CODE).append(")\n")
             .append("pid now: ").append(Process.myPid()).append('\n')
             .append("collected: ").append(java.util.Date(now)).append('\n')
             .append(notes.joinToString("\n")).append('\n')

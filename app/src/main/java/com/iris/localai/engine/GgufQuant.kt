@@ -1,12 +1,14 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.File
 import java.io.InputStream
 
 /**
- * 2.3.2 Bonsai: tensor types of a GGUF read from its header, checked before a load.
+ * Bonsai: tensor types of a GGUF read from its header, checked before a load.
  *  - Q1_0 (41) / Q2_0 (42) — PrismML Bonsai 1-bit / ternary — run on CPU or OpenCL only: the NPU
  *    paths (GenieX, built-in Hexagon runtime) have no kernels for them, so NPU is dropped from the chain.
  *  - Types our ggml does not know (≥ [TYPE_COUNT]), e.g. PrismML's private PQ2_0 = 142 / PTQ1_0 = 143
@@ -23,18 +25,18 @@ object GgufQuant {
     const val TYPE_COUNT = 44
 
     /**
-     * 2.5.0-beta9: [arch] = general.architecture, [nextn] = `<arch>.nextn_predict_layers` (MTP / NextN
+     * [arch] = general.architecture, [nextn] = `<arch>.nextn_predict_layers` (MTP / NextN
      * heads; 0 when absent). A model with nextn > 0 can use MTP speculative decoding.
      */
     data class Info(
         val types: Set<Int>, val arch: String = "", val nextn: Int = 0,
-        /** 2.5.1: `<arch>.expert_count` / `<arch>.expert_used_count`（非 MoE 为 0）。 */
+        /** `<arch>.expert_count` / `<arch>.expert_used_count`（非 MoE 为 0）。 */
         val expertCount: Int = 0, val expertUsed: Int = 0,
-        /** 2.5.1: 名字含 `_exps` 的张量字节数与全部张量字节数（按偏移差估算；未知为 0）。 */
+        /** 名字含 `_exps` 的张量字节数与全部张量字节数（按偏移差估算；未知为 0）。 */
         val expsBytes: Long = 0, val tensorBytes: Long = 0,
     ) {
         val mtp: Boolean get() = nextn > 0
-        /** 2.5.1: MoE 模型（多于 1 个专家）。 */
+        /** MoE 模型（多于 1 个专家）。 */
         val moe: Boolean get() = expertCount > 1
         val lowBit: Boolean get() = Q1_0 in types || Q2_0 in types
         val unknown: Set<Int> get() = types.filterTo(HashSet()) { it >= TYPE_COUNT || it < 0 }
@@ -97,7 +99,7 @@ object GgufQuant {
                 key.endsWith(".nextn_predict_layers") && type in 0L..12L && type != 8L && type != 9L -> {
                     nextnByArch[key.removeSuffix(".nextn_predict_layers")] = int(type).coerceIn(0, 64).toInt()
                 }
-                // 2.5.1: MoE 专家数（用于「专家按需加载」与激活专家数）
+                // MoE 专家数（用于「专家按需加载」与激活专家数）
                 key.endsWith(".expert_count") && type in 0L..12L && type != 8L && type != 9L -> {
                     expertsByArch[key.removeSuffix(".expert_count")] = int(type).coerceIn(0, 4096).toInt()
                 }
@@ -111,7 +113,7 @@ object GgufQuant {
             }
         }
         val types = HashSet<Int>()
-        // 2.5.1: (偏移, 是否专家张量)，按偏移差估算每个张量大小
+        // (偏移, 是否专家张量)，按偏移差估算每个张量大小
         val offsets = ArrayList<Pair<Long, Boolean>>()
         for (i in 0 until tensors) {
             val nameLen = u64()        // name
@@ -131,7 +133,7 @@ object GgufQuant {
         )
     }
 
-    /** 2.5.1: (专家张量字节, 全部张量字节)；[dataBytes] < 0 时最后一个张量记 0。 */
+    /** (专家张量字节, 全部张量字节)；[dataBytes] < 0 时最后一个张量记 0。 */
     fun tensorSizes(offsets: List<Pair<Long, Boolean>>, dataBytes: Long): Pair<Long, Long> {
         val sorted = offsets.sortedBy { it.first }
         var exps = 0L; var all = 0L
@@ -151,9 +153,9 @@ object GgufQuant {
         override fun skip(n: Long): Long = super.skip(n).also { if (it > 0) count += it }
     }
 
-    /** 2.5.0-beta9: MTP draft tokens per step when MTP 加速 is on and the model has MTP layers (else 0). */
+    /** MTP draft tokens per step when MTP 加速 is on and the model has MTP layers (else 0). */
     const val MTP_DRAFT = 3
-    /** 2.5.0-beta10: llama.cpp backends only — CPU, and GPU (OpenCL / Vulkan, experimental). Never the NPU. */
+    /** llama.cpp backends only — CPU, and GPU (OpenCL / Vulkan, experimental). Never the NPU. */
     fun mtpBackend(backend: Backend): Boolean = backend == Backend.CPU || backend == Backend.GPU
     fun mtpDraft(enabled: Boolean, info: Info?, backend: Backend): Int =
         if (enabled && info?.mtp == true && mtpBackend(backend)) MTP_DRAFT else 0

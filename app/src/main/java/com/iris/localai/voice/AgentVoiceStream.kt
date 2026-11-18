@@ -1,7 +1,7 @@
 package com.iris.localai.voice
 
 /**
- * 2.1.9 边生成边开口: speaks a 智能体 voice reply while its answer turn is still being generated,
+ * 边生成边开口: speaks a 智能体 voice reply while its answer turn is still being generated,
  * instead of waiting for the whole agent loop to end. Pure and unit-tested.
  *
  * Each model turn is fed in as its answer so far ([update], reasoning already removed). Text is

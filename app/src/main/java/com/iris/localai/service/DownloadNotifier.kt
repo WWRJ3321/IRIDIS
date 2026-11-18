@@ -1,5 +1,9 @@
 package com.iris.localai.service
 
+import com.iris.localai.I18n
+import com.iris.localai.data.Format
+import com.iris.localai.imagegen.ImageCatalog
+import com.iris.localai.imagegen.ImageDl
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,19 +24,19 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 
-/** 2.4.4: one download in the notification (pure, unit-tested). */
+/** one download in the notification (pure, unit-tested). */
 data class DlItem(val key: String, val name: String, val done: Long, val total: Long, val extracting: Boolean = false, val failed: String? = null) {
     val active: Boolean get() = failed == null
 }
 
-/** 2.4.4: wording of the download notification (pure, unit-tested). */
+/** wording of the download notification (pure, unit-tested). */
 object DownloadText {
-    fun size(bytes: Long): String = com.iris.localai.data.Format.bytes(bytes)
+    fun size(bytes: Long): String = Format.bytes(bytes)
 
     fun title(active: List<DlItem>): String = when (active.size) {
         0 -> ""
-        1 -> com.iris.localai.I18n.s(R.string.dl244_title_one, active[0].name)
-        else -> com.iris.localai.I18n.s(R.string.dl244_title_many, active.size)
+        1 -> I18n.s(R.string.dl244_title_one, active[0].name)
+        else -> I18n.s(R.string.dl244_title_many, active.size)
     }
 
     fun body(active: List<DlItem>): String {
@@ -41,10 +45,10 @@ object DownloadText {
     }
 
     fun line(d: DlItem): String = when {
-        d.extracting -> com.iris.localai.I18n.s(R.string.dl244_extracting)
-        d.total > 0 -> com.iris.localai.I18n.s(R.string.dl244_progress, percent(d), size(d.done), size(d.total))
+        d.extracting -> I18n.s(R.string.dl244_extracting)
+        d.total > 0 -> I18n.s(R.string.dl244_progress, percent(d), size(d.done), size(d.total))
         d.done > 0 -> size(d.done)
-        else -> com.iris.localai.I18n.s(R.string.dl244_preparing)
+        else -> I18n.s(R.string.dl244_preparing)
     }
 
     fun percent(d: DlItem): Int = if (d.total > 0) ((d.done.toDouble() / d.total) * 100).toInt().coerceIn(0, 100) else 0
@@ -58,7 +62,7 @@ object DownloadText {
 }
 
 /**
- * 2.4.4: every model download (对话 / 生图 / 语音 / 翻译) shows a progress notification and, while one is
+ * every model download (对话 / 生图 / 语音 / 翻译) shows a progress notification and, while one is
  * running, a dataSync foreground service keeps IRIDIS from being frozen or killed in the background.
  * A finished download leaves a 「下载完成」 notification; a failed one 「下载失败」 with the reason.
  */
@@ -73,7 +77,7 @@ object DownloadNotifier {
     fun start(app: Context, c: AppContainer) {
         appCtx = app
         app.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL, com.iris.localai.I18n.s(R.string.dl244_channel), NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(CHANNEL, I18n.s(R.string.dl244_channel), NotificationManager.IMPORTANCE_LOW),
         )
         c.scope.launch {
             var prev: Map<String, DlItem> = emptyMap()
@@ -83,11 +87,11 @@ object DownloadNotifier {
                     if (hub.active) add(DlItem("hub:" + hub.repoId, hub.repoId.substringAfter('/'), hub.doneBytes, hub.totalBytes))
                     else if (hub.error != null && !hub.paused && hub.repoId.isNotEmpty()) add(DlItem("hub:" + hub.repoId, hub.repoId.substringAfter('/'), 0, 0, failed = hub.error))
                     img.forEach { (id, s) ->
-                        val name = com.iris.localai.imagegen.ImageCatalog.known.firstOrNull { it.id == id }?.name ?: id
+                        val name = ImageCatalog.known.firstOrNull { it.id == id }?.name ?: id
                         when (s) {
-                            is com.iris.localai.imagegen.ImageDl.Downloading -> add(DlItem("img:$id", name, s.done, s.total))
-                            is com.iris.localai.imagegen.ImageDl.Extracting -> add(DlItem("img:$id", name, s.done, s.total, extracting = true))
-                            is com.iris.localai.imagegen.ImageDl.Failed -> add(DlItem("img:$id", name, 0, 0, failed = s.message))
+                            is ImageDl.Downloading -> add(DlItem("img:$id", name, s.done, s.total))
+                            is ImageDl.Extracting -> add(DlItem("img:$id", name, s.done, s.total, extracting = true))
+                            is ImageDl.Failed -> add(DlItem("img:$id", name, 0, 0, failed = s.message))
                         }
                     }
                     voice.forEach { (p, s) -> pack("voice:" + p.id, p.title, s)?.let(::add) }
@@ -144,7 +148,7 @@ object DownloadNotifier {
         val body = DownloadText.body(active)
         return NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(DownloadText.title(active).ifEmpty { com.iris.localai.I18n.s(R.string.dl244_channel) })
+            .setContentTitle(DownloadText.title(active).ifEmpty { I18n.s(R.string.dl244_channel) })
             .setContentText(body.substringBefore('\n'))
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setProgress(100, pct ?: 0, pct == null)
@@ -158,15 +162,15 @@ object DownloadNotifier {
     private fun result(ctx: Context, name: String, error: String?) = runCatching {
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(if (error == null) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error)
-            .setContentTitle(com.iris.localai.I18n.s(if (error == null) R.string.dl244_done else R.string.dl244_failed, name))
-            .apply { if (error != null) setContentText(error).setStyle(NotificationCompat.BigTextStyle().bigText(error)) else setContentText(com.iris.localai.I18n.s(R.string.dl244_done_hint)) }
+            .setContentTitle(I18n.s(if (error == null) R.string.dl244_done else R.string.dl244_failed, name))
+            .apply { if (error != null) setContentText(error).setStyle(NotificationCompat.BigTextStyle().bigText(error)) else setContentText(I18n.s(R.string.dl244_done_hint)) }
             .setAutoCancel(true).setContentIntent(openApp(ctx))
             .build()
         ctx.getSystemService(NotificationManager::class.java).notify(ID_RESULT + (name.hashCode() and 0xfff), n)
     }.onFailure { Log.w(TAG, "result notification", it) }
 }
 
-/** 2.4.4: keeps the process alive while a model downloads; its notification is [DownloadNotifier]'s progress. */
+/** keeps the process alive while a model downloads; its notification is [DownloadNotifier]'s progress. */
 class DownloadService : android.app.Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 

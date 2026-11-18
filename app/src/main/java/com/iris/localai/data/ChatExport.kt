@@ -7,7 +7,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-/** 2.6.3: 多选会话导出 — Markdown / TXT / JSON. Pure (time zone passed in), unit-tested. */
+/** 多选会话导出 — Markdown / TXT / JSON. Pure (time zone passed in), unit-tested. */
 object ChatExport {
     enum class Format(val ext: String, val mime: String) { MARKDOWN("md", "text/markdown"), TXT("txt", "text/plain"), JSON("json", "application/json") }
 

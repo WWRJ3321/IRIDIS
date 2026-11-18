@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 
 /**
- * 2.4.4: one line that shrinks its font (down to [minScale] of [style]) until the whole text fits,
+ * one line that shrinks its font (down to [minScale] of [style]) until the whole text fits,
  * instead of cutting it with 「…」; only text that still does not fit at the smallest size is ellipsized.
  * Used where a second line would break the layout (pills, buttons, segments).
  */

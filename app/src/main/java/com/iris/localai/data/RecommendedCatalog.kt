@@ -1,13 +1,21 @@
 package com.iris.localai.data
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.edge0.Edge0Assets
+import com.iris.localai.knowledge.KbEmbedModels
+import com.iris.localai.translate.TranslatePack
+import com.iris.localai.voice.VoiceKind
+import com.iris.localai.voice.VoicePack
+
 /**
- * 2.2.17 C: the 「推荐」 tab of 下载模型 — one list, grouped into 对话 / 特色模型 / 生图 / 语音, each
+ * C: the 「推荐」 tab of 下载模型 — one list, grouped into 对话 / 特色模型 / 生图 / 语音, each
  * entry a plain-Chinese card (name, one-line purpose, size, engine) with the details (files, quant,
  * licence, repo) behind its detail sheet. Replaces the 2.2.12 grouped list in MnnHub. Pure (unit-tested).
  * Chat repo ids checked on the HF API 2026-11-01; ccore/Qwen3.5-4B-3D-Coder files/sizes/licence on 2026-11-03.
  */
 object RecommendedCatalog {
-    enum class Section(val title: String) { CHAT(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)), FEATURED(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6284d9)), IMAGE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_19a9bc)), SPEECH(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35)), TRANSLATE(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8b3607)), EMBED(com.iris.localai.I18n.s(com.iris.localai.R.string.kb251_embed_section)) }
+    enum class Section(val title: String) { CHAT(I18n.s(R.string.chat_859362)), FEATURED(I18n.s(R.string.data_6284d9)), IMAGE(I18n.s(R.string.chat_19a9bc)), SPEECH(I18n.s(R.string.settings_48df35)), TRANSLATE(I18n.s(R.string.chat_8b3607)), EMBED(I18n.s(R.string.kb251_embed_section)) }
     enum class Engine(val label: String) { GGUF("GGUF"), MNN("MNN"), LITERT("LiteRT"), NPU("NPU"), ONNX("ONNX"), BERGAMOT("Bergamot"), EDGE0("Edge0") }
 
     sealed interface Kind {
@@ -16,19 +24,19 @@ object RecommendedCatalog {
         /** One known GGUF file (+ optional vision projector) through MnnHub.startGguf. */
         data class Gguf(
             val repoId: String, val file: String, val size: Long, val mmproj: String? = null, val mmprojSize: Long = 0, val localName: String? = null,
-            /** 2.5.1: 投影文件所在的另一个 HF 仓库（null = 与模型同仓库）。 */
+            /** 投影文件所在的另一个 HF 仓库（null = 与模型同仓库）。 */
             val mmprojRepo: String? = null,
         ) : Kind {
-            /** 2.4.3: name on disk ([localName] renames a file like "Qwen3.5-4B.Q4_K_M.gguf" that would read as the base model). */
+            /** name on disk ([localName] renames a file like "Qwen3.5-4B.Q4_K_M.gguf" that would read as the base model). */
             val localFile: String get() = localName ?: file
-            /** 2.5.1: 下载用的投影路径（跨仓库时带 [GgufSearch.crossRepoPath] 前缀）。 */
+            /** 下载用的投影路径（跨仓库时带 [GgufSearch.crossRepoPath] 前缀）。 */
             val mmprojPath: String? get() = mmproj?.let { f -> mmprojRepo?.let { GgufSearch.crossRepoPath(it, f) } ?: f }
         }
         /** A 生图 model (ImageGenDownloader). */
         data class Image(val modelId: String) : Kind
         /** A voice pack (VoiceModelStore); size comes from its bundled manifest. */
         data class Voice(val packId: String) : Kind
-        /** 2.3.0 ③: an offline translation pack (TranslatePackStore). */
+        /** an offline translation pack (TranslatePackStore). */
         data class Translate(val packId: String) : Kind
     }
 
@@ -48,7 +56,7 @@ object RecommendedCatalog {
         val licence: String? = null,
         /** Tap to try after loading (特色模型). */
         val demoPrompt: String? = null,
-        /** 2.4.4: listed only on this chip (base id like "mt6991"); an NPU build runs nowhere else. */
+        /** listed only on this chip (base id like "mt6991"); an NPU build runs nowhere else. */
         val onlySoc: String? = null,
     ) {
         /** Repo the MnnHub state names while this downloads (null for 生图 / 语音). */
@@ -68,7 +76,7 @@ object RecommendedCatalog {
         Item("XHToken/$repo", Section.CHAT, name, purpose, gb(size), Engine.GGUF, Kind.Hub("XHToken/$repo"), top, quant = "Q4_K_M")
 
     /**
-     * 2.4.3: GGUF twin of an MNN entry (llama.cpp: CPU / GPU / Hexagon), one Q4_K_M file + optional vision projector.
+     * GGUF twin of an MNN entry (llama.cpp: CPU / GPU / Hexagon), one Q4_K_M file + optional vision projector.
      * Files and sizes from the HF tree API 2026-11-06 (lmstudio-community = Qwen's official weights; Jackrong = author of the Opus distills).
      */
     private fun gguf(
@@ -88,7 +96,7 @@ object RecommendedCatalog {
     )
 
     /**
-     * 2.5.1: Gemma 4 19B-A4B REAP（第三方专家剪枝 MoE，中文未测），mradermacher i1 量化；投影来自非 i1 仓库。
+     * Gemma 4 19B-A4B REAP（第三方专家剪枝 MoE，中文未测），mradermacher i1 量化；投影来自非 i1 仓库。
      * 文件名与大小来自 HF tree API 2026-11-12。建议开「专家按需加载」。
      */
     const val REAP_REPO = "mradermacher/gemma-4-19b-a4b-it-REAP-i1-GGUF"
@@ -96,12 +104,12 @@ object RecommendedCatalog {
     const val REAP_IQ3 = "$REAP_REPO#IQ3_XXS"
     const val REAP_Q4 = "$REAP_REPO#Q4_0"
     private fun reap(id: String, quant: String, bytes: Long) = Item(
-        id, Section.CHAT, "Gemma 4 19B REAP（$quant）", com.iris.localai.I18n.s(com.iris.localai.R.string.v251_reap_purpose), bytes, Engine.GGUF,
+        id, Section.CHAT, "Gemma 4 19B REAP（$quant）", I18n.s(R.string.v251_reap_purpose), bytes, Engine.GGUF,
         Kind.Gguf(REAP_REPO, "gemma-4-19b-a4b-it-REAP.i1-$quant.gguf", bytes, "gemma-4-19b-a4b-it-REAP.mmproj-Q8_0.gguf", 806_408_480L, mmprojRepo = REAP_MMPROJ_REPO),
         quant = "i1-$quant", licence = "Gemma",
     )
 
-    /** 2.6.5: Edge0-35B 资产目录总大小（转换产物 assets.tsv 合计）。 */
+    /** Edge0-35B 资产目录总大小（转换产物 assets.tsv 合计）。 */
     const val EDGE0_BYTES = 22_000_000_000L
     const val LFM_REPO = "abenzerps/LFM2.5-24B-A2B-Uncensored-GSQ-RCO-GGUF"
     const val NANBEIGE_REPO = "bartowski/Nanbeige_Nanbeige4.2-3B-GGUF"
@@ -109,127 +117,127 @@ object RecommendedCatalog {
     const val CODER_DEMO = "用 Three.js 写一个单文件 HTML：星空中漂浮着一颗缓慢自转的彩色立方体，周围环绕几个发光小球，" +
         "有柔和灯光和阴影，可以用鼠标或手指拖动旋转视角。直接输出完整代码。"
 
-    /** 2.4.4: base SoC id of this phone ("mt6991"), set once at app start; null in unit tests. */
+    /** base SoC id of this phone ("mt6991"), set once at app start; null in unit tests. */
     @Volatile var deviceSoc: String? = null
 
     const val GEMMA3_1B = "litert-community/Gemma3-1B-IT"
-    /** 2.4.4 (Issue #6): Google's official MediaTek NPU builds — Dimensity 9300 / 9400 / 9500 only. */
+    /** Issue #6: Google's official MediaTek NPU builds — Dimensity 9300 / 9400 / 9500 only. */
     private fun mtkGemma(soc: String, bytes: Long) = Item(
-        "$GEMMA3_1B#$soc", Section.CHAT, "Gemma 3 1B（NPU）", com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_gemma_purpose), bytes, Engine.LITERT,
+        "$GEMMA3_1B#$soc", Section.CHAT, "Gemma 3 1B（NPU）", I18n.s(R.string.mtk244_gemma_purpose), bytes, Engine.LITERT,
         Kind.Hub(GEMMA3_1B, "Gemma3-1B-IT_q4_ekv1280_$soc.litertlm"), top = true, licence = "Gemma", onlySoc = soc,
     )
 
     const val QWEN3_06B = "litert-community/Qwen3-0.6B"
     /**
-     * 2.4.5: Qwen3-0.6B compiled for the Dimensity 9500 NPU (MT6993; a16w8, 4096-token context, Apache-2.0).
+     * Qwen3-0.6B compiled for the Dimensity 9500 NPU (MT6993; a16w8, 4096-token context, Apache-2.0).
      * Size from the HF tree API 2026-11-07 (1,202,913,280 B; the model card's table says 992 MB) — ModelScope
      * mirror lists the same size. The file carries no Jinja template: LiteRT-LM builds the prompt from the
      * file's own turn markers, so the NPU path needs no template of ours.
      */
     private val mtkQwen3 = Item(
-        "$QWEN3_06B#mt6993", Section.CHAT, "Qwen3 0.6B（NPU）", com.iris.localai.I18n.s(com.iris.localai.R.string.mtk245_qwen_purpose), 1_202_913_280L, Engine.LITERT,
+        "$QWEN3_06B#mt6993", Section.CHAT, "Qwen3 0.6B（NPU）", I18n.s(R.string.mtk245_qwen_purpose), 1_202_913_280L, Engine.LITERT,
         Kind.Hub(QWEN3_06B, "Qwen3-0.6B.mediatek.mt6993.litertlm"), top = true, licence = APACHE, onlySoc = "mt6993",
     )
 
     val ITEMS: List<Item> = listOf(
-        // 2.4.4: shown first on a matching Dimensity phone, hidden everywhere else (sizes: HF + ModelScope, 2026-11-07).
+        // shown first on a matching Dimensity phone, hidden everywhere else (sizes: HF + ModelScope, 2026-11-07).
         mtkGemma("mt6989", 1_032_830_976L),
         mtkGemma("mt6991", 1_033_814_016L),
         mtkGemma("mt6993", 1_020_411_904L),
         mtkQwen3,
         // ---- 对话 (top = the six shown before 展开全部) ----
-        litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_73508c), 2.6, top = true),
-        mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8), 2.9, top = true),
-        lms35("4B", 2_707_513_696L, 675_568_768L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8b23d8)),
-        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6eff8b), "Qwen3.5-4B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2814fe), 2.8, top = true, licence = null),
-        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_6eff8b), "4B", 2_707_510_080L, "mmproj-BF16.gguf", 675_568_864L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_2814fe)),
-        litert("Gemma 4 E4B", "gemma-4-E4B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_5fd1a5), 3.7, top = true),
-        mnn("Qwen3.5 0.8B", "Qwen3.5-0.8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_2b93b4), 0.55, top = true),
-        lms35("0.8B", 527_502_816L, 207_345_952L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_2b93b4)),
-        spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aca2d5), 3.5, top = true),
-        mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b), 1.4),
-        lms35("2B", 1_270_808_032L, 671_372_416L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_63239b)),
-        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f), 7.274875830),
-        lms35("9B", 5_627_044_256L, 921_704_480L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_7d4f8f)),
-        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "Qwen3.5-2B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f), 1.4, licence = null),
-        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_1c3edc), "2B", 1_270_804_416L, "mmproj-BF16.gguf", 671_372_512L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_36299f)),
-        mnn(com.iris.localai.I18n.s(com.iris.localai.R.string.data_45dc04), "Qwen3.5-0.8B$OPUS", com.iris.localai.I18n.s(com.iris.localai.R.string.data_aafdaf), 0.54, licence = null),
-        opus(com.iris.localai.I18n.s(com.iris.localai.R.string.data_45dc04), "0.8B", 527_499_200L, "Qwen3.5-0.8B.BF16-mmproj.gguf", 207_346_048L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_aafdaf)),
-        litert("Gemma 4 12B", "gemma-4-12B-it-litert-lm", com.iris.localai.I18n.s(com.iris.localai.R.string.data_e0fccf), 6.9),
-        spark("Spark X2.6 1.7B", "Spark-X2.6-1.7B-GGUF", com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c8f8e), 1.8),
-        mnn("Qwen3 0.6B", "Qwen3-0.6B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_eec245), 0.45),
-        lms3("0.6B", 484_219_808L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_eec245)),
-        mnn("Qwen3 1.7B", "Qwen3-1.7B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9b89f0), 1.2),
-        lms3("1.7B", 1_282_439_328L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_9b89f0)),
-        mnn("Qwen3 4B", "Qwen3-4B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79), 2.7),
-        lms3("4B", 2_497_280_704L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_268c79)),
-        mnn("Qwen3 8B", "Qwen3-8B-MNN", com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462), 5.5),
-        lms3("8B", 5_027_783_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ca462)),
-        // 2.5.5: 南北阁 Nanbeige4.2 3B（循环 Transformer：22 层跑两遍，比同尺寸慢）；bartowski imatrix，HF tree API 2026-11-14。
-        gguf("Nanbeige 4.2 3B", NANBEIGE_REPO, "Nanbeige_Nanbeige4.2-3B-Q4_K_M.gguf", 2_684_023_968L, com.iris.localai.I18n.s(com.iris.localai.R.string.v255_nanbeige_purpose)),
-        // 2.5.1: Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
+        litert("Gemma 4 E2B", "gemma-4-E2B-it-litert-lm", I18n.s(R.string.data_73508c), 2.6, top = true),
+        mnn("Qwen3.5 4B", "Qwen3.5-4B-MNN", I18n.s(R.string.data_8b23d8), 2.9, top = true),
+        lms35("4B", 2_707_513_696L, 675_568_768L, I18n.s(R.string.data_8b23d8)),
+        mnn(I18n.s(R.string.data_6eff8b), "Qwen3.5-4B$OPUS", I18n.s(R.string.data_2814fe), 2.8, top = true, licence = null),
+        opus(I18n.s(R.string.data_6eff8b), "4B", 2_707_510_080L, "mmproj-BF16.gguf", 675_568_864L, I18n.s(R.string.data_2814fe)),
+        litert("Gemma 4 E4B", "gemma-4-E4B-it-litert-lm", I18n.s(R.string.data_5fd1a5), 3.7, top = true),
+        mnn("Qwen3.5 0.8B", "Qwen3.5-0.8B-MNN", I18n.s(R.string.data_2b93b4), 0.55, top = true),
+        lms35("0.8B", 527_502_816L, 207_345_952L, I18n.s(R.string.data_2b93b4)),
+        spark("Spark X2.6 4B", "Spark-X2.6-4B-GGUF", I18n.s(R.string.data_aca2d5), 3.5, top = true),
+        mnn("Qwen3.5 2B", "Qwen3.5-2B-MNN", I18n.s(R.string.data_63239b), 1.4),
+        lms35("2B", 1_270_808_032L, 671_372_416L, I18n.s(R.string.data_63239b)),
+        mnn("Qwen3.5 9B", "Qwen3.5-9B-MNN", I18n.s(R.string.data_7d4f8f), 7.274875830),
+        lms35("9B", 5_627_044_256L, 921_704_480L, I18n.s(R.string.data_7d4f8f)),
+        mnn(I18n.s(R.string.data_1c3edc), "Qwen3.5-2B$OPUS", I18n.s(R.string.data_36299f), 1.4, licence = null),
+        opus(I18n.s(R.string.data_1c3edc), "2B", 1_270_804_416L, "mmproj-BF16.gguf", 671_372_512L, I18n.s(R.string.data_36299f)),
+        mnn(I18n.s(R.string.data_45dc04), "Qwen3.5-0.8B$OPUS", I18n.s(R.string.data_aafdaf), 0.54, licence = null),
+        opus(I18n.s(R.string.data_45dc04), "0.8B", 527_499_200L, "Qwen3.5-0.8B.BF16-mmproj.gguf", 207_346_048L, I18n.s(R.string.data_aafdaf)),
+        litert("Gemma 4 12B", "gemma-4-12B-it-litert-lm", I18n.s(R.string.data_e0fccf), 6.9),
+        spark("Spark X2.6 1.7B", "Spark-X2.6-1.7B-GGUF", I18n.s(R.string.data_7c8f8e), 1.8),
+        mnn("Qwen3 0.6B", "Qwen3-0.6B-MNN", I18n.s(R.string.data_eec245), 0.45),
+        lms3("0.6B", 484_219_808L, I18n.s(R.string.data_eec245)),
+        mnn("Qwen3 1.7B", "Qwen3-1.7B-MNN", I18n.s(R.string.data_9b89f0), 1.2),
+        lms3("1.7B", 1_282_439_328L, I18n.s(R.string.data_9b89f0)),
+        mnn("Qwen3 4B", "Qwen3-4B-MNN", I18n.s(R.string.data_268c79), 2.7),
+        lms3("4B", 2_497_280_704L, I18n.s(R.string.data_268c79)),
+        mnn("Qwen3 8B", "Qwen3-8B-MNN", I18n.s(R.string.data_0ca462), 5.5),
+        lms3("8B", 5_027_783_968L, I18n.s(R.string.data_0ca462)),
+        // 南北阁 Nanbeige4.2 3B（循环 Transformer：22 层跑两遍，比同尺寸慢）；bartowski imatrix，HF tree API 2026-11-14。
+        gguf("Nanbeige 4.2 3B", NANBEIGE_REPO, "Nanbeige_Nanbeige4.2-3B-Q4_K_M.gguf", 2_684_023_968L, I18n.s(R.string.v255_nanbeige_purpose)),
+        // Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
         reap(REAP_IQ3, "IQ3_XXS", 8_311_270_560L),
         reap(REAP_Q4, "Q4_0", 10_647_317_152L),
-        // 2.5.9: LFM2.5 24B-A2B 无审查版（lfm2moe，激活 2B），用户指定 IQ2_XS；大小来自 HF tree API 2026-11-15。
+        // LFM2.5 24B-A2B 无审查版（lfm2moe，激活 2B），用户指定 IQ2_XS；大小来自 HF tree API 2026-11-15。
         Item(
-            LFM_REPO, Section.CHAT, "LFM2.5 24B-A2B 无审查（IQ2_XS）", com.iris.localai.I18n.s(com.iris.localai.R.string.v259_lfm_purpose), 8_516_829_600L, Engine.GGUF,
+            LFM_REPO, Section.CHAT, "LFM2.5 24B-A2B 无审查（IQ2_XS）", I18n.s(R.string.v259_lfm_purpose), 8_516_829_600L, Engine.GGUF,
             Kind.Gguf(LFM_REPO, "LFM2.5-24B-A2B-GSQ-RCO-IQ2_XS.gguf", 8_516_829_600L), quant = "IQ2_XS", licence = "LFM Open License",
         ),
-        // 2.6.5 (实验): Edge0-35B（Qwen3.6-35B-A3B 底座 + LoRA + prerouter，SSD 流式专家，仅 CPU / i8mm）。
+        // 实验: Edge0-35B（Qwen3.6-35B-A3B 底座 + LoRA + prerouter，SSD 流式专家，仅 CPU / i8mm）。
         // 资产由我们用官方 make_assets.py 从 Edge0/Edge0-35B-A3B-preview 转换，托管在 HF（hf-mirror 同步）。
         Item(
-            com.iris.localai.engine.edge0.Edge0Assets.REPO, Section.CHAT, "Edge0-35B（实验）", com.iris.localai.I18n.s(com.iris.localai.R.string.e265_purpose),
-            EDGE0_BYTES, Engine.EDGE0, Kind.Hub(com.iris.localai.engine.edge0.Edge0Assets.REPO), quant = "int4", licence = APACHE,
+            Edge0Assets.REPO, Section.CHAT, "Edge0-35B（实验）", I18n.s(R.string.e265_purpose),
+            EDGE0_BYTES, Engine.EDGE0, Kind.Hub(Edge0Assets.REPO), quant = "int4", licence = APACHE,
         ),
         // ---- 特色模型 ----
         Item(
-            CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", com.iris.localai.I18n.s(com.iris.localai.R.string.data_c2d28e),
+            CODER_REPO, Section.FEATURED, "Qwen3.5 4B 3D Coder", I18n.s(R.string.data_c2d28e),
             2_708_804_096L, Engine.GGUF,
             Kind.Gguf(CODER_REPO, "Qwen3.5-4B-3D-Coder-Q4_K_M.gguf", 2_708_804_096L, "mmproj-Qwen3.5-4B-BF16.gguf", 675_568_768L),
             top = true, quant = "Q4_K_M", licence = APACHE, demoPrompt = CODER_DEMO,
         ),
-        // 2.3.2 Bonsai 2 (PrismML, Qwen3.5 ternary): only the upstream Q2_0 files (PQ2_0 / PTQ1_0 need PrismML's fork).
+        // Bonsai 2 (PrismML, Qwen3.5 ternary): only the upstream Q2_0 files (PQ2_0 / PTQ1_0 need PrismML's fork).
         // HF prism-ml/Ternary-Bonsai-2-{2B,4B}-gguf checked 2026-11-04 (sizes from the tree API). 测试: CPU / OpenCL only, text only.
         Item(
-            "prism-ml/Ternary-Bonsai-2-2B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "2B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            "prism-ml/Ternary-Bonsai-2-2B-gguf", Section.FEATURED, I18n.s(R.string.data232_bonsai, "2B"), I18n.s(R.string.data232_bonsai_purpose),
             546_689_504L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-2B-gguf", "Ternary-Bonsai-2-2B-Q2_0.gguf", 546_689_504L),
             quant = "Q2_0", licence = APACHE,
         ),
         Item(
-            "prism-ml/Ternary-Bonsai-2-4B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "4B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            "prism-ml/Ternary-Bonsai-2-4B-gguf", Section.FEATURED, I18n.s(R.string.data232_bonsai, "4B"), I18n.s(R.string.data232_bonsai_purpose),
             1_212_103_520L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-4B-gguf", "Ternary-Bonsai-2-4B-Q2_0.gguf", 1_212_103_520L),
             quant = "Q2_0", licence = APACHE,
         ),
-        // 2.4.3: 9B, upstream Q2_0 only (2,556,640,128 B, HF tree 2026-11-06); PQ2_0 / PTQ1_0 / MTP / DFlash need PrismML's fork.
+        // 9B, upstream Q2_0 only (2,556,640,128 B, HF tree 2026-11-06); PQ2_0 / PTQ1_0 / MTP / DFlash need PrismML's fork.
         Item(
-            "prism-ml/Ternary-Bonsai-2-9B-gguf", Section.FEATURED, com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai, "9B"), com.iris.localai.I18n.s(com.iris.localai.R.string.data232_bonsai_purpose),
+            "prism-ml/Ternary-Bonsai-2-9B-gguf", Section.FEATURED, I18n.s(R.string.data232_bonsai, "9B"), I18n.s(R.string.data232_bonsai_purpose),
             2_556_640_128L, Engine.GGUF, Kind.Gguf("prism-ml/Ternary-Bonsai-2-9B-gguf", "Ternary-Bonsai-2-9B-Q2_0.gguf", 2_556_640_128L),
             quant = "Q2_0", licence = APACHE,
         ),
         // ---- 生图 ----
-        Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", com.iris.localai.I18n.s(com.iris.localai.R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
-    ) + voiceItems() + translateItems() + com.iris.localai.knowledge.KbEmbedModels.catalogItems() // 2.5.1 知识库嵌入模型
+        Item("sd15-qnn", Section.IMAGE, "Stable Diffusion 1.5", I18n.s(R.string.data_9026cb), 709_785_222L, Engine.NPU, Kind.Image("sd15-qnn"), top = true),
+    ) + voiceItems() + translateItems() + KbEmbedModels.catalogItems() // 知识库嵌入模型
 
     /** 语音: every downloadable voice pack (识别 / 朗读 / 音色克隆), same order as the 语音 page. */
-    private fun voiceItems(): List<Item> = com.iris.localai.voice.VoicePack.entries.filter { !it.delisted }.map { p ->
+    private fun voiceItems(): List<Item> = VoicePack.entries.filter { !it.delisted }.map { p ->
         val kind = when (p.kind) {
-            com.iris.localai.voice.VoiceKind.ASR -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_7c306e)
-            com.iris.localai.voice.VoiceKind.TTS -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f9ab1f)
-            com.iris.localai.voice.VoiceKind.CLONE -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_8bc980)
+            VoiceKind.ASR -> I18n.s(R.string.data_7c306e)
+            VoiceKind.TTS -> I18n.s(R.string.chat_f9ab1f)
+            VoiceKind.CLONE -> I18n.s(R.string.data_8bc980)
         }
         Item(
             "voice:" + p.id, Section.SPEECH, p.title, "$kind · ${p.blurb}", 0L, Engine.ONNX, Kind.Voice(p.id),
-            top = p == com.iris.localai.voice.VoicePack.ASR_SENSEVOICE || p == com.iris.localai.voice.VoicePack.TTS_KOKORO,
+            top = p == VoicePack.ASR_SENSEVOICE || p == VoicePack.TTS_KOKORO,
         )
     }
 
-    /** 2.3.0 ③ 翻译: the offline Bergamot packs (one per direction), same as 设置 › 语音与翻译. */
-    private fun translateItems(): List<Item> = com.iris.localai.translate.TranslatePack.entries.map { p ->
-        Item("translate:" + p.id, Section.TRANSLATE, com.iris.localai.I18n.s(com.iris.localai.R.string.data_8df05e, p.title), com.iris.localai.I18n.s(com.iris.localai.R.string.data_4b65d4, p.blurb), p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
+    /** 翻译: the offline Bergamot packs (one per direction), same as 设置 › 语音与翻译. */
+    private fun translateItems(): List<Item> = TranslatePack.entries.map { p ->
+        Item("translate:" + p.id, Section.TRANSLATE, I18n.s(R.string.data_8df05e, p.title), I18n.s(R.string.data_4b65d4, p.blurb), p.totalBytes, Engine.BERGAMOT, Kind.Translate(p.id), top = true, licence = "MPL-2.0")
     }
 
     /**
-     * 2.6.6: model sections (对话 / 特色 / 生图) sort by series name → download size ([ModelSort]); 语音 / 翻译 /
+     * model sections (对话 / 特色 / 生图) sort by series name → download size ([ModelSort]); 语音 / 翻译 /
      * 嵌入 keep their own order (grouped by kind, same as their settings pages).
      */
     fun section(s: Section): List<Item> {
@@ -240,7 +248,7 @@ object RecommendedCatalog {
     val SERIES_TITLED = SORTED
 
     /**
-     * 2.6.6: memory the model needs while running, for the 「内存可能不够」 hint. Equals the download size,
+     * memory the model needs while running, for the 「内存可能不够」 hint. Equals the download size,
      * except Edge0-35B: its experts stream from storage per token (only the dense trunk + router + a small
      * expert cache stay resident), so the author's figure is ~3 GB of RAM for the 21.95 GB asset folder
      * (Edge0 README, not measured on our devices). Only Edge0 is special-cased.
@@ -269,7 +277,7 @@ object RecommendedCatalog {
         if (local == repo) return true
         val stem = repo.removeSuffix("-gguf").removeSuffix("-mnn").removeSuffix("-litert-lm")
         if (local == stem) return true
-        // 2.4.3: an MNN download is a folder named after the repo — never its GGUF twin "Qwen3.5-4B-Q4_K_M.gguf"
+        // an MNN download is a folder named after the repo — never its GGUF twin "Qwen3.5-4B-Q4_K_M.gguf"
         if (repo.endsWith("-mnn")) return false
         return Regex("^" + Regex.escape(stem) + "[-._](i?q\\d|f16|bf16|f32)").containsMatchIn(local)
     }
@@ -277,18 +285,18 @@ object RecommendedCatalog {
     /** One short Chinese reason out of a (possibly multi-source, multi-line) download error. */
     fun shortReason(error: String?): String {
         val e = error?.trim().orEmpty()
-        if (e.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
-        if (e == MnnHub.GATED || com.iris.localai.I18n.s(com.iris.localai.R.string.data_10091e) in e) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_0834a0)
-        var line = e.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
+        if (e.isEmpty()) return I18n.s(R.string.data_65e200)
+        if (e == MnnHub.GATED || I18n.s(R.string.data_10091e) in e) return I18n.s(R.string.data_0834a0)
+        var line = e.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return I18n.s(R.string.data_65e200)
         val head = line.substringBefore('：', "")
-        val labels = DownloadSource.CONCRETE.map { it.label } + listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.data_662005), "hf-mirror", "HuggingFace", "Hugging Face")
+        val labels = DownloadSource.CONCRETE.map { it.label } + listOf(I18n.s(R.string.data_662005), "hf-mirror", "HuggingFace", "Hugging Face")
         if (head.isNotEmpty() && head.length <= 24 && labels.any { head.contains(it, ignoreCase = true) }) line = line.substringAfter('：').trim()
-        if (line.isEmpty()) return com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200)
+        if (line.isEmpty()) return I18n.s(R.string.data_65e200)
         return if (line.length > 120) line.take(119) + "…" else line
     }
 }
 
-/** 2.2.17 C: what one recommended card shows (computed from the download states; pure). */
+/** C: what one recommended card shows (computed from the download states; pure). */
 sealed interface RecStatus {
     data object Idle : RecStatus
     /** Another model is downloading (one at a time). */
@@ -314,14 +322,14 @@ sealed interface RecStatus {
 
         /** 「下载」 / 「42%」 / 「继续」 / 「换源重试」 / 「加载」 / 「使用中」. */
         fun primaryLabel(s: RecStatus, section: RecommendedCatalog.Section): String = when (s) {
-            Idle, Blocked -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
-            is Downloading -> s.fraction?.let { "${(it * 100).toInt()}%" } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2d455c)
-            is Paused -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56)
-            is Failed -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b7da7)
+            Idle, Blocked -> I18n.s(R.string.settings_f26ef9)
+            is Downloading -> s.fraction?.let { "${(it * 100).toInt()}%" } ?: I18n.s(R.string.settings_2d455c)
+            is Paused -> I18n.s(R.string.models_27ca56)
+            is Failed -> I18n.s(R.string.models_3b7da7)
             is Installed -> when (section) {
-                RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea)
-                RecommendedCatalog.Section.SPEECH -> if (s.loaded) com.iris.localai.I18n.s(com.iris.localai.R.string.data_4d419c) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_ecff77)
-                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE, RecommendedCatalog.Section.EMBED -> com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_9719fe)
+                RecommendedCatalog.Section.CHAT, RecommendedCatalog.Section.FEATURED -> if (s.loaded) I18n.s(R.string.data_4d419c) else I18n.s(R.string.models_4793ea)
+                RecommendedCatalog.Section.SPEECH -> if (s.loaded) I18n.s(R.string.data_4d419c) else I18n.s(R.string.data_ecff77)
+                RecommendedCatalog.Section.IMAGE, RecommendedCatalog.Section.TRANSLATE, RecommendedCatalog.Section.EMBED -> I18n.s(R.string.imagegen_9719fe)
             }
         }
     }

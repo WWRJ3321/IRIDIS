@@ -1,7 +1,12 @@
-package com.iris.localai.util
+package com.iris.localai.util.thinking
+
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
 
 /**
- * 1.7.8: reasoning gets its own budget instead of eating the answer's maxNewTokens.
+ * reasoning gets its own budget instead of eating the answer's maxNewTokens.
  *
  * Done in Kotlin, no native change: the engine is asked for `answerLimit + budget` tokens, and this
  * meter watches the stream. GGUF and MNN emit about one piece per token, so pieces are counted as

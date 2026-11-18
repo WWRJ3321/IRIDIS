@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -31,15 +33,15 @@ import com.iris.localai.ui.theme.IrisType
 
 /**
  * 2.2.0, 设置 › 模型与加载 › GenieX (full flavour): the downloadable runtime.
- * 2.1.3: the global GGUF engine switch is gone — a GGUF model on the NPU runs on GenieX, on GPU / CPU on llama.cpp.
+ * the global GGUF engine switch is gone — a GGUF model on the NPU runs on GenieX, on GPU / CPU on llama.cpp.
  */
 @Composable
 internal fun GenieXSection(vm: SettingsViewModel, gx: GenieXSupport) {
-    SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0ab786))
+    SectionTitle(I18n.s(R.string.settings_0ab786))
     SettingsGroup {
         GenieXRuntimeRow(gx, onInstall = vm::installGeniex, onCancel = vm::cancelGeniex, onDelete = vm::deleteGeniex)
     }
-    GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9a3ae4))
+    GroupFootnote(I18n.s(R.string.settings_9a3ae4))
 }
 
 @Composable
@@ -59,24 +61,24 @@ private fun GenieXRuntimeRow(gx: GenieXSupport, onInstall: () -> Unit, onCancel:
     val (subtitle, action) = when (val s = st) {
         is NpuState.Unsupported -> s.reason to null
         NpuState.NotInstalled ->
-            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_dc39b3, chip, mb(gx.downloadBytes), mb(gx.installedBytes)) +
-                (if (gx.qairtSupported) "" else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cd84be)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9) to install)
-        is NpuState.Downloading -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b5c7e, mb(s.downloaded), mb(s.total)) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2) to onCancel)
-        NpuState.Installed -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d58a87, chip, GenieX.VERSION) to (com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) to onDelete)
-        is NpuState.Failed -> s.message to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_132c5c) to install)
-        is NpuState.NeedsRepair -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5a6769, chip, s.reason) to (com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f82661) to install)
+            I18n.s(R.string.settings_dc39b3, chip, mb(gx.downloadBytes), mb(gx.installedBytes)) +
+                (if (gx.qairtSupported) "" else I18n.s(R.string.settings_cd84be)) to (I18n.s(R.string.settings_f26ef9) to install)
+        is NpuState.Downloading -> I18n.s(R.string.settings_2b5c7e, mb(s.downloaded), mb(s.total)) to (I18n.s(R.string.chat_625fb2) to onCancel)
+        NpuState.Installed -> I18n.s(R.string.settings_d58a87, chip, GenieX.VERSION) to (I18n.s(R.string.chat_2f4aad) to onDelete)
+        is NpuState.Failed -> s.message to (I18n.s(R.string.settings_132c5c) to install)
+        is NpuState.NeedsRepair -> I18n.s(R.string.settings_5a6769, chip, s.reason) to (I18n.s(R.string.settings_f82661) to install)
     }
     Column {
         SettingsRow(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5bff1c),
+            I18n.s(R.string.settings_5bff1c),
             subtitle = subtitle,
             subtitleColor = if (st is NpuState.Failed || st is NpuState.NeedsRepair) Iris.colors.danger else Iris.colors.textTertiary,
             trailing = action?.let { (label, fn) ->
                 {
                     IrisButton(
                         label, fn, compact = true,
-                        style = if (label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad) || label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)) IrisButtonStyle.Text else IrisButtonStyle.Outline,
-                        destructive = label == com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
+                        style = if (label == I18n.s(R.string.chat_2f4aad) || label == I18n.s(R.string.chat_625fb2)) IrisButtonStyle.Text else IrisButtonStyle.Outline,
+                        destructive = label == I18n.s(R.string.chat_2f4aad),
                     )
                 }
             },
@@ -95,11 +97,11 @@ internal object GenieXConsent {
     @Volatile var accepted: Boolean = false
 }
 
-internal val GENIEX_LICENSE_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6b9f80)
+internal val GENIEX_LICENSE_TITLE: String get() = I18n.s(R.string.settings_6b9f80)
 internal val GENIEX_LICENSE_BODY: String get() =
-    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9f4b3f) +
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c97ff7, GenieX.VERSION) +
-        com.iris.localai.I18n.s(com.iris.localai.R.string.settings_358252)
+    I18n.s(R.string.settings_9f4b3f) +
+        I18n.s(R.string.settings_c97ff7, GenieX.VERSION) +
+        I18n.s(R.string.settings_358252)
 internal const val GENIEX_LICENSE_URL = "https://www.qualcomm.com/site/terms-of-use"
 
 @Composable
@@ -108,15 +110,15 @@ private fun GenieXLicenseDialog(onAccept: () -> Unit, onDismiss: () -> Unit) {
     IrisDialog(
         onDismiss = onDismiss,
         title = GENIEX_LICENSE_TITLE,
-        confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad7951),
+        confirmText = I18n.s(R.string.settings_ad7951),
         onConfirm = onAccept,
-        dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2),
+        dismissText = I18n.s(R.string.chat_625fb2),
     ) {
         Column {
             Text(GENIEX_LICENSE_BODY, style = IrisType.secondary, color = Iris.colors.textSecondary)
             Spacer(Modifier.height(IrisDimens.space8))
             IrisButton(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.settings_81d193), {
+                I18n.s(R.string.settings_81d193), {
                     runCatching {
                         context.startActivity(
                             android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(GENIEX_LICENSE_URL))

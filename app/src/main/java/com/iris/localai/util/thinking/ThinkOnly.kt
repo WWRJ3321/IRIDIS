@@ -1,9 +1,13 @@
-package com.iris.localai.util
+package com.iris.localai.util.thinking
 
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
 import com.iris.localai.engine.StopReason
 
 /**
- * 1.7.7: per-reply accounting of reasoning vs. answer output, for the IrisGen end-of-reply log
+ * per-reply accounting of reasoning vs. answer output, for the IrisGen end-of-reply log
  * (and the think-only decision). Engines only report one generated-token count, so the split is
  * by streamed pieces (GGUF / MNN emit about one piece per token; LiteRT pieces can be longer) and
  * the token numbers are that count divided in proportion. Pure, unit-tested.
@@ -78,7 +82,7 @@ class ReplyAccounting(private val startInThinking: Boolean) {
 }
 
 /**
- * 1.7.7: a reply whose reasoning ended (or was cut off) with no answer text used to end silently:
+ * a reply whose reasoning ended (or was cut off) with no answer text used to end silently:
  * no error line, no 重新生成 button (both need an answer or an error). Decides what to do instead.
  */
 object ThinkOnlyPolicy {
@@ -127,7 +131,7 @@ object ThinkOnlyPolicy {
 }
 
 /**
- * 1.7.8: the same rule for the OpenAI / Ollama API (≤ 1.7.7 only logged it): a reply with reasoning
+ * the same rule for the OpenAI / Ollama API (≤ 1.7.7 only logged it): a reply with reasoning
  * but no answer is continued once with thinking off; still empty (or context full / error) →
  * the client gets an explicit error instead of an empty `content`. A client that turned thinking
  * off itself, or a cancelled request, is left alone. Pure, unit-tested.

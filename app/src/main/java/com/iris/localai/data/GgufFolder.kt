@@ -1,7 +1,9 @@
 package com.iris.localai.data
 
+import com.iris.localai.engine.llama.MmprojPairing
+
 /**
- * 2.3.5 (#8): a picked folder that holds GGUF files (e.g. LFM3-Omni / WeVisOne-VL = main GGUF + mmproj GGUF).
+ * a picked folder that holds GGUF files (e.g. LFM3-Omni / WeVisOne-VL = main GGUF + mmproj GGUF).
  * Pure: names (+ which ones a header sniff flagged as CLIP projectors) → what to import and how to link. Unit-tested.
  */
 object GgufFolder {
@@ -20,11 +22,11 @@ object GgufFolder {
 
     fun isGguf(name: String) = name.lowercase().endsWith(".gguf")
 
-    /** 2.3.5: folder name for a GGUF model: main file name without split suffix / .gguf. */
+    /** folder name for a GGUF model: main file name without split suffix / .gguf. */
     fun folderFor(mainName: String): String =
         mainName.replace(SPLIT, ".gguf").let { if (isGguf(it)) it.dropLast(5) else it }.ifBlank { "model" }
 
-    /** 2.3.5: a model folder's loadable mains (first shards), or empty when it is not a GGUF folder. */
+    /** a model folder's loadable mains (first shards), or empty when it is not a GGUF folder. */
     fun mainsIn(names: Collection<String>): List<String> = classify(names)?.mains.orEmpty()
 
     /** True for later shards (-00002-of-…) of a split GGUF. */
@@ -59,7 +61,7 @@ object GgufFolder {
         val pairs = LinkedHashMap<String, String>()
         for (m in mains) {
             val p = if (projectors.size == 1) projectors[0]
-            else com.iris.localai.engine.llama.MmprojPairing.pick(m, projectors)
+            else MmprojPairing.pick(m, projectors)
             if (p != null) pairs[m] = p
         }
         return Plan(copy, mains, projectors, pairs)

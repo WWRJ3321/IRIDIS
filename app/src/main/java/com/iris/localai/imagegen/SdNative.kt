@@ -1,5 +1,8 @@
 package com.iris.localai.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.llama.CpuFeatures
 import android.content.Context
 import android.util.Log
 import androidx.annotation.Keep
@@ -7,7 +10,7 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * 2.4.0: JNI surface of libiris_sd.so (upstream stable-diffusion.cpp, app/src/main/cpp/sdcpp/sd_jni.cpp).
+ * JNI surface of libiris_sd.so (upstream stable-diffusion.cpp, app/src/main/cpp/sdcpp/sd_jni.cpp).
  * The library is not in the APK: it comes down with the sd.cpp models ([ImageCatalog.SD_LIB]), is copied to
  * internal storage (external storage is mounted noexec) and loaded only when its SHA-256 matches.
  */
@@ -19,8 +22,8 @@ object SdNative {
     @Synchronized
     fun ensureLoaded(context: Context, downloaded: File?): String? {
         if (loaded) return null
-        com.iris.localai.engine.llama.CpuFeatures.missingForI8mm()?.let { return it }
-        val noLib = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_sd240_nolib)
+        CpuFeatures.missingForI8mm()?.let { return it }
+        val noLib = I18n.s(R.string.imagegen_sd240_nolib)
         val src = downloaded?.takeIf { it.isFile && it.length() == ImageCatalog.SD_LIB.size } ?: return noLib
         return try {
             val dir = File(context.filesDir, "sdcpp").apply { mkdirs() }

@@ -1,5 +1,8 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.memory.MemoryStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -65,47 +68,47 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** 2.2.9 texts of the memory list (unit-tested). */
+/** texts of the memory list (unit-tested). */
 object MemoryListText {
-    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7)
-    val SEARCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_603d2a)
-    val ALL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a8b0c2)
-    val PENDING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_493b7b)
-    val SAVED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4e42e4)
-    val ACCEPT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f7d9d3)
-    val IGNORE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c0d5d6)
-    val ADD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_68c7b1)
-    val EDIT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_95b351)
-    val DELETE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)
-    val EMPTY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c0ab88)
-    val NO_MATCH: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_aebf07)
+    val TITLE: String get() = I18n.s(R.string.agent_44e4d7)
+    val SEARCH: String get() = I18n.s(R.string.agent_603d2a)
+    val ALL: String get() = I18n.s(R.string.agent_a8b0c2)
+    val PENDING: String get() = I18n.s(R.string.agent_493b7b)
+    val SAVED: String get() = I18n.s(R.string.agent_4e42e4)
+    val ACCEPT: String get() = I18n.s(R.string.chat_f7d9d3)
+    val IGNORE: String get() = I18n.s(R.string.chat_c0d5d6)
+    val ADD: String get() = I18n.s(R.string.agent_68c7b1)
+    val EDIT: String get() = I18n.s(R.string.agent_95b351)
+    val DELETE: String get() = I18n.s(R.string.chat_2f4aad)
+    val EMPTY: String get() = I18n.s(R.string.agent_c0ab88)
+    val NO_MATCH: String get() = I18n.s(R.string.agent_aebf07)
 
     fun kind(k: MemoryItem.Kind): String = when (k) {
-        MemoryItem.Kind.ABOUT -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d89889)
-        MemoryItem.Kind.PREF -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_43b9ff)
-        MemoryItem.Kind.FACT -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_beb171)
+        MemoryItem.Kind.ABOUT -> I18n.s(R.string.agent_d89889)
+        MemoryItem.Kind.PREF -> I18n.s(R.string.agent_43b9ff)
+        MemoryItem.Kind.FACT -> I18n.s(R.string.agent_beb171)
     }
 
     fun source(s: MemoryItem.Source): String = when (s) {
-        MemoryItem.Source.USER -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6055c8)
-        MemoryItem.Source.AGENT -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bb6a19)
-        MemoryItem.Source.SUGGESTED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_19444e)
-        MemoryItem.Source.MIGRATED -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_bd277e)
+        MemoryItem.Source.USER -> I18n.s(R.string.agent_6055c8)
+        MemoryItem.Source.AGENT -> I18n.s(R.string.agent_bb6a19)
+        MemoryItem.Source.SUGGESTED -> I18n.s(R.string.agent_19444e)
+        MemoryItem.Source.MIGRATED -> I18n.s(R.string.agent_bd277e)
     }
 
     /** 刚刚 / n 分钟前 / n 小时前 / MM-dd. */
     fun whenLabel(now: Long, t: Long, zone: ZoneId = ZoneId.systemDefault()): String {
         val d = now - t
         return when {
-            d < 60_000L -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_4181f7)
-            d < 3_600_000L -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_aea893, d / 60_000L)
-            d < 86_400_000L -> com.iris.localai.I18n.s(com.iris.localai.R.string.hints_d935fb, d / 3_600_000L)
+            d < 60_000L -> I18n.s(R.string.hints_4181f7)
+            d < 3_600_000L -> I18n.s(R.string.hints_aea893, d / 60_000L)
+            d < 86_400_000L -> I18n.s(R.string.hints_d935fb, d / 3_600_000L)
             else -> Instant.ofEpochMilli(t).atZone(zone).format(DateTimeFormatter.ofPattern("MM-dd", Locale.ROOT))
         }
     }
 
     fun pendingFrom(t: Long, zone: ZoneId = ZoneId.systemDefault()): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_313dfa) + Instant.ofEpochMilli(t).atZone(zone).format(DateTimeFormatter.ofPattern("MM-dd HH:mm", Locale.ROOT)) + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4d864e)
+        I18n.s(R.string.agent_313dfa) + Instant.ofEpochMilli(t).atZone(zone).format(DateTimeFormatter.ofPattern("MM-dd HH:mm", Locale.ROOT)) + I18n.s(R.string.agent_4d864e)
 
     /** Search + kind filter (null = all). */
     fun filter(items: List<MemoryItem>, query: String, kind: MemoryItem.Kind?): List<MemoryItem> {
@@ -114,8 +117,8 @@ object MemoryListText {
     }
 
     fun edited(r: ItemsEdit): String? = when (r) {
-        is ItemsEdit.Ok -> r.replaced?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dd55e7, it) }
-        is ItemsEdit.Err -> if (r.message.startsWith("already")) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_62bbba) else if (r.message.startsWith("memory is full")) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_cb13e2) else r.message
+        is ItemsEdit.Ok -> r.replaced?.let { I18n.s(R.string.agent_dd55e7, it) }
+        is ItemsEdit.Err -> if (r.message.startsWith("already")) I18n.s(R.string.agent_62bbba) else if (r.message.startsWith("memory is full")) I18n.s(R.string.agent_cb13e2) else r.message
     }
 }
 
@@ -153,7 +156,7 @@ fun MemoryListPage(onBack: () -> Unit) {
                 textStyle = IrisType.body.copy(color = c.text),
                 shape = IrisRadius.pillShape,
                 colors = irisTextFieldColors(),
-                // 2.5.0 Beta5: ScrollBody has no side padding — inset to the card edge (groupGutter) like the groups.
+                // ScrollBody has no side padding — inset to the card edge (groupGutter) like the groups.
                 modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter).padding(top = IrisDimens.space8),
             )
             Spacer(Modifier.height(IrisDimens.space16))
@@ -220,7 +223,7 @@ fun MemoryListPage(onBack: () -> Unit) {
             onDismiss = { adding = false; editing = null },
         ) { text, k ->
             adding = false; editing = null
-            // 2.2.14: saving an empty text clears the item (edit) or does nothing (add).
+            // saving an empty text clears the item (edit) or does nothing (add).
             when {
                 text.isBlank() && e != null -> act { store.delete(e.id); null }
                 text.isBlank() -> Unit
@@ -230,7 +233,7 @@ fun MemoryListPage(onBack: () -> Unit) {
     }
     deleting?.let { d ->
         ConfirmDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8af8e7), message = d.text, confirmText = MemoryListText.DELETE,
+            title = I18n.s(R.string.agent_8af8e7), message = d.text, confirmText = MemoryListText.DELETE,
             onConfirm = { act { store.delete(d.id); null } },
             onDismiss = { deleting = null },
         )
@@ -284,7 +287,7 @@ private fun MemoryRow(item: MemoryItem, now: Long, onEdit: () -> Unit, onDelete:
             )
         }
         Box {
-            PressableIcon(IrisIcons.More, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
+            PressableIcon(IrisIcons.More, I18n.s(R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
             IrisMenu(menu, { menu = false }) {
                 IrisMenuItem(MemoryListText.EDIT, IrisIcons.Edit) { menu = false; onEdit() }
                 IrisMenuItem(MemoryListText.DELETE, null, destructive = true) { menu = false; onDelete() }
@@ -297,9 +300,9 @@ private fun MemoryRow(item: MemoryItem, now: Long, onEdit: () -> Unit, onDelete:
 private fun ItemDialog(initialText: String, initialKind: MemoryItem.Kind, title: String, onDismiss: () -> Unit, onSave: (String, MemoryItem.Kind) -> Unit) {
     var text by remember { mutableStateOf(initialText) }
     var k by remember { mutableStateOf(initialKind) }
-    val over = text.trim().length > com.iris.localai.memory.MemoryStore.ITEM_MAX
+    val over = text.trim().length > MemoryStore.ITEM_MAX
     IrisDialog(
-        onDismiss = onDismiss, title = title, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
+        onDismiss = onDismiss, title = title, confirmText = I18n.s(R.string.settings_be5fbb),
         confirmEnabled = !over,
         onConfirm = { onSave(text.trim(), k) },
     ) {
@@ -307,14 +310,14 @@ private fun ItemDialog(initialText: String, initialKind: MemoryItem.Kind, title:
             OutlinedTextField(
                 text, { text = it }, minLines = 2, maxLines = 6,
                 textStyle = IrisType.body.copy(color = Iris.colors.text),
-                placeholder = { Text(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2ca522), style = IrisType.body, color = Iris.colors.textTertiary) },
+                placeholder = { Text(I18n.s(R.string.agent_2ca522), style = IrisType.body, color = Iris.colors.textTertiary) },
                 shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 MemoryItem.Kind.entries.forEach { kk -> FilterPill(MemoryListText.kind(kk), k == kk) { k = kk } }
             }
             Text(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_37f497, text.trim().length, com.iris.localai.memory.MemoryStore.ITEM_MAX),
+                I18n.s(R.string.agent_37f497, text.trim().length, MemoryStore.ITEM_MAX),
                 style = IrisType.caption, color = if (over) Iris.colors.danger else Iris.colors.textTertiary,
             )
         }

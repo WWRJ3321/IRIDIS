@@ -1,5 +1,7 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
 
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 
 /**
- * 1.10.2: the last load per model + backend (time, cache hit / first compile), kept across app
+ * the last load per model + backend (time, cache hit / first compile), kept across app
  * starts in its own SharedPreferences file `iris_load_stats` — no existing settings key is touched.
  */
 class LoadStatsStore(context: Context) {

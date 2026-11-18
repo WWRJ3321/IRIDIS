@@ -1,5 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.streaming
 
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.thinking.*
 import java.util.Locale
 
 /**
@@ -12,7 +16,7 @@ class ReplyTimer(private val clock: () -> Long = { android.os.SystemClock.elapse
     private var firstAt = 0L
     private var lastAt = 0L
     private var endAt = 0L
-    /** 1.13.1: output time without long pauses (tool runs, app frozen in the background, prefill of a later agent step). */
+    /** output time without long pauses (tool runs, app frozen in the background, prefill of a later agent step). */
     private var activeMs = 0L
     @Volatile var chars = 0
         private set
@@ -76,7 +80,7 @@ object ReplySpeed {
             val cps = chars * 1000.0 / outputMs
             parts += if (cps >= 10) "${Math.round(cps)} 字/秒" else String.format(Locale.US, "%.1f 字/秒", cps)
         }
-        // 1.13.1: the engine's own decode rate (tokens, not characters), when it measured one.
+        // the engine's own decode rate (tokens, not characters), when it measured one.
         if (tokensPerSecond > 0f && tokensPerSecond < 10_000f) parts += String.format(Locale.US, "%.1f tok/s", tokensPerSecond)
         val t = maxOf(totalMs, outputMs)
         if (t > 0) parts += if (t < 10_000) String.format(Locale.US, "用时 %.1fs", t / 1000.0) else "用时 ${Math.round(t / 1000.0)}s"

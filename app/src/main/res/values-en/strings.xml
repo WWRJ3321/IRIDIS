@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">The reply hit the length limit before the content was complete; nothing written</string>
     <string name="ask245_pill">Waiting for you: %1$s</string>
     <string name="ask245_reopen">Open the confirmation</string>
-    <string name="vg245_title">Use GPU for vision</string>
+    <string name="vg245_title">Vision (mmproj)</string>
     <string name="vg245_off">mmproj on CPU on Snapdragon. Applies after reload</string>
     <string name="vg245_on">Faster vision; may hang on some phones. Applies after reload</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU build, 4K context, text only (beta)</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">Model too large (about %1$s GB) for this phone\'s memory</string>
     <string name="ig27_start">Download a model first, or tap “Import model” at the end to use your own files</string>
     <string name="st27_embed">Knowledge base search model</string>
+    <string name="engine_cl_off">GPU (OpenCL) was turned off for safety after the last load crashed</string>
+    <string name="models_gpu_recheck">Re-check GPU</string>
+    <string name="models_gpu_recheck_ok">Re-checked: GPU is available.</string>
+    <string name="models_gpu_recheck_restart">GPU re-enabled; restart the app for it to take effect.</string>
+    <string name="models_gpu_recheck_none">Still no OpenCL driver found.</string>
+    <string name="vg27b_note">For regular GGUF models, choose CPU or GPU for vision here. When the model runs on the NPU (GenieX), GenieX handles vision automatically and this setting does not apply. Applies after reload.</string>
 </resources>

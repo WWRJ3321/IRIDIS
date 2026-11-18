@@ -1,7 +1,12 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
- * 2.2.14: a GPU (OpenCL) load that stops making progress. On some Adreno drivers the new
+ * a GPU (OpenCL) load that stops making progress. On some Adreno drivers the new
  * llama.cpp OpenCL backend sits in kernel compilation / driver init and never returns, and the
  * native call cannot be interrupted. Any change of the progress signature (load progress,
  * OpenCL log ticks, compiled-kernel cache files) counts as progress; [timeoutMs] without a
@@ -35,9 +40,9 @@ class GpuLoadWatchdog(val timeoutMs: Long = TIMEOUT_MS) {
             ((progress.coerceIn(0f, 1f) * 1000).toLong() shl 42) or
                 ((ticks.toLong() and 0x1FFFFF) shl 21) or (cacheFiles.toLong() and 0x1FFFFF)
 
-        val HANG_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_496c6c)
+        val HANG_NOTICE: String get() = I18n.s(R.string.engine_496c6c)
 
         fun hangDetail(ticks: Int, lastLog: String, stalledMs: Long): String =
-            com.iris.localai.I18n.s(com.iris.localai.R.string.engine_65bbe5, stalledMs / 1000, ticks) + lastLog.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
+            I18n.s(R.string.engine_65bbe5, stalledMs / 1000, ticks) + lastLog.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
     }
 }

@@ -1,6 +1,11 @@
-package com.iris.localai.util
+package com.iris.localai.util.diagnostics
 
-/** 1.10.9: what the model is doing right now (indicator above the composer). Pure parts unit-tested. */
+import com.iris.localai.util.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
+
+/** what the model is doing right now (indicator above the composer). Pure parts unit-tested. */
 data class Activity(val label: String, val since: Long = System.currentTimeMillis()) {
     companion object {
         /** A new phase must hold this long before it replaces the shown one (no flicker). */

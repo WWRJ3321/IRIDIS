@@ -1,5 +1,21 @@
 package com.iris.localai.ui.models
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.DeviceRecommend
+import com.iris.localai.data.ModelFormat
+import com.iris.localai.data.ModelSort
+import com.iris.localai.engine.GgufQuant
+import com.iris.localai.engine.MtpTag
+import com.iris.localai.imagegen.ImageCatalog
+import com.iris.localai.knowledge.KbEmbedModels
+import com.iris.localai.translate.TranslatePack
+import com.iris.localai.ui.components.ConfirmDialog
+import com.iris.localai.ui.components.GroupFootnote
+import com.iris.localai.ui.components.PressableIcon
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.LocalReduceMotion
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -87,18 +103,18 @@ import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.voice.PackState
 import com.iris.localai.voice.VoicePack
 
-/** 2.2.17 C 下载模型 page texts and small pure helpers (unit-tested). */
+/** C 下载模型 page texts and small pure helpers (unit-tested). */
 object DownloadText {
-    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_329255)
-    val TABS get() = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3f9810), com.iris.localai.I18n.s(com.iris.localai.R.string.models_2b62ab), com.iris.localai.I18n.s(com.iris.localai.R.string.models_8818d4), com.iris.localai.I18n.s(com.iris.localai.R.string.models_726731))
-    val ONE_AT_A_TIME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_d7c432)
-    val PAUSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8d63ef)
-    val CANCEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_625fb2)
-    /** 2.6.3: paused → delete the downloaded part. */
-    val DISCARD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.dl263_discard)
-    val VISION_TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_25cef9)
-    val TRY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_8c0dd3)
-    val TRY_HINT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.models_6ebc23)
+    val TITLE: String get() = I18n.s(R.string.models_329255)
+    val TABS get() = listOf(I18n.s(R.string.models_3f9810), I18n.s(R.string.models_2b62ab), I18n.s(R.string.models_8818d4), I18n.s(R.string.models_726731))
+    val ONE_AT_A_TIME: String get() = I18n.s(R.string.models_d7c432)
+    val PAUSE: String get() = I18n.s(R.string.models_8d63ef)
+    val CANCEL: String get() = I18n.s(R.string.chat_625fb2)
+    /** paused → delete the downloaded part. */
+    val DISCARD: String get() = I18n.s(R.string.dl263_discard)
+    val VISION_TITLE: String get() = I18n.s(R.string.models_25cef9)
+    val TRY: String get() = I18n.s(R.string.models_8c0dd3)
+    val TRY_HINT: String get() = I18n.s(R.string.models_6ebc23)
 
     /** Tab index → online list (null = 推荐). */
     fun modeOf(tab: Int): GgufSearch.Browse? = when (tab) { 1 -> GgufSearch.Browse.HOT; 2 -> GgufSearch.Browse.NEW; 3 -> GgufSearch.Browse.FIT; else -> null }
@@ -111,28 +127,28 @@ object DownloadText {
 
     /** One line for the 模型与加载 page (null = nothing downloading / paused / failed). */
     fun statusLine(hub: MnnHub.State): String? = when {
-        hub.active -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_51b52e, displayName(hub.repoId)) + (if (hub.totalBytes > 0) " · ${(hub.progress * 100).toInt()}%" else "")
-        hub.paused -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_87c0cf, displayName(hub.repoId))
-        hub.error != null -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_d2cb87) + RecommendedCatalog.shortReason(hub.error)
+        hub.active -> I18n.s(R.string.models_51b52e, displayName(hub.repoId)) + (if (hub.totalBytes > 0) " · ${(hub.progress * 100).toInt()}%" else "")
+        hub.paused -> I18n.s(R.string.models_87c0cf, displayName(hub.repoId))
+        hub.error != null -> I18n.s(R.string.models_d2cb87) + RecommendedCatalog.shortReason(hub.error)
         else -> null
     }
 
     /** "1.2 GB / 2.5 GB · 魔搭 ModelScope". */
     fun progressLine(done: Long, total: Long, source: String = ""): String =
-        listOfNotNull(if (total > 0) "${Format.bytes(done)} / ${Format.bytes(total)}" else com.iris.localai.I18n.s(com.iris.localai.R.string.models_dcfb68), source.ifBlank { null }).joinToString(" · ")
+        listOfNotNull(if (total > 0) "${Format.bytes(done)} / ${Format.bytes(total)}" else I18n.s(R.string.models_dcfb68), source.ifBlank { null }).joinToString(" · ")
 
     /** What the detail sheet says the download fetches. */
     fun filesLine(item: RecommendedCatalog.Item): String = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Gguf -> k.file
         is RecommendedCatalog.Kind.Hub -> when (item.engine) {
-            RecommendedCatalog.Engine.MNN -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_ddd4f5)
-            RecommendedCatalog.Engine.LITERT -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_b351da)
-            RecommendedCatalog.Engine.EDGE0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.e265_files)
-            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_89d8e3)
+            RecommendedCatalog.Engine.MNN -> I18n.s(R.string.models_ddd4f5)
+            RecommendedCatalog.Engine.LITERT -> I18n.s(R.string.models_b351da)
+            RecommendedCatalog.Engine.EDGE0 -> I18n.s(R.string.e265_files)
+            else -> I18n.s(R.string.models_89d8e3)
         }
-        is RecommendedCatalog.Kind.Image -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_aa40ac)
-        is RecommendedCatalog.Kind.Voice -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_73e385)
-        is RecommendedCatalog.Kind.Translate -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_947d0a)
+        is RecommendedCatalog.Kind.Image -> I18n.s(R.string.models_aa40ac)
+        is RecommendedCatalog.Kind.Voice -> I18n.s(R.string.models_73e385)
+        is RecommendedCatalog.Kind.Translate -> I18n.s(R.string.models_947d0a)
     }
 }
 
@@ -149,15 +165,15 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     val voiceStates by vm.voiceStates.collectAsStateWithLifecycle()
     val translateStates by vm.translateStates.collectAsStateWithLifecycle()
     val ram = remember { vm.availRam() }
-    // 2.5.0 Beta6: 按机型推荐 — total RAM + chip class → one chat model, shown first on 推荐.
+    // 按机型推荐 — total RAM + chip class → one chat model, shown first on 推荐.
     val total = remember { vm.totalRam() }
     val socMan = remember { if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MANUFACTURER }.getOrNull() else null }
     val socModel = remember { if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MODEL }.getOrNull() else android.os.Build.HARDWARE }
-    val chip = remember { com.iris.localai.data.DeviceRecommend.chip(socMan, socModel) }
-    val forDevice = remember { com.iris.localai.data.DeviceRecommend.pick(total, chip) }
-    // 2.5.1: 额外推荐（12 GB / 16 GB 机的 Gemma 4 19B REAP），排在原推荐之后
-    val forDeviceExtra = remember { com.iris.localai.data.DeviceRecommend.extras(total, chip) }
-    // 2.4.4: downloads show their progress in the notification shade; ask once (Android 13+).
+    val chip = remember { DeviceRecommend.chip(socMan, socModel) }
+    val forDevice = remember { DeviceRecommend.pick(total, chip) }
+    // 额外推荐（12 GB / 16 GB 机的 Gemma 4 19B REAP），排在原推荐之后
+    val forDeviceExtra = remember { DeviceRecommend.extras(total, chip) }
+    // downloads show their progress in the notification shade; ask once (Android 13+).
     run {
         val ctx = androidx.compose.ui.platform.LocalContext.current
         val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
@@ -174,7 +190,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     var query by rememberSaveable { mutableStateOf(search.query) }
     var expanded by remember { mutableStateOf(emptySet<Section>()) }
     var detailId by rememberSaveable { mutableStateOf<String?>(null) }
-    // 2.6.2: opened from elsewhere for one catalog card (知识库 › 嵌入模型 not downloaded).
+    // opened from elsewhere for one catalog card (知识库 › 嵌入模型 not downloaded).
     androidx.compose.runtime.LaunchedEffect(Unit) { DownloadNav.take()?.let { detailId = it } }
 
     // models from elsewhere: the existing import, its progress shows on 模型与加载
@@ -189,27 +205,27 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     LaunchedEffect(imageStates.keys) { vm.refreshImageModels() }
 
     val loadedPath = (engine as? EngineState.Ready)?.model?.path
-    // 2.6.7: 下载卡顿——这些要读磁盘，之前每次进度刷新在主线程逐卡重算；改为 IO 线程、只在列表/下载状态变化时算。
+    // 下载卡顿——这些要读磁盘，之前每次进度刷新在主线程逐卡重算；改为 IO 线程、只在列表/下载状态变化时算。
     val embedDone by androidx.compose.runtime.produceState(emptySet<String>(), models, hub.active, hub.repoId) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { com.iris.localai.knowledge.KbEmbedModels.installed().map { it.repo }.toSet() }.getOrDefault(emptySet())
+            runCatching { KbEmbedModels.installed().map { it.repo }.toSet() }.getOrDefault(emptySet())
         }
     }
     val voiceSizes by androidx.compose.runtime.produceState(emptyMap<VoicePack, Long>(), voiceStates) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { VoicePack.entries.associateWith(vm::voiceBytes) }
     }
     fun local(item: RecommendedCatalog.Item): LocalModel? = vm.localFor(item, models)
-    /** 2.5.0-beta9: the installed GGUF behind a card (its header decides the 「MTP」 badge). */
+    /** the installed GGUF behind a card (its header decides the 「MTP」 badge). */
     fun ggufPath(item: RecommendedCatalog.Item): String? =
-        if (item.kind is RecommendedCatalog.Kind.Gguf) local(item)?.takeIf { it.format == com.iris.localai.data.ModelFormat.GGUF }?.path else null
+        if (item.kind is RecommendedCatalog.Kind.Gguf) local(item)?.takeIf { it.format == ModelFormat.GGUF }?.path else null
     fun status(item: RecommendedCatalog.Item): RecStatus = when (val k = item.kind) {
         is RecommendedCatalog.Kind.Hub, is RecommendedCatalog.Kind.Gguf -> {
             val l = local(item)
-            RecStatus.forHub(item.repoId!!, hub, l != null || item.repoId in embedDone, l != null && l.path == loadedPath)
+            RecStatus.forHub(item.repoId.orEmpty(), hub, l != null || item.repoId in embedDone, l != null && l.path == loadedPath)
         }
         is RecommendedCatalog.Kind.Image -> when (val s = imageStates[k.modelId]) {
             is ImageDl.Downloading -> RecStatus.Downloading(s.done, s.total, s.source, pausable = false)
-            is ImageDl.Extracting -> RecStatus.Downloading(s.done, s.total, com.iris.localai.I18n.s(com.iris.localai.R.string.models_b8894f), pausable = false)
+            is ImageDl.Extracting -> RecStatus.Downloading(s.done, s.total, I18n.s(R.string.models_b8894f), pausable = false)
             is ImageDl.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
             else -> if (k.modelId in imageDone) RecStatus.Installed() else RecStatus.Idle
         }
@@ -217,13 +233,13 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             val p = VoicePack.byId(k.packId)
             when (val s = p?.let { voiceStates[it] }) {
                 is PackState.Downloading -> RecStatus.Downloading(s.downloaded, s.total, pausable = false)
-                PackState.Extracting -> RecStatus.Downloading(0, 0, com.iris.localai.I18n.s(com.iris.localai.R.string.models_b8894f), pausable = false)
+                PackState.Extracting -> RecStatus.Downloading(0, 0, I18n.s(R.string.models_b8894f), pausable = false)
                 is PackState.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
                 PackState.Installed -> RecStatus.Installed(vm.voiceInUse(p))
                 else -> RecStatus.Idle
             }
         }
-        is RecommendedCatalog.Kind.Translate -> when (val s = com.iris.localai.translate.TranslatePack.entries.firstOrNull { it.id == k.packId }?.let { translateStates[it] }) {
+        is RecommendedCatalog.Kind.Translate -> when (val s = TranslatePack.entries.firstOrNull { it.id == k.packId }?.let { translateStates[it] }) {
             is PackState.Downloading -> RecStatus.Downloading(s.downloaded, s.total, pausable = false)
             is PackState.Failed -> RecStatus.Failed(RecommendedCatalog.shortReason(s.message))
             PackState.Installed -> RecStatus.Installed()
@@ -232,7 +248,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
     }
     fun size(item: RecommendedCatalog.Item): Long = (item.kind as? RecommendedCatalog.Kind.Voice)?.let { k -> VoicePack.byId(k.packId)?.let { voiceSizes[it] }?.takeIf { it > 0 } } ?: item.sizeBytes
     fun ramHint(item: RecommendedCatalog.Item): String? =
-        if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(RecommendedCatalog.runBytes(item), ram) else null // 2.6.6: Edge0 按运行内存
+        if (ram > 0 && item.section != Section.SPEECH && item.section != Section.TRANSLATE && item.sizeBytes > 0) GgufSearch.fitHint(RecommendedCatalog.runBytes(item), ram) else null // Edge0 按运行内存
     val actions = object : RecActions {
         override fun primary(item: RecommendedCatalog.Item, s: RecStatus, withVision: Boolean) {
             when (s) {
@@ -295,7 +311,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         placeholder = { Text(SearchText.HINT, style = IrisType.body, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingIcon = { Icon(Icons.Outlined.Search, null, tint = c.textTertiary, modifier = Modifier.size(IrisDimens.iconMedium)) },
                         trailingIcon = if (query.isNotEmpty()) ({
-                            com.iris.localai.ui.components.PressableIcon(Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c)) { query = ""; if (tab > 0) vm.browse(DownloadText.modeOf(tab)!!, "") }
+                            PressableIcon(Icons.Outlined.Close, I18n.s(R.string.chat_288f0c)) { query = ""; if (tab > 0) vm.browse(DownloadText.modeOf(tab)!!, "") }
                         }) else null,
                         shape = IrisRadius.pillShape,
                         colors = com.iris.localai.ui.components.irisTextFieldColors(),
@@ -321,7 +337,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                                 Text(hub.repoId.substringAfter('/'), style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(hub.repoId.substringBefore('/'), style = IrisType.caption, color = c.textTertiary, maxLines = 1)
                             }
-                            if (s is RecStatus.Paused) IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_27ca56), vm::resumeDownload, compact = true)
+                            if (s is RecStatus.Paused) IrisButton(I18n.s(R.string.models_27ca56), vm::resumeDownload, compact = true)
                         }
                         DownloadBlock(s, onPause = vm::pauseDownload, onRetry = vm::retryOtherSource, onCancel = vm::cancelDownload, onImport = importFile, onDiscard = { vm.discardDownload() })
                     }
@@ -329,28 +345,28 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             }
             if (tab == 0) {
                 forDevice?.let { rec ->
-                    item(key = "for-device-title", contentType = "title") { SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_title)) }
+                    item(key = "for-device-title", contentType = "title") { SectionTitle(I18n.s(R.string.v250_rec_title)) }
                     item(key = "for-device", contentType = "rec") {
                         RecCard(rec, status(rec), size(rec), ramHint(rec), actions, onOpen = { detailId = rec.id }, mtpPath = ggufPath(rec))
                     }
                     items(forDeviceExtra, key = { "for-device-" + it.id }, contentType = { "rec" }) { x ->
-                        androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RecCard(x, status(x), size(x), ramHint(x), actions, onOpen = { detailId = x.id }, mtpPath = ggufPath(x)) }
+                        androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RecCard(x, status(x), size(x), ramHint(x), actions, onOpen = { detailId = x.id }, mtpPath = ggufPath(x)) }
                     }
                     item(key = "for-device-why", contentType = "hint") {
-                        val dr = com.iris.localai.data.DeviceRecommend
+                        val dr = DeviceRecommend
                         val brand = when (dr.vendor(socMan, socModel)) {
-                            com.iris.localai.data.DeviceRecommend.Vendor.QUALCOMM -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_soc_qcom)
-                            com.iris.localai.data.DeviceRecommend.Vendor.MEDIATEK -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_soc_mtk)
+                            DeviceRecommend.Vendor.QUALCOMM -> I18n.s(R.string.v250_soc_qcom)
+                            DeviceRecommend.Vendor.MEDIATEK -> I18n.s(R.string.v250_soc_mtk)
                             else -> ""
                         }
                         val cls = when (chip) {
-                            com.iris.localai.data.DeviceRecommend.Chip.FLAGSHIP -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_flagship)
-                            com.iris.localai.data.DeviceRecommend.Chip.MID -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_mid)
-                            com.iris.localai.data.DeviceRecommend.Chip.ENTRY -> com.iris.localai.I18n.s(com.iris.localai.R.string.v250_chip_entry)
-                            com.iris.localai.data.DeviceRecommend.Chip.UNKNOWN -> ""
+                            DeviceRecommend.Chip.FLAGSHIP -> I18n.s(R.string.v250_chip_flagship)
+                            DeviceRecommend.Chip.MID -> I18n.s(R.string.v250_chip_mid)
+                            DeviceRecommend.Chip.ENTRY -> I18n.s(R.string.v250_chip_entry)
+                            DeviceRecommend.Chip.UNKNOWN -> ""
                         }
                         val chipText = listOf(brand, cls).filter { it.isNotEmpty() }.joinToString(" ")
-                        com.iris.localai.ui.components.GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.v250_rec_why, dr.ramGb(total), chipText.ifEmpty { "—" }))
+                        GroupFootnote(I18n.s(R.string.v250_rec_why, dr.ramGb(total), chipText.ifEmpty { "—" }))
                     }
                 }
                 Section.entries.forEach { sec ->
@@ -358,21 +374,21 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     val open = sec in expanded
                     val shown = RecommendedCatalog.visible(sec, open)
                     item(key = "sec-" + sec.name, contentType = "title") { SectionTitle(sec.title) }
-                    // 2.6.6: sorted series → size; a run of ≥ 2 same-series cards gets a light series sub-title.
-                    com.iris.localai.data.ModelSort.runs(shown) { it.name }.forEach { (series, run) ->
+                    // sorted series → size; a run of ≥ 2 same-series cards gets a light series sub-title.
+                    ModelSort.runs(shown) { it.name }.forEach { (series, run) ->
                     if (run.size >= 2 && sec in RecommendedCatalog.SERIES_TITLED) item(key = "ser-" + sec.name + "-" + run.first().id, contentType = "series") {
                         Text(series, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(start = IrisDimens.pageGutter + IrisDimens.space4, top = IrisDimens.space8, bottom = IrisDimens.space2))
                     }
                     items(run, key = { it.id }, contentType = { "rec" }) { item ->
                         val s = status(item)
-                        // 2.5.3: switching category / filter fades cards in and out instead of swapping at once.
-                        androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item)) }
+                        // switching category / filter fades cards in and out instead of swapping at once.
+                        androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item)) }
                     }
                     }
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
                         item(key = "more-" + sec.name, contentType = "more") {
                             IrisButton(
-                                if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c77b8, all.size),
+                                if (open) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.models_2c77b8, all.size),
                                 { expanded = if (open) expanded - sec else expanded + sec },
                                 style = IrisButtonStyle.Text, compact = true,
                                 icon = Icons.Outlined.ExpandMore,
@@ -386,7 +402,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         Text(SourceText.IMPORT_HINT, style = IrisType.secondary, color = c.textSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(SourceText.IMPORT, importFile, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Add)
-                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.models_238420), { folderPicker.launch(null) }, style = IrisButtonStyle.Tonal, compact = true, icon = com.iris.localai.ui.icons.IrisIcons.Folder)
+                            IrisButton(I18n.s(R.string.models_238420), { folderPicker.launch(null) }, style = IrisButtonStyle.Tonal, compact = true, icon = IrisIcons.Folder)
                         }
                         Text(SourceText.AUTO_SWITCH, style = IrisType.caption, color = c.textTertiary)
                     }
@@ -399,10 +415,10 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                         if (search.searched && !search.loading && search.hits.isEmpty()) Text(SearchText.EMPTY, style = IrisType.caption, color = c.textTertiary)
                     }
                 }
-                items(search.hits, key = { "hit-" + it.site.name + it.id }, contentType = { "hit" }) { h -> androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) { OnlineCard(h, ram) { vm.openRepo(h) } } }
+                items(search.hits, key = { "hit-" + it.site.name + it.id }, contentType = { "hit" }) { h -> androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { OnlineCard(h, ram) { vm.openRepo(h) } } }
                 item(key = "more-online", contentType = "hint") {
                     Text(
-                        when { search.loading -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_25878e); search.hasMore && search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_9248b2); search.hits.isNotEmpty() -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_1fe900); else -> "" },
+                        when { search.loading -> I18n.s(R.string.models_25878e); search.hasMore && search.hits.isNotEmpty() -> I18n.s(R.string.models_9248b2); search.hits.isNotEmpty() -> I18n.s(R.string.models_1fe900); else -> "" },
                         style = IrisType.caption, color = c.textTertiary,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
                     )
@@ -427,7 +443,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
 }
 
 /**
- * 2.6.2: open 下载模型 from another page with one catalog card's detail sheet shown.
+ * open 下载模型 from another page with one catalog card's detail sheet shown.
  * MainActivity sets [opener] (push the route); [open] stores the card id the screen takes once.
  */
 object DownloadNav {
@@ -472,20 +488,20 @@ private fun Badge(text: String, tone: Color? = null) {
 }
 
 @Composable
-private fun ramTone(hint: String): Color = if (hint == com.iris.localai.I18n.s(com.iris.localai.R.string.models_60a35c)) Iris.colors.success else Iris.colors.warning
+private fun ramTone(hint: String): Color = if (hint == I18n.s(R.string.models_60a35c)) Iris.colors.success else Iris.colors.warning
 
 @Composable
 private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, mtpPath: String? = null) {
-    // 2.5.0-beta9: 「MTP」 only when the downloaded GGUF's header has MTP layers (read on IO).
+    // 「MTP」 only when the downloaded GGUF's header has MTP layers (read on IO).
     val mtp by androidx.compose.runtime.produceState(false, mtpPath) {
         value = mtpPath != null && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.iris.localai.engine.GgufQuant.of(java.io.File(mtpPath))?.mtp == true
+            GgufQuant.of(java.io.File(mtpPath))?.mtp == true
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
-        if (size > 0) Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(size))
+        if (size > 0) Badge(I18n.s(R.string.chat_768d35) + Format.bytes(size))
         Badge(item.engine.label)
-        if (mtp) Badge(com.iris.localai.engine.MtpTag.LABEL)
+        if (mtp) Badge(MtpTag.LABEL)
         ramHint?.let { Badge(it, ramTone(it)) }
     }
 }
@@ -540,19 +556,19 @@ private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit
         is RecStatus.Paused -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
             IrisProgressBar(progress = if (s.total > 0) (s.done.toDouble() / s.total).toFloat() else 0f)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models_80e506) + DownloadText.progressLine(s.done, s.total), style = IrisType.caption, color = c.textSecondary,
+                Text(I18n.s(R.string.models_80e506) + DownloadText.progressLine(s.done, s.total), style = IrisType.caption, color = c.textSecondary,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Text, compact = true)
                 IrisButton(DownloadText.CANCEL, onCancel, style = IrisButtonStyle.Text, compact = true)
             }
-            // 2.6.3: 清除已下载 — confirm, then the .part files go and the card is back to 下载.
+            // 清除已下载 — confirm, then the .part files go and the card is back to 下载.
             if (onDiscard != null) {
                 var asking by remember { mutableStateOf(false) }
                 IrisButton(DownloadText.DISCARD, { asking = true }, style = IrisButtonStyle.Text, compact = true)
-                if (asking) com.iris.localai.ui.components.ConfirmDialog(
+                if (asking) ConfirmDialog(
                     title = DownloadText.DISCARD,
-                    message = com.iris.localai.I18n.s(com.iris.localai.R.string.dl263_discard_msg, com.iris.localai.data.Format.bytes(s.done)),
-                    confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
+                    message = I18n.s(R.string.dl263_discard_msg, Format.bytes(s.done)),
+                    confirmText = I18n.s(R.string.chat_2f4aad),
                     onConfirm = { asking = false; onDiscard() },
                     onDismiss = { asking = false },
                 )
@@ -580,9 +596,9 @@ private fun OnlineCard(h: GgufSearch.RepoHit, ram: Long, onOpen: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
             Badge(h.site.tag)
-            h.sizeRange?.let { r -> Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_768d35) + Format.bytes(r.first) + com.iris.localai.I18n.s(com.iris.localai.R.string.models_d59693)) }
+            h.sizeRange?.let { r -> Badge(I18n.s(R.string.chat_768d35) + Format.bytes(r.first) + I18n.s(R.string.models_d59693)) }
             if (ram > 0) h.sizeRange?.let { r -> GgufSearch.fitHint(r.first, ram).let { Badge(it, ramTone(it)) } }
-            if (h.gated) Badge(com.iris.localai.I18n.s(com.iris.localai.R.string.models_dc6722), Iris.colors.warning)
+            if (h.gated) Badge(I18n.s(R.string.models_dc6722), Iris.colors.warning)
         }
     }
 }
@@ -602,17 +618,17 @@ private fun RecDetailSheet(
             Badges(item, size, ramHint, mtpPath)
         }
         Spacer(Modifier.height(IrisDimens.space8))
-        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47), DownloadText.filesLine(item))
-        item.quant?.let { ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_03860b), it) }
-        item.licence?.let { ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_20a284), it) }
-        ValueRow(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_26ca20), item.repoId ?: when (val k = item.kind) {
-            is RecommendedCatalog.Kind.Image -> com.iris.localai.imagegen.ImageCatalog.byId(k.modelId)?.hfRepo ?: "Qualcomm AI Hub"
-            is RecommendedCatalog.Kind.Translate -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_3788b3, com.iris.localai.translate.TranslatePack.REPO)
-            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_e88a00)
+        ValueRow(I18n.s(R.string.chat_2a0c47), DownloadText.filesLine(item))
+        item.quant?.let { ValueRow(I18n.s(R.string.models_03860b), it) }
+        item.licence?.let { ValueRow(I18n.s(R.string.models_20a284), it) }
+        ValueRow(I18n.s(R.string.chat_26ca20), item.repoId ?: when (val k = item.kind) {
+            is RecommendedCatalog.Kind.Image -> ImageCatalog.byId(k.modelId)?.hfRepo ?: "Qualcomm AI Hub"
+            is RecommendedCatalog.Kind.Translate -> I18n.s(R.string.models_3788b3, TranslatePack.REPO)
+            else -> I18n.s(R.string.models_e88a00)
         })
         val g = item.kind as? RecommendedCatalog.Kind.Gguf
         if (g?.mmproj != null && s == RecStatus.Idle) {
-            CheckRow(DownloadText.VISION_TITLE, withVision, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_10ffff, g.mmproj, Format.bytes(g.mmprojSize))) { withVision = !withVision }
+            CheckRow(DownloadText.VISION_TITLE, withVision, subtitle = I18n.s(R.string.models_10ffff, g.mmproj, Format.bytes(g.mmprojSize))) { withVision = !withVision }
         }
         item.demoPrompt?.let { prompt ->
             Column(Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8), verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
@@ -631,8 +647,8 @@ private fun RecDetailSheet(
             }
         }
         if (item.section == RecommendedCatalog.Section.CHAT || item.section == RecommendedCatalog.Section.FEATURED) {
-            // 2.6.4: 科普页互链 — 看懂这张卡片上的术语（GGUF/量化/MoE）。
-            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.models264_guide_link), style = IrisType.caption, color = c.accent,
+            // 科普页互链 — 看懂这张卡片上的术语（GGUF/量化/MoE）。
+            Text(I18n.s(R.string.models264_guide_link), style = IrisType.caption, color = c.accent,
                 modifier = Modifier.padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space4)
                     .clickable { val key = ModelGuideNav.sectionFor(item); onDismiss(); ModelGuideNav.open(key) }.padding(vertical = IrisDimens.space4))
         }

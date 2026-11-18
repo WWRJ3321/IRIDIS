@@ -2,11 +2,11 @@ package com.iris.localai.memory
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import com.iris.localai.agent.RecallHit
-import com.iris.localai.agent.HistorySearch
+import com.iris.localai.agent.tools.RecallHit
+import com.iris.localai.agent.tools.HistorySearch
 import com.iris.localai.data.Conversation
 import com.iris.localai.data.Role
-import com.iris.localai.util.ThinkParser
+import com.iris.localai.util.thinking.ThinkParser
 
 /** Conversation → raw history records (messages + one record per tool step). Pure. */
 object HistoryRecords {

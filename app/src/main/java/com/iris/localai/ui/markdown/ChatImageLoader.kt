@@ -1,5 +1,7 @@
 package com.iris.localai.ui.markdown
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -9,13 +11,13 @@ import android.provider.MediaStore
 import android.util.LruCache
 import androidx.core.content.FileProvider
 import com.iris.localai.IrisApp
-import com.iris.localai.agent.SafeHttpClient
+import com.iris.localai.agent.web.SafeHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 2.2: a minimal image loader for chat (the app has no Coil): bytes from https (through
+ * a minimal image loader for chat (the app has no Coil): bytes from https (through
  * [SafeHttpClient]: public hosts only, no cookies, size-capped), the agent workspace, content:// or
  * data:, decoded with inSampleSize so a photo never becomes a full-size bitmap. Decoded bitmaps sit
  * in a small LRU shared by the whole chat; raw bytes are fetched again only to save / share.
@@ -129,7 +131,7 @@ object ChatImageLoader {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(send, com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_106d52)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent.createChooser(send, I18n.s(R.string.markdown_106d52)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     }.getOrDefault(false)
 }

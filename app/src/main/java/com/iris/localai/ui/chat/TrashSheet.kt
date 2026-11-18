@@ -1,5 +1,9 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.LocalReduceMotion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,7 +36,7 @@ import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
 
-/** 2.2.14: 回收站 — deleted chats, restore or delete for good; purged automatically after 30 days. */
+/** 回收站 — deleted chats, restore or delete for good; purged automatically after 30 days. */
 @Composable
 fun TrashSheet(
     entries: List<TrashEntry>,
@@ -45,36 +49,36 @@ fun TrashSheet(
     var confirmEmpty by remember { mutableStateOf(false) }
     val now = remember { System.currentTimeMillis() }
     IrisSheet(onDismiss = onDismiss) {
-        SheetHeader(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2896bd)) {
-            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c), { confirmEmpty = true }, style = IrisButtonStyle.Text, compact = true, enabled = entries.isNotEmpty(), destructive = true)
+        SheetHeader(I18n.s(R.string.chat_2896bd)) {
+            IrisButton(I18n.s(R.string.chat_288f0c), { confirmEmpty = true }, style = IrisButtonStyle.Text, compact = true, enabled = entries.isNotEmpty(), destructive = true)
         }
         Text(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2b9512, TrashPolicy.KEEP_DAYS),
+            I18n.s(R.string.chat_2b9512, TrashPolicy.KEEP_DAYS),
             style = IrisType.caption, color = c.textTertiary,
             modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space4),
         )
         if (entries.isEmpty()) {
             Text(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4a409f), style = IrisType.body, color = c.textSecondary,
+                I18n.s(R.string.chat_4a409f), style = IrisType.body, color = c.textSecondary,
                 modifier = Modifier.fillMaxWidth().padding(IrisDimens.pageGutter),
             )
         } else {
             LazyColumn(Modifier.heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)) {
                 items(entries, key = { it.id }) { e ->
-                    // 2.5.3: restored / purged rows fade out and the rest slide up.
-                    androidx.compose.foundation.layout.Box(if (com.iris.localai.ui.theme.LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = com.iris.localai.ui.motion.IrisMotion.standard(), placementSpec = com.iris.localai.ui.motion.IrisMotion.Gentle.offset(), fadeOutSpec = com.iris.localai.ui.motion.IrisMotion.standard()), propagateMinConstraints = true) {
+                    // restored / purged rows fade out and the rest slide up.
+                    androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space8),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(e.title.ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1ac07a) }, style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_cab824, TrashPolicy.daysLeft(e.deletedAt, now)), style = IrisType.caption, color = c.textTertiary)
+                            Text(e.title.ifBlank { I18n.s(R.string.chat_1ac07a) }, style = IrisType.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(I18n.s(R.string.chat_cab824, TrashPolicy.daysLeft(e.deletedAt, now)), style = IrisType.caption, color = c.textTertiary)
                         }
                         Spacer(Modifier.width(IrisDimens.space8))
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space4)) {
-                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c7db6d), { onRestore(e.id) }, style = IrisButtonStyle.Tonal, compact = true)
-                            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), { onPurge(e.id) }, style = IrisButtonStyle.Text, compact = true, destructive = true)
+                            IrisButton(I18n.s(R.string.chat_c7db6d), { onRestore(e.id) }, style = IrisButtonStyle.Tonal, compact = true)
+                            IrisButton(I18n.s(R.string.chat_2f4aad), { onPurge(e.id) }, style = IrisButtonStyle.Text, compact = true, destructive = true)
                         }
                     }
                     }
@@ -85,9 +89,9 @@ fun TrashSheet(
     }
     if (confirmEmpty) {
         ConfirmDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2563fa),
-            message = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c04740, entries.size),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
+            title = I18n.s(R.string.chat_2563fa),
+            message = I18n.s(R.string.chat_c04740, entries.size),
+            confirmText = I18n.s(R.string.chat_288f0c),
             onConfirm = { onEmpty() },
             onDismiss = { confirmEmpty = false },
         )

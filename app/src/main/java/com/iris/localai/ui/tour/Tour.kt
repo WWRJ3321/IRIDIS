@@ -1,5 +1,6 @@
 package com.iris.localai.ui.tour
 
+import com.iris.localai.I18n
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -85,7 +86,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * 2.5.3 新手引导 (spotlight guided tour / coach marks). Replaces the 2.5.2 five-page guide.
+ * 新手引导 (spotlight guided tour / coach marks). Replaces the 2.5.2 five-page guide.
  *
  * Targets register their bounds with [tourTarget]; [TourOverlay] dims the screen with a solid scrim,
  * cuts a rounded hole around the current target (animated between targets), and shows a matte solid
@@ -144,7 +145,7 @@ data class TourRect(val left: Float, val top: Float, val right: Float, val botto
     fun contains(x: Float, y: Float): Boolean = x in left..right && y in top..bottom
 }
 
-/** 2.5.3: pure tour logic (unit-tested). */
+/** pure tour logic (unit-tested). */
 object TourLogic {
     /** Due once after the welcome (disclaimer first) until finished or skipped; replay sets the flag back. */
     fun shouldShow(welcomeAccepted: Boolean, tourDone: Boolean): Boolean = welcomeAccepted && !tourDone
@@ -515,22 +516,22 @@ private fun TipCard(
             .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
     ) {
         Row(Modifier.fillMaxWidth()) {
-            Text(com.iris.localai.I18n.s(step.title), style = IrisType.titleSmall, color = c.text, modifier = Modifier.weight(1f))
+            Text(I18n.s(step.title), style = IrisType.titleSmall, color = c.text, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(IrisDimens.space8))
             Text(
-                com.iris.localai.I18n.s(R.string.tour253_counter, n, total), style = IrisType.caption, color = c.textSecondary,
+                I18n.s(R.string.tour253_counter, n, total), style = IrisType.caption, color = c.textSecondary,
                 maxLines = 1, overflow = TextOverflow.Clip,
             )
         }
         Spacer(Modifier.height(IrisDimens.space4))
-        Text(com.iris.localai.I18n.s(step.body), style = IrisType.secondary, color = c.text)
+        Text(I18n.s(step.body), style = IrisType.secondary, color = c.text)
         Spacer(Modifier.height(IrisDimens.space12))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-            if (!last) IrisButton(com.iris.localai.I18n.s(R.string.tour253_skip), onClick = onSkip, style = IrisButtonStyle.Text, compact = true)
+            if (!last) IrisButton(I18n.s(R.string.tour253_skip), onClick = onSkip, style = IrisButtonStyle.Text, compact = true)
             Spacer(Modifier.weight(1f))
-            if (index > 0) IrisButton(com.iris.localai.I18n.s(R.string.tour253_prev), onClick = onPrev, style = IrisButtonStyle.Tonal, compact = true)
+            if (index > 0) IrisButton(I18n.s(R.string.tour253_prev), onClick = onPrev, style = IrisButtonStyle.Tonal, compact = true)
             IrisButton(
-                com.iris.localai.I18n.s(if (last) R.string.tour253_done else R.string.tour253_next),
+                I18n.s(if (last) R.string.tour253_done else R.string.tour253_next),
                 onClick = onNext, compact = true,
             )
         }

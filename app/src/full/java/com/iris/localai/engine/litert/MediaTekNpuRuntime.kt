@@ -1,5 +1,7 @@
 package com.iris.localai.engine.litert
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import android.content.Context
 import android.os.Build
 import com.iris.localai.engine.NpuIds
@@ -15,7 +17,7 @@ import java.io.File
 import java.io.IOException
 
 /**
- * 2.4.4 (Issue #6): MediaTek NeuroPilot NPU for LiteRT-LM. Only one library is ours to ship:
+ * Issue #6: MediaTek NeuroPilot NPU for LiteRT-LM. Only one library is ours to ship:
  * libLiteRtDispatch_MediaTek.so (Apache-2.0, ~330 KB) from Google Maven
  * com.google.ai.edge.litert:litert-npu-runtime-mediatek:2.3.2, bundled in assets/npu/. The NeuroPilot
  * driver itself (libneuron_adapter / libneuronusdk_adapter.mtk.so …) comes from the phone's /vendor,
@@ -49,7 +51,7 @@ class MediaTekNpuRuntime private constructor(context: Context) : NpuSupport {
 
     private fun diskState(): NpuState = when {
         socId == null -> NpuState.Unsupported(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.mtk244_unsupported, "${Build.SOC_MANUFACTURER} $soc".trim()),
+            I18n.s(R.string.mtk244_unsupported, "${Build.SOC_MANUFACTURER} $soc".trim()),
         )
         isInstalled -> NpuState.Installed
         else -> NpuState.NotInstalled

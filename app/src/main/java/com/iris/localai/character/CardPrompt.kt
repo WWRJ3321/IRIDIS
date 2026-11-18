@@ -8,7 +8,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 
 /**
- * 2.3.2 角色卡 → prompt (pure, unit-tested):
+ * 角色卡 → prompt (pure, unit-tested):
  *  - [system]: the card's system_prompt (`{{original}}` = the user's own system prompt) or a short
  *    default, then description / personality / scenario / example dialogue, macros replaced.
  *  - [greetings]: first_mes + alternate_greetings (the opening message and its swipes).
@@ -117,7 +117,7 @@ object CardPrompt {
 }
 
 /**
- * 2.3.2 v1 lorebook (character_book): keyword-triggered entries. Supported: `enabled`, `constant`,
+ * v1 lorebook (character_book): keyword-triggered entries. Supported: `enabled`, `constant`,
  * `keys` (any), `selective` + `secondary_keys` (needs one of each), `case_sensitive`, `use_regex`
  * (`/pattern/flags` or plain pattern), `insertion_order` (ascending), `priority` (kept first when
  * over budget), book `scan_depth` (default 4 messages) and `token_budget`. Not supported (ignored):

@@ -1,7 +1,10 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
- * 2.2.2: Gemma 4 streams its reasoning as `<|channel>thought\n…<channel|>`. This rewrites it, piece
+ * Gemma 4 streams its reasoning as `<|channel>thought\n…<channel|>`. This rewrites it, piece
  * by piece, into the `<think>…</think>` form the rest of the app folds; other models pass through
  * untouched. A tag split across pieces is held back until it is complete.
  */
@@ -55,7 +58,7 @@ class ChannelThink {
     companion object {
         const val OPEN = "<|channel>"
         const val CLOSE = "<channel|>"
-        /** 2.2.13: K2 Horizon reasoning tags (high / medium / low effort). */
+        /** K2 Horizon reasoning tags (high / medium / low effort). */
         val K2_TAGS = listOf("ifm|think", "ifm|think_fast", "ifm|think_faster").flatMap { listOf("<$it>", "</$it>") }
         val TAGS = listOf(OPEN, CLOSE) + K2_TAGS
         private val MAX_TAG = TAGS.maxOf { it.length }

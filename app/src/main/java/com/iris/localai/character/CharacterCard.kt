@@ -11,7 +11,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * 2.3.2 角色卡: a SillyTavern character card kept as its full JSON ([raw], always normalised to
+ * 角色卡: a SillyTavern character card kept as its full JSON ([raw], always normalised to
  * `chara_card_v3`), so fields IRIDIS does not know (extensions, assets, lorebook decorators …) are
  * written back unchanged on export. Only the fields the editor shows are read / replaced.
  *

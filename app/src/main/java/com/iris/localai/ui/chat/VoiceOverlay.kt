@@ -1,5 +1,10 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
+import com.iris.localai.ui.feedback.FeedbackVoice
+import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
@@ -94,19 +99,19 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
     // without looking at the screen.
     val haptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     DisposableEffect(Unit) {
-        com.iris.localai.ui.feedback.FeedbackVoice.overlayOpen = true
-        onDispose { com.iris.localai.ui.feedback.FeedbackVoice.overlayOpen = false }
+        FeedbackVoice.overlayOpen = true
+        onDispose { FeedbackVoice.overlayOpen = false }
     }
     val bargeIns0 = remember { state.bargeIns }
-    LaunchedEffect(state.bargeIns) { if (state.bargeIns > bargeIns0) haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.BARGE_IN) }
+    LaunchedEffect(state.bargeIns) { if (state.bargeIns > bargeIns0) haptic.perform(FeedbackEvent.BARGE_IN) }
     var lastPhase by remember { mutableStateOf(state.phase) }
     LaunchedEffect(state.phase) {
         val p = state.phase
         if (p == VoicePhase.RECOGNIZING && lastPhase == VoicePhase.LISTENING) {
-            haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_STOP)
+            haptic.perform(FeedbackEvent.LISTEN_STOP)
         }
-        if (p == VoicePhase.LISTENING && lastPhase == VoicePhase.PREPARING) haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.LISTEN_START)
-        if (p == VoicePhase.ERROR && lastPhase != VoicePhase.ERROR) haptic.perform(com.iris.localai.ui.feedback.FeedbackEvent.ERROR)
+        if (p == VoicePhase.LISTENING && lastPhase == VoicePhase.PREPARING) haptic.perform(FeedbackEvent.LISTEN_START)
+        if (p == VoicePhase.ERROR && lastPhase != VoicePhase.ERROR) haptic.perform(FeedbackEvent.ERROR)
         lastPhase = p
     }
     // Volume keys adjust media volume (where the reply plays) while the voice screen is open.
@@ -134,7 +139,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
         }
     }
 
-    val accent = c.accent // 1.8.0: HyperOS blue (was indigo)
+    val accent = c.accent // HyperOS blue (was indigo)
     val phaseColor = when (state.phase) {
         VoicePhase.LISTENING -> if (muted) c.textTertiary else c.success
         VoicePhase.RECOGNIZING, VoicePhase.THINKING -> c.warning
@@ -143,12 +148,12 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
         VoicePhase.PREPARING -> c.textTertiary
     }
     val phaseText = when (state.phase) {
-        VoicePhase.PREPARING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f601cb)
-        VoicePhase.LISTENING -> if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_557582) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5cca6a)
-        VoicePhase.RECOGNIZING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b77edf)
-        VoicePhase.THINKING -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_1b0a9d)
-        VoicePhase.SPEAKING -> if (state.awaitingAudio) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_97058e) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_9b174d)
-        VoicePhase.ERROR -> com.iris.localai.I18n.s(com.iris.localai.R.string.chat_985c39)
+        VoicePhase.PREPARING -> I18n.s(R.string.chat_f601cb)
+        VoicePhase.LISTENING -> if (muted) I18n.s(R.string.chat_557582) else I18n.s(R.string.chat_5cca6a)
+        VoicePhase.RECOGNIZING -> I18n.s(R.string.chat_b77edf)
+        VoicePhase.THINKING -> I18n.s(R.string.chat_1b0a9d)
+        VoicePhase.SPEAKING -> if (state.awaitingAudio) I18n.s(R.string.chat_97058e) else I18n.s(R.string.chat_9b174d)
+        VoicePhase.ERROR -> I18n.s(R.string.chat_985c39)
     }
 
     Box(
@@ -172,7 +177,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
             Row(
                 Modifier
                     .background(c.surfaceVariant.copy(alpha = 0.7f), IrisRadius.pillShape)
-                    .padding(horizontal = com.iris.localai.ui.theme.IrisSpace.M, vertical = IrisDimens.space8),
+                    .padding(horizontal = IrisSpace.M, vertical = IrisDimens.space8),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val dotColor by animateColorAsState(phaseColor, IrisMotion.standard(), label = "phaseColor")
@@ -188,7 +193,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 Text(
                     state.error.orEmpty(), style = IrisType.caption, color = c.danger, textAlign = TextAlign.Center,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = IrisDimens.space32, vertical = com.iris.localai.ui.theme.IrisSpace.S),
+                    modifier = Modifier.padding(horizontal = IrisDimens.space32, vertical = IrisSpace.S),
                 )
             }
 
@@ -210,7 +215,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             // Transcript
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = com.iris.localai.ui.theme.IrisSpace.XL).height(190.dp),
+                Modifier.fillMaxWidth().padding(horizontal = IrisSpace.XL).height(190.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
             ) {
@@ -238,7 +243,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                     }
                 } else if (state.lastHeard.isBlank()) {
                     Text(
-                        if (state.phase == VoicePhase.LISTENING && !muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_0c2a12) else "",
+                        if (state.phase == VoicePhase.LISTENING && !muted) I18n.s(R.string.chat_0c2a12) else "",
                         style = IrisType.secondary, color = c.textTertiary, textAlign = TextAlign.Center,
                     )
                 }
@@ -246,27 +251,27 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             // Controls
             Row(
-                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = com.iris.localai.ui.theme.IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),
+                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {
-                VoiceControl(if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e1019) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_351cb1)) {
+                VoiceControl(if (muted) I18n.s(R.string.chat_6e1019) else I18n.s(R.string.chat_351cb1)) {
                     PressableIcon(
-                        if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_6e1019) else com.iris.localai.I18n.s(com.iris.localai.R.string.chat_351cb1),
+                        if (muted) Icons.Outlined.MicOff else Icons.Outlined.Mic, if (muted) I18n.s(R.string.chat_6e1019) else I18n.s(R.string.chat_351cb1),
                         size = 64.dp, iconSize = 26.dp,
                         background = if (muted) c.text else c.surfaceVariant,
                         tint = if (muted) c.chatBackground else c.text,
                     ) { muted = !muted; vm.voice.setMuted(muted) }
                 }
-                VoiceControl(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7c1e51)) {
+                VoiceControl(I18n.s(R.string.chat_7c1e51)) {
                     PressableIcon(
-                        Icons.Outlined.PanTool, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_7c1e51), size = 64.dp, iconSize = IrisDimens.space24, background = c.surfaceVariant,
+                        Icons.Outlined.PanTool, I18n.s(R.string.chat_7c1e51), size = 64.dp, iconSize = IrisDimens.space24, background = c.surfaceVariant,
                         enabled = state.phase == VoicePhase.SPEAKING || state.phase == VoicePhase.THINKING,
                     ) { vm.voice.interrupt() }
                 }
-                VoiceControl(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_12f1d7)) {
+                VoiceControl(I18n.s(R.string.chat_12f1d7)) {
                     PressableIcon(
-                        Icons.Outlined.Close, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_137760), size = 64.dp, iconSize = 26.dp,
+                        Icons.Outlined.Close, I18n.s(R.string.chat_137760), size = 64.dp, iconSize = 26.dp,
                         background = c.danger, tint = Color.White, haptic = true, onClick = onClose,
                     )
                 }

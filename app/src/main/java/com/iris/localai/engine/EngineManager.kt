@@ -1,5 +1,20 @@
 package com.iris.localai.engine
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.EffectiveModelConfig
+import com.iris.localai.data.ModelConfigRepository
+import com.iris.localai.data.TokenLimit
+import com.iris.localai.engine.geniex.GenieX
+import com.iris.localai.engine.geniex.GgufEngineRule
+import com.iris.localai.engine.llama.LlamaNative
+import com.iris.localai.engine.llama.MmprojPairing
+import com.iris.localai.util.AppRestart
+import com.iris.localai.util.HintLog
+import com.iris.localai.util.diagnostics.CrashReporter
+import com.iris.localai.util.thinking.ReplyAccounting
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import android.content.Context
 import android.util.Log
 import com.iris.localai.data.AppSettings
@@ -26,7 +41,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** 1.7.8: when the idle timer may unload the model (pure, unit-tested in V178Test). */
+/** when the idle timer may unload the model (pure, unit-tested in V178Test). */
 object IdleUnloadRule {
     fun canUnload(generating: Boolean, generationLocked: Boolean, registeredRequests: Int, reloading: Boolean): Boolean =
         !generating && !generationLocked && registeredRequests == 0 && !reloading
@@ -38,9 +53,9 @@ sealed interface EngineState {
         val model: LocalModel,
         val progress: Float,
         val since: Long = System.currentTimeMillis(),
-        /** 1.7.4: non-null while the same model is reloaded to apply this resource tier. */
+        /** non-null while the same model is reloaded to apply this resource tier. */
         val applyingTier: ResourceTier? = null,
-        /** 1.9.0: the backend being tried right now (null = not chosen yet); drives [SlowLoadHint]. */
+        /** the backend being tried right now (null = not chosen yet); drives [SlowLoadHint]. */
         val backend: Backend? = null,
     ) : EngineState
     data class Ready(val model: LocalModel, val details: ModelDetails) : EngineState
@@ -51,7 +66,7 @@ sealed interface EngineState {
 enum class Requester { CHAT, VOICE, API }
 
 /**
- * 1.14.3: identifies who may stop a generation. Before, [EngineManager.cancel] stopped whatever
+ * identifies who may stop a generation. Before, [EngineManager.cancel] stopped whatever
  * ran, so a chat 停止 ended an API client's reply (and vice versa). Now a generation is tagged with
  * its owner and [EngineManager.cancel] only stops it for that same owner. One owner may be reused
  * for many generations (ChatViewModel keeps one); [EngineManager.generate] without one uses a fresh
@@ -64,7 +79,7 @@ class GenOwner(val name: String) {
 }
 
 /**
- * 1.14.3: which owner's generation holds the engine (pure; unit-tested in V1143FixTest).
+ * which owner's generation holds the engine (pure; unit-tested in V1143FixTest).
  * [begin] / [end] run under EngineManager's generation lock; [cancel] / [cancelAll] may come from
  * any thread. [stopEngine] is the engine's own (global) cancel; it is only called under [lock] so
  * the running generation cannot end and another owner's begin in between.
@@ -122,92 +137,92 @@ class EngineManager(
     private val scope: CoroutineScope,
     private val settings: SettingsRepository,
     private val models: ModelRepository,
-    val modelConfigs: com.iris.localai.data.ModelConfigRepository,
+    val modelConfigs: ModelConfigRepository,
 ) {
     private val appContext = context.applicationContext
     val threadPolicy = ThreadPolicy(appContext)
     val crashMemory = BackendCrashMemory(appContext)
     /** Native load deaths are not Java exceptions; this keeps the next start from loading again. */
     private val startupGuard = StartupLoadGuard(appContext)
-    /** 1.10.2: last load time + cache use per model / backend (model sheet, logcat IrisLoad). */
+    /** last load time + cache use per model / backend (model sheet, logcat IrisLoad). */
     val loadStats = LoadStatsStore(appContext)
-    /** 1.10.2: why the model was last unloaded (logged with the next load). */
+    /** why the model was last unloaded (logged with the next load). */
     @Volatile private var lastUnload: String? = null
 
     /** Probed on demand: the NPU runtime can be installed while the app runs. */
     fun environment(): BackendEnvironment = BackendEnvironment.probe(appContext)
 
-    /** 2.2.17: projector paired with this GGUF file (same folder), or null = text-only. */
+    /** projector paired with this GGUF file (same folder), or null = text-only. */
     fun mmprojFor(model: LocalModel, userPick: String?): String? = runCatching {
         val dir = java.io.File(model.path).parentFile ?: return null
         val names = dir.list()?.toList().orEmpty()
-        com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, names, userPick)?.let { java.io.File(dir, it).absolutePath }
+        MmprojPairing.pick(java.io.File(model.path).name, names, userPick)?.let { java.io.File(dir, it).absolutePath }
     }.getOrNull()
 
     fun backendOptions(model: LocalModel): List<BackendOption> =
         BackendCapabilities.options(model.format, model.fileName, environment())
 
     /**
-     * 2.2.0: which engine runs [model]. QAIRT folders: always GenieX. 2.1.3: GGUF follows the
+     * which engine runs [model]. QAIRT folders: always GenieX. 2.1.3: GGUF follows the
      * backend ([com.iris.localai.engine.geniex.GgufEngineRule]): NPU → GenieX when it is usable,
      * GPU / CPU → llama.cpp. [backend] defaults to the backend a load starts with.
      */
     fun engineFor(
         model: LocalModel,
-        cfg: com.iris.localai.data.EffectiveModelConfig = effective(model),
+        cfg: EffectiveModelConfig = effective(model),
         backend: Backend? = null,
         options: List<BackendOption>? = null,
     ): String = when (model.format) {
-        ModelFormat.QAIRT -> com.iris.localai.engine.geniex.GenieX.ENGINE_GENIEX
+        ModelFormat.QAIRT -> GenieX.ENGINE_GENIEX
         ModelFormat.GGUF -> {
             val opts = options ?: backendOptions(model)
             val b = backend ?: BackendCapabilities.preferred(cfg.backend, model.format, model.fileName, opts)
-            com.iris.localai.engine.geniex.GgufEngineRule.engineFor(
+            GgufEngineRule.engineFor(
                 b, hasGeniex && environment().geniexBlock == null && opts.any { it.backend == Backend.NPU && it.available },
             )
         }
-        else -> com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA
+        else -> GenieX.ENGINE_LLAMA
     }
 
-    /** 2.2.0: this build has the GenieX engine (full flavour). */
+    /** this build has the GenieX engine (full flavour). */
     val hasGeniex: Boolean get() = EngineFactory.geniex(appContext) != null
 
-    /** 2.2.0: "GenieX · NPU" for a model GenieX would run (the backend a load starts with), else null. */
+    /** "GenieX · NPU" for a model GenieX would run (the backend a load starts with), else null. */
     fun geniexTag(model: LocalModel): String? =
-        if (engineFor(model) == com.iris.localai.engine.geniex.GenieX.ENGINE_GENIEX)
-            runCatching { com.iris.localai.engine.geniex.GenieX.tag(preferredBackend(model)) }.getOrNull()
+        if (engineFor(model) == GenieX.ENGINE_GENIEX)
+            runCatching { GenieX.tag(preferredBackend(model)) }.getOrNull()
         else null
 
     /** Global defaults merged with [model]'s own overrides. */
-    fun effective(model: LocalModel? = readyModel): com.iris.localai.data.EffectiveModelConfig =
-        com.iris.localai.data.EffectiveModelConfig.resolve(settings.current, model?.format, modelConfigs.get(model?.id))
+    fun effective(model: LocalModel? = readyModel): EffectiveModelConfig =
+        EffectiveModelConfig.resolve(settings.current, model?.format, modelConfigs.get(model?.id))
 
     val tier: ResourceTier get() = ResourceTier.of(settings.current.resourceTier)
 
     /**
      * The backend a load of [model] starts with (its own choice, the engine default, or 自动).
-     * 1.7.8: independent of the resource tier ([forTier] kept for callers; ignored) — the tier only
+     * independent of the resource tier ([forTier] kept for callers; ignored) — the tier only
      * changes CPU resources, it never moves a model off the GPU the user picked.
      */
     @Suppress("UNUSED_PARAMETER")
     fun preferredBackend(
         model: LocalModel,
-        cfg: com.iris.localai.data.EffectiveModelConfig = effective(model),
+        cfg: EffectiveModelConfig = effective(model),
         forTier: ResourceTier = tier,
     ): Backend = BackendCapabilities.preferred(cfg.backend, model.format, model.fileName, backendOptions(model))
 
     /** 2.2.14 / 2.5.0 Beta6: free RAM (ActivityManager.availMem) vs. model file + mmproj + context. Blocking (file sizes). */
-    private fun memoryVerdict(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): MemoryPreflight.Verdict =
+    private fun memoryVerdict(model: LocalModel, cfg: EffectiveModelConfig, gpu: Boolean): MemoryPreflight.Verdict =
         memoryPlan(model, cfg, gpu).first
 
     /**
-     * 2.5.1: 内存预检 + 是否启用专家按需加载（MoE）。专家按需加载生效时，所需内存 = 非专家张量 + 专家张量 25% + KV
+     * 内存预检 + 是否启用专家按需加载（MoE）。专家按需加载生效时，所需内存 = 非专家张量 + 专家张量 25% + KV
      * （[MemoryPreflight.needMoe]，专家字节按 GGUF 张量名含 `_exps` 统计）。
      */
-    private fun memoryPlan(model: LocalModel, cfg: com.iris.localai.data.EffectiveModelConfig, gpu: Boolean): Pair<MemoryPreflight.Verdict, Boolean> {
+    private fun memoryPlan(model: LocalModel, cfg: EffectiveModelConfig, gpu: Boolean): Pair<MemoryPreflight.Verdict, Boolean> {
         val mi = android.app.ActivityManager.MemoryInfo()
         appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
-        // 2.4.4: the vision projector (mmproj) is loaded too — count it.
+        // the vision projector (mmproj) is loaded too — count it.
         val proj = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj)?.let { java.io.File(it).length() } ?: 0L else 0L
         val plain = MemoryPreflight.check(mi.availMem, model.sizeBytes + proj, cfg.contextLength, gpu)
         val info = if (model.format == ModelFormat.GGUF) GgufQuant.of(java.io.File(model.path)) else null
@@ -217,7 +232,7 @@ class EngineManager(
     }
 
     /**
-     * 2.5.0 Beta6: the check a user-started load asks first (off the main thread). A SHORT verdict makes the
+     * the check a user-started load asks first (off the main thread). A SHORT verdict makes the
      * UI ask 「仍要加载 / 取消」 — it never blocks. Errors count as OK.
      */
     suspend fun preflight(model: LocalModel): MemoryPreflight.Verdict = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -236,7 +251,7 @@ class EngineManager(
     /** Read by [cancel] / [cancelAll] from any thread; written only under [lifecycle] + [generation]. */
     @Volatile private var engine: InferenceEngine? = null
     @Volatile private var idleJob: Job? = null
-    /** 1.14.3: the owner of the generation holding the engine; per-owner cancel goes through it. */
+    /** the owner of the generation holding the engine; per-owner cancel goes through it. */
     private val ownership = GenerationOwnership { engine?.cancel() }
 
     private val _state = MutableStateFlow<EngineState>(EngineState.Idle)
@@ -249,21 +264,21 @@ class EngineManager(
     val readyModel: LocalModel? get() = (state.value as? EngineState.Ready)?.model
     val readyDetails: ModelDetails? get() = (state.value as? EngineState.Ready)?.details
 
-    /** 1.7.4: the plan / starting backend the resident model was loaded with (null = none loaded). */
+    /** the plan / starting backend the resident model was loaded with (null = none loaded). */
     @Volatile private var loadedPlan: ResourcePlan? = null
     @Volatile private var loadedPreferred: Backend? = null
 
     /**
-     * 1.7.7: requests vs. tier reloads (see [ReloadGate]). A request is registered from its start
+     * requests vs. tier reloads (see [ReloadGate]). A request is registered from its start
      * (ChatViewModel: before ensureLoaded) to its end; a reload only begins with none registered.
      */
     private val gate = ReloadGate()
 
 
-    /** 1.7.7: a model a failed tier reload left unloaded; the next request loads it again. */
+    /** a model a failed tier reload left unloaded; the next request loads it again. */
     @Volatile private var lostByReload: LocalModel? = null
 
-    /** 1.7.7: one-off messages for the chat screen (reload failed / GPU fell back to CPU). */
+    /** one-off messages for the chat screen (reload failed / GPU fell back to CPU). */
     private val _notices = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 8)
     val notices: kotlinx.coroutines.flow.SharedFlow<String> = _notices
 
@@ -276,10 +291,10 @@ class EngineManager(
 
     fun clearPreloadSkipNotice() { _preloadSkipNotice.value = null }
 
-    /** 1.7.4: debounced "reload the same model with the new tier" for MNN / LiteRT. */
+    /** debounced "reload the same model with the new tier" for MNN / LiteRT. */
     private val tierReload = TierReloadScheduler(
         scope = scope,
-        // 1.7.7: a registered request counts as busy even before it holds the generation lock.
+        // a registered request counts as busy even before it holds the generation lock.
         isBusy = { _busy.value != null || gate.requests > 0 },
         decide = ::decideTierReload,
         reload = ::reloadForTier,
@@ -287,23 +302,23 @@ class EngineManager(
     )
 
 
-    /** 1.7.5: what the last tier change really did (null = none since launch). Drives the card status. */
+    /** what the last tier change really did (null = none since launch). Drives the card status. */
     private val _tierApply = MutableStateFlow<TierApplyResult?>(null)
     val tierApply: StateFlow<TierApplyResult?> = _tierApply.asStateFlow()
 
-    /** 1.7.5: battery current / CPU evidence per tier, logcat only (IrisResource). */
+    /** battery current / CPU evidence per tier, logcat only (IrisResource). */
     private val telemetry = ResourceTelemetry.android(appContext, scope) { Log.i(RES_TAG, it) }
-    /** 1.7.6: last reply's per-tier numbers for 设置 › 资源诊断. */
+    /** last reply's per-tier numbers for 设置 › 资源诊断. */
     val telemetryReport get() = telemetry.lastReport
     @Volatile private var lastAppliedTier: ResourceTier? = null
 
     init {
-        // 1.7.8: the user's 资源档配置 feed every plan.
+        // the user's 资源档配置 feed every plan.
         threadPolicy.profileSource = { settings.current.tierProfiles }
-        // 1.7.7: a reload deferred because a request was registered runs when the last one ends.
+        // a reload deferred because a request was registered runs when the last one ends.
         gate.onIdle = { tierReload.onGenerationFinished() }
         // Every writer of the tier (composer card, model sheet, settings page) goes through the settings.
-        // 1.7.8: so does 资源档配置 — editing the profile of the tier in use is applied the same way
+        // so does 资源档配置 — editing the profile of the tier in use is applied the same way
         // (live where possible, then the debounced, ReloadGate-guarded reload check).
         scope.launch {
             var lastTier = settings.current.resourceTier
@@ -319,30 +334,30 @@ class EngineManager(
                         TierProfiles.resolve(profiles, k, next, threadPolicy.topology)
                 }
                 if (!tierChanged && !profileChanged) return@collect // another tier's profile: nothing to do now
-                // 1.7.5: cores / nice reach a loaded MNN (CPU) model at once, idle or mid-reply;
+                // cores / nice reach a loaded MNN (CPU) model at once, idle or mid-reply;
                 // then the debounced reload check only reloads for what could not be applied live.
                 if (profileChanged || lastAppliedTier != next) applyTierLive(next)
-                tierReload.onTierChanged(next.label + if (profileChanged) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b66fcc) else "")
+                tierReload.onTierChanged(next.label + if (profileChanged) I18n.s(R.string.engine_b66fcc) else "")
             }
         }
     }
 
-    /** 2.4.2: a reply or native computation is running (an unload now waits for it). */
+    /** a reply or native computation is running (an unload now waits for it). */
     val busyNow: Boolean get() = generation.isLocked || engine?.busyNative == true
 
-    /** 2.1.7: the load running / queued now; a message sent meanwhile waits for it ([ensureLoaded]). */
+    /** the load running / queued now; a message sent meanwhile waits for it ([ensureLoaded]). */
     private val inFlight = InFlightLoad()
 
 
-    suspend fun load(model: LocalModel, reason: String = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373)): Boolean = inFlight.run(model.path) {
+    suspend fun load(model: LocalModel, reason: String = I18n.s(R.string.chat_f2d373)): Boolean = inFlight.run(model.path) {
         lifecycle.withLock {
-            // 1.10.2: the resident model is never reloaded by a plain load (same model = same backend
+            // the resident model is never reloaded by a plain load (same model = same backend
             // choice; a different backend / context only reloads through reload()).
             if (ReloadRules.alreadyLoaded(state.value, model.path)) {
                 Log.i(LoadTelemetry.TAG, "load skipped ($reason): ${model.fileName} is already loaded")
                 return@withLock true
             }
-            // 2.4.2 终止温度: no new load while still over the cutoff; otherwise arm again (a reload
+            // 终止温度: no new load while still over the cutoff; otherwise arm again (a reload
             // after a trip used to stay unprotected until the phone had cooled 2°C below the setting).
             ThermalCutoff.startOrRefuse()?.let { msg ->
                 _notices.tryEmit(msg)
@@ -350,7 +365,7 @@ class EngineManager(
                 return@withLock false
             }
             cancelAll()
-            // 2.4.0: switching models used to look like nothing happened — the old model kept showing
+            // switching models used to look like nothing happened — the old model kept showing
             // as loaded while its unload waited for an uninterruptible MNN prefill (warm-up or a just
             // stopped reply) to end. Show the new model as loading at once, and say why it waits.
             val prev = state.value
@@ -370,18 +385,18 @@ class EngineManager(
     }
 
     /**
-     * 1.10.2: background preload of the last-used model at app start (setting
+     * background preload of the last-used model at app start (setting
      * 「启动时预加载上次的模型」 = the existing `autoLoadLastModel` key, default on).
      */
     suspend fun preloadAtStart(): PreloadDecision {
         val s = settings.current
-        // 2.2.14: the previous process restarted because a GPU load hung → reload that model on CPU.
+        // the previous process restarted because a GPU load hung → reload that model on CPU.
         crashMemory.takePendingCpuReload()?.let { file ->
             models.refresh()
             val pm = models.find(file)
             if (pm != null) {
                 _preloadSkipNotice.value = GpuLoadWatchdog.HANG_NOTICE
-                load(pm, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_827e10))
+                load(pm, reason = I18n.s(R.string.engine_827e10))
                 return PreloadDecision.LOAD
             }
         }
@@ -391,7 +406,7 @@ class EngineManager(
         val d = PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle, blocked)
         Log.i(LoadTelemetry.TAG, "preload at start: $d${s.lastModelFile?.let { " ($it)" } ?: ""}")
         if (d == PreloadDecision.SKIP_AFTER_NATIVE_CRASH) _preloadSkipNotice.value = startupGuard.skipNotice()
-        if (d == PreloadDecision.LOAD && m != null) load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2feffd))
+        if (d == PreloadDecision.LOAD && m != null) load(m, reason = I18n.s(R.string.engine_2feffd))
         return d
     }
 
@@ -399,12 +414,12 @@ class EngineManager(
     private suspend fun loadLocked(
         model: LocalModel,
         applyingTier: ResourceTier?,
-        /** 1.7.7: load with this tier instead of the setting (restoring after a failed tier reload). */
+        /** load with this tier instead of the setting (restoring after a failed tier reload). */
         tierOverride: ResourceTier? = null,
-        /** 1.7.7: CPU only (the first reply on a freshly loaded GPU backend failed). */
+        /** CPU only (the first reply on a freshly loaded GPU backend failed). */
         cpuOnly: Boolean = false,
-        /** 1.10.2: why this load happens (IrisLoad log). */
-        reason: String = if (applyingTier != null) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_883f2e) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_4793ea),
+        /** why this load happens (IrisLoad log). */
+        reason: String = if (applyingTier != null) I18n.s(R.string.engine_883f2e) else I18n.s(R.string.models_4793ea),
     ): Boolean =
         generation.withLock {
             engine?.unload()
@@ -417,51 +432,51 @@ class EngineManager(
             _state.value = EngineState.Loading(model, 0f, since, applyingTier)
             val cfg = effective(model)
             val useTier = tierOverride ?: tier
-            // 1.7.8: CPU and GPU/NPU have separate profiles; the plan follows the backend being tried.
+            // CPU and GPU/NPU have separate profiles; the plan follows the backend being tried.
             var plan = threadPolicy.plan(useTier, cfg.threads, Backend.CPU)
             val options = backendOptions(model)
-            // 2.2.13: the previous load crashed the app → this one runs on CPU only and says so.
+            // the previous load crashed the app → this one runs on CPU only and says so.
             val safeMode = crashMemory.takeSafeMode()
             if (safeMode) _preloadSkipNotice.value = SAFE_MODE_NOTICE
-            // 2.2.14: OpenCL hung on this device before → GGUF starts on CPU (retry in model settings).
+            // OpenCL hung on this device before → GGUF starts on CPU (retry in model settings).
             val clHung = model.format == ModelFormat.GGUF && crashMemory.openClHung
             val preferred = if (cpuOnly || safeMode) Backend.CPU
                 else preferredBackend(model, cfg, useTier).let { if (clHung && it == Backend.GPU) Backend.CPU else it }
-            // 2.2.14: free RAM vs. model + context; warn (never block) before a likely OOM crash.
-            // 2.5.0 Beta6: file reads (mmproj lookup, GGUF header) run on IO, never on the main thread.
-            // 2.5.1: 同一次预检决定是否启用专家按需加载（MoE）。
+            // free RAM vs. model + context; warn (never block) before a likely OOM crash.
+            // file reads (mmproj lookup, GGUF header) run on IO, never on the main thread.
+            // 同一次预检决定是否启用专家按需加载（MoE）。
             var moeCpu = false
             runCatching {
                 val (v, moe) = withContext(kotlinx.coroutines.Dispatchers.IO) { memoryPlan(model, cfg, preferred == Backend.GPU) }
                 moeCpu = moe
                 Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)} moe_cpu=$moe")
-                v.message?.let { _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, it)) }
+                v.message?.let { _notices.tryEmit(I18n.s(R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
-            // 2.3.2 Bonsai: Q1_0 / Q2_0 GGUF never go to the NPU; unknown types (PrismML PQ2_0 / PTQ1_0) are refused below.
+            // Bonsai: Q1_0 / Q2_0 GGUF never go to the NPU; unknown types (PrismML PQ2_0 / PTQ1_0) are refused below.
             val quant = if (model.format == ModelFormat.GGUF) withContext(kotlinx.coroutines.Dispatchers.IO) { GgufQuant.of(java.io.File(model.path)) } else null
             val chain = GgufQuant.chainFor(if (safeMode) listOf(Backend.CPU) else BackendPlanner.chain(preferred, options, crashed), quant)
             val errors = StringBuilder()
             options.firstOrNull { it.backend == preferred && !it.available }?.let {
                 errors.append("[${preferred.label}] ${it.reason}\n")
             }
-            if (preferred in crashed) errors.append(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ed0bfe, preferred.label))
+            if (preferred in crashed) errors.append(I18n.s(R.string.engine_ed0bfe, preferred.label))
             var e: InferenceEngine? = null
             // Survives a SIGSEGV (the finally below does not run) so the next start can skip auto-load.
-            com.iris.localai.util.CrashReporter.breadcrumb("加载模型 ${model.fileName}")
+            CrashReporter.breadcrumb("加载模型 ${model.fileName}")
             try {
             try {
                 quant?.takeIf { it.unknown.isNotEmpty() }?.let { q ->
-                    throw EngineException(if (q.prism) com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_prism, q.label) else com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_unknown, q.unknown.sorted().joinToString()))
+                    throw EngineException(if (q.prism) I18n.s(R.string.eng232_prism, q.label) else I18n.s(R.string.eng232_unknown, q.unknown.sorted().joinToString()))
                 }
-                if (quant?.lowBit == true && preferred == Backend.NPU) _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.eng232_lowbit, quant.label))
-                if (chain.isEmpty()) throw EngineException(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_214c8c) + options.joinToString("\n") { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, it.backend.label, it.reason ?: com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ad6b70)) })
+                if (quant?.lowBit == true && preferred == Backend.NPU) _notices.tryEmit(I18n.s(R.string.eng232_lowbit, quant.label))
+                if (chain.isEmpty()) throw EngineException(I18n.s(R.string.engine_214c8c) + options.joinToString("\n") { I18n.s(R.string.chat_b9fef6, it.backend.label, it.reason ?: I18n.s(R.string.engine_ad6b70)) })
                 var details: ModelDetails? = null
-                // 2.2.15: a GGUF on the NPU may get two tries — GenieX, then the built-in llama.cpp Hexagon runtime.
+                // a GGUF on the NPU may get two tries — GenieX, then the built-in llama.cpp Hexagon runtime.
                 val env = environment()
                 val attempts = chain.flatMap { b ->
                     if (model.format == ModelFormat.GGUF && b == Backend.NPU)
-                        com.iris.localai.engine.geniex.GgufEngineRule.npuEngines(hasGeniex && env.geniexBlock == null, env.htpReady)
+                        GgufEngineRule.npuEngines(hasGeniex && env.geniexBlock == null, env.htpReady)
                             .ifEmpty { listOf(engineFor(model, cfg, b, options)) }.map { b to it }
                     else listOf(b to engineFor(model, cfg, b, options))
                 }
@@ -472,7 +487,7 @@ class EngineManager(
                     crashMemory.arm(model.id, backend)
                     if (!abandoned()) _state.value = EngineState.Loading(model, (_state.value as? EngineState.Loading)?.progress ?: 0f, since, applyingTier, backend)
                     val loadStart = System.currentTimeMillis()
-                    // 1.10.3: GPU compile-cache guards — a load that never finished last time, too little space.
+                    // GPU compile-cache guards — a load that never finished last time, too little space.
                     val marker = gpuLoadMarker(model, backend)
                     val watchdog = if (model.format == ModelFormat.GGUF && backend == Backend.GPU) startGpuWatchdog(model) else null
                     try {
@@ -485,20 +500,20 @@ class EngineManager(
                                 backend = backend,
                                 kvCacheType = if (cfg.flashAttention) cfg.kvCacheType else 0,
                                 batchSize = cfg.batchSize.takeIf { it > 0 } ?: plan.batch,
-                                // 2.5.1: 专家按需加载依赖 mmap
+                                // 专家按需加载依赖 mmap
                                 useMmap = (cfg.useMmap || (moeCpu && model.format == ModelFormat.GGUF)) && !settings.current.mnnForceNoMmap,
                                 noVisual = settings.current.mnnNoVisual,
                                 resources = plan,
                                 mmprojPath = if (model.format == ModelFormat.GGUF) mmprojFor(model, cfg.mmproj) else null,
                                 mmprojGpu = settings.current.visionGpu,
-                                // 2.5.0-beta9: never after a crash (safe mode). 2.5.0-beta10: CPU and GPU (experimental), not NPU.
+                                // never after a crash (safe mode). 2.5.0-beta10: CPU and GPU (experimental), not NPU.
                                 mtpDraft = if (safeMode || model.format != ModelFormat.GGUF) 0 else GgufQuant.mtpDraft(cfg.mtp, quant, backend),
-                                // 2.5.0-beta10: LiteRT-LM speculative decoding (built-in drafter), same switch.
+                                // LiteRT-LM speculative decoding (built-in drafter), same switch.
                                 litertMtp = LiteRtMtp.enabled(cfg.mtp, safeMode, model.format == ModelFormat.LITERT, backend),
-                                // 2.5.1: MoE 专家按需加载 / 激活专家数（只对 GGUF MoE 生效）
+                                // MoE 专家按需加载 / 激活专家数（只对 GGUF MoE 生效）
                                 moeCpu = moeCpu && model.format == ModelFormat.GGUF,
                                 expertUsed = if (model.format == ModelFormat.GGUF) MoeLoad.expertUsed(cfg.expertUsed, quant) else 0,
-                                // 2.5.4: LES 前瞻专家调度（安全模式不开）
+                                // LES 前瞻专家调度（安全模式不开）
                                 les = !safeMode && model.format == ModelFormat.GGUF && MoeLoad.lesActive(cfg.les, quant, moeCpu, gpu = backend == Backend.GPU),
                             ),
                         ) { p ->
@@ -527,23 +542,23 @@ class EngineManager(
                     }
                 }
                 if (abandoned()) {
-                    // 1.10.9: the user cancelled while the native call ran — release what it built.
+                    // the user cancelled while the native call ran — release what it built.
                     Log.i(LoadTelemetry.TAG, "cancelled load returned after ${(System.currentTimeMillis() - since) / 1000}s: released")
                     withContext(NonCancellable) { runCatching { e?.unload() } }
                     guardFirstGeneration = null
                     if (_state.value is EngineState.Idle) _notices.tryEmit(LoadCancel.RELEASED)
                     return@withLock false
                 }
-                val d = details ?: throw EngineException(errors.toString().trim().ifEmpty { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_866b79) })
-                val note = if (d.activeBackend != preferred) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ed13cd, preferred.label, d.activeBackend.label) +
+                val d = details ?: throw EngineException(errors.toString().trim().ifEmpty { I18n.s(R.string.engine_866b79) })
+                val note = if (d.activeBackend != preferred) I18n.s(R.string.engine_ed13cd, preferred.label, d.activeBackend.label) +
                     errors.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().substringAfter("] ") else null
-                // 1.7.8: never fall back silently (user rule) — log it and tell the chat screen.
+                // never fall back silently (user rule) — log it and tell the chat screen.
                 if (note != null) {
                     Log.w(RES_TAG, "backend FALLBACK: ${model.fileName} wanted ${preferred.label}, running ${d.activeBackend.label} " +
                         "(tier ${useTier.short}${if (applyingTier != null) ", tier reload" else ""}): ${errors.toString().trim().replace('\n', ' ')}")
-                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, note))
+                    _notices.tryEmit(I18n.s(R.string.chat_b9fef6, model.displayName, note))
                 }
-                // 2.1.8: bounded warm-up (WarmUpGuard): a first generation that never answers no longer
+                // bounded warm-up (WarmUpGuard): a first generation that never answers no longer
                 // keeps the load in flight forever; its own cancellation propagates (no runCatching).
                 if (cfg.warmup) {
                     val w = WarmUpGuard.run(onTimeout = { e?.cancel() }) { warmUp(e!!) }
@@ -558,7 +573,7 @@ class EngineManager(
                 loadedPreferred = preferred
                 lastAppliedTier = plan.tier
                 if (applyingTier == null) _tierApply.value = null   // a fresh model: no stale status
-                _state.value = EngineState.Ready(model, d.copy(fallbackNote = listOfNotNull(note, d.fallbackNote).joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c4530d)).ifEmpty { null }))
+                _state.value = EngineState.Ready(model, d.copy(fallbackNote = listOfNotNull(note, d.fallbackNote).joinToString(I18n.s(R.string.settings_c4530d)).ifEmpty { null }))
                 settings.update { it.copy(lastModelFile = model.fileName) }
                 startupGuard.noteLoadSucceeded()
                 scheduleIdleUnload()
@@ -575,12 +590,12 @@ class EngineManager(
                 false
             }
             } finally {
-                com.iris.localai.util.CrashReporter.breadcrumb(null)
+                CrashReporter.breadcrumb(null)
             }
         }
 
     /**
-     * 1.10.3: before a LiteRT GPU load: warn when the previous GPU load of this model never finished
+     * before a LiteRT GPU load: warn when the previous GPU load of this model never finished
      * (its marker is still there — the app was killed / frozen mid-compile, so the runtime rebuilds)
      * or when there is too little space for the GPU weight cache; then write the marker for this
      * load. Deleted when the load returns (success or failure); only a dead process leaves it.
@@ -592,7 +607,7 @@ class EngineManager(
             val marker = java.io.File(dir, GpuCacheDiag.loadingMarker(model.fileName, backend))
             if (marker.exists()) {
                 Log.w(LoadTelemetry.TAG, "previous GPU load of ${model.fileName} did not finish (marker from ${marker.readText().trim()}): the runtime will rebuild its cache")
-                _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, model.displayName, GpuCacheDiag.INTERRUPTED_NOTICE))
+                _notices.tryEmit(I18n.s(R.string.chat_b9fef6, model.displayName, GpuCacheDiag.INTERRUPTED_NOTICE))
             }
             val free = dir.usableSpace
             if (GpuCacheDiag.lowSpace(free, model.sizeBytes)) {
@@ -605,7 +620,7 @@ class EngineManager(
     }
 
     /**
-     * 2.2.14: watches a llama.cpp GPU load. The JNI call cannot be interrupted and holds the one
+     * watches a llama.cpp GPU load. The JNI call cannot be interrupted and holds the one
      * native thread, so a hang (no progress for [GpuLoadWatchdog.TIMEOUT_MS]) is handled by
      * remembering it, restarting the process and reloading the model on CPU at the next start.
      */
@@ -614,7 +629,7 @@ class EngineManager(
         val cacheDir = java.io.File(appContext.cacheDir, "opencl")
         fun sig(): Long = GpuLoadWatchdog.signature(
             (_state.value as? EngineState.Loading)?.progress ?: 0f,
-            com.iris.localai.engine.llama.LlamaNative.gpuTicks(),
+            LlamaNative.gpuTicks(),
             cacheDir.list()?.size ?: 0,
         )
         wd.start(System.currentTimeMillis(), sig())
@@ -623,23 +638,23 @@ class EngineManager(
             val now = System.currentTimeMillis()
             if (!wd.observe(now, sig())) continue
             val detail = GpuLoadWatchdog.hangDetail(
-                com.iris.localai.engine.llama.LlamaNative.gpuTicks(),
-                com.iris.localai.engine.llama.LlamaNative.gpuLastLog(), wd.stalledFor(now),
+                LlamaNative.gpuTicks(),
+                LlamaNative.gpuLastLog(), wd.stalledFor(now),
             )
             Log.w(LoadTelemetry.TAG, "GPU load hang: ${model.fileName}: $detail")
             crashMemory.markOpenClHung(detail, model.fileName)
-            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            CrashReporter.breadcrumb(null)
             withContext(kotlinx.coroutines.Dispatchers.Main) {
-                com.iris.localai.util.HintLog.add(GpuLoadWatchdog.HANG_NOTICE, com.iris.localai.util.HintLog.Source.MODEL)
+                HintLog.add(GpuLoadWatchdog.HANG_NOTICE, HintLog.Source.MODEL)
                 runCatching { android.widget.Toast.makeText(appContext, GpuLoadWatchdog.HANG_NOTICE, android.widget.Toast.LENGTH_LONG).show() }
             }
             kotlinx.coroutines.delay(1200)
-            com.iris.localai.util.AppRestart.restart(appContext)
+            AppRestart.restart(appContext)
             break
         }
     }
 
-    /** 1.10.2: stores + logs one load (adb logcat -s IrisLoad). */
+    /** stores + logs one load (adb logcat -s IrisLoad). */
     private fun recordLoad(model: LocalModel, backend: Backend, ms: Long, d: ModelDetails?, ok: Boolean, reason: String) {
         val r = LoadRecord(
             modelId = model.id,
@@ -651,7 +666,7 @@ class EngineManager(
             maxNumTokens = if (model.format == ModelFormat.LITERT) d?.contextLength ?: 0 else 0,
             ok = ok,
             at = System.currentTimeMillis(),
-            reason = reason + (lastUnload?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d7aeae, it) } ?: ""),
+            reason = reason + (lastUnload?.let { I18n.s(R.string.engine_d7aeae, it) } ?: ""),
         )
         lastUnload = null
         if (ok) loadStats.put(r)
@@ -668,7 +683,7 @@ class EngineManager(
         e.resetContext()
     }
 
-    suspend fun unload(reason: String = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c5271c)) = lifecycle.withLock {
+    suspend fun unload(reason: String = I18n.s(R.string.engine_c5271c)) = lifecycle.withLock {
         cancelAll()
         if (engine != null) {
             lastUnload = reason
@@ -687,14 +702,14 @@ class EngineManager(
     /** Reloads the current model, e.g. after changing context length or threads. */
     suspend fun reload() {
         val m = readyModel ?: return
-        unload(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_64ca9b))
-        load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_64ca9b))
+        unload(I18n.s(R.string.engine_64ca9b))
+        load(m, reason = I18n.s(R.string.engine_64ca9b))
     }
 
     /** Loads the last used model if nothing is loaded (used by auto-load and the API). */
     suspend fun ensureLoaded(preferredFileName: String? = null): Boolean {
         if (preferredFileName == null) {
-            // 2.1.7: a load is running (any model) → wait for it and answer with that model; never
+            // a load is running (any model) → wait for it and answer with that model; never
             // cancel it to reload the previously used one. Follows a newer load started meanwhile.
             val awaited = inFlight.awaitInFlight()
             if (awaited != null) return awaited && state.value is EngineState.Ready
@@ -705,10 +720,10 @@ class EngineManager(
             ?: readyModel
             ?: defaultModel()
             ?: return false
-        return load(target, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4978ec))
+        return load(target, reason = I18n.s(R.string.engine_4978ec))
     }
 
-    /** 2.1.7 「默认模型」: the chosen default if still installed, else the last used model. */
+    /** 「默认模型」: the chosen default if still installed, else the last used model. */
     fun defaultModel(): LocalModel? =
         settings.current.defaultModelFile.takeIf { it.isNotBlank() }?.let { models.find(it) }
             ?: models.find(settings.current.lastModelFile)
@@ -719,11 +734,11 @@ class EngineManager(
      */
     fun samplingFor(
         disableThinking: Boolean,
-        cfg: com.iris.localai.data.EffectiveModelConfig = effective(),
+        cfg: EffectiveModelConfig = effective(),
         contextShift: Boolean = false,
         keepTokens: Int = 4,
     ): SamplingConfig {
-        // 1.7.8: the plan of the backend the model really runs on (CPU or GPU/NPU profile set).
+        // the plan of the backend the model really runs on (CPU or GPU/NPU profile set).
         val plan = threadPolicy.plan(tier, cfg.threads, readyDetails?.activeBackend)
         return SamplingConfig(
             temperature = cfg.temperature,
@@ -731,8 +746,8 @@ class EngineManager(
             topK = cfg.topK,
             minP = cfg.minP,
             repeatPenalty = cfg.repeatPenalty,
-            // 2.6.7 少算: close to the cool-down limit → shorter replies and 低 reasoning effort.
-            maxNewTokens = CoolDown.maxNew(com.iris.localai.data.TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF), CoolDown.hotNow()),
+            // 少算: close to the cool-down limit → shorter replies and 低 reasoning effort.
+            maxNewTokens = CoolDown.maxNew(TokenLimit.resolve(cfg.maxNewTokens, cfg.contextLength, readyModel?.format == ModelFormat.GGUF), CoolDown.hotNow()),
             disableThinking = disableThinking,
             thinkEffort = if (disableThinking) 0 else CoolDown.effort(ThinkLevel.effort(settings.current.thinkLevel, readyDetails?.thinkEffort.orEmpty()), !readyDetails?.thinkEffort.isNullOrEmpty(), CoolDown.hotNow()),
             threads = plan.threads,
@@ -747,7 +762,7 @@ class EngineManager(
     }
 
     /**
-     * 1.7.7: runs [block] as one registered request (see [ReloadGate]): a tier reload cannot start
+     * runs [block] as one registered request (see [ReloadGate]): a tier reload cannot start
      * while it runs, and if one is running it waits for it first ([onWaiting] true/false).
      * ChatViewModel wraps ensureLoaded → plan → generate in this so the reload can never slip in
      * between them.
@@ -760,7 +775,7 @@ class EngineManager(
      * native work promptly. 1.7.7: registered with [gate] (waits for a running tier reload, then
      * starts by itself); a model a failed reload left unloaded is loaded again first; a first reply
      * on a freshly loaded GPU/NPU backend that fails before any output is retried once on the CPU.
-     * 1.14.3: [owner] is who may stop it with [cancel] (default: a fresh owner, i.e. only collection
+     * [owner] is who may stop it with [cancel] (default: a fresh owner, i.e. only collection
      * cancellation or [cancelAll] stop it).
      */
     fun generate(
@@ -770,7 +785,7 @@ class EngineManager(
         owner: GenOwner = GenOwner(requester.name),
     ): Flow<GenEvent> = flow {
         ThermalCutoff.startOrRefuse()?.let { msg -> emit(GenEvent.Done(StopReason.ERROR, null, msg)); return@flow }
-        // 2.6.7 过热断续: over the limit → wait here (before any work) until cooled; cancellable.
+        // 过热断续: over the limit → wait here (before any work) until cooled; cancellable.
         CoolDown.awaitCool { msg -> Log.i(GEN_TAG, "cool-down wait ($requester): $msg"); _notices.tryEmit(msg) }
         gate.request(onWaiting = { w ->
             if (w) Log.i(RES_TAG, "request ($requester) queued: tier reload in progress, starts when it ends")
@@ -781,7 +796,7 @@ class EngineManager(
             while (true) {
                 var stopped = false
                 val retryOnCpu = generateOnce(history, params, requester, owner, allowCpuRetry = !cpuRetried) { ev ->
-                    // 2.6.7 立即停止 (option): over the limit mid-reply → ask the engine to stop (keeps what was said).
+                    // 立即停止 (option): over the limit mid-reply → ask the engine to stop (keeps what was said).
                     if (!stopped && ev is GenEvent.Piece && CoolDown.stopNowHit()) {
                         stopped = true
                         Log.i(GEN_TAG, "cool-down: stop now at ${ThermalGovernor.tempC}°C")
@@ -794,10 +809,10 @@ class EngineManager(
                 cpuRetried = true
                 val m = readyModel
                 val from = readyDetails?.activeBackend
-                val ok = m != null && lifecycle.withLock { loadLocked(m, applyingTier = null, cpuOnly = true, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d24275)) }
+                val ok = m != null && lifecycle.withLock { loadLocked(m, applyingTier = null, cpuOnly = true, reason = I18n.s(R.string.engine_d24275)) }
                 if (!ok) {
                     emit(GenEvent.Done(StopReason.ERROR, null, "${from?.label ?: "GPU"} 上首次生成失败，回退 CPU 也失败：" +
-                        ((state.value as? EngineState.Failed)?.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468))))
+                        ((state.value as? EngineState.Failed)?.message ?: I18n.s(R.string.chat_5d0468))))
                     break
                 }
                 Log.w(GEN_TAG, "first reply on ${from?.label} failed before any output → reloaded on CPU, retrying the same request")
@@ -807,12 +822,12 @@ class EngineManager(
         }
     }
 
-    /** 1.7.7: a failed tier reload (and failed restore) left no model: load it again for this request. */
+    /** a failed tier reload (and failed restore) left no model: load it again for this request. */
     private suspend fun recoverAfterFailedReload(requester: Requester) {
         if (engine != null && state.value is EngineState.Ready) return
         val m = lostByReload ?: return
         Log.w(RES_TAG, "request ($requester): the last tier reload left no model loaded → loading ${m.fileName} again")
-        load(m, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_689775))
+        load(m, reason = I18n.s(R.string.engine_689775))
     }
 
     /**
@@ -829,7 +844,7 @@ class EngineManager(
     ): Boolean = generation.withLock {
         val e = engine
         if (e == null) {
-            val why = (state.value as? EngineState.Failed)?.message?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.chat_fedfea, it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_5d0468)
+            val why = (state.value as? EngineState.Failed)?.message?.let { I18n.s(R.string.chat_fedfea, it) } ?: I18n.s(R.string.chat_5d0468)
             Log.w(GEN_TAG, "request ($requester) rejected: $why")
             emit(GenEvent.Done(StopReason.ERROR, null, why))
             return@withLock false
@@ -838,13 +853,13 @@ class EngineManager(
         _busy.value = requester
         val guard = guardFirstGeneration
         if (guard != null) crashMemory.arm(guard.first, guard.second)
-        // 1.7.5: power / CPU evidence for this reply (logcat only).
+        // power / CPU evidence for this reply (logcat only).
         val plan = params.resources
         if (plan != null) telemetry.begin(plan.tier.short) { e.resourceThreadIds() }
         var tokens: Int? = null
         var tokPerSec: Float? = null
-        // 1.7.7: why the reply ended + reasoning vs. answer tokens, under logcat tag IrisGen.
-        val acct = com.iris.localai.util.ReplyAccounting(
+        // why the reply ended + reasoning vs. answer tokens, under logcat tag IrisGen.
+        val acct = ReplyAccounting(
             startInThinking = readyDetails?.thinkingPrefilled == true && !params.disableThinking,
         )
         var pieces = 0
@@ -856,7 +871,7 @@ class EngineManager(
             e.generate(history, params).collect { ev ->
                 when (ev) {
                     is GenEvent.Piece -> {
-                        // 1.14.3: a cancel that reached the engine before its native call started can
+                        // a cancel that reached the engine before its native call started can
                         // be lost (MNN / LiteRT clear the flag at start): repeat it for this run only.
                         if (run.stopRequested) runCatching { e.cancel() }
                         pieces++; acct.onPiece(ev.text); telemetry.piece(); emit(ev)
@@ -864,7 +879,7 @@ class EngineManager(
                     is GenEvent.Done -> {
                         tokens = ev.stats?.generatedTokens; tokPerSec = ev.stats?.tokensPerSecond
                         done = ev
-                        // 2.0: an NPU-only file cannot be reloaded on the CPU; report the native error
+                        // an NPU-only file cannot be reloaded on the CPU; report the native error
                         // ("NPU 上首次生成失败：…") instead of a doomed CPU retry that hid it.
                         val npuOnly = readyModel?.let { it.format == ModelFormat.LITERT && BackendCapabilities.npuTarget(it.fileName) != null } == true
                         when (val d = FirstReplyFallback.decide(
@@ -895,7 +910,7 @@ class EngineManager(
                         if (retry) " → retrying on CPU" else "",
             )
             if (plan != null) telemetry.end(tokens, tokPerSec)
-            // 1.7.8: one line per reply for comparing tiers / backends on the phone (adb logcat -s IrisResource).
+            // one line per reply for comparing tiers / backends on the phone (adb logcat -s IrisResource).
             Log.i(RES_TAG, ResourceLog.perReply(
                 backend = readyDetails?.backend ?: "?", active = readyDetails?.activeBackend, plan = plan,
                 loadedThreads = loadedPlan?.threads, engineLive = runCatching { e.livePolicy() }.getOrNull(),
@@ -904,41 +919,41 @@ class EngineManager(
             if (guard != null) { crashMemory.disarm(); guardFirstGeneration = null }
             _busy.value = null
             scheduleIdleUnload()
-            tierReload.onGenerationFinished() // 1.7.4: a deferred tier reload runs now
+            tierReload.onGenerationFinished() // a deferred tier reload runs now
         }
         retry
     }
 
     /**
-     * 1.14.3: stops the running generation only if it belongs to [owner]; another owner's generation
+     * stops the running generation only if it belongs to [owner]; another owner's generation
      * (chat vs. API vs. speed test) is left alone, and a still-queued one is not touched (its owner
      * cancels its collection). True = the engine was asked to stop.
      */
     fun cancel(owner: GenOwner): Boolean = ownership.cancel(owner)
 
-    /** 1.14.3: the old global cancel, for load / unload only (whoever runs is stopped). */
+    /** the old global cancel, for load / unload only (whoever runs is stopped). */
     fun cancelAll() {
         ownership.cancelAll()?.let { Log.i(GEN_TAG, "cancelAll: stopped ($it)") }
     }
 
-    /** 1.14.3: owner of the speed test's generations ([benchmark]). */
+    /** owner of the speed test's generations ([benchmark]). */
     private val benchOwner = GenOwner("bench")
 
-    /** 1.14.3: 设置 › 测速 「停止」: stops only the speed test's own generation. */
+    /** 设置 › 测速 「停止」: stops only the speed test's own generation. */
     fun cancelBenchmark(): Boolean = cancel(benchOwner)
 
     /**
      * Kept for 设置 › 测速 「停止」 (SettingsViewModel.cancelBenchmark), its only remaining caller.
-     * 1.14.3: no longer global — stops the speed test's generation only.
+     * no longer global — stops the speed test's generation only.
      */
     @Deprecated("Not global any more: use cancel(owner), cancelBenchmark() or cancelAll()", ReplaceWith("cancelBenchmark()"))
     fun cancel() { cancelBenchmark() }
 
-    /** 1.10.9: [EngineState.Loading.since] of a load the user cancelled (0 = none). */
+    /** [EngineState.Loading.since] of a load the user cancelled (0 = none). */
     @Volatile private var abandonedLoad = 0L
 
     /**
-     * 1.10.9: 「取消加载」. The native load call itself cannot be interrupted, so the load is
+     * 「取消加载」. The native load call itself cannot be interrupted, so the load is
      * abandoned: the UI is free at once (state Idle), nothing else may use the result, and when the
      * native call returns the half-loaded model is released immediately. A new load waits for that.
      */
@@ -948,13 +963,13 @@ class EngineManager(
         abandonedLoad = st.since
         Log.i(LoadTelemetry.TAG, "load cancelled by user: ${st.model.fileName} after ${(System.currentTimeMillis() - st.since) / 1000}s")
         _state.value = EngineState.Idle
-        // 2.1.7: a message waiting for this load is released now (not when the native call returns).
+        // a message waiting for this load is released now (not when the native call returns).
         inFlight.current()?.let { inFlight.end(it, false) }
         _notices.tryEmit(LoadCancel.NOTICE)
         return true
     }
 
-    /** 1.7.2: how a tier change reaches the loaded model while it generates. */
+    /** how a tier change reaches the loaded model while it generates. */
     fun liveApplyMode(): LiveApply {
         val ready = state.value as? EngineState.Ready ?: return LiveApply.NEXT_REPLY
         // Both must agree: the format/backend rule and what the engine itself reports.
@@ -963,7 +978,7 @@ class EngineManager(
     }
 
     /**
-     * 1.7.2: called after the user picked [newTier] while a reply runs. Applies threads / cores /
+     * called after the user picked [newTier] while a reply runs. Applies threads / cores /
      * priority to that reply when the engine supports it (GGUF on the CPU); otherwise the new tier
      * is only in the settings and takes effect with the next reply (or the next load).
      */
@@ -979,11 +994,11 @@ class EngineManager(
                 val generating = _busy.value != null
                 val plan = threadPolicy.plan(newTier, effective().threads, st.details.activeBackend)
                 val e = engine
-                // 1.7.2 GGUF/CPU: only a running reply can take it; 1.7.5 MNN/CPU: idle or running.
+                // GGUF/CPU: only a running reply can take it; 1.7.5 MNN/CPU: idle or running.
                 val attempt = mode == LiveApply.LIVE_POLICY || (mode == LiveApply.IMMEDIATE && generating)
                 val liveOk = if (attempt && e != null) e.applyResourcesLive(plan) else null
                 val threadsDiffer = loadedPlan?.threads != plan.threads
-                // 1.10.2: LiteRT-LM on the GPU / NPU is not reloaded for a speed change (see
+                // LiteRT-LM on the GPU / NPU is not reloaded for a speed change (see
                 // ReloadRules.tierReloadsLiteRt) — the new tier is used by its next load.
                 LiveResourcePolicy.result(mode, generating, liveOk, threadsDiffer).let { r ->
                     if (r == TierApplyResult.RELOAD && st.model.format == ModelFormat.LITERT &&
@@ -997,7 +1012,7 @@ class EngineManager(
         return result
     }
 
-    /** 1.7.4: does the current tier need the resident model reloaded? null = nothing loaded. */
+    /** does the current tier need the resident model reloaded? null = nothing loaded. */
     private fun decideTierReload(): TierReloadDecision? {
         val ready = state.value as? EngineState.Ready ?: return null
         val loaded = loadedPlan ?: return null
@@ -1010,7 +1025,7 @@ class EngineManager(
     }
 
     /**
-     * 1.7.4: reloads the resident model with the current tier, bypassing [load]'s same-model early
+     * reloads the resident model with the current tier, bypassing [load]'s same-model early
      * return. Never cancels a reply: if one is running it reports DEFERRED_BUSY and the scheduler
      * retries when it ends. The conversation lives in the app, so nothing is lost; engines without
      * a restored KV cache (MNN) simply prefill the history again on the next message.
@@ -1020,7 +1035,7 @@ class EngineManager(
         if (_busy.value != null) return@withLock TierReloadResult.DEFERRED_BUSY
         val d = decideTierReload()
         if (d == null || !d.reload) return@withLock TierReloadResult.SKIPPED
-        // 1.7.7: a request that has started (even one still before the generation lock) wins; the
+        // a request that has started (even one still before the generation lock) wins; the
         // reload runs when the last request ends (gate.onIdle → scheduler).
         if (!gate.tryBeginReload()) {
             Log.i(RES_TAG, "tier reload deferred: ${gate.requests} request(s) in progress")
@@ -1040,20 +1055,20 @@ class EngineManager(
                 if (loadedPlan?.tier == tier) _tierApply.value = TierApplyResult.RELOADED
                 TierReloadResult.APPLIED
             } else {
-                val err = (state.value as? EngineState.Failed)?.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.engine_974e74)
+                val err = (state.value as? EngineState.Failed)?.message ?: I18n.s(R.string.engine_974e74)
                 Log.w(RES_TAG, "tier reload FAILED after ${ms}ms: $err")
-                // 1.7.7: never leave the user without a model: load it again with the tier it ran on,
+                // never leave the user without a model: load it again with the tier it ran on,
                 // and put the setting back so card, plan and model agree.
-                val restored = prevTier != null && loadLocked(ready.model, applyingTier = null, tierOverride = prevTier, reason = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_694905))
+                val restored = prevTier != null && loadLocked(ready.model, applyingTier = null, tierOverride = prevTier, reason = I18n.s(R.string.engine_694905))
                 if (restored) {
                     Log.w(RES_TAG, "tier reload: restored ${ready.model.fileName} with previous tier ${prevTier.short}; setting reverted")
                     settings.update { it.copy(resourceTier = prevTier.ordinal) }
                     _tierApply.value = TierApplyResult.RELOAD_FAILED
-                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_549f7f, t.label, err.lineSequence().first(), prevTier.label))
+                    _notices.tryEmit(I18n.s(R.string.engine_549f7f, t.label, err.lineSequence().first(), prevTier.label))
                 } else {
                     lostByReload = ready.model
                     Log.w(RES_TAG, "tier reload: restore with previous tier failed too; next request loads again")
-                    _notices.tryEmit(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_e87a0d, t.label, err.lineSequence().first()))
+                    _notices.tryEmit(I18n.s(R.string.engine_e87a0d, t.label, err.lineSequence().first()))
                 }
                 TierReloadResult.FAILED
             }
@@ -1115,7 +1130,7 @@ class EngineManager(
         generation.withLock { engine?.resetContext() }
     }
 
-    /** 2.3: 新对话 — keeps the KV cache where the engine reuses a common prefix by itself (system prompt). */
+    /** 新对话 — keeps the KV cache where the engine reuses a common prefix by itself (system prompt). */
     suspend fun resetForNewChat() {
         generation.withLock { engine?.takeUnless { it.reusesCommonPrefix }?.resetContext() }
     }
@@ -1129,22 +1144,22 @@ class EngineManager(
         if (minutes <= 0 || state.value !is EngineState.Ready) return
         idleJob = scope.launch {
             delay(minutes * 60_000L)
-            // 1.7.8: also not while a request is registered (between ensureLoaded and generate it
+            // also not while a request is registered (between ensureLoaded and generate it
             // holds no lock yet) or a tier reload owns the engine — unloading there made that
             // request fail with 「模型未加载」.
             if (IdleUnloadRule.canUnload(busy.value != null, generation.isLocked, gate.requests, gate.reloading.value)) {
                 idleJob = null // unload() must not cancel the coroutine it is running in
                 Log.i(TAG, "idle for $minutes min → unloading model")
-                unload(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0cbbff, minutes))
+                unload(I18n.s(R.string.engine_0cbbff, minutes))
             }
         }
     }
 
     private companion object {
-        val SAFE_MODE_NOTICE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b46cdd)
+        val SAFE_MODE_NOTICE: String get() = I18n.s(R.string.engine_b46cdd)
         const val TAG = "EngineManager"
         const val RES_TAG = "IrisResource"
-        /** 1.7.7: end-of-reply reason + thinking / answer tokens. */
+        /** end-of-reply reason + thinking / answer tokens. */
         const val GEN_TAG = "IrisGen"
     }
 }

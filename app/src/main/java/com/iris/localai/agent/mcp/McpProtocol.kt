@@ -13,7 +13,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /**
- * 2.3.0 ②: pure parts of the MCP client (JSON-RPC 2.0 framing, SSE parsing, tool-name namespacing,
+ * pure parts of the MCP client (JSON-RPC 2.0 framing, SSE parsing, tool-name namespacing,
  * input-schema flattening for the text prompt). No Android, no network — unit-tested (McpV230Test).
  * Remote servers only (Streamable HTTP 2025-03-26+, legacy HTTP+SSE fallback): no stdio / subprocess.
  */

@@ -42,9 +42,9 @@ interface QnnGraph : Closeable {
 /** Opens context binaries (native: [NativeQnnGraphLoader]; tests: a fake). */
 fun interface QnnGraphLoader {
     fun open(bin: File): QnnGraph
-    /** 2.6.12: 多图文件按名字挑一个（空名 = 第一个）。 */
+    /** 多图文件按名字挑一个（空名 = 第一个）。 */
     fun open(bin: File, graph: String): QnnGraph = open(bin)
-    /** 2.6.12: 文件里所有图的名字。 */
+    /** 文件里所有图的名字。 */
     fun graphNames(bin: File): List<String> = emptyList()
 }
 

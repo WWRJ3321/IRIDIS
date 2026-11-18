@@ -1,5 +1,12 @@
 package com.iris.localai.ui.markdown
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.chat.ImageEditor
+import com.iris.localai.ui.chat.ToolButton
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.IrisFontSize
+import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.motion.enterOnce
 import android.annotation.SuppressLint
 import android.content.Context
@@ -86,7 +93,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 
-/** 2.2: the two switches the rich views follow (外观 › 聊天内容). */
+/** the two switches the rich views follow (外观 › 聊天内容). */
 internal data class RichSettings(val renderHtml: Boolean = true, val loadNetworkImages: Boolean = true)
 
 /** Read only by messages that actually contain an image or an HTML block, so plain replies pay nothing. */
@@ -98,27 +105,27 @@ internal fun rememberRichSettings(): RichSettings {
 }
 
 internal object RichText {
-    val PREVIEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_7056bd)
-    val OPEN_IMAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_3bc999)
-    val SVG: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_e077ad)
-    val SOURCE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_5b804b)
-    val SHOW_PREVIEW: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_645dbc)
-    val FULLSCREEN: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_185926)
-    val COPY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_79d3ab)
-    val COPIED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_52e6ab)
-    val CLOSE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91)
-    val SAVE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_a3c86e)
-    val EDIT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.img262_edit)
-    val SHARE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_c31f48)
-    val SAVED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c1a317)
-    val SAVE_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6de920)
-    val SHARE_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c0fda5)
-    val LOAD_FAILED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_b3b83e)
-    val CRASHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_bbf012)
+    val PREVIEW: String get() = I18n.s(R.string.markdown_7056bd)
+    val OPEN_IMAGE: String get() = I18n.s(R.string.markdown_3bc999)
+    val SVG: String get() = I18n.s(R.string.markdown_e077ad)
+    val SOURCE: String get() = I18n.s(R.string.markdown_5b804b)
+    val SHOW_PREVIEW: String get() = I18n.s(R.string.files_645dbc)
+    val FULLSCREEN: String get() = I18n.s(R.string.markdown_185926)
+    val COPY: String get() = I18n.s(R.string.ui_79d3ab)
+    val COPIED: String get() = I18n.s(R.string.chat_52e6ab)
+    val CLOSE: String get() = I18n.s(R.string.ui_b15d91)
+    val SAVE: String get() = I18n.s(R.string.markdown_a3c86e)
+    val EDIT: String get() = I18n.s(R.string.img262_edit)
+    val SHARE: String get() = I18n.s(R.string.files_c31f48)
+    val SAVED: String get() = I18n.s(R.string.markdown_c1a317)
+    val SAVE_FAILED: String get() = I18n.s(R.string.imagegen_6de920)
+    val SHARE_FAILED: String get() = I18n.s(R.string.markdown_c0fda5)
+    val LOAD_FAILED: String get() = I18n.s(R.string.markdown_b3b83e)
+    val CRASHED: String get() = I18n.s(R.string.markdown_bbf012)
 }
 
 private val PREVIEW_MAX = 360.dp
-/** 2.5.4: a page that fills its viewport (3D / canvas / height:100%) gets this fixed card height instead of a measured one. */
+/** a page that fills its viewport (3D / canvas / height:100%) gets this fixed card height instead of a measured one. */
 private val PREVIEW_FILL = 300.dp
 
 // ------------------------------------------------------------------------------------------ HTML
@@ -145,7 +152,7 @@ private fun HtmlCard(source: String, kind: HtmlBlocks.Kind, allowImages: Boolean
         Row(Modifier.fillMaxWidth().padding(start = IrisDimens.space12, end = IrisDimens.space4, top = IrisDimens.space2, bottom = IrisDimens.space2), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (kind == HtmlBlocks.Kind.SVG) IrisIcons.Image else IrisIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(IrisDimens.space6))
-            Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.textTertiary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, modifier = Modifier.weight(1f))
+            Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.textTertiary, fontSize = IrisFontSize.XS, modifier = Modifier.weight(1f))
             CardAction(IrisIcons.Code, if (showSource) RichText.SHOW_PREVIEW else RichText.SOURCE) { showSource = !showSource }
             CardAction(IrisIcons.Expand, RichText.FULLSCREEN) { fullscreen = true }
             CardAction(IrisIcons.Copy, if (copied) RichText.COPIED else RichText.COPY) {
@@ -167,7 +174,7 @@ private fun CardAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     ) {
         Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(IrisDimens.space4))
-        Text(label, color = c.textSecondary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS)
+        Text(label, color = c.textSecondary, fontSize = IrisFontSize.XS)
     }
 }
 
@@ -175,9 +182,9 @@ private fun CardAction(icon: ImageVector, label: String, onClick: () -> Unit) {
 private fun SourceText(source: String, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState())
-            .padding(start = com.iris.localai.ui.theme.IrisSpace.M, end = com.iris.localai.ui.theme.IrisSpace.M, bottom = IrisDimens.space12),
+            .padding(start = IrisSpace.M, end = IrisSpace.M, bottom = IrisDimens.space12),
     ) {
-        Text(source, fontFamily = FontFamily.Monospace, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, lineHeight = 20.sp, color = Iris.colors.text, softWrap = false)
+        Text(source, fontFamily = FontFamily.Monospace, fontSize = IrisFontSize.XS, lineHeight = 20.sp, color = Iris.colors.text, softWrap = false)
     }
 }
 
@@ -191,7 +198,7 @@ private fun WebPreview(doc: String, allowImages: Boolean, fills: Boolean = false
     var visible by remember { mutableStateOf(false) }
     var crashed by remember(doc) { mutableStateOf(false) }
     var contentHeight by remember(doc) { mutableIntStateOf(0) }
-    // 2.5.4: a full-viewport page (Three.js canvas sized to innerHeight, html/body height:100%) has no
+    // a full-viewport page (Three.js canvas sized to innerHeight, html/body height:100%) has no
     // content height to measure; measuring it made the card track its own viewport. Fixed height instead.
     val h: Dp = when {
         fills -> PREVIEW_FILL
@@ -204,7 +211,7 @@ private fun WebPreview(doc: String, allowImages: Boolean, fills: Boolean = false
         contentAlignment = Alignment.Center,
     ) {
         when {
-            crashed -> Text(RichText.CRASHED, color = c.textTertiary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS)
+            crashed -> Text(RichText.CRASHED, color = c.textTertiary, fontSize = IrisFontSize.XS)
             visible -> key(doc) {
                 AndroidView(
                     factory = { ctx ->
@@ -221,7 +228,7 @@ private fun WebPreview(doc: String, allowImages: Boolean, fills: Boolean = false
 }
 
 /**
- * 2.5.4 (网页预览 Three.js 空白): the document used to be loaded in the AndroidView factory, before the
+ * 网页预览 Three.js 空白: the document used to be loaded in the AndroidView factory, before the
  * WebView had a size, so scripts read innerWidth / innerHeight = 0 and sized their canvas 0×0 (inline
  * style beats the page's CSS). Load only once the view has a real size; on later size changes (card height,
  * rotation) also fire `resize` so pages that listen re-fit.
@@ -246,7 +253,7 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
     val c = Iris.colors
     var showSource by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        // 2.5.2: the activity handles rotation itself, so the dialog window kept its first size (wider /
+        // the activity handles rotation itself, so the dialog window kept its first size (wider /
         // taller than the screen after a turn). Match the window to the screen on every configuration.
         val cfg = LocalConfiguration.current
         val dialogWindow = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
@@ -256,7 +263,7 @@ private fun HtmlFullscreen(doc: String, source: String, kind: HtmlBlocks.Kind, a
         Column(Modifier.fillMaxSize().enterOnce().background(c.background).systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space4), verticalAlignment = Alignment.CenterVertically) {
                 PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = c.text, onClick = onDismiss)
-                Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.text, fontSize = com.iris.localai.ui.theme.IrisFontSize.M, modifier = Modifier.weight(1f))
+                Text(if (kind == HtmlBlocks.Kind.SVG) RichText.SVG else RichText.PREVIEW, color = c.text, fontSize = IrisFontSize.M, modifier = Modifier.weight(1f))
                 CardAction(IrisIcons.Code, if (showSource) RichText.SHOW_PREVIEW else RichText.SOURCE) { showSource = !showSource }
             }
             Box(Modifier.weight(1f).fillMaxWidth().background(c.surfaceVariant)) {
@@ -302,7 +309,7 @@ private fun sandboxWebView(ctx: Context, allowImages: Boolean, onHeight: ((Int) 
     webViewClient = object : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val url = request.url.toString()
-            // 2.2.17: bundled Three.js for any CDN `three` URL (any version), with CORS for module scripts.
+            // bundled Three.js for any CDN `three` URL (any version), with CORS for module scripts.
             ThreeAssets.assetFor(url)?.let { asset ->
                 return runCatching {
                     WebResourceResponse(ThreeAssets.MIME, "utf-8", 200, "OK", ThreeAssets.HEADERS, ThreeAssets.open(asset) { view.context.assets.open(it) })
@@ -388,14 +395,14 @@ internal fun MarkdownImage(block: MdBlock.Image) {
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.widthIn(max = w).heightIn(max = 420.dp).clip(IrisRadius.mediumShape).clickable { viewer = true },
                 )
-                if (block.alt.isNotBlank()) Text(block.alt, color = c.textTertiary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS)
+                if (block.alt.isNotBlank()) Text(block.alt, color = c.textTertiary, fontSize = IrisFontSize.XS)
             }
         }
     }
     if (viewer) ImageViewer(src, block.alt) { viewer = false }
 }
 
-/** 2.1.7: a small square thumbnail of a workspace picture (agent step cards); tap opens the full-screen viewer. */
+/** a small square thumbnail of a workspace picture (agent step cards); tap opens the full-screen viewer. */
 @Composable
 internal fun ImageThumbnail(path: String, size: Dp = 72.dp) {
     val c = Iris.colors
@@ -421,12 +428,12 @@ internal fun ImageThumbnail(path: String, size: Dp = 72.dp) {
 private fun ImageNote(alt: String, reason: String) {
     val c = Iris.colors
     Row(
-        Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = com.iris.localai.ui.theme.IrisSpace.S, vertical = IrisDimens.space6),
+        Modifier.clip(IrisRadius.smallShape).background(c.surfaceVariant).padding(horizontal = IrisSpace.S, vertical = IrisDimens.space6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(IrisIcons.Image, null, tint = c.textTertiary, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(IrisDimens.space6))
-        Text(if (alt.isBlank()) reason else "$alt · $reason", color = c.textTertiary, fontSize = com.iris.localai.ui.theme.IrisFontSize.XS, maxLines = 2)
+        Text(if (alt.isBlank()) reason else "$alt · $reason", color = c.textTertiary, fontSize = IrisFontSize.XS, maxLines = 2)
     }
 }
 
@@ -435,7 +442,7 @@ private fun ImageNote(alt: String, reason: String) {
 private fun ImageViewer(src: ImageSource, alt: String, onDismiss: () -> Unit) = ChatImageViewer(listOf(src to alt), 0, onDismiss)
 
 /**
- * 2.4.5 (Issue #13): the full-screen viewer for pictures in a conversation (sent photos, markdown
+ * Issue #13: the full-screen viewer for pictures in a conversation (sent photos, markdown
  * images, step pictures). Pinch or double-tap to zoom, drag to pan (kept inside the picture), left /
  * right through the pictures of one message like the 生成历史 viewer; 保存到相册 and 分享.
  */
@@ -444,7 +451,7 @@ internal fun ChatImageViewer(
     items: List<Pair<ImageSource, String>>,
     start: Int,
     onDismiss: () -> Unit,
-    /** 2.6.2: given (composer attachments) = 编辑 in the toolbar; the edited picture replaces item [index]. */
+    /** given (composer attachments) = 编辑 in the toolbar; the edited picture replaces item [index]. */
     onEdit: ((index: Int, edited: Bitmap) -> Unit)? = null,
 ) {
     val ctx = LocalContext.current
@@ -455,9 +462,9 @@ internal fun ChatImageViewer(
     var scale by remember(index) { mutableFloatStateOf(1f) }
     var offset by remember(index) { mutableStateOf(Offset.Zero) }
     var box by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-    // 2.6.2: immersive — black, bars float over the picture; one tap hides / shows them.
+    // immersive — black, bars float over the picture; one tap hides / shows them.
     var chrome by remember { mutableStateOf(true) }
-    val chromeA by androidx.compose.animation.core.animateFloatAsState(if (chrome) 1f else 0f, label = "viewerChrome")
+    val chromeA by androidx.compose.animation.core.animateFloatAsState(if (chrome) 1f else 0f, IrisMotion.FadeIn.float(), label = "viewerChrome")
     var editing by remember { mutableStateOf<Bitmap?>(null) }
     val white = androidx.compose.ui.graphics.Color.White
     val black = androidx.compose.ui.graphics.Color.Black
@@ -471,7 +478,7 @@ internal fun ChatImageViewer(
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         editing?.let { full ->
-            com.iris.localai.ui.chat.ImageEditor(full, onCancel = { editing = null }) { out ->
+            ImageEditor(full, onCancel = { editing = null }) { out ->
                 editing = null
                 onEdit?.invoke(index, out)
             }
@@ -524,7 +531,7 @@ internal fun ChatImageViewer(
                 ) {
                     PressableIcon(IrisIcons.Close, RichText.CLOSE, tint = white, enabled = chrome, onClick = onDismiss)
                     Spacer(Modifier.weight(1f))
-                    if (items.size > 1) Text("${index + 1} / ${items.size}", color = white.copy(alpha = 0.85f), fontSize = com.iris.localai.ui.theme.IrisFontSize.S, modifier = Modifier.padding(end = IrisDimens.space16))
+                    if (items.size > 1) Text("${index + 1} / ${items.size}", color = white.copy(alpha = 0.85f), fontSize = IrisFontSize.S, modifier = Modifier.padding(end = IrisDimens.space16))
                 }
                 // Bottom toolbar: 编辑 · 保存 · 分享.
                 Row(
@@ -533,14 +540,14 @@ internal fun ChatImageViewer(
                         .systemBarsPadding().padding(vertical = IrisDimens.space8),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    if (onEdit != null) com.iris.localai.ui.chat.ToolButton(IrisIcons.Edit, RichText.EDIT, false, enabled = chrome && bitmap != null) {
+                    if (onEdit != null) ToolButton(IrisIcons.Edit, RichText.EDIT, false, enabled = chrome && bitmap != null) {
                         scope.launch {
                             val full = withContext(Dispatchers.IO) { ChatImageLoader.load(ctx, src, 4096) }
                             if (full != null) editing = full else Toast.makeText(ctx, RichText.LOAD_FAILED, Toast.LENGTH_SHORT).show()
                         }
                     }
-                    com.iris.localai.ui.chat.ToolButton(IrisIcons.Download, RichText.SAVE, false, enabled = chrome) { withBytes({ ChatImageLoader.saveToGallery(ctx, it) }, RichText.SAVE_FAILED, RichText.SAVED) }
-                    com.iris.localai.ui.chat.ToolButton(IrisIcons.Share, RichText.SHARE, false, enabled = chrome) {
+                    ToolButton(IrisIcons.Download, RichText.SAVE, false, enabled = chrome) { withBytes({ ChatImageLoader.saveToGallery(ctx, it) }, RichText.SAVE_FAILED, RichText.SAVED) }
+                    ToolButton(IrisIcons.Share, RichText.SHARE, false, enabled = chrome) {
                         scope.launch {
                             val bytes = withContext(Dispatchers.IO) { ChatImageLoader.bytes(ctx, src) }
                             if (bytes == null || !ChatImageLoader.share(ctx, bytes)) Toast.makeText(ctx, RichText.SHARE_FAILED, Toast.LENGTH_SHORT).show()
@@ -552,7 +559,7 @@ internal fun ChatImageViewer(
     }
 }
 
-/** 2.4.5 (#13): zoom / pan limits of [ChatImageViewer]. Pure. */
+/** zoom / pan limits of [ChatImageViewer]. Pure. */
 object ZoomMath {
     const val MIN = 1f
     const val MAX = 6f

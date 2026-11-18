@@ -1,12 +1,12 @@
 package com.iris.localai.context
 
-import com.iris.localai.agent.AgentStep
-import com.iris.localai.agent.StepStatus
+import com.iris.localai.agent.core.AgentStep
+import com.iris.localai.agent.core.StepStatus
 import com.iris.localai.util.TokenEstimator
 import kotlinx.serialization.Serializable
 
 /**
- * 1.10.0 deterministic context compaction (pi-vcc style): no model call, pure Kotlin, and the
+ * deterministic context compaction (pi-vcc style): no model call, pure Kotlin, and the
  * same input always gives exactly the same summary. Older turns are folded into four sections
  * (目标 / 未完成事项 / 引用 / 关键信号) plus one line per tool call; the newest turns stay verbatim.
  * Repeated compactions merge into the previous state with de-duplication.
@@ -20,7 +20,7 @@ data class CompactMsg(
     val text: String,
     val steps: List<AgentStep> = emptyList(),
     /**
-     * 2.2.17 D: tokens the planner adds to this message on top of [text] (its 【相关记忆】 /
+     * D: tokens the planner adds to this message on top of [text] (its 【相关记忆】 /
      * knowledge block). Without it the estimate stayed below the trigger while the planner already
      * had to drop the oldest messages, so auto-compaction never ran near the limit.
      */
@@ -73,13 +73,13 @@ object ToolRollup {
         steps.joinToString("\n", prefix = "$HEADER\n") { "- " + line(it) }
 
     const val HEADER = "〔本轮已执行的工具〕"
-    /** 1.13.0: was 50 — too short to keep what a search or read found. */
+    /** was 50 — too short to keep what a search or read found. */
     const val RESULT_CHARS = 240
 
     private val ECHO = Regex("〔本轮已执行的工具〕[^\\n]*(\\n[ \\t]*[-•*][^\\n]*)*\\n?")
 
     /**
-     * 1.13.0: small models copy this history block into a new answer as if they had used a tool
+     * small models copy this history block into a new answer as if they had used a tool
      * (no tool ran — the "result" is invented). True when [text] contains such an echo.
      */
     fun hasEcho(text: String): Boolean = HEADER in text

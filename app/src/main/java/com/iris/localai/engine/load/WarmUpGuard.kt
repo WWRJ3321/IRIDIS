@@ -1,10 +1,14 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * 2.1.8: the one-token warm-up at the end of a model load, bounded. Before, it ran unbounded inside
+ * the one-token warm-up at the end of a model load, bounded. Before, it ran unbounded inside
  * the load (`runCatching { warmUp(e) }`): an engine whose first generation never answered (NPU /
  * GPU runtime stuck before its first token) kept the load "in flight" forever, so a message sent
  * meanwhile — which waits for that load (2.1.7 InFlightLoad) — hung with it. The runCatching also
@@ -36,5 +40,5 @@ object WarmUpGuard {
     }
 
     fun timeoutNotice(modelName: String): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.engine_866d51, modelName, TIMEOUT_MS / 1000)
+        I18n.s(R.string.engine_866d51, modelName, TIMEOUT_MS / 1000)
 }

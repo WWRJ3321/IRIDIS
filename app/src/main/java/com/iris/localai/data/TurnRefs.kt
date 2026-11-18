@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class TurnRefKind { SKILL, TOOL }
 
-/** 2.2: one skill / agent tool the user picked for this turn (shown as a chip, sent as one line). */
+/** one skill / agent tool the user picked for this turn (shown as a chip, sent as one line). */
 @Serializable
 data class TurnRef(val kind: TurnRefKind, val name: String) {
     /** Text shown on the chip and in the bubble. */
@@ -14,7 +14,7 @@ data class TurnRef(val kind: TurnRefKind, val name: String) {
 }
 
 /**
- * 2.2: the picked skills / tools ride along with **that user turn only** — one short line appended
+ * the picked skills / tools ride along with **that user turn only** — one short line appended
  * to the user text in the prompt. The system prompt never changes, so its KV cache stays reusable.
  * Pure (unit-tested).
  */

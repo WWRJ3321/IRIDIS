@@ -1,7 +1,7 @@
 package com.iris.localai.agent.gui
 
 /**
- * 2.4.0: OCR only what changed between two screenshots (idea from Tsuki's behaviour; own code).
+ * OCR only what changed between two screenshots (idea from Tsuki's behaviour; own code).
  * A screenshot is summarised as a [COLS]×rows grid of mean luminance; cells whose luminance moved
  * by more than [THRESHOLD] are "changed". Unchanged screen → reuse the last lines; a small changed
  * area → OCR only its bounding box (grown by one cell) and keep the old lines outside it; a big

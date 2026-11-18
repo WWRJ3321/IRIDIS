@@ -59,9 +59,9 @@ class ApiService : LifecycleService() {
         val c = (application as IrisApp).container
         val s = c.settings.current
         val lan = s.apiAllowLan && s.apiKey.isNotBlank()
-        // 2.1.3: IPv4 127.0.0.1 (not the IPv6 ::1 loopback) unless LAN is on.
+        // IPv4 127.0.0.1 (not the IPv6 ::1 loopback) unless LAN is on.
         val bind = InetAddress.getByName(ApiPolicy.bindHost(lan))
-        // 2.6.4: 识图 (image_url) + /v1/images/generations + /v1/audio/speech.
+        // 识图 (image_url) + /v1/images/generations + /v1/audio/speech.
         val imgDir = java.io.File(cacheDir, "api-images").apply { deleteRecursively(); mkdirs() }
         val routes = ApiRoutes(c.engine, c.models, c.settings, media = AppApiMedia(applicationContext, c), imageDir = imgDir)
         // Not reference counted: with a timed acquire per request, the timeout's own release could

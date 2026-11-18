@@ -23,7 +23,7 @@ object AudioFileDecoder {
             } ?: throw IOException("文件里没有音频")
             ex.selectTrack(track)
             val fmt = ex.getTrackFormat(track)
-            val mime = fmt.getString(MediaFormat.KEY_MIME)!!
+            val mime = fmt.getString(MediaFormat.KEY_MIME) ?: throw IOException("音频格式未知")
             var rate = fmt.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = fmt.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val codec = MediaCodec.createDecoderByType(mime)

@@ -1,5 +1,10 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.memory.MemoryPrompt
+import com.iris.localai.ui.components.Chevron
+import com.iris.localai.ui.icons.IrisIcons
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -48,35 +53,35 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 1.10.0 texts of 设置 › 记忆 (unit-tested). */
+/** texts of 设置 › 记忆 (unit-tested). */
 object MemoryText {
-    val NAV: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_84fa29)
-    val MASTER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1415ca)
-    val INJECT_AGENT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d63f7c)
-    val INJECT_CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4edca2)
-    val DOC_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1025dc)
-    val LIST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7)
-    val SUGGEST: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d5fb8d)
-    val SUGGEST_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f7329b)
+    val NAV: String get() = I18n.s(R.string.agent_84fa29)
+    val MASTER: String get() = I18n.s(R.string.agent_1415ca)
+    val INJECT_AGENT: String get() = I18n.s(R.string.agent_d63f7c)
+    val INJECT_CHAT: String get() = I18n.s(R.string.agent_4edca2)
+    val DOC_NOTE: String get() = I18n.s(R.string.agent_1025dc)
+    val LIST: String get() = I18n.s(R.string.agent_44e4d7)
+    val SUGGEST: String get() = I18n.s(R.string.agent_d5fb8d)
+    val SUGGEST_SUB: String get() = I18n.s(R.string.agent_f7329b)
     fun listSubtitle(n: Int, pending: Int): String =
-        (if (n == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c13df5) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_15ec09, n)) + if (pending > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_11e7a2, pending) else ""
-    /** 2.2.9 E: the merged switch, as seen in 开发者选项. */
-    val COMPACT_ONE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23641b)
+        (if (n == 0) I18n.s(R.string.agent_c13df5) else I18n.s(R.string.agent_15ec09, n)) + if (pending > 0) I18n.s(R.string.agent_11e7a2, pending) else ""
+    /** E: the merged switch, as seen in 开发者选项. */
+    val COMPACT_ONE: String get() = I18n.s(R.string.agent_23641b)
     fun injectBudget(contextTokens: Int): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ba6880, com.iris.localai.memory.MemoryPrompt.budget(contextTokens), contextTokens)
-    val COMPACT_NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ef6f5e)
-    val CLEAR: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_54309c)
+        I18n.s(R.string.agent_ba6880, MemoryPrompt.budget(contextTokens), contextTokens)
+    val COMPACT_NOTE: String get() = I18n.s(R.string.agent_ef6f5e)
+    val CLEAR: String get() = I18n.s(R.string.agent_54309c)
 
-    fun usage(len: Int, cap: Int = MemoryOps.CAP): String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_37f497, len, cap)
+    fun usage(len: Int, cap: Int = MemoryOps.CAP): String = I18n.s(R.string.agent_37f497, len, cap)
 }
 
 @Composable
 fun MemorySettingsPage(
     onBack: () -> Unit,
-    /** 2.1.3: 「上下文与记忆」 and 「记忆」 are one page, 「记忆与上下文」 (the context sections come first). */
-    title: String = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dfeb13),
+    /** 「上下文与记忆」 and 「记忆」 are one page, 「记忆与上下文」 (the context sections come first). */
+    title: String = I18n.s(R.string.agent_dfeb13),
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
-    /** 2.5.0 Beta5: open 记忆列表 / 知识库 as routes (animated); null = shown in place. Before [header]: callers pass it as the trailing lambda. */
+    /** open 记忆列表 / 知识库 as routes (animated); null = shown in place. Before [header]: callers pass it as the trailing lambda. */
     onOpenList: (() -> Unit)? = null,
     onOpenKnowledge: (() -> Unit)? = null,
     header: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
@@ -114,28 +119,28 @@ fun MemorySettingsPage(
     SubpageScaffold(title, onBack, actions = actions) {
         ScrollBody {
             header()
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7))
+            SectionTitle(I18n.s(R.string.agent_de49f7))
             SettingsGroup {
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_de49f7), ms.enabled, subtitle = MemoryText.MASTER, icon = com.iris.localai.ui.icons.IrisIcons.Memory) { on ->
+                SwitchRow(I18n.s(R.string.agent_de49f7), ms.enabled, subtitle = MemoryText.MASTER, icon = IrisIcons.Memory) { on ->
                     agent.memorySettings.update { it.copy(enabled = on) }
                 }
                 Divider()
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fcd608), ms.injectAgent, subtitle = MemoryText.INJECT_AGENT, icon = com.iris.localai.ui.icons.IrisIcons.Agent, enabled = ms.enabled) { on ->
+                SwitchRow(I18n.s(R.string.agent_fcd608), ms.injectAgent, subtitle = MemoryText.INJECT_AGENT, icon = IrisIcons.Agent, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(injectAgent = on) }
                 }
                 Divider()
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ec50c7), ms.injectChat, subtitle = MemoryText.INJECT_CHAT, icon = com.iris.localai.ui.icons.IrisIcons.Chat, enabled = ms.enabled) { on ->
+                SwitchRow(I18n.s(R.string.agent_ec50c7), ms.injectChat, subtitle = MemoryText.INJECT_CHAT, icon = IrisIcons.Chat, enabled = ms.enabled) { on ->
                     agent.memorySettings.update { it.copy(injectChat = on) }
                 }
             }
 
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7))
+            SectionTitle(I18n.s(R.string.agent_44e4d7))
             SettingsGroup {
                 SettingsRow(
                     MemoryText.LIST, icon = Icons.Outlined.Face,
                     subtitle = MemoryText.listSubtitle(counts.first, counts.second),
                     onClick = { onOpenList?.invoke() ?: run { showList = true } },
-                    trailing = { com.iris.localai.ui.components.Chevron() },
+                    trailing = { Chevron() },
                 )
                 Divider()
                 SwitchRow(MemoryText.SUGGEST, ms.suggest, subtitle = MemoryText.SUGGEST_SUB, icon = Icons.Outlined.AutoAwesome, enabled = ms.enabled) { on ->
@@ -145,7 +150,7 @@ fun MemorySettingsPage(
                 SettingsRow(
                     MemoryText.CLEAR, icon = Icons.Outlined.DeleteSweep,
                     titleColor = Iris.colors.danger,
-                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ab89b3),
+                    subtitle = I18n.s(R.string.agent_ab89b3),
                     enabled = counts.first > 0 || counts.second > 0,
                     onClick = { clearing = true },
                 )
@@ -154,26 +159,26 @@ fun MemorySettingsPage(
 
             KnowledgeEntry(onOpen = { onOpenKnowledge?.invoke() ?: run { showKb = true } })
 
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_593d49))
+            SectionTitle(I18n.s(R.string.agent_593d49))
             SettingsGroup {
-                // 2.2.9 E: 智能体自动压缩 + 对话自动压缩 → one switch (= 主页面「快满时自动整理」).
-                SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc0f2e), ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
+                // E: 智能体自动压缩 + 对话自动压缩 → one switch (= 主页面「快满时自动整理」).
+                SwitchRow(I18n.s(R.string.agent_dc0f2e), ms.autoCompact, subtitle = MemoryText.COMPACT_ONE, icon = Icons.Outlined.Compress) { on ->
                     agent.memorySettings.update { it.withAutoCompact(on) }
                 }
                 Divider()
                 SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.agent_38d78c), icon = com.iris.localai.ui.icons.IrisIcons.Layers,
-                    subtitle = indexed?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3ac76a, it.first, it.second) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dc9d89),
+                    I18n.s(R.string.agent_38d78c), icon = IrisIcons.Layers,
+                    subtitle = indexed?.let { I18n.s(R.string.agent_3ac76a, it.first, it.second) } ?: I18n.s(R.string.agent_dc9d89),
                 )
             }
             GroupFootnote(MemoryText.COMPACT_NOTE)
 
-            // 2.2.9 F: index / budget details that used to sit on the normal page.
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_23b687))
+            // F: index / budget details that used to sit on the normal page.
+            SectionTitle(I18n.s(R.string.agent_23b687))
             SettingsGroup {
                 SettingsRow(
-                    KnowledgeText.TITLE + " · " + KnowledgeText.REBUILD, icon = com.iris.localai.ui.icons.IrisIcons.Reload, enabled = !rebuilding,
-                    subtitle = if (rebuilding) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_34a084) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ac06c2),
+                    KnowledgeText.TITLE + " · " + KnowledgeText.REBUILD, icon = IrisIcons.Reload, enabled = !rebuilding,
+                    subtitle = if (rebuilding) I18n.s(R.string.agent_34a084) else I18n.s(R.string.agent_ac06c2),
                     onClick = {
                         rebuilding = true
                         scope.launch {
@@ -183,16 +188,16 @@ fun MemorySettingsPage(
                     },
                 )
                 Divider()
-                SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a67bd), icon = com.iris.localai.ui.icons.IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
+                SettingsRow(I18n.s(R.string.agent_0a67bd), icon = IrisIcons.Layers, subtitle = MemoryText.injectBudget(ctxTokens))
             }
         }
     }
 
     if (clearing) {
         ConfirmDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5ad835),
-            message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_49ac8d),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_288f0c),
+            title = I18n.s(R.string.agent_5ad835),
+            message = I18n.s(R.string.agent_49ac8d),
+            confirmText = I18n.s(R.string.chat_288f0c),
             onConfirm = {
                 scope.launch {
                     withContext(Dispatchers.IO) { agent.memoryDocs.clear() }

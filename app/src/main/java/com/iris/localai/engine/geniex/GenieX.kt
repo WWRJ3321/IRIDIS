@@ -1,11 +1,18 @@
 package com.iris.localai.engine.geniex
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.BackendEnvironment
+import com.iris.localai.engine.BackendOption
+import com.iris.localai.engine.EngineFeatures
+import com.iris.localai.engine.SamplingConfig
+import com.iris.localai.engine.StopReason
 import com.iris.localai.engine.Backend
 import com.iris.localai.engine.NpuState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * 2.2.0: Qualcomm GenieX (com.qualcomm.qti:geniex-android; 0.10.0 = QAIRT 2.50 since 2.4.1) as the fourth engine, full flavour only.
+ * Qualcomm GenieX (com.qualcomm.qti:geniex-android; 0.10.0 = QAIRT 2.50 since 2.4.1) as the fourth engine, full flavour only.
  * Two runtimes inside one SDK:
  *  - `llama_cpp`: GGUF files on the Hexagon NPU / Adreno GPU / CPU (Q4_0 is best on Hexagon);
  *  - `qairt`: Qualcomm AI Hub pre-compiled bundles (a folder: genie_config.json + *.bin + tokenizer.json), NPU only.
@@ -14,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 object GenieX {
     const val VERSION = "0.10.0"
-    /** 2.4.1: QAIRT (QNN) version of the runtime GenieX [VERSION] ships (libQnnHtp.so v2.50.40). */
+    /** QAIRT (QNN) version of the runtime GenieX [VERSION] ships (libQnnHtp.so v2.50.40). */
     const val QAIRT_VERSION = "2.50"
     const val LABEL = "GenieX"
 
@@ -42,8 +49,8 @@ object GenieX {
     const val RUNTIME_QAIRT = "qairt"
 
     /** Shown when the runtime is not installed. */
-    val NEED_RUNTIME: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_51a58e)
-    val NOT_IN_BUILD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f09b89)
+    val NEED_RUNTIME: String get() = I18n.s(R.string.engine_51a58e)
+    val NOT_IN_BUILD: String get() = I18n.s(R.string.engine_f09b89)
 
     /**
      * User-facing error: a Chinese summary plus the original exception text (class + message, and the
@@ -57,10 +64,10 @@ object GenieX {
             val c = t.cause
             if (c != null && c !== t) {
                 val cm = c.message?.trim().orEmpty()
-                if (cm.isNotEmpty() && cm != t.message?.trim()) append(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1afce1)).append(c.javaClass.simpleName).append(": ").append(cm).append('）')
+                if (cm.isNotEmpty() && cm != t.message?.trim()) append(I18n.s(R.string.engine_1afce1)).append(c.javaClass.simpleName).append(": ").append(cm).append('）')
             }
         }
-        return com.iris.localai.I18n.s(com.iris.localai.R.string.engine_22de1b, summary, raw.take(600))
+        return I18n.s(R.string.engine_22de1b, summary, raw.take(600))
     }
 
     /**
@@ -69,16 +76,16 @@ object GenieX {
      */
     fun codeHint(message: String?, qairt: Boolean = false): String? {
         val m = message.orEmpty().lowercase()
-        // 2.4.1: an AI Hub bundle that fails here is almost always built for another QAIRT version or chip.
+        // an AI Hub bundle that fails here is almost always built for another QAIRT version or chip.
         if (qairt && ("model loading failed" in m || "invalid model" in m || "context" in m && "binary" in m))
-            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_loadfail, QAIRT_VERSION)
+            return I18n.s(R.string.geniex241_loadfail, QAIRT_VERSION)
         return when {
-            "parameter not supported" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_77a0f4)
-            "file not found" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_8931e5)
-            "unknown device" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_5d92a6)
-            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1bcb6b)
-            "memory allocation" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d8e6a6)
-            "model loading failed" in m || "invalid model" in m -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_f4bcd9)
+            "parameter not supported" in m -> I18n.s(R.string.engine_77a0f4)
+            "file not found" in m -> I18n.s(R.string.engine_8931e5)
+            "unknown device" in m -> I18n.s(R.string.engine_5d92a6)
+            "plugin" in m && ("load" in m || "invalid" in m || "not found" in m) -> I18n.s(R.string.engine_1bcb6b)
+            "memory allocation" in m -> I18n.s(R.string.engine_d8e6a6)
+            "model loading failed" in m || "invalid model" in m -> I18n.s(R.string.engine_f4bcd9)
             else -> null
         }
     }
@@ -147,7 +154,7 @@ object GenieXLibs {
     /** Hexagon arch of a Qualcomm SoC (Build.SOC_MANUFACTURER / SOC_MODEL); null = not a supported Snapdragon. */
     fun hexagonArch(manufacturer: String?, socModel: String?): Int? {
         if (!isQualcomm(manufacturer)) return null
-        val id = Regex("^(sm|qcs)(\\d{4})").find(socModel.orEmpty().trim().lowercase())?.let { it.groupValues[1] + it.groupValues[2] }
+        val id = RX_1.find(socModel.orEmpty().trim().lowercase())?.let { it.groupValues[1] + it.groupValues[2] }
         return when (id) {
             "sm8850" -> 81
             "sm8750" -> 79
@@ -162,8 +169,8 @@ object GenieXLibs {
 
     /** Why GenieX cannot run on this chip, or null when it can. */
     fun unsupportedReason(manufacturer: String?, socModel: String?): String? = when {
-        !isQualcomm(manufacturer) -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_78eb36, manufacturer.orEmpty().ifBlank { com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1df01e) }, socModel.orEmpty()).trim()
-        hexagonArch(manufacturer, socModel) == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2cc6d9, socModel.orEmpty())
+        !isQualcomm(manufacturer) -> I18n.s(R.string.engine_78eb36, manufacturer.orEmpty().ifBlank { I18n.s(R.string.engine_1df01e) }, socModel.orEmpty()).trim()
+        hexagonArch(manufacturer, socModel) == null -> I18n.s(R.string.engine_2cc6d9, socModel.orEmpty())
         else -> null
     }
 
@@ -202,16 +209,16 @@ object GenieXLibs {
     fun installedBytes(arch: Int): Long = forArch(arch).sumOf { it.pin.size }
 
     /**
-     * 2.4.1: version of an older runtime still on disk (sibling folders `rt-<version>-v<arch>`), or null.
+     * version of an older runtime still on disk (sibling folders `rt-<version>-v<arch>`), or null.
      * GenieX 0.8.0 (QAIRT 2.45) cannot run bundles built with QAIRT 2.50, so it is offered as 「重新下载」.
      */
     fun oldRuntime(siblings: Collection<String>, current: String): String? =
         siblings.asSequence().filter { it != current }
-            .mapNotNull { Regex("^rt-([0-9][0-9A-Za-z.]*)-v\\d+$").find(it)?.groupValues?.get(1) }
+            .mapNotNull { RX_2.find(it)?.groupValues?.get(1) }
             .firstOrNull { it != GenieX.VERSION }
 
     fun oldRuntimeReason(old: String): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_oldrt, old, GenieX.VERSION, GenieX.QAIRT_VERSION)
+        I18n.s(R.string.geniex241_oldrt, old, GenieX.VERSION, GenieX.QAIRT_VERSION)
 
     // ---------------------------------------------------------------- install marker
 
@@ -233,10 +240,10 @@ object GenieXLibs {
     fun check(arch: Int, marker: String?, sizeOf: (String) -> Long?): Check {
         if (marker == null) return Check.NotInstalled
         val header = marker.lineSequence().firstOrNull().orEmpty()
-        if (header != "geniex=${GenieX.VERSION} arch=v$arch") return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6a0843, header))
+        if (header != "geniex=${GenieX.VERSION} arch=v$arch") return Check.Broken(I18n.s(R.string.engine_6a0843, header))
         for (l in forArch(arch)) {
-            val got = sizeOf(l.path) ?: return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, l.path))
-            if (got != l.pin.size) return Check.Broken(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_4a161b, l.path, got, l.pin.size))
+            val got = sizeOf(l.path) ?: return Check.Broken(I18n.s(R.string.engine_d99bd6, l.path))
+            if (got != l.pin.size) return Check.Broken(I18n.s(R.string.engine_4a161b, l.path, got, l.pin.size))
         }
         return Check.Ok
     }
@@ -255,9 +262,9 @@ object QairtBundle {
 
     /** What a load needs that is missing, or null. */
     fun missing(names: Set<String>): String? = when {
-        names.none { it.lowercase().endsWith(".bin") } -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_0d698d)
-        GENIE_CONFIG !in names -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, GENIE_CONFIG)
-        TOKENIZER !in names -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d99bd6, TOKENIZER)
+        names.none { it.lowercase().endsWith(".bin") } -> I18n.s(R.string.engine_0d698d)
+        GENIE_CONFIG !in names -> I18n.s(R.string.engine_d99bd6, GENIE_CONFIG)
+        TOKENIZER !in names -> I18n.s(R.string.engine_d99bd6, TOKENIZER)
         else -> null
     }
 
@@ -269,17 +276,17 @@ object QairtBundle {
 
     /** "Qwen3-4B-Instruct-2507_genie_bundle" → "Qwen3 4B Instruct 2507". */
     fun displayName(folder: String): String {
-        val base = folder.replace(Regex("[-_.]?(genie[-_]?bundle|qairt|aihub|geniex)$", RegexOption.IGNORE_CASE), "")
-        return base.replace(Regex("[_-]+"), " ").replace(Regex("\\s+"), " ").trim().ifEmpty { folder }
+        val base = folder.replace(RX_3, "")
+        return base.replace(RX_4, " ").replace(RX_5, " ").trim().ifEmpty { folder }
     }
 
     /** Context size compiled into the bundle (`"context": {"size": N}` in genie_config.json), or null. */
     fun contextSize(genieConfig: String): Int? =
-        Regex("\"context\"\\s*:\\s*\\{[^{}]*?\"size\"\\s*:\\s*(\\d+)").find(genieConfig)?.groupValues?.get(1)?.toIntOrNull()
+        RX_6.find(genieConfig)?.groupValues?.get(1)?.toIntOrNull()
 }
 
 /**
- * 2.4.1: what an AI Hub bundle was compiled for, checked before the load so a mismatch gets a clear
+ * what an AI Hub bundle was compiled for, checked before the load so a mismatch gets a clear
  * Chinese reason instead of GenieX's "Model loading failed". `htp_backend_ext_config.json` names the
  * Hexagon generation (`"dsp_arch": "v79"`); `metadata.json` / `genie_config.json` may carry the QAIRT
  * (QNN SDK) version the context binaries were built with. Missing fields = no verdict (load as before).
@@ -329,11 +336,11 @@ object QairtCompat {
     fun problem(info: Info, deviceArch: Int?, runtimeQairt: String = GenieX.QAIRT_VERSION): String? {
         val b = info.dspArch
         if (b != null && deviceArch != null && b != deviceArch) {
-            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_arch, chipName(b), b, chipName(deviceArch), deviceArch)
+            return I18n.s(R.string.geniex241_arch, chipName(b), b, chipName(deviceArch), deviceArch)
         }
         val q = info.qairt
         if (q != null && compare(q, runtimeQairt) > 0) {
-            return com.iris.localai.I18n.s(com.iris.localai.R.string.geniex241_qairt, q, runtimeQairt)
+            return I18n.s(R.string.geniex241_qairt, q, runtimeQairt)
         }
         return null
     }
@@ -364,7 +371,7 @@ object GenieXVision {
         if (projectors.isEmpty()) return null
         val m = norm(stem(modelFile))
         projectors.firstOrNull { p ->
-            val ps = norm(stem(p).replace(Regex("(?i)mmproj"), ""))
+            val ps = norm(stem(p).replace(RX_7, ""))
             ps.isNotEmpty() && (m.contains(ps) || ps.contains(m))
         }?.let { return it }
         val lower = modelFile.lowercase()
@@ -391,12 +398,12 @@ object GenieXTurns {
     }
 }
 
-/** 2.1.2: GenieX GGUF on Hexagon sometimes finished a regenerate with no tokens at all. */
+/** GenieX GGUF on Hexagon sometimes finished a regenerate with no tokens at all. */
 object GenieXRetry {
-    val EMPTY_MESSAGE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d792e1)
+    val EMPTY_MESSAGE: String get() = I18n.s(R.string.engine_d792e1)
 
-    fun shouldRetryEmpty(attempt: Int, cancelled: Boolean, emptyOutput: Boolean, reason: com.iris.localai.engine.StopReason?): Boolean =
-        attempt == 0 && !cancelled && emptyOutput && reason != com.iris.localai.engine.StopReason.CANCELLED
+    fun shouldRetryEmpty(attempt: Int, cancelled: Boolean, emptyOutput: Boolean, reason: StopReason?): Boolean =
+        attempt == 0 && !cancelled && emptyOutput && reason != StopReason.CANCELLED
 }
 
 /** What the app shows and drives for the downloadable GenieX runtime (implemented in the full flavour). */
@@ -420,29 +427,29 @@ object GenieXRules {
         null -> GenieX.NOT_IN_BUILD
         is NpuState.Unsupported -> state.reason
         NpuState.Installed -> null
-        is NpuState.NeedsRepair -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_af7b98, state.reason)
-        is NpuState.Downloading -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_00acad)
+        is NpuState.NeedsRepair -> I18n.s(R.string.engine_af7b98, state.reason)
+        is NpuState.Downloading -> I18n.s(R.string.engine_00acad)
         NpuState.NotInstalled, is NpuState.Failed -> GenieX.NEED_RUNTIME
     }
 
-    fun ggufOptions(env: com.iris.localai.engine.BackendEnvironment): List<com.iris.localai.engine.BackendOption> {
+    fun ggufOptions(env: BackendEnvironment): List<BackendOption> {
         val b = env.geniexBlock
-        if (b != null) return Backend.entries.map { com.iris.localai.engine.BackendOption(it, false, b) }
-        val noCl = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2d318f)
+        if (b != null) return Backend.entries.map { BackendOption(it, false, b) }
+        val noCl = env.noGpuReason()
         return listOf(
-            com.iris.localai.engine.BackendOption(Backend.CPU, true, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a1a409)),
-            com.iris.localai.engine.BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2de3e4)),
-            com.iris.localai.engine.BackendOption(Backend.NPU, true, detail = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_95046e)),
+            BackendOption(Backend.CPU, true, detail = I18n.s(R.string.engine_a1a409)),
+            BackendOption(Backend.GPU, env.hasOpenCl, if (env.hasOpenCl) null else noCl, I18n.s(R.string.engine_2de3e4)),
+            BackendOption(Backend.NPU, true, detail = I18n.s(R.string.engine_95046e)),
         )
     }
 
-    fun qairtOptions(env: com.iris.localai.engine.BackendEnvironment): List<com.iris.localai.engine.BackendOption> {
-        val onlyNpu = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_2dca88)
-        val npuReason = env.geniexBlock ?: if (!env.geniexQairt) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b96a2e) else null
+    fun qairtOptions(env: BackendEnvironment): List<BackendOption> {
+        val onlyNpu = I18n.s(R.string.engine_2dca88)
+        val npuReason = env.geniexBlock ?: if (!env.geniexQairt) I18n.s(R.string.engine_b96a2e) else null
         return listOf(
-            com.iris.localai.engine.BackendOption(Backend.CPU, false, onlyNpu),
-            com.iris.localai.engine.BackendOption(Backend.GPU, false, onlyNpu),
-            com.iris.localai.engine.BackendOption(Backend.NPU, npuReason == null, npuReason, "GenieX · QAIRT · Hexagon"),
+            BackendOption(Backend.CPU, false, onlyNpu),
+            BackendOption(Backend.GPU, false, onlyNpu),
+            BackendOption(Backend.NPU, npuReason == null, npuReason, "GenieX · QAIRT · Hexagon"),
         )
     }
 
@@ -450,12 +457,12 @@ object GenieXRules {
      * llama.cpp inside GenieX: its own sampler (min-p, penalties, seed), batch, and context shift
      * (GenerationConfig.slidingWindow); no KV quant / Flash Attention / mmap switches.
      */
-    val GGUF_FEATURES = com.iris.localai.engine.EngineFeatures(
+    val GGUF_FEATURES = EngineFeatures(
         contextShift = true, presenceFrequency = true, seed = true, batchSize = true,
     )
 
     /** QAIRT: context and KV fixed in the bundle; sampling still per request. */
-    val QAIRT_FEATURES = com.iris.localai.engine.EngineFeatures(
+    val QAIRT_FEATURES = EngineFeatures(
         presenceFrequency = true, seed = true,
     )
 }
@@ -477,7 +484,7 @@ object GenieXSampling {
         val seed: Int,
     )
 
-    fun args(p: com.iris.localai.engine.SamplingConfig): Args {
+    fun args(p: SamplingConfig): Args {
         val greedy = p.temperature <= 0f
         return Args(
             temperature = if (greedy) 0f else p.temperature,
@@ -492,20 +499,30 @@ object GenieXSampling {
     }
 
     /** ProfilingData.stopReason ("eos" / "stop_sequence" / "user" / "length") → the app's reason. */
-    fun stopReason(raw: String?, cancelled: Boolean, generated: Long, maxNewTokens: Int): com.iris.localai.engine.StopReason {
+    fun stopReason(raw: String?, cancelled: Boolean, generated: Long, maxNewTokens: Int): StopReason {
         val r = raw.orEmpty().lowercase()
         return when {
-            cancelled || r == "user" -> com.iris.localai.engine.StopReason.CANCELLED
-            r == "length" -> if (maxNewTokens > 0 && generated in 0 until maxNewTokens.toLong()) com.iris.localai.engine.StopReason.CONTEXT_FULL
-                else com.iris.localai.engine.StopReason.MAX_TOKENS
-            else -> com.iris.localai.engine.StopReason.END
+            cancelled || r == "user" -> StopReason.CANCELLED
+            r == "length" -> if (maxNewTokens > 0 && generated in 0 until maxNewTokens.toLong()) StopReason.CONTEXT_FULL
+                else StopReason.MAX_TOKENS
+            else -> StopReason.END
         }
     }
 
     /** Models whose chat template has a thinking switch (Qwen3 hybrids, *-Thinking, R1 distills, QwQ). */
     fun thinkingModel(name: String): Boolean {
         val n = name.lowercase()
-        if ("thinking" in n || "qwq" in n || "deepseek-r1" in n || Regex("(^|[-_ ])r1([-_ .]|$)").containsMatchIn(n)) return true
+        if ("thinking" in n || "qwq" in n || "deepseek-r1" in n || RX_8.containsMatchIn(n)) return true
         return "qwen3" in n && "instruct" !in n && "-vl" !in n && "_vl" !in n
     }
 }
+
+// 预编译的正则（原先在函数体内每次调用都编译）。
+private val RX_1 = Regex("^(sm|qcs)(\\d{4})")
+private val RX_2 = Regex("^rt-([0-9][0-9A-Za-z.]*)-v\\d+$")
+private val RX_3 = Regex("[-_.]?(genie[-_]?bundle|qairt|aihub|geniex)$", RegexOption.IGNORE_CASE)
+private val RX_4 = Regex("[_-]+")
+private val RX_5 = Regex("\\s+")
+private val RX_6 = Regex("\"context\"\\s*:\\s*\\{[^{}]*?\"size\"\\s*:\\s*(\\d+)")
+private val RX_7 = Regex("(?i)mmproj")
+private val RX_8 = Regex("(^|[-_ ])r1([-_ .]|$)")

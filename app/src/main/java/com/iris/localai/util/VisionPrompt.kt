@@ -1,8 +1,12 @@
 package com.iris.localai.util
 
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import com.iris.localai.engine.PromptMessage
 
-/** 2.1.1: which prompt message carries the newest user message's pictures. Pure, JVM-tested. */
+/** which prompt message carries the newest user message's pictures. Pure, JVM-tested. */
 object VisionPrompt {
     /**
      * Index of the last user prompt message that is [text] (the newest user message with its
@@ -16,7 +20,7 @@ object VisionPrompt {
         if (exact >= 0) return exact
         val tail = messages.indexOfLast { it.role == PromptMessage.USER && it.content.trimEnd().endsWith(want) }
         if (tail >= 0) return tail
-        // 2.1.6: 智能体 mode appends the plan note after the user's words (AgentPrompt.withPlanNote).
+        // 智能体 mode appends the plan note after the user's words (AgentPrompt.withPlanNote).
         return messages.indexOfLast { it.role == PromptMessage.USER && it.content.contains(want) }
     }
 
@@ -24,7 +28,7 @@ object VisionPrompt {
     fun maxSide(engineMax: Int): Int = if (engineMax > 0) engineMax else Attachments.VISION_MAX_SIDE
 
     /**
-     * 2.1.7: 「识图清晰度」 [setting] (px, snapped to 384/512/1024), capped by the engine's own limit
+     * 「识图清晰度」 [setting] (px, snapped to 384/512/1024), capped by the engine's own limit
      * [engineMax] (MNN 512: its CPU/GPU ViT at 1024 px took minutes), 0 = no engine limit.
      */
     fun maxSide(engineMax: Int, setting: Int): Int {
@@ -33,7 +37,7 @@ object VisionPrompt {
     }
 }
 
-/** 2.1.7 「识图清晰度」: how large a picture the vision model reads. Pure. */
+/** 「识图清晰度」: how large a picture the vision model reads. Pure. */
 enum class VisionQuality(val side: Int, val label: String) {
     FAST(384, "快速"),
     STANDARD(512, "标准"),

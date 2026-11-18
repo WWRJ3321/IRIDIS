@@ -3,7 +3,7 @@ package com.iris.localai.util.title
 import com.iris.localai.engine.PromptMessage
 
 /**
- * 2.2.14: short conversation title written by the loaded model after the first reply.
+ * short conversation title written by the loaded model after the first reply.
  * The first user line stays as the fallback when the model gives nothing usable.
  */
 object TitleGen {

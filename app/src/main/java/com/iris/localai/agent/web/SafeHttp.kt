@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -18,7 +21,7 @@ import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
 /**
- * 1.14.3: which addresses the agent's web tools may reach. [isPublic] is pure (no DNS).
+ * which addresses the agent's web tools may reach. [isPublic] is pure (no DNS).
  * Refused: loopback, private (RFC 1918), CGNAT 100.64/10, link-local, "this network" 0/8,
  * unspecified, multicast, reserved / broadcast 240/4, benchmark / documentation ranges, IPv6 ULA
  * fc00::/7, link-/site-local, multicast, and IPv4-mapped / -compatible / NAT64 / 6to4 forms of a
@@ -151,7 +154,7 @@ object NetGuard {
 }
 
 /**
- * 1.14.3: a minimal HTTP/1.1 GET client for web_fetch / web_search that connects to the very
+ * a minimal HTTP/1.1 GET client for web_fetch / web_search that connects to the very
  * address it checked. HttpURLConnection resolves the host again when it connects, so a DNS answer
  * that changed between the check and the connection (DNS rebinding: public at first, 127.0.0.1 a
  * moment later) slipped through. Here the host is resolved once ([NetGuard.resolvePublic]), the

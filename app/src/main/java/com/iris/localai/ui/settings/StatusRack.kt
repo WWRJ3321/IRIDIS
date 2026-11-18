@@ -1,5 +1,13 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.tools.ScreenTool
+import com.iris.localai.ui.components.Fold
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisChartColors
+import com.iris.localai.ui.theme.IrisRadius
+import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.ui.theme.IrisDimens
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -67,9 +75,9 @@ import com.iris.localai.ui.theme.LocalReduceMotion
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** 1.14.0: state of one rack slot. */
+/** state of one rack slot. */
 enum class RackState(val code: String, val label: String) {
-    OFF("OFF", com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91)), STANDBY("STANDBY", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6f5af7)), ON("ON", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c0d218)), RUN("RUN", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d679ae)), LOAD("LOAD", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f013ea)), DONE("DONE", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_769d88)), ERROR("ERR", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ad8e01));
+    OFF("OFF", I18n.s(R.string.ui_b15d91)), STANDBY("STANDBY", I18n.s(R.string.settings_6f5af7)), ON("ON", I18n.s(R.string.settings_c0d218)), RUN("RUN", I18n.s(R.string.chat_d679ae)), LOAD("LOAD", I18n.s(R.string.settings_f013ea)), DONE("DONE", I18n.s(R.string.agent_769d88)), ERROR("ERR", I18n.s(R.string.settings_ad8e01));
     val up: Boolean get() = this == ON || this == RUN || this == LOAD || this == DONE
 }
 
@@ -87,7 +95,7 @@ data class RackInput(
     val toolGroup: String? = null,
     val stepsDone: Int = 0,
     val webOn: Boolean = false,
-    /** 2.2.2: the screen tool (GUI agent) is enabled. */
+    /** the screen tool (GUI agent) is enabled. */
     val screenOn: Boolean = false,
     val voicePacks: Int = 0,
     val voiceActive: Boolean = false,
@@ -102,28 +110,28 @@ object RackRules {
     fun modules(i: RackInput): List<RackModule> {
         fun live(group: String) = i.agentRunning && i.toolGroup == group
         return listOf(
-            RackModule("PWR", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_8000f1), i.modelState, i.modelName?.let { it + (if (i.modelDetail.isNotBlank()) " · " + i.modelDetail else "") } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7bb4fd), i.modelChips),
+            RackModule("PWR", I18n.s(R.string.chat_8000f1), i.modelState, i.modelName?.let { it + (if (i.modelDetail.isNotBlank()) " · " + i.modelDetail else "") } ?: I18n.s(R.string.settings_7bb4fd), i.modelChips),
             RackModule(
-                "AGENT", com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9),
+                "AGENT", I18n.s(R.string.chat_72fbb9),
                 when { i.agentRunning -> RackState.RUN; !i.agentMode -> RackState.OFF; i.planLeft > 0 -> RackState.STANDBY; else -> RackState.ON },
                 when {
-                    i.agentRunning -> (i.tool?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7c7c73, it) } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_dc269a)) + com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8dd1ea, i.stepsDone)
-                    !i.agentMode -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e1ca2e)
-                    i.planLeft > 0 -> com.iris.localai.I18n.s(com.iris.localai.R.string.settings_88f19c, i.planLeft)
-                    else -> com.iris.localai.I18n.s(com.iris.localai.R.string.agent_28a44c)
+                    i.agentRunning -> (i.tool?.let { I18n.s(R.string.settings_7c7c73, it) } ?: I18n.s(R.string.chat_dc269a)) + I18n.s(R.string.settings_8dd1ea, i.stepsDone)
+                    !i.agentMode -> I18n.s(R.string.settings_e1ca2e)
+                    i.planLeft > 0 -> I18n.s(R.string.settings_88f19c, i.planLeft)
+                    else -> I18n.s(R.string.agent_28a44c)
                 },
-                listOfNotNull(i.tool, if (i.planLeft > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_60e1a5, i.planLeft) else null, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8fdb54, i.stepsDone)),
+                listOfNotNull(i.tool, if (i.planLeft > 0) I18n.s(R.string.settings_60e1a5, i.planLeft) else null, I18n.s(R.string.agent_8fdb54, i.stepsDone)),
             ),
-            RackModule("NET", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e0e755), if (!i.webOn) RackState.OFF else if (live("WEB")) RackState.RUN else RackState.ON,
-                if (i.webOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_30ea5a) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cdf966), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e5f71f), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_18a481))),
-            RackModule("SCREEN", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_cc8c48), if (!i.screenOn) RackState.OFF else if (i.agentRunning && i.tool == com.iris.localai.agent.ScreenTool.label) RackState.RUN else RackState.STANDBY,
-                if (i.screenOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_54438d) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2b7ddb), emptyList()),
-            RackModule("VOICE", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_48df35), when { i.voiceActive -> RackState.RUN; i.voicePacks > 0 -> RackState.ON; else -> RackState.OFF },
-                if (i.voicePacks > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5049f8, i.voicePacks) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d4f54e), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_91315e, i.voicePacks))),
-            RackModule("API", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2a59e7), when { i.apiError != null -> RackState.ERROR; i.apiRunning -> RackState.ON; else -> RackState.OFF },
-                i.apiError ?: if (i.apiRunning) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_27de1c, i.apiPort) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f4baf7), if (i.apiRunning) listOf(":${i.apiPort}") else emptyList()),
-            RackModule("MEM", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_44e4d7), if (!i.memoryOn) RackState.OFF else if (live("MEMORY")) RackState.RUN else RackState.ON,
-                if (i.memoryOn) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_9e2b20) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_5190eb), emptyList()),
+            RackModule("NET", I18n.s(R.string.settings_e0e755), if (!i.webOn) RackState.OFF else if (live("WEB")) RackState.RUN else RackState.ON,
+                if (i.webOn) I18n.s(R.string.settings_30ea5a) else I18n.s(R.string.settings_cdf966), listOf(I18n.s(R.string.settings_e5f71f), I18n.s(R.string.settings_18a481))),
+            RackModule("SCREEN", I18n.s(R.string.settings_cc8c48), if (!i.screenOn) RackState.OFF else if (i.agentRunning && i.tool == ScreenTool.label) RackState.RUN else RackState.STANDBY,
+                if (i.screenOn) I18n.s(R.string.settings_54438d) else I18n.s(R.string.settings_2b7ddb), emptyList()),
+            RackModule("VOICE", I18n.s(R.string.settings_48df35), when { i.voiceActive -> RackState.RUN; i.voicePacks > 0 -> RackState.ON; else -> RackState.OFF },
+                if (i.voicePacks > 0) I18n.s(R.string.settings_5049f8, i.voicePacks) else I18n.s(R.string.settings_d4f54e), listOf(I18n.s(R.string.settings_91315e, i.voicePacks))),
+            RackModule("API", I18n.s(R.string.settings_2a59e7), when { i.apiError != null -> RackState.ERROR; i.apiRunning -> RackState.ON; else -> RackState.OFF },
+                i.apiError ?: if (i.apiRunning) I18n.s(R.string.settings_27de1c, i.apiPort) else I18n.s(R.string.settings_f4baf7), if (i.apiRunning) listOf(":${i.apiPort}") else emptyList()),
+            RackModule("MEM", I18n.s(R.string.agent_44e4d7), if (!i.memoryOn) RackState.OFF else if (live("MEMORY")) RackState.RUN else RackState.ON,
+                if (i.memoryOn) I18n.s(R.string.settings_9e2b20) else I18n.s(R.string.settings_5190eb), emptyList()),
         )
     }
 
@@ -132,14 +140,14 @@ object RackRules {
         .takeIf { it >= 0 } ?: mods.indexOfFirst { it.state == RackState.RUN || it.state == RackState.LOAD }
 }
 
-private val Orange = com.iris.localai.ui.theme.IrisChartColors.orange
+private val Orange = IrisChartColors.orange
 private const val C30 = 0.8660254f
 private const val S30 = 0.5f
 
 /**
- * 1.14.0 运行状态: an isometric compute rack — one slot per part of IRIS with its state; the
+ * 运行状态: an isometric compute rack — one slot per part of IRIS with its state; the
  * running (or tapped) slot slides out in orange, the fans spin while a reply is written.
- * 1.14.1: every size is relative to the rack (text no longer spills into the next slot), the
+ * every size is relative to the rack (text no longer spills into the next slot), the
  * rack is taller so slots are big enough to tap, and a plain list underneath names each part
  * and opens its settings.
  */
@@ -149,7 +157,7 @@ fun StatusRack(
     modifier: Modifier = Modifier, onOpen: ((Int) -> Unit)? = null,
 ) {
     val c = Iris.colors
-    // 1.14.4: only the system "remove animations" switch snaps the rack (1.14.0: 减少动态效果时风扇静止).
+    // only the system "remove animations" switch snaps the rack (1.14.0: 减少动态效果时风扇静止).
     // It used to be OR'ed with LocalDecorativeMotion, which is false while a reply streams, in battery
     // saver and at 视觉效果 省电 — so the drawers, the boot sequence and the fans never moved, and the
     // "fans speed up while generating" state could never be seen at all.
@@ -169,7 +177,7 @@ fun StatusRack(
             if (reduce) pulls[i].snapTo(target) else pulls[i].animateTo(target, IrisMotion.Gentle.float())
         }
     }
-    // 1.14.1: power-on sequence — the slots slide in one after another and their lights come on.
+    // power-on sequence — the slots slide in one after another and their lights come on.
     val boot = remember(modules.size) { List(modules.size) { Animatable(if (reduce) 1f else 0f) } }
     LaunchedEffect(modules.size) {
         boot.forEachIndexed { i, a ->
@@ -181,7 +189,7 @@ fun StatusRack(
     }
     val upAnim by animateFloatAsState(modules.count { it.state.up }.toFloat(), IrisMotion.Gentle.float(), label = "upBars")
     val up = modules.count { it.state.up }
-    // 1.14.4: the infinite transition only exists while [loops] (it ticks frames for as long as it is
+    // the infinite transition only exists while [loops] (it ticks frames for as long as it is
     // composed, read or not). Its values are State objects read inside draw / graphicsLayer, so a
     // frame redraws the canvas instead of recomposing the whole rack and its list.
     val angleState: State<Float>
@@ -222,7 +230,7 @@ fun StatusRack(
                 .pointerInput(modules.size) {
                 detectTapGestures { tap ->
                     val geo = RackGeom(size.width.toFloat(), size.height.toFloat())
-                    // 1.14.5: the pulled-out drawer is a real control — its readout (top) opens that
+                    // the pulled-out drawer is a real control — its readout (top) opens that
                     // part like the list row does; its front (handle) pushes it back in.
                     val open = selNow
                     val drawer = if (open in modules.indices) geo.drawerHit(tap, open, modules.size, pulls[open].value * geo.OPEN) else DrawerHit.NONE
@@ -253,7 +261,7 @@ fun StatusRack(
                 poly(listOf(p(W, 0f, 0f), p(W, D, 0f), p(W, D, H), p(W, 0f, H)), side, line)
 
                 // ---- fans on the top, along the depth ----
-                // 1.14.1: three fans side by side along the width, with a gap between them (they overlapped).
+                // three fans side by side along the width, with a gap between them (they overlapped).
                 val fr = 0.105f
                 listOf(0.22f, 0.50f, 0.78f).forEach { f -> fan(W * f, D * 0.50f, fr, fanAngle, line, ink, face) }
 
@@ -273,7 +281,7 @@ fun StatusRack(
                 val hz1 = H - 0.03f; val hz0 = H - HEADER
                 poly(listOf(p(0.04f, 0f, hz0), p(W - 0.04f, 0f, hz0), p(W - 0.04f, 0f, hz1), p(0.04f, 0f, hz1)), front, if (generating) Orange else line)
                 val hm = (hz0 + hz1) / 2
-                // 1.14.1: the power button lies on the front face (it was a flat screen circle).
+                // the power button lies on the front face (it was a flat screen circle).
                 val pcx = 0.14f; val pr = 0.075f
                 faceDisc(pcx, 0f, hm, pr, dark)
                 val pw = if (modelReady) c.success else c.surface
@@ -329,7 +337,7 @@ fun StatusRack(
                 }
             }
         }
-        // 1.14.1: the same parts as a readable list — tap opens that part's settings.
+        // the same parts as a readable list — tap opens that part's settings.
         // 2.0.x: only the parts that are doing something (and the selected one) are listed; the
         // rest fold into one 「其余 N 项」 row. The rack above still shows every drawer.
         var showAll by rememberSaveable { mutableStateOf(false) }
@@ -343,20 +351,20 @@ fun StatusRack(
                 RackState.ON, RackState.DONE -> c.success; else -> c.textTertiary
             }, IrisMotion.Color.spec(), label = "rackState")
             val breathe = m.state == RackState.RUN
-            com.iris.localai.ui.components.Fold(showAll || i in listed) {
+            Fold(showAll || i in listed) {
             Row(
                 Modifier.fillMaxWidth()
                     .graphicsLayer { alpha = b.coerceIn(0f, 1f); translationY = (1f - b) * 18.dp.toPx() }
-                    .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
+                    .clip(IrisRadius.mediumShape)
                     .background(bg)
-                    .clickable(onClickLabel = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_369d31, m.name)) { picked = i; onOpen?.invoke(i) }
+                    .clickable(onClickLabel = I18n.s(R.string.settings_369d31, m.name)) { picked = i; onOpen?.invoke(i) }
                     .heightIn(min = 48.dp)
                     .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space6),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 Box(Modifier.size(10.dp).graphicsLayer { val sc = if (breathe) 0.8f + 0.4f * blinkState.value else 1f; scaleX = sc; scaleY = sc }.clip(CircleShape).background(dot))
                 Spacer(Modifier.width(IrisDimens.space12))
-                androidx.compose.material3.Icon(RACK_ICONS.getOrElse(i) { com.iris.localai.ui.icons.IrisIcons.Chip }, null,
+                androidx.compose.material3.Icon(RACK_ICONS.getOrElse(i) { IrisIcons.Chip }, null,
                     tint = if (m.state.up) c.text else c.textTertiary, modifier = Modifier.size(IrisDimens.space20))
                 Spacer(Modifier.width(IrisDimens.space12))
                 Column(Modifier.weight(1f)) {
@@ -375,10 +383,10 @@ fun StatusRack(
             Text(
                 RackList.toggleLabel(hidden, showAll), style = IrisType.caption, color = c.textSecondary,
                 modifier = Modifier.fillMaxWidth()
-                    .clip(com.iris.localai.ui.theme.IrisRadius.mediumShape)
-                    .clickable(onClickLabel = if (showAll) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.components_e2edde)) { showAll = !showAll }
+                    .clip(IrisRadius.mediumShape)
+                    .clickable(onClickLabel = if (showAll) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.components_e2edde)) { showAll = !showAll }
                     .heightIn(min = 40.dp)
-                    .padding(horizontal = IrisDimens.space16, vertical = com.iris.localai.ui.theme.IrisSpace.M),
+                    .padding(horizontal = IrisDimens.space16, vertical = IrisSpace.M),
             )
         }
     }
@@ -390,7 +398,7 @@ object RackList {
     fun visible(states: List<RackState>, selected: Int): Set<Int> =
         states.indices.filter { states[it] != RackState.OFF && states[it] != RackState.STANDBY || it == selected }.toSet()
 
-    fun toggleLabel(hidden: Int, open: Boolean): String = if (open) com.iris.localai.I18n.s(com.iris.localai.R.string.chat_def9e9) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b54b50, hidden)
+    fun toggleLabel(hidden: Int, open: Boolean): String = if (open) I18n.s(R.string.chat_def9e9) else I18n.s(R.string.settings_b54b50, hidden)
 }
 
 /** Isometric projection of the rack (x along the front, y into depth, z up). */
@@ -399,7 +407,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
     val D = 0.46f
     val H = 1.22f
     val PULL = 0.15f
-    /** 1.14.5: how far the selected drawer slides out — deep enough to show its readout on top (fits the left margin). */
+    /** how far the selected drawer slides out — deep enough to show its readout on top (fits the left margin). */
     val OPEN = 0.26f
     val HEADER = 0.30f
 
@@ -483,14 +491,14 @@ private class RackGeom(val cw: Float, val ch: Float) {
         withTransform({ transform(mtx) }) { drawText(layout, topLeft = Offset(0f, -layout.size.height / 2f)) }
     }
 
-    /** 1.14.5: map a screen point onto the plane z = [z] (rack units x, y). */
+    /** map a screen point onto the plane z = [z] (rack units x, y). */
     private fun onTop(t: Offset, z: Float): Pair<Float, Float> {
         val a = (t.x - ox) / (C30 * k0)
         val b = ((t.y - oy) / k0 + z) / S30
         return (a + b) / 2 to (a - b) / 2
     }
 
-    /** 1.14.5: what a tap hits on the drawer [i] pulled out by [pull]: its readout (top) or its handle (front / side). */
+    /** what a tap hits on the drawer [i] pulled out by [pull]: its readout (top) or its handle (front / side). */
     fun drawerHit(t: Offset, i: Int, n: Int, pull: Float): DrawerHit {
         if (pull < 0.05f) return DrawerHit.NONE
         val (z0, z1) = slotZ(i, n)
@@ -509,7 +517,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
     }
 
     /**
-     * 1.14.5: text lying on a top face (plane z = [z]), reading along +x with its top toward the back
+     * text lying on a top face (plane z = [z]), reading along +x with its top toward the back
      * (+y), vertically centred on depth [yMid]. Returns the drawn width in rack units.
      */
     fun DrawScope.topText(
@@ -535,7 +543,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
     }
 
     /**
-     * 1.14.5: the readout inside an open drawer (top face from depth [y] to 0 at height [z]):
+     * the readout inside an open drawer (top face from depth [y] to 0 at height [z]):
      * name + state, the part's detail line, up to three chips, and an 打开 › hint — the same
      * data the list row shows. Drawn for the selected drawer only.
      */
@@ -554,7 +562,7 @@ private class RackGeom(val cw: Float, val ch: Float) {
         val base = TextStyle(fontWeight = FontWeight.SemiBold)
         // line 1: name · state            打开 ›
         val l1 = y + depth * 0.80f
-        val hint = topText(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_0bbf91), ix1 - 0.03f, l1, z, base.copy(color = Orange.copy(alpha = a), fontWeight = FontWeight.Medium), 0.044f, m, rightAlign = true)
+        val hint = topText(I18n.s(R.string.settings_0bbf91), ix1 - 0.03f, l1, z, base.copy(color = Orange.copy(alpha = a), fontWeight = FontWeight.Medium), 0.044f, m, rightAlign = true)
         val nw = topText(mod.name, tx, l1, z, base.copy(color = text.copy(alpha = a)), 0.056f, m, maxWidth = 0.40f)
         topText("· " + mod.state.label, tx + nw + 0.02f, l1, z, base.copy(color = stateColor.copy(alpha = a), fontWeight = FontWeight.Medium), 0.046f, m,
             maxWidth = (ix1 - 0.05f - hint - (tx + nw + 0.02f)).coerceAtLeast(0.05f))
@@ -587,10 +595,10 @@ private class RackGeom(val cw: Float, val ch: Float) {
     }
 }
 
-/** 1.14.5: what a tap on the open drawer lands on. */
+/** what a tap on the open drawer lands on. */
 private enum class DrawerHit { NONE, CONTENT, HANDLE }
 
-/** 1.14.1: list icons, same order as the rack layers (模型 智能体 联网 看屏 语音 API 记忆). */
+/** list icons, same order as the rack layers (模型 智能体 联网 看屏 语音 API 记忆). */
 private val RACK_ICONS by lazy {
-    with(com.iris.localai.ui.icons.IrisIcons) { listOf(Chip, Agent, Globe, Eye, Voice, Plug, Memory) }
+    with(IrisIcons) { listOf(Chip, Agent, Globe, Eye, Voice, Plug, Memory) }
 }

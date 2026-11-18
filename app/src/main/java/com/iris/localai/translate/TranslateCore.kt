@@ -1,15 +1,17 @@
 package com.iris.localai.translate
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import com.iris.localai.engine.PromptMessage
 
 /**
- * 2.3.0 ③ 本地翻译 — the pure parts (unit-tested, V230TranslateTest): language detection, the
+ * 本地翻译 — the pure parts (unit-tested, V230TranslateTest): language detection, the
  * dedicated translation prompt, cleaning model output (thinking stripped), engine selection and
  * the paragraph split the offline engine streams by.
  */
 enum class TransLang(val code: String, val label: String, val english: String) {
-    ZH("zh", com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a7bac2), "Simplified Chinese"),
-    EN("en", com.iris.localai.I18n.s(com.iris.localai.R.string.translate_f9fb6a), "English");
+    ZH("zh", I18n.s(R.string.translate_a7bac2), "Simplified Chinese"),
+    EN("en", I18n.s(R.string.translate_f9fb6a), "English");
 
     companion object {
         fun byCode(code: String): TransLang? = entries.firstOrNull { it.code == code }
@@ -22,8 +24,8 @@ object TranslateSettings {
     const val ENGINE_AUTO = "auto"
     const val ENGINE_MODEL = "model"
     const val ENGINE_OFFLINE = "offline"
-    val TARGETS = listOf(TARGET_AUTO to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a73116), "zh" to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_a7bac2), "en" to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_f9fb6a))
-    val ENGINES = listOf(ENGINE_AUTO to com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), ENGINE_MODEL to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_e18ae8), ENGINE_OFFLINE to com.iris.localai.I18n.s(com.iris.localai.R.string.translate_50d4a8))
+    val TARGETS = listOf(TARGET_AUTO to I18n.s(R.string.translate_a73116), "zh" to I18n.s(R.string.translate_a7bac2), "en" to I18n.s(R.string.translate_f9fb6a))
+    val ENGINES = listOf(ENGINE_AUTO to I18n.s(R.string.settings_3aed2c), ENGINE_MODEL to I18n.s(R.string.translate_e18ae8), ENGINE_OFFLINE to I18n.s(R.string.translate_50d4a8))
 }
 
 object LangDetect {
@@ -46,7 +48,7 @@ object LangDetect {
     /** [setting] "auto" = 中↔英 (Chinese → English, everything else → Chinese); "zh"/"en" fixed. */
     fun target(text: String, setting: String, ui: String = "zh"): TransLang =
         TransLang.byCode(setting) ?: if (ui == "en") {
-            // 2.3.1: English UI → auto translates into English, English text into Chinese.
+            // English UI → auto translates into English, English text into Chinese.
             if (detect(text) == TransLang.EN) TransLang.ZH else TransLang.EN
         } else if (detect(text) == TransLang.ZH) TransLang.EN else TransLang.ZH
 
@@ -104,11 +106,11 @@ sealed interface EngineChoice {
 }
 
 object EngineSelect {
-    val NEED_MODEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_99db9d)
-    val NEED_EITHER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.translate_7b5a14)
+    val NEED_MODEL: String get() = I18n.s(R.string.settings_99db9d)
+    val NEED_EITHER: String get() = I18n.s(R.string.translate_7b5a14)
     fun needPack(source: TransLang, target: TransLang) =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.translate_85c9c7, source.label, target.label)
-    val OFFLINE_UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.translate_30da87)
+        I18n.s(R.string.translate_85c9c7, source.label, target.label)
+    val OFFLINE_UNSUPPORTED: String get() = I18n.s(R.string.translate_30da87)
 
     /**
      * [pref]: 自动 = the loaded model, else the offline pack; 当前模型 / 离线 = only that one.

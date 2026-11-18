@@ -2,9 +2,9 @@ package com.iris.localai.voice
 
 import android.util.Log
 import com.iris.localai.data.SettingsRepository
-import com.iris.localai.util.SentenceSplitter
+import com.iris.localai.util.streaming.SentenceSplitter
 import kotlinx.coroutines.CancellationException
-import com.iris.localai.util.SpeechText
+import com.iris.localai.util.streaming.SpeechText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,7 +31,7 @@ data class VoiceUiState(
     val error: String? = null,
     /** Mid-answer gap: everything synthesised so far has played and the next sentence is still being synthesised. */
     val awaitingAudio: Boolean = false,
-    /** 2.1.0: counts interruptions of the reply (talking over it or tapping), for the barge-in haptic. */
+    /** counts interruptions of the reply (talking over it or tapping), for the barge-in haptic. */
     val bargeIns: Int = 0,
 ) {
     /** The orb floats + breathes while the answer is being prepared: before the first audio and in gaps. */
@@ -77,7 +77,7 @@ class VoiceController(
     @Volatile private var replyJob: Job? = null
     @Volatile private var player: PcmPlayer? = null
     @Volatile private var muted = false
-    /** 2.1.8: recent TTS text, to drop recognised echo of it. Touched from mic, ASR and TTS coroutines. */
+    /** recent TTS text, to drop recognised echo of it. Touched from mic, ASR and TTS coroutines. */
     private val echoText = SyncEchoTextGuard()
 
     val isRunning: Boolean get() = session?.isActive == true
@@ -147,8 +147,8 @@ class VoiceController(
             val preroll = FrameRing(PREROLL_FRAMES)  // the start of what the user says over the reply
             var prefix: FloatArray? = null            // pre-roll kept for the utterance after a barge-in
             var outPeak = 0f          // decaying peak of our own playback level
-            val gate = HalfDuplexGate() // 2.1.8: mic closed while our voice is on the loudspeaker (+ tail)
-            val preOpen = PreOpenBuffer() // 2.1.9: echo-free audio from the tail, replayed when the gate opens
+            val gate = HalfDuplexGate() // mic closed while our voice is on the loudspeaker (+ tail)
+            val preOpen = PreOpenBuffer() // echo-free audio from the tail, replayed when the gate opens
             var lastAction = MicAction.LISTEN
             try {
                 Microphone.frames().collect { frame ->
@@ -175,12 +175,12 @@ class VoiceController(
                     if (action == MicAction.MUTED) {
                         // Half-duplex: nothing of what the mic hears now reaches VAD / ASR / barge-in.
                         if (prev != MicAction.MUTED) { vad.clear(); detector.reset(); preroll.clear(); prefix = null; preOpen.clear() }
-                        // 2.1.9: keep the last ~300 ms heard after playback ended (never TTS itself).
+                        // keep the last ~300 ms heard after playback ended (never TTS itself).
                         preOpen.onMutedFrame(frame, echoFree = !audible && gate.echoFree(now))
                         return@collect
                     }
                     if (prev == MicAction.MUTED) {
-                        // 2.1.9: the gate opens. Instead of starting from nothing, replay what the
+                        // the gate opens. Instead of starting from nothing, replay what the
                         // user may already have said inside the tail, then the live frame.
                         vad.clear()
                         for (f in preOpen.drain()) { vad.acceptWaveform(f); preroll.add(f) }
@@ -226,7 +226,7 @@ class VoiceController(
             if (audio.size < ASR_SAMPLE_RATE / 4) continue // < 250 ms: noise
             _state.update { it.copy(phase = VoicePhase.RECOGNIZING) }
             // A failed recognition (native ASR error on an odd clip) skips that utterance; before
-            // 1.5.1 it ended the whole voice session with an error screen.
+            // it ended the whole voice session with an error screen.
             val text = try {
                 recognizer.transcribe(audio)
             } catch (e: CancellationException) {

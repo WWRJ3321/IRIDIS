@@ -4,11 +4,11 @@ import com.iris.localai.data.AppSettings
 import com.iris.localai.data.ModelFiles
 import com.iris.localai.data.sanitized
 import com.iris.localai.server.HttpServer
-import com.iris.localai.util.SentenceSplitter
-import com.iris.localai.util.SpeechText
-import com.iris.localai.util.StopTokenFilter
-import com.iris.localai.util.StreamingThinkSplitter
-import com.iris.localai.util.ThinkParser
+import com.iris.localai.util.streaming.SentenceSplitter
+import com.iris.localai.util.streaming.SpeechText
+import com.iris.localai.util.streaming.StopTokenFilter
+import com.iris.localai.util.thinking.StreamingThinkSplitter
+import com.iris.localai.util.thinking.ThinkParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,7 +1,11 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.core
+
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 
 /**
- * 2.4.5 (Issue #11): write_file content was cut at different lengths depending on the model.
+ * Issue #11: write_file content was cut at different lengths depending on the model.
  *
  * Cause: every 智能体 turn was capped at min(最大生成长度, 1536) tokens — thinking included — and
  * [JsonRepair.extractObject] closes a string that the length limit cut off, so the call still

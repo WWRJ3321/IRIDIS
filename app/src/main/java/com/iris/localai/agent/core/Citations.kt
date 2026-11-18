@@ -1,7 +1,11 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.core
+
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 
 /**
- * 2.2.17 D 引用链接: the sources of a web_search answer, read back from the reply's own tool steps
+ * D 引用链接: the sources of a web_search answer, read back from the reply's own tool steps
  * (the step detail is the numbered result list the model saw, local or online model alike), so
  * the answer's inline [1] markers become links and a compact 来源 row sits under the message.
  */
@@ -25,8 +29,9 @@ object Citations {
             for (line in s.detail.lineSequence()) {
                 ITEM.matchEntire(line)?.let { title = it.groupValues[2].trim(); return@let }
                 val u = URL_LINE.matchEntire(line)?.groupValues?.get(1)
-                if (u != null && title != null) {
-                    if (seen.add(u)) out += Source(out.size + 1, title!!.substringBeforeLast(" (").ifBlank { title!! }, u)
+                val t = title
+                if (u != null && t != null) {
+                    if (seen.add(u)) out += Source(out.size + 1, t.substringBeforeLast(" (").ifBlank { t }, u)
                     title = null
                 }
             }

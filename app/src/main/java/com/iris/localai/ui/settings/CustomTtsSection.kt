@@ -1,5 +1,9 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.ui.components.IrisDialog
+import com.iris.localai.ui.components.TextInputDialog
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.voice.VoicePack
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,7 +32,7 @@ import com.iris.localai.voice.InstalledTts
 import com.iris.localai.voice.PackState
 
 /**
- * 2.4.5: 设置 › 语音 › 导入的语音合成模型 — sherpa-onnx Kokoro / Matcha / VITS (Piper, MeloTTS…)
+ * 设置 › 语音 › 导入的语音合成模型 — sherpa-onnx Kokoro / Matcha / VITS (Piper, MeloTTS…)
  * from a folder, a .tar.bz2 or a download link; each can be chosen as the read-aloud voice or deleted.
  */
 @Composable
@@ -39,10 +43,10 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
     val state by vm.customImport.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshCustomTts() }
     val active = remember(models, s.ttsPack) { vm.activeCustomTts() }
-    // 2.5.0 Beta5: a cloned voice in force wins over imported models (same rule as the synthesizer).
+    // a cloned voice in force wins over imported models (same rule as the synthesizer).
     val voices by vm.cloneVoices.collectAsStateWithLifecycle()
     val packs by vm.voicePacks.collectAsStateWithLifecycle()
-    val cloneOn = VoiceChoice.cloneActive(s.cloneVoiceId, voices.map { it.id }, packs[com.iris.localai.voice.VoicePack.CLONE_ZIPVOICE] == PackState.Installed)
+    val cloneOn = VoiceChoice.cloneActive(s.cloneVoiceId, voices.map { it.id }, packs[VoicePack.CLONE_ZIPVOICE] == PackState.Installed)
     var askUrl by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<InstalledTts?>(null) }
     val folderPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -74,7 +78,7 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             })
             IrisProgressBar(
                 progress = if (state.phase == 0 && state.total > 0) (state.done.toFloat() / state.total).coerceIn(0f, 1f) else null,
-                modifier = Modifier.padding(start = com.iris.localai.ui.theme.IrisSpace.L, end = com.iris.localai.ui.theme.IrisSpace.L, bottom = com.iris.localai.ui.theme.IrisSpace.S),
+                modifier = Modifier.padding(start = IrisSpace.L, end = IrisSpace.L, bottom = IrisSpace.S),
             )
         } else {
             SettingsRow(I18n.s(R.string.tts245_pick_folder), subtitle = I18n.s(R.string.tts245_pick_folder_sub), onClick = { vm.clearTtsImportMessage(); folderPicker.launch(null) })
@@ -83,13 +87,13 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             Divider()
             SettingsRow(I18n.s(R.string.tts245_paste_url), subtitle = I18n.s(R.string.tts245_paste_url_sub), onClick = { vm.clearTtsImportMessage(); askUrl = true })
         }
-        state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }
-        state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.S)) }
+        state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.S)) }
+        state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.S)) }
     }
     GroupFootnote(I18n.s(R.string.tts245_footnote))
 
     if (askUrl) {
-        com.iris.localai.ui.components.TextInputDialog(
+        TextInputDialog(
             title = I18n.s(R.string.tts245_paste_url),
             initial = "",
             onConfirm = { url -> askUrl = false; vm.importTtsUrl(url.trim()) },
@@ -99,7 +103,7 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
         )
     }
     deleting?.let { m ->
-        com.iris.localai.ui.components.IrisDialog(
+        IrisDialog(
             onDismiss = { deleting = null }, title = I18n.s(R.string.tts245_delete_title, m.model.name),
             confirmText = I18n.s(R.string.chat_2f4aad), onConfirm = { deleting = null; vm.deleteCustomTts(m) },
             destructive = true,

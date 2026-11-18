@@ -71,7 +71,7 @@ object IrisMotion {
     val FadeIn = SpringToken(response = 0.30f, damping = 1.0f)
     /** Opacity out / leaving: a little quicker than coming in. */
     val FadeOut = SpringToken(response = 0.22f, damping = 1.0f)
-    /** 1.7.5: short settle with no overshoot, for reduced visual effects (省电 level / battery saver / heat). */
+    /** short settle with no overshoot, for reduced visual effects (省电 level / battery saver / heat). */
     val Quick = SpringToken(response = 0.16f, damping = 1.0f)
     /** Colour changes (selection, theme-dependent tints). */
     val Color = SpringToken(response = 0.36f, damping = 1.0f)
@@ -92,7 +92,7 @@ object IrisMotion {
     const val SWEEP_PERIOD_MS = 1400
     const val ORB_BREATH_MS = 2400
     const val ORB_BREATH_BUSY_MS = 900
-    /** 1.14.7: delay between consecutive items of a staggered entrance (welcome screen). */
+    /** delay between consecutive items of a staggered entrance (welcome screen). */
     const val ENTRANCE_STAGGER_MS = 70L
     /** Smooth ease for looping indicators (a loop has no "current value" to retarget, so no spring). */
     val LoopEasing: Easing = CubicBezierEasing(0.37f, 0f, 0.63f, 1f)
@@ -118,6 +118,12 @@ object IrisMotion {
     val ProgressEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     /** Ease-in for things leaving (the falling cards). */
     val ExitEasing: Easing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
+
+    /** 面板变形（模型 / 角色 pill → 面板）的时长；减少动态效果时用短的。 */
+    const val MORPH_MS = 300
+    const val MORPH_REDUCED_MS = 120
+    /** 生图进行中的彩色流动一圈的时长。 */
+    const val IMAGE_GEN_FLOW_MS = 6000
 
     /** A one-shot 0 → 1 progress (archive wave, rise, decrypt sweep). */
     fun <T> progress(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =

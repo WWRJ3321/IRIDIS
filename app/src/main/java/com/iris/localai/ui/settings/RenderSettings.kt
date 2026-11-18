@@ -1,5 +1,7 @@
 package com.iris.localai.ui.settings
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.compose.runtime.Composable
 import com.iris.localai.data.AppSettings
 import com.iris.localai.ui.components.Divider
@@ -10,11 +12,11 @@ import com.iris.localai.ui.icons.IrisIcons
 
 /** 2.2 外观 › 聊天内容: rich rendering switches (kept in their own file so 外观 only gains one call). */
 object RenderSettingsText {
-    val SECTION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_204d38)
-    val HTML: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_322e4c)
-    val HTML_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d28b3a)
-    val IMAGES: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c0a0b2)
-    val IMAGES_SUB: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be4e07)
+    val SECTION: String get() = I18n.s(R.string.settings_204d38)
+    val HTML: String get() = I18n.s(R.string.settings_322e4c)
+    val HTML_SUB: String get() = I18n.s(R.string.settings_d28b3a)
+    val IMAGES: String get() = I18n.s(R.string.settings_c0a0b2)
+    val IMAGES_SUB: String get() = I18n.s(R.string.settings_be4e07)
 }
 
 @Composable
@@ -25,7 +27,7 @@ fun RenderSettingsSection(s: AppSettings, update: ((AppSettings) -> AppSettings)
         Divider()
         SwitchRow(RenderSettingsText.IMAGES, s.loadNetworkImages, subtitle = RenderSettingsText.IMAGES_SUB, icon = IrisIcons.Image) { on -> update { it.copy(loadNetworkImages = on) } }
         Divider()
-        // 2.6.7: 思考自动收起
-        SwitchRow(com.iris.localai.I18n.s(com.iris.localai.R.string.s267_fold), s.autoFoldThinking, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.s267_fold_sub), icon = IrisIcons.Think) { on -> update { it.copy(autoFoldThinking = on) } }
+        // 思考自动收起
+        SwitchRow(I18n.s(R.string.s267_fold), s.autoFoldThinking, subtitle = I18n.s(R.string.s267_fold_sub), icon = IrisIcons.Think) { on -> update { it.copy(autoFoldThinking = on) } }
     }
 }

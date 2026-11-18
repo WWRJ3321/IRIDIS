@@ -1,5 +1,10 @@
 package com.iris.localai.data
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.core.AgentStep
+import com.iris.localai.context.CompactState
+import com.iris.localai.engine.geniex.QairtBundle
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -14,7 +19,7 @@ data class GenerationStats(
     val prefillMs: Long = 0,
     val generateMs: Long = 0,
     val droppedMessages: Int = 0,
-    /** 1.7.1: tokens discarded by KV context shift during this reply. */
+    /** tokens discarded by KV context shift during this reply. */
     val shiftedTokens: Int = 0,
     /** Tokens in the KV cache when the reply ended (0 = unknown). */
     val kvUsed: Int = 0,
@@ -24,7 +29,7 @@ data class GenerationStats(
 }
 
 /**
- * 2.6.1: one reply written in two passes (thinking ran out / think-only → answer with thinking off): add the second
+ * one reply written in two passes (thinking ran out / think-only → answer with thinking off): add the second
  * pass's decode to the first so the bubble's tok/s covers the whole reply. Before, only the short answer pass was
  * kept, it fell under the 8-token / 300 ms floor and tok/s vanished. Pure.
  */
@@ -57,27 +62,27 @@ data class ChatMessage(
     val outputChars: Int = 0,
     val outputMs: Long = 0,
     val totalMs: Long = 0,
-    /** 1.9.0 智能体 mode: the tool steps of this reply, drawn as cards above the answer. */
-    val agentSteps: List<com.iris.localai.agent.AgentStep> = emptyList(),
-    /** 1.10.12: files / pictures sent with a user message (copies in filesDir/attachments). */
+    /** 智能体 mode: the tool steps of this reply, drawn as cards above the answer. */
+    val agentSteps: List<AgentStep> = emptyList(),
+    /** files / pictures sent with a user message (copies in filesDir/attachments). */
     val attachments: List<Attachment> = emptyList(),
-    /** 2.2: skills / agent tools the user picked for this turn (「技能」 chip); one prompt line on this turn only. */
+    /** skills / agent tools the user picked for this turn (「技能」 chip); one prompt line on this turn only. */
     val refs: List<TurnRef> = emptyList(),
     /** 2.0.x: an assistant reply the user edited in place (shown as 「已编辑」). */
     val edited: Boolean = false,
     /**
-     * 2.0.x message versions (edit / regenerate keep the old ones). Empty = a single version, the
+     * message versions (edit / regenerate keep the old ones). Empty = a single version, the
      * message itself (every chat saved before this feature). Otherwise one entry per version; the
      * entry at [activeVersion] is a placeholder — the live message fields (and, for a user message,
      * the conversation after it) are that version. See [MessageVersions].
      */
     val versions: List<MessageVersion> = emptyList(),
     val activeVersion: Int = 0,
-    /** 2.1.0: knowledge-base snippets this reply was given (shown as 「引用 n 段知识库」). */
+    /** knowledge-base snippets this reply was given (shown as 「引用 n 段知识库」). */
     val kbRefs: Int = 0,
-    /** 2.2.9: where those snippets came from, 「租房合同.md · 第 3 段」 (see KbSource); empty in older chats. */
+    /** where those snippets came from, 「租房合同.md · 第 3 段」 (see KbSource); empty in older chats. */
     val kbSources: List<String> = emptyList(),
-    /** 2.2.9: 「＋ 记住？」 suggestion shown under this reply (null = none / handled). */
+    /** 「＋ 记住？」 suggestion shown under this reply (null = none / handled). */
     val memorySuggestion: String? = null,
 )
 
@@ -97,7 +102,7 @@ data class MessageVersion(
     val outputChars: Int = 0,
     val outputMs: Long = 0,
     val totalMs: Long = 0,
-    val agentSteps: List<com.iris.localai.agent.AgentStep> = emptyList(),
+    val agentSteps: List<AgentStep> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val edited: Boolean = false,
     val tail: List<ChatMessage> = emptyList(),
@@ -106,7 +111,7 @@ data class MessageVersion(
 @Serializable
 enum class AttachmentKind { IMAGE, TEXT, FILE }
 
-/** 1.10.12: one attached file. [text] = its text for the prompt (TEXT only, capped). */
+/** one attached file. [text] = its text for the prompt (TEXT only, capped). */
 @Serializable
 data class Attachment(
     val name: String,
@@ -125,10 +130,10 @@ data class Conversation(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val messages: List<ChatMessage> = emptyList(),
-    /** 2.2.14: title written by the model or by the user (no more auto title). */
+    /** title written by the model or by the user (no more auto title). */
     val titled: Boolean = false,
     val pinned: Boolean = false,
-    /** 1.7.1: [ContextStrategy] ordinal for this conversation; null = the global default. */
+    /** [ContextStrategy] ordinal for this conversation; null = the global default. */
     val contextStrategy: Int? = null,
     /** 「从这里开始新上下文」: only messages *after* this id are sent to the model. */
     val contextStartAfterId: String? = null,
@@ -136,13 +141,13 @@ data class Conversation(
     val summary: String = "",
     /** Last message id covered by [summary]. */
     val summaryUpToId: String? = null,
-    /** 1.10.0: deterministic compaction of the early part (no model call); null = not compacted. */
-    val compaction: com.iris.localai.context.CompactState? = null,
-    /** 1.10.0: long-term memory frozen when this conversation first used it; null = not taken yet. */
+    /** deterministic compaction of the early part (no model call); null = not compacted. */
+    val compaction: CompactState? = null,
+    /** long-term memory frozen when this conversation first used it; null = not taken yet. */
     val memorySnapshot: String? = null,
     /** [com.iris.localai.memory.MemorySettings.epoch] when [memorySnapshot] was taken. */
     val memoryEpoch: Int = 0,
-    /** 2.3.2 角色卡: the card this chat was started with (folder id under characters/); null = none. */
+    /** 角色卡: the card this chat was started with (folder id under characters/); null = none. */
     val characterId: String? = null,
 )
 
@@ -160,9 +165,9 @@ enum class ModelFormat(val label: String, val extensions: Set<String>) {
     LITERT("LiteRT-LM", setOf("litertlm", "task")),
     /** A folder (taobao-mnn layout: config.json + llm.mnn + llm.mnn.weight + tokenizer.txt …). */
     MNN("MNN", emptySet()),
-    /** 2.2.0: a Qualcomm AI Hub (QAIRT / Genie) bundle folder: genie_config.json + *.bin + tokenizer.json. Run by GenieX, NPU only. */
+    /** a Qualcomm AI Hub (QAIRT / Genie) bundle folder: genie_config.json + *.bin + tokenizer.json. Run by GenieX, NPU only. */
     QAIRT("GenieX · QAIRT", emptySet()),
-    /** 2.6.5 (实验): an Edge0 asset folder (model.json + base/lora/prerouter.gguf + assets.tsv), run by edge0-infer, CPU only. */
+    /** 实验: an Edge0 asset folder (model.json + base/lora/prerouter.gguf + assets.tsv), run by edge0-infer, CPU only. */
     EDGE0("Edge0", emptySet());
 
     companion object {
@@ -178,7 +183,7 @@ data class LocalModel(
     val path: String,
     val sizeBytes: Long,
     val format: ModelFormat,
-    /** 2.5.5: 用户起的显示名（[ModelAliases]），null = 按文件名。 */
+    /** 用户起的显示名（[ModelAliases]），null = 按文件名。 */
     val alias: String? = null,
 ) {
     val id: String get() = fileName
@@ -186,7 +191,7 @@ data class LocalModel(
     /** 按文件名推出来的名字（改名前的原名）。 */
     val fileDisplayName: String get() = when (format) {
         ModelFormat.MNN -> ModelNames.displayMnn(fileName)
-        ModelFormat.QAIRT -> com.iris.localai.engine.geniex.QairtBundle.displayName(fileName)
+        ModelFormat.QAIRT -> QairtBundle.displayName(fileName)
         ModelFormat.EDGE0 -> if (fileName.startsWith("Edge0-35B", ignoreCase = true)) "Edge0-35B" else fileName
         else -> ModelNames.display(fileName)
     }
@@ -226,11 +231,11 @@ data class AppSettings(
     val deepThinking: Boolean = true,
     val lastModelFile: String? = null,
     val autoLoadLastModel: Boolean = true,
-    /** 1.8.0 crash-diag: skip loading visual.mnn (treat vision models as text-only). Takes effect on next model load. */
+    /** crash-diag: skip loading visual.mnn (treat vision models as text-only). Takes effect on next model load. */
     val mnnNoVisual: Boolean = false,
-    /** 2.4.5: 识图用 GPU — let the vision projector (mmproj) run on an Adreno GPU too (2.4.4 keeps it on the CPU there). Next load. */
+    /** 识图（mmproj）选 GPU（设置里的 CPU / GPU 分段，GPU = true）：Adreno 上视觉投影器也跑 GPU；默认 CPU。重新加载生效。 */
     val visionGpu: Boolean = false,
-    /** 1.8.0 crash-diag: global override — force off mmap weight mapping on every load. Takes effect on next model load. */
+    /** crash-diag: global override — force off mmap weight mapping on every load. Takes effect on next model load. */
     val mnnForceNoMmap: Boolean = false,
     val keepScreenOn: Boolean = true,
 
@@ -262,7 +267,7 @@ data class AppSettings(
     /** "auto" (loaded model, else offline) / "model" / "offline". */
     val translateEngine: String = "auto",
     val downloadSource: DownloadSource = DownloadSource.AUTO,
-    /** 2.2.16: old default HF_MIRROR → 自动 once; [lastGoodSource] = DownloadSource name that last worked. */
+    /** old default HF_MIRROR → 自动 once; [lastGoodSource] = DownloadSource name that last worked. */
     val downloadSourceMigrated: Boolean = false,
     val lastGoodSource: String = "",
     /** Cloned voice (ZipVoice) used for voice chat and read-aloud; "" = the fixed voice of [ttsPack]. */
@@ -275,12 +280,12 @@ data class AppSettings(
     // ---- 1.7.0 ----
     /** In-chat performance overlay (speed / CPU / memory / GPU if readable) while generating. */
     val perfOverlay: Boolean = false,
-    /** 2.5.6: 风险提示弹窗（加载前内存不足、生图内存偏紧）；false = 不弹，直接加载 / 生成。 */
+    /** 风险提示弹窗（加载前内存不足、生图内存偏紧）；false = 不弹，直接加载 / 生成。 */
     val warnPopups: Boolean = true,
     /** Keep generating in the background (foreground service + progress notification). */
     val backgroundGeneration: Boolean = true,
     val askedNotificationPermission: Boolean = false,
-    /** 1.10.13: asked once for 忽略电池优化 (background generation). */
+    /** asked once for 忽略电池优化 (background generation). */
     val askedBatteryExemption: Boolean = false,
     /** Voice chat: how easily talking over the reply interrupts it. 0 = 低, 1 = 中, 2 = 高. */
     val bargeInSensitivity: Int = 1,
@@ -288,7 +293,7 @@ data class AppSettings(
     val bargeInVoiceComm: Boolean = false,
 
     // ---- 1.7.1 ----
-    /** [com.iris.localai.engine.ResourceTier] ordinal; -1 = not yet migrated from powerMode / targetTps. */
+    /** [com.iris.localai.engine.resources.ResourceTier] ordinal; -1 = not yet migrated from powerMode / targetTps. */
     val resourceTier: Int = -1,
     /** Default backend per engine ([ModelFormat.name] → "CPU" / "GPU" / "NPU"; missing = 自动). */
     val defaultBackends: Map<String, String> = emptyMap(),
@@ -314,42 +319,42 @@ data class AppSettings(
     val summaryTriggerPercent: Int = 75,
     /** 视觉效果: 0 = 省电, 1 = 均衡, 2 = 华丽; -1 = not yet migrated from [glassEffects]. */
     val visualEffects: Int = -1,
-    /** 1.14.1: grey capsule behind the chat top-bar buttons (off: plain icons). */
+    /** grey capsule behind the chat top-bar buttons (off: plain icons). */
     val topBarCapsules: Boolean = false,
-    /** 1.14.1: 运行状态 rack at the top of 设置. */
+    /** 运行状态 rack at the top of 设置. */
     val showStatusRack: Boolean = true,
     /**
-     * 1.14.7: first-launch welcome (with the disclaimer) was accepted. Default false, so fresh
+     * first-launch welcome (with the disclaimer) was accepted. Default false, so fresh
      * installs *and* upgrades from older versions (no key in the stored JSON) see it once.
      */
     val welcomeAccepted: Boolean = false,
     /**
-     * 2.5.3 新手引导 (spotlight tour): finished or skipped. A new key (`tour253_done`, default false), so
+     * 新手引导 (spotlight tour): finished or skipped. A new key (`tour253_done`, default false), so
      * users who saw the 2.5.2 five-page guide (`onboarding_done`, now ignored) also see the tour once.
      * 设置 › 关于与调试 › 新手引导 sets it back to false (replay).
      */
     @kotlinx.serialization.SerialName("tour253_done")
     val tour253Done: Boolean = false,
-    /** 2.5.5: 已看过「此次更新」的版本（versionName）；空 = 没看过。 */
+    /** 已看过「此次更新」的版本（versionName）；空 = 没看过。 */
     @kotlinx.serialization.SerialName("notes_seen")
     val notesSeen: String = "",
-    /** 2.0.1: 温度限速 — pace generation from this temperature (°C, 35–50); 0 = off. */
+    /** 温度限速 — pace generation from this temperature (°C, 35–50); 0 = off. */
     val thermalLimitC: Int = 0,
-    /** 2.1.0 引用知识库: 对话 replies quote up to 3 snippets from workspace/knowledge (only when it has files). */
+    /** 引用知识库: 对话 replies quote up to 3 snippets from workspace/knowledge (only when it has files). */
     val knowledgeInChat: Boolean = true,
     /** 2.2 渲染网页代码: a closed ```html / ```svg block (or a whole-reply HTML document) shows as a sandboxed preview card. */
     val renderHtml: Boolean = true,
     /** 2.2 加载网络图片: https images in replies and previews (fetched by the app, public hosts only, no cookies). */
     val loadNetworkImages: Boolean = true,
-    /** 2.2.9 F: 开发者选项 › 开发者模式 — shows 本对话的策略 in the chat context sheet. */
+    /** F: 开发者选项 › 开发者模式 — shows 本对话的策略 in the chat context sheet. */
     val developerMode: Boolean = false,
-    /** 2.2.9 F: the one-time 「高级设置在开发者选项」 hint on 上下文 · 记忆 · 知识库 was shown. */
+    /** F: the one-time 「高级设置在开发者选项」 hint on 上下文 · 记忆 · 知识库 was shown. */
     val contextHintShown: Boolean = false,
 
     // ---- 1.7.8 ----
     /**
      * 资源档配置: "CPU.LOW" / "GPU.HIGH" … → the user's threads / cores / nice for that tier on that
-     * backend kind. Missing = generated from the core clusters ([com.iris.localai.engine.TierProfiles]).
+     * backend kind. Missing = generated from the core clusters ([com.iris.localai.engine.resources.TierProfiles]).
      */
     val tierProfiles: Map<String, TierProfile> = emptyMap(),
     /**
@@ -357,16 +362,16 @@ data class AppSettings(
      * limit). 0 = old behaviour: reasoning and answer share [maxNewTokens].
      */
     val thinkingBudget: Int = 2048,
-    /** 2.6.0: 思考档位 chosen by long-pressing 思考. 0 = not chosen (use [thinkingBudget]), 1 低, 2 中, 3 高. */
+    /** 思考档位 chosen by long-pressing 思考. 0 = not chosen (use [thinkingBudget]), 1 低, 2 中, 3 高. */
     val thinkLevel: Int = 0,
-    /** 2.6.7: 思考自动收起——正文开始输出时把思考块收起。默认关（保持现状）。 */
+    /** 思考自动收起——正文开始输出时把思考块收起。默认关（保持现状）。 */
     val autoFoldThinking: Boolean = false,
     /**
-     * 2.6.7 过热断续（Edge0 + llama 通用）：电池温度到这个值（°C，38–55；0 = 关）后，当前回答照常说完，
+     * 过热断续（Edge0 + llama 通用）：电池温度到这个值（°C，38–55；0 = 关）后，当前回答照常说完，
      * 之后新的生成先「降温中」等待，降到 [coolPauseC] − 3 °C 自动继续。降温靠暂停和少算，不靠降速。
      */
     val coolPauseC: Int = 45,
-    /** 2.6.7: 到温度上限时立即停止当前回答（默认否：说完再停）。 */
+    /** 到温度上限时立即停止当前回答（默认否：说完再停）。 */
     val coolStopNow: Boolean = false,
 
     // ---- 2.1.0 ----
@@ -382,7 +387,7 @@ data class AppSettings(
     // ---- 2.1.4 外观 ----
     /** 配色: [com.iris.localai.ui.theme.IrisPalette.id] — "default" / "sakura" / "mint" / "lilac" / "cream" / "mist" / "sky". */
     val themePalette: String = "default",
-    /** 2.5.0 界面风格: [com.iris.localai.ui.theme.IrisStyle.id] — "soft" (柔光, default) / "classic" (经典). */
+    /** 界面风格: [com.iris.localai.ui.theme.IrisStyle.id] — "soft" (柔光, default) / "classic" (经典). */
     val uiStyle: String = "soft",
     /** 自定义背景: file name in filesDir/backgrounds ([com.iris.localai.ui.theme.BackgroundImage]); "" = none. */
     val backgroundImage: String = "",
@@ -390,13 +395,13 @@ data class AppSettings(
     val backgroundBlur: Int = 0,
     /** 遮罩深浅: % of the theme background laid over the picture (0–90). */
     val backgroundScrim: Int = 40,
-    /** 2.2.10 外观 ›「动态混色背景」: drifting theme-colour blobs at the home top. Default off. */
+    /** 外观 ›「动态混色背景」: drifting theme-colour blobs at the home top. Default off. */
     val dynamicBlend: Boolean = false,
-    /** 2.2.14 外观 ›「纯色背景」: one plain colour; no gradients, glow, blend, glass or picture. */
+    /** 外观 ›「纯色背景」: one plain colour; no gradients, glow, blend, glass or picture. */
     val solidBackground: Boolean = false,
-    /** 2.2.10 语音 › 朗读引擎: "local" (本机模型 / 克隆音色) or "system" (Android 系统 TTS). */
+    /** 语音 › 朗读引擎: "local" (本机模型 / 克隆音色) or "system" (Android 系统 TTS). */
     val ttsEngine: String = "local",
-    /** 2.2.10 性能 ›「终止温度」°C (0 = off, 40–60): stop everything and unload all models. */
+    /** 性能 ›「终止温度」°C (0 = off, 40–60): stop everything and unload all models. */
     val thermalCutoffC: Int = 0,
 
     // ---- 2.1.7 ----
@@ -412,10 +417,10 @@ data class AppSettings(
 
 /** How a conversation's history is fitted into the model's context window. */
 enum class ContextStrategy(val label: String, val hint: String) {
-    SLIDING_WINDOW(com.iris.localai.I18n.s(com.iris.localai.R.string.data_28cd8a), com.iris.localai.I18n.s(com.iris.localai.R.string.data_275fef)),
-    TOKEN_BUDGET(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b8f718), com.iris.localai.I18n.s(com.iris.localai.R.string.data_64a081)),
-    SUMMARY(com.iris.localai.I18n.s(com.iris.localai.R.string.data_b929ee), com.iris.localai.I18n.s(com.iris.localai.R.string.data_ab6492)),
-    KV_SHIFT(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_6649d1), com.iris.localai.I18n.s(com.iris.localai.R.string.data_e80b39));
+    SLIDING_WINDOW(I18n.s(R.string.data_28cd8a), I18n.s(R.string.data_275fef)),
+    TOKEN_BUDGET(I18n.s(R.string.data_b8f718), I18n.s(R.string.data_64a081)),
+    SUMMARY(I18n.s(R.string.data_b929ee), I18n.s(R.string.data_ab6492)),
+    KV_SHIFT(I18n.s(R.string.settings_6649d1), I18n.s(R.string.data_e80b39));
 
     companion object {
         fun of(i: Int?): ContextStrategy = entries.getOrElse(i ?: -1) { TOKEN_BUDGET }
@@ -434,8 +439,8 @@ object ModelNames {
 
     /** "Qwen3-1.7B-MNN" → "Qwen3 1.7B" (the format tag already says MNN). */
     fun displayMnn(folder: String): String {
-        val base = folder.replace(Regex("[-_.]?MNN$", RegexOption.IGNORE_CASE), "")
-        val cleaned = base.replace(Regex("[_-]+"), " ").replace(Regex("\\s+"), " ").trim()
+        val base = folder.replace(RX_1, "")
+        val cleaned = base.replace(RX_2, " ").replace(RX_3, " ").trim()
         return cleaned.ifEmpty { folder }
     }
 
@@ -443,24 +448,34 @@ object ModelNames {
     fun display(fileName: String): String {
         var base = fileName.substringBeforeLast('.')
         quantization(fileName)?.let { q ->
-            base = base.replace(Regex("[-_.]?${Regex.escape(q)}$", RegexOption.IGNORE_CASE), "")
+            base = base.replace(QUANT_SUFFIX_RX.getOrPut(q) { Regex("[-_.]?${Regex.escape(q)}$", RegexOption.IGNORE_CASE) }, "")
         }
-        val cleaned = base.replace(Regex("[_-]+"), " ").replace(Regex("\\s+"), " ").trim()
+        val cleaned = base.replace(RX_2, " ").replace(RX_3, " ").trim()
         return polish(cleaned).ifEmpty { fileName }
     }
 
-    /** 2.2.14: the home pill's name: display name without packaging words (GGUF / MNN / Instruct / Chat). */
+    /** the home pill's name: display name without packaging words (GGUF / MNN / Instruct / Chat). */
     fun short(display: String): String {
-        val n = display.replace(Regex("(?i)(?<=\\s|^)(gguf|mnn|instruct|chat|hf)(?=\\s|$)"), " ")
-            .replace(Regex("\\s+"), " ").trim()
+        val n = display.replace(RX_4, " ")
+            .replace(RX_3, " ").trim()
         return n.ifEmpty { display }
     }
 
     /** "gemma 4 E2B it qualcomm sm8750" → "Gemma 4 E2B NPU": capitalised, no "it" suffix, chip tag → NPU. */
     fun polish(name: String): String {
-        var n = name.replace(Regex("\\s+qualcomm\\s+sm\\d+\\b", RegexOption.IGNORE_CASE), " NPU")
-        n = n.replace(Regex("\\s+it(?=\\s|$)"), "")
-        n = n.replace(Regex("\\s+"), " ").trim()
+        var n = name.replace(RX_5, " NPU")
+        n = n.replace(RX_6, "")
+        n = n.replace(RX_3, " ").trim()
         return n.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
     }
 }
+
+// 预编译的正则（原先在函数体内每次调用都编译）。
+private val RX_1 = Regex("[-_.]?MNN$", RegexOption.IGNORE_CASE)
+private val RX_2 = Regex("[_-]+")
+private val RX_3 = Regex("\\s+")
+private val RX_4 = Regex("(?i)(?<=\\s|^)(gguf|mnn|instruct|chat|hf)(?=\\s|$)")
+private val RX_5 = Regex("\\s+qualcomm\\s+sm\\d+\\b", RegexOption.IGNORE_CASE)
+private val RX_6 = Regex("\\s+it(?=\\s|$)")
+/** 量化名 → 结尾匹配正则的缓存。 */
+private val QUANT_SUFFIX_RX = java.util.concurrent.ConcurrentHashMap<String, Regex>()

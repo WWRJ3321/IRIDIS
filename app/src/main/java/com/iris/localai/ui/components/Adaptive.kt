@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * 1.12.0 large-screen / landscape adaptation. Phones in portrait are unchanged; on a tablet, an
+ * large-screen / landscape adaptation. Phones in portrait are unchanged; on a tablet, an
  * unfolded foldable or a phone in landscape, chat and settings keep a readable column centred on
  * the screen instead of stretching lines across 2000 px, and stay clear of a side camera cutout.
  */

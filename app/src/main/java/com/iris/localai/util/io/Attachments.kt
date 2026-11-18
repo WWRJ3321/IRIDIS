@@ -1,5 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -9,7 +13,7 @@ import java.io.File
 import java.util.UUID
 
 /**
- * 1.10.12: files and pictures sent with a message. Each is copied into app storage
+ * files and pictures sent with a message. Each is copied into app storage
  * (filesDir/attachments) so the conversation keeps working when the original moves. Text files
  * are read once and their text rides along in the prompt; pictures go to the model only when it
  * can see (ModelDetails.supportsVision).
@@ -130,7 +134,7 @@ object Attachments {
 
     /**
      * Longest side of a picture handed to a vision model when nothing else asks. 2.0.2–2.1.6: 1024;
-     * 2.1.7: 512 (「识图清晰度 · 标准」) — 1024 px kept vision prefill busy for tens of seconds on a phone.
+     * 512 (「识图清晰度 · 标准」) — 1024 px kept vision prefill busy for tens of seconds on a phone.
      */
     const val VISION_MAX_SIDE = 512
 
@@ -138,7 +142,7 @@ object Attachments {
     const val LEGACY_VISION_SIDE = 1024
 
     /**
-     * 2.1.1: MNN (Qwen2/2.5/3/3.5-VL) feeds the picture at its own size to a CPU/GPU ViT: 1024 px is
+     * MNN (Qwen2/2.5/3/3.5-VL) feeds the picture at its own size to a CPU/GPU ViT: 1024 px is
      * ~3000 patches and kept 「预填充」 busy for minutes on a phone. 512 px ≈ 200–350 vision tokens.
      */
     const val MNN_VISION_MAX_SIDE = 512
@@ -171,7 +175,7 @@ object Attachments {
     }
 
     /**
-     * 2.1.1: files every engine decodes as they are: baseline/progressive JPEG and PNG. MNN's imread
+     * files every engine decodes as they are: baseline/progressive JPEG and PNG. MNN's imread
      * (stb_image) cannot open WebP / HEIC / HEIF, so such a small picture used to reach it unconverted
      * and was dropped. Pure (first bytes of the file).
      */
@@ -183,7 +187,7 @@ object Attachments {
     }
 
     /**
-     * 2.0.2: a full-size photo or screenshot made the vision encoder (CPU on MNN) cut it into
+     * a full-size photo or screenshot made the vision encoder (CPU on MNN) cut it into
      * thousands of patches, so prefill sat for minutes. The model now gets a copy whose longest
      * side is [max], EXIF rotation applied, cached next to the original. 2.1.1: also re-encoded when
      * the original is not JPEG/PNG (WebP, HEIC…), transparency flattened onto white. Falls back to

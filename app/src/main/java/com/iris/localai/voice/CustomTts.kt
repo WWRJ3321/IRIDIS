@@ -1,5 +1,9 @@
 package com.iris.localai.voice
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.Format
+import com.iris.localai.util.io.HttpDownload
 import android.content.Context
 import android.net.Uri
 import android.os.StatFs
@@ -16,7 +20,7 @@ import java.io.File
 import java.io.IOException
 
 /**
- * 2.4.5: text-to-speech models the user imports in sherpa-onnx format (a folder, a .tar.bz2, or a
+ * text-to-speech models the user imports in sherpa-onnx format (a folder, a .tar.bz2, or a
  * download link). The type is read from the files: `voices.bin` = Kokoro, a vocoder `.onnx`
  * (vocos / hifigan) = Matcha, otherwise one `.onnx` with `lexicon.txt` + `tokens.txt` or
  * `espeak-ng-data` = VITS (Piper / MeloTTS / …). GPT-SoVITS and RVC are not sherpa-onnx models;
@@ -217,14 +221,14 @@ class CustomTtsStore(private val context: Context, private val voiceStore: Voice
     }
 
     /** Text for [reason] (also used by the UI for the URL check). */
-    fun message(reason: TtsReject): String = com.iris.localai.I18n.s(when (reason) {
-        TtsReject.EMPTY, TtsReject.NO_MODEL -> com.iris.localai.R.string.tts245_no_model
-        TtsReject.PIPER_RAW -> com.iris.localai.R.string.tts245_piper_raw
-        TtsReject.GPT_SOVITS_RVC -> com.iris.localai.R.string.tts245_sovits
-        TtsReject.NO_TOKENS -> com.iris.localai.R.string.tts245_no_tokens
-        TtsReject.MATCHA_NO_VOCODER -> com.iris.localai.R.string.tts245_no_vocoder
-        TtsReject.NO_TEXT_FRONTEND -> com.iris.localai.R.string.tts245_no_frontend
-        TtsReject.BAD_URL -> com.iris.localai.R.string.tts245_bad_url
+    fun message(reason: TtsReject): String = I18n.s(when (reason) {
+        TtsReject.EMPTY, TtsReject.NO_MODEL -> R.string.tts245_no_model
+        TtsReject.PIPER_RAW -> R.string.tts245_piper_raw
+        TtsReject.GPT_SOVITS_RVC -> R.string.tts245_sovits
+        TtsReject.NO_TOKENS -> R.string.tts245_no_tokens
+        TtsReject.MATCHA_NO_VOCODER -> R.string.tts245_no_vocoder
+        TtsReject.NO_TEXT_FRONTEND -> R.string.tts245_no_frontend
+        TtsReject.BAD_URL -> R.string.tts245_bad_url
     })
 
     private suspend fun runImport(block: suspend () -> InstalledTts) {
@@ -242,7 +246,7 @@ class CustomTtsStore(private val context: Context, private val voiceStore: Voice
 
     private fun checkSpace(dir: File, need: Long) {
         val free = runCatching { StatFs(dir.absolutePath).availableBytes }.getOrDefault(Long.MAX_VALUE)
-        if (free < need) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, com.iris.localai.data.Format.bytes(need), com.iris.localai.data.Format.bytes(free)))
+        if (free < need) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
     }
 
     /** 选择文件夹 (ACTION_OPEN_DOCUMENT_TREE). The file list is checked before anything is copied. */
@@ -287,7 +291,7 @@ class CustomTtsStore(private val context: Context, private val voiceStore: Voice
                     currentCoroutineContext().ensureActive()
                     val out = File(tmp, d.rel.removePrefix(strip)).apply { parentFile?.mkdirs() }
                     val uri = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, d.id)
-                    (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, d.rel))).use { ins ->
+                    (resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_31f711, d.rel))).use { ins ->
                         out.outputStream().buffered(1 shl 20).use { os -> ins.copyTo(os, 1 shl 20) }
                     }
                     done += d.size
@@ -315,7 +319,7 @@ class CustomTtsStore(private val context: Context, private val voiceStore: Voice
             try {
                 val archive = File(tmp, ".archive.tar.bz2")
                 _import.value = TtsImportState(active = true, phase = 0, total = size.coerceAtLeast(0))
-                (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, name))).use { ins ->
+                (resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_31f711, name))).use { ins ->
                     archive.outputStream().buffered(1 shl 20).use { os -> copyWithProgress(ins, os, size) }
                 }
                 extractAndFinish(tmp, archive, name.removeSuffix(".tar.bz2").removeSuffix(".TAR.BZ2"))
@@ -332,15 +336,15 @@ class CustomTtsStore(private val context: Context, private val voiceStore: Voice
             val tmp = tempDir()
             try {
                 val archive = File(tmp, ".archive.tar.bz2")
-                val conn = com.iris.localai.util.HttpDownload.open(u, 0L)
+                val conn = HttpDownload.open(u, 0L)
                 try {
                     val code = conn.responseCode
-                    if (code != java.net.HttpURLConnection.HTTP_OK) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_19cb06, code, u))
+                    if (code != java.net.HttpURLConnection.HTTP_OK) throw IOException(I18n.s(R.string.util_19cb06, code, u))
                     val size = conn.contentLengthLong
                     if (size > 0) checkSpace(writeRoot(), size * 3)
                     _import.value = TtsImportState(active = true, phase = 0, total = size.coerceAtLeast(0))
                     conn.inputStream.use { ins -> archive.outputStream().buffered(1 shl 20).use { os -> copyWithProgress(ins, os, size) } }
-                    if (size > 0 && archive.length() != size) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_8b8d88, archive.length(), size, archive.name))
+                    if (size > 0 && archive.length() != size) throw IOException(I18n.s(R.string.util_8b8d88, archive.length(), size, archive.name))
                 } finally { conn.disconnect() }
                 extractAndFinish(tmp, archive, name)
             } catch (t: Throwable) { tmp.deleteRecursively(); throw t }

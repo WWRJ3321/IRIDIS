@@ -6,7 +6,7 @@ import com.iris.localai.engine.NpuIds
 import com.iris.localai.engine.NpuRuntimeFiles
 import com.iris.localai.engine.NpuState
 import com.iris.localai.engine.NpuSupport
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +26,7 @@ import java.util.zip.ZipFile
  *    Direct (QNN / QAIRT) 2.50.0 from Maven Central (com.qualcomm.qti:qnn-runtime:2.50.0,
  *    aliyun mirror as fallback), downloaded only after the user accepts Qualcomm's license.
  * Only the six files this SoC needs are kept (~113 MB, incl. libQnnHtpPrepare); the downloaded archive is deleted.
- * 2.0: "installed" means all five are present, non-empty and match the sizes recorded in the
+ * "installed" means all five are present, non-empty and match the sizes recorded in the
  * marker ([NpuRuntimeFiles.check]); otherwise the state is NeedsRepair and install() redoes it.
  */
 class QualcommNpuRuntime private constructor(context: Context) : NpuSupport {
@@ -90,7 +90,7 @@ class QualcommNpuRuntime private constructor(context: Context) : NpuSupport {
             for (name in NpuRuntimeFiles.expected(a).filter { it != NpuRuntimeFiles.DISPATCH }) {
                 extract(qnnAar, "jni/arm64-v8a/$name", tmp)
             }
-            // 2.0: record each library's size + SHA-256 (one pass over ~113 MB, install time only);
+            // record each library's size + SHA-256 (one pass over ~113 MB, install time only);
             // isInstalled checks presence + size on every query.
             val recorded = NpuRuntimeFiles.expected(a).map { name ->
                 val f = File(tmp, name)

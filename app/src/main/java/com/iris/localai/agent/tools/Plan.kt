@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +14,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-/** 1.14.0: one step of a plan. */
+/** one step of a plan. */
 @Serializable
 enum class PlanStatus(val mark: String, val label: String) { TODO(" ", "待办"), DOING("~", "进行中"), DONE("x", "完成"), SKIPPED("-", "跳过") }
 
@@ -19,7 +22,7 @@ enum class PlanStatus(val mark: String, val label: String) { TODO(" ", "待办")
 data class PlanStep(val text: String, val status: PlanStatus = PlanStatus.TODO)
 
 /**
- * 1.14.0 计划模式: the plan of one conversation. It is written into the system prompt on every
+ * 计划模式: the plan of one conversation. It is written into the system prompt on every
  * run (never into the history), so compaction can never fold it away; it stays until every step
  * is done or the plan is cleared.
  */
@@ -126,7 +129,7 @@ object PlanTool : AgentTool {
 }
 
 /**
- * 1.14.0 按需载入: groups listed only by name in the system prompt; `activate(group)` returns
+ * 按需载入: groups listed only by name in the system prompt; `activate(group)` returns
  * their full usage as a tool result (appended at the end, so the KV-cache prefix stays valid).
  */
 object ActivateTool : AgentTool {

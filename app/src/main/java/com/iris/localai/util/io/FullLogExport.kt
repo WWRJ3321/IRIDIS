@@ -1,6 +1,10 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
-import com.iris.localai.agent.AgentStep
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
+import com.iris.localai.agent.core.AgentStep
 import com.iris.localai.data.ChatMessage
 import com.iris.localai.data.Conversation
 import com.iris.localai.data.Role
@@ -13,7 +17,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * 2.5.0-beta7 「导出完整日志」: the run log plus the full text of the chats — user messages, replies,
+ * 「导出完整日志」: the run log plus the full text of the chats — user messages, replies,
  * reasoning (<think>), every agent tool step (name / arguments / result / output as the model saw
  * it), timestamps, model. One zip: README.txt, app-log.txt, conversations/NN-title.txt.
  *
@@ -114,7 +118,7 @@ object FullLogExport {
 
     /** File name inside the zip: 01-title.txt (title cut and made safe). */
     fun entryName(i: Int, c: Conversation): String {
-        val t = c.title.ifBlank { c.id }.replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_").take(40)
+        val t = c.title.ifBlank { c.id }.replace(RX_1, "_").take(40)
         return DIR + "%03d-%s.txt".format(i + 1, t)
     }
 
@@ -128,3 +132,6 @@ object FullLogExport {
         }
     }
 }
+
+// 预编译的正则（原先在函数体内每次调用都编译）。
+private val RX_1 = Regex("[\\\\/:*?\"<>|\\s]+")

@@ -30,7 +30,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 /**
- * 2.6.5 (实验): Edge0-35B through edge0-infer (libiris_edge0.so, CPU only). One runtime per process
+ * 实验: Edge0-35B through edge0-infer (libiris_edge0.so, CPU only). One runtime per process
  * (the engine's rule), so the native handle is shared and only models/sessions come and go.
  * Not tested on a real phone yet.
  */

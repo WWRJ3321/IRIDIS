@@ -1,5 +1,6 @@
 package com.iris.localai.voice
 
+import com.iris.localai.util.diagnostics.CrashReporter
 import android.content.Context
 import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
@@ -54,8 +55,8 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
 
     /** Creates a fresh VAD (cheap; one per listening session). */
     fun newVad(minSilenceSec: Float = 0.6f): Vad {
-        com.iris.localai.util.CrashReporter.breadcrumb("加载语音检测 VAD")
-        return createVad(minSilenceSec).also { com.iris.localai.util.CrashReporter.breadcrumb(null) }
+        CrashReporter.breadcrumb("加载语音检测 VAD")
+        return createVad(minSilenceSec).also { CrashReporter.breadcrumb(null) }
     }
 
     private fun createVad(minSilenceSec: Float): Vad = Vad(
@@ -124,7 +125,7 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
         // The breadcrumb only has to survive a *native* crash (process gone); a Java exception
         // must clear it, or the next launch would wrongly skip the speech warm-up.
         try {
-            com.iris.localai.util.CrashReporter.breadcrumb("加载语音识别 ${pack.id}")
+            CrashReporter.breadcrumb("加载语音识别 ${pack.id}")
             val r = OfflineRecognizer(
                 config = OfflineRecognizerConfig(
                     featConfig = FeatureConfig(sampleRate = ASR_SAMPLE_RATE, featureDim = 80),
@@ -134,7 +135,7 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
             recognizer = r
             language = wanted
             loadedPack = pack
-            com.iris.localai.util.CrashReporter.breadcrumb("预热语音识别 ${pack.id}")
+            CrashReporter.breadcrumb("预热语音识别 ${pack.id}")
             // The first decode pays ONNX Runtime's lazy allocation / kernel selection; do it now.
             runCatching {
                 val st = r.createStream()
@@ -146,7 +147,7 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
                 }
             }
         } finally {
-            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            CrashReporter.breadcrumb(null)
         }
     }
 
@@ -157,11 +158,11 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
         val stream = r.createStream()
         try {
             stream.acceptWaveform(samples, ASR_SAMPLE_RATE)
-            com.iris.localai.util.CrashReporter.breadcrumb("语音识别 ${loadedPack?.id} ${samples.size / 16} ms")
+            CrashReporter.breadcrumb("语音识别 ${loadedPack?.id} ${samples.size / 16} ms")
             r.decode(stream)
             cleanup(r.getResult(stream).text)
         } finally {
-            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            CrashReporter.breadcrumb(null)
             stream.release()
         }
     }
@@ -187,17 +188,17 @@ class SpeechSynthesizer(
     private val settings: SettingsRepository,
     private val clones: CloneVoiceStore,
     context: Context? = null,
-    /** 2.4.5: imported models (null in host tests). */
+    /** imported models (null in host tests). */
     private val customs: CustomTtsStore? = null,
 ) {
-    /** 2.2.10: 朗读引擎「系统 TTS」 (null in host tests). */
+    /** 朗读引擎「系统 TTS」 (null in host tests). */
     val system: SystemTts? = context?.let { SystemTts(it.applicationContext) }
     /** True while prepare() chose the system engine (cleared when a cloned voice is previewed). */
     @Volatile var usingSystem = false
         private set
-    /** 2.3.3: the card chat on screen speaks with its bound voice; null = the global setting. */
+    /** the card chat on screen speaks with its bound voice; null = the global setting. */
     @Volatile var override: VoiceOverride? = null
-    /** 2.3.4: true while the settings 试听 plays — it always uses the global voice, never a card chat's override. */
+    /** true while the settings 试听 plays — it always uses the global voice, never a card chat's override. */
     @Volatile var globalOnly: Boolean = false
     private val activeOverride: VoiceOverride? get() = VoiceBinding.applicable(override, globalOnly)
     private fun sel(): VoiceSel = settings.current.let { s -> VoiceBinding.effective(VoiceSel(s.ttsPack, s.ttsSpeakerId, s.cloneVoiceId), activeOverride) }
@@ -221,7 +222,7 @@ class SpeechSynthesizer(
     private var cloneAudio: FloatArray? = null
 
     val isAvailable: Boolean get() = (systemSelected() && system?.hasEngine() == true) || activeClone() != null || activeCustom() != null || activePack() != null
-    /** 2.4.5: the chosen imported model, if it is still on disk. */
+    /** the chosen imported model, if it is still on disk. */
     fun activeCustom(): InstalledTts? = customs?.find(sel().pack)
     /** Imported model loaded right now (its id), and its voice count. */
     @Volatile private var loadedCustom: String? = null
@@ -295,7 +296,7 @@ class SpeechSynthesizer(
             )
         }
         try {
-        com.iris.localai.util.CrashReporter.breadcrumb("加载语音合成 ${pack.id}")
+        CrashReporter.breadcrumb("加载语音合成 ${pack.id}")
         val zhFsts = listOf("date.fst", "number.fst", "phone.fst").joinToString(",") { p(it) }
         tts = when (pack) {
             VoicePack.TTS_MELO -> OfflineTts(
@@ -360,14 +361,14 @@ class SpeechSynthesizer(
         loadedPack = pack
         clone = null
         cloneAudio = null
-        com.iris.localai.util.CrashReporter.breadcrumb("预热语音合成 ${pack.id}")
+        CrashReporter.breadcrumb("预热语音合成 ${pack.id}")
         runCatching { tts!!.generateWithCallback("你好", 0, 1f, TtsChunkCallback { false }) } // warm-up, discarded
         } finally {
-            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            CrashReporter.breadcrumb(null)
         }
     }
 
-    /** 2.4.5: loads an imported sherpa-onnx model (Kokoro / Matcha / VITS) from its detected files. Runs on the TTS worker. */
+    /** loads an imported sherpa-onnx model (Kokoro / Matcha / VITS) from its detected files. Runs on the TTS worker. */
     private fun prepareCustom(m: InstalledTts) {
         if (tts != null && loadedCustom == m.id) return
         tts?.release()
@@ -382,7 +383,7 @@ class SpeechSynthesizer(
         val lexicon = sp.lexicons.joinToString(",") { p(it) }
         val fsts = sp.ruleFsts.joinToString(",") { p(it) }
         try {
-            com.iris.localai.util.CrashReporter.breadcrumb("加载导入的语音合成 ${m.id} (${sp.type})")
+            CrashReporter.breadcrumb("加载导入的语音合成 ${m.id} (${sp.type})")
             val modelConfig = when (sp.type) {
                 CustomTtsType.KOKORO -> OfflineTtsModelConfig(
                     kokoro = OfflineTtsKokoroModelConfig(model = p(sp.model), voices = p(sp.voices), tokens = p(sp.tokens), dataDir = p(sp.dataDir), lexicon = lexicon, dictDir = "" /* unused since sherpa-onnx 1.12; a path trips the jieba code (see TTS_MELO) */),
@@ -403,7 +404,7 @@ class SpeechSynthesizer(
             customSpeakers = runCatching { engine.numSpeakers() }.getOrDefault(1)
             runCatching { engine.generateWithCallback("你好", 0, 1f, TtsChunkCallback { false }) } // warm-up, discarded
         } finally {
-            com.iris.localai.util.CrashReporter.breadcrumb(null)
+            CrashReporter.breadcrumb(null)
         }
     }
 
@@ -419,7 +420,7 @@ class SpeechSynthesizer(
             fun p(name: String) = File(d, name).absolutePath
             requireFiles(p("encoder.int8.onnx"), p("decoder.int8.onnx"), p("vocos_24khz.onnx"), p("tokens.txt"), p("lexicon.txt"), p("espeak-ng-data"))
             try {
-                com.iris.localai.util.CrashReporter.breadcrumb("加载音色克隆 ZipVoice")
+                CrashReporter.breadcrumb("加载音色克隆 ZipVoice")
                 tts = OfflineTts(
                     config = OfflineTtsConfig(
                         model = OfflineTtsModelConfig(
@@ -434,7 +435,7 @@ class SpeechSynthesizer(
                 )
                 loadedPack = pack
             } finally {
-                com.iris.localai.util.CrashReporter.breadcrumb(null)
+                CrashReporter.breadcrumb(null)
             }
         }
         if (clone?.id != v.id || cloneAudio == null) {
@@ -475,7 +476,7 @@ class SpeechSynthesizer(
             }
             val engine = tts ?: return@withContext
             val sid = if (loadedCustom != null) CustomTts.speaker(speakerId, customSpeakers) else if (loadedPack?.singleSpeaker != false) 0 else speakerId
-            com.iris.localai.util.CrashReporter.breadcrumb("语音合成 ${loadedCustom ?: loadedPack?.id} 音色$sid：${text.take(40)}")
+            CrashReporter.breadcrumb("语音合成 ${loadedCustom ?: loadedPack?.id} 音色$sid：${text.take(40)}")
             try {
                 if (loadedPack == VoicePack.CLONE_ZIPVOICE && clone != null) {
                     // ZipVoice re-encodes the reference with every call; one sentence per call keeps the first audio early.
@@ -484,7 +485,7 @@ class SpeechSynthesizer(
                     engine.generateWithCallback(text, sid, speed, TtsChunkCallback(onAudio))
                 }
             } finally {
-                com.iris.localai.util.CrashReporter.breadcrumb(null)
+                CrashReporter.breadcrumb(null)
             }
         }
 
@@ -514,6 +515,6 @@ class TtsChunkCallback(private val onAudio: (FloatArray) -> Boolean) : (FloatArr
         try { if (onAudio(samples)) 1 else 0 } catch (t: Throwable) { 0 }
 }
 
-/** 2.2.10 AppSettings.ttsEngine values. */
+/** AppSettings.ttsEngine values. */
 const val TTS_ENGINE_LOCAL = "local"
 const val TTS_ENGINE_SYSTEM = "system"

@@ -1,5 +1,9 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import com.iris.localai.data.ModelFormat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -11,7 +15,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * 1.7.4: a resource-tier change has to reach engines that fix their resources at load time.
+ * a resource-tier change has to reach engines that fix their resources at load time.
  *
  * MNN writes thread_num / power into its config and creates its worker pool inside Llm::load();
  * LiteRT-LM fixes the CPU thread count (Backend.CPU(threadCount)) and its XNNPACK/dispatch threads
@@ -41,7 +45,7 @@ object TierReloadPolicy {
         next: ResourcePlan,
         loadedPreferred: Backend? = null,
         nextPreferred: Backend? = null,
-        /** 1.7.5: cores/nice the loaded engine's threads have *now* (after live re-pins); null = unknown. */
+        /** cores/nice the loaded engine's threads have *now* (after live re-pins); null = unknown. */
         live: LiveChange? = null,
     ): TierReloadDecision {
         if (format == null || loaded == null) return TierReloadDecision.NONE
@@ -51,43 +55,43 @@ object TierReloadPolicy {
             ModelFormat.GGUF -> {
                 // CPU: threads / cores / nice are applied between decodes (1.7.2), batch next load.
                 // GPU/NPU: per-request threads; only a different backend choice needs a reload.
-                if (activeBackend != Backend.CPU && backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+                if (activeBackend != Backend.CPU && backendChanged) changed += I18n.s(R.string.models_e778d6)
             }
             ModelFormat.MNN -> if (activeBackend == Backend.CPU) {
-                // 1.7.5: cores + nice are re-pinned on the existing threads (no reload); only the
+                // cores + nice are re-pinned on the existing threads (no reload); only the
                 // pool size needs one. Power is always "normal" on the CPU (MNN binding off).
-                if (loaded.threads != next.threads) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d27612)
+                if (loaded.threads != next.threads) changed += I18n.s(R.string.settings_d27612)
                 val curCpus = live?.cpus ?: LiveResourcePolicy.coresFor(loaded, loaded.threads)
                 val curNice = live?.nice ?: loaded.nice
-                if (curCpus != LiveResourcePolicy.coresFor(next, loaded.threads)) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
-                if (curNice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
-                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+                if (curCpus != LiveResourcePolicy.coresFor(next, loaded.threads)) changed += I18n.s(R.string.settings_976a3e)
+                if (curNice != next.nice) changed += I18n.s(R.string.engine_ee8ecb)
+                if (backendChanged) changed += I18n.s(R.string.models_e778d6)
             } else {
                 // 1.7.8, MNN on the GPU: thread_num is the OpenCL mode (fixed by MnnEngine) and the
                 // power hint is forced to normal, so neither needs a reload. Cores + nice reach the
                 // generating (host) thread every reply; the reload only re-homes the driver threads
                 // created at load.
-                if (loaded.cpus != next.cpus) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
-                if (loaded.nice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
-                // 1.7.9: the Adreno perf hint is a property of the OpenCL context created at load.
-                if (loaded.gpuHint != next.gpuHint) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_117661)
-                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+                if (loaded.cpus != next.cpus) changed += I18n.s(R.string.settings_976a3e)
+                if (loaded.nice != next.nice) changed += I18n.s(R.string.engine_ee8ecb)
+                // the Adreno perf hint is a property of the OpenCL context created at load.
+                if (loaded.gpuHint != next.gpuHint) changed += I18n.s(R.string.settings_117661)
+                if (backendChanged) changed += I18n.s(R.string.models_e778d6)
             }
             ModelFormat.LITERT -> {
-                // 1.7.9: LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() takes no
+                // LiteRT-LM 0.18 has no GPU priority / perf option (Backend.GPU() takes no
                 // arguments, EngineConfig has none) → a GPU 性能提示 change never reloads it.
-                // 1.7.8: on the GPU / NPU LiteRT-LM takes no thread count (Backend.GPU()/NPU()).
-                // 1.10.2: and no reload for the host threads' cores / priority either — that cost
+                // on the GPU / NPU LiteRT-LM takes no thread count (Backend.GPU()/NPU()).
+                // and no reload for the host threads' cores / priority either — that cost
                 // the user a full 40 s+ engine init per speed change. They apply at the next load.
                 if (ReloadRules.tierReloadsLiteRt(activeBackend)) {
-                    if (loaded.threads != next.threads) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_d27612)
-                    if (loaded.cpus != next.cpus) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.settings_976a3e)
-                    if (loaded.nice != next.nice) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ee8ecb)
+                    if (loaded.threads != next.threads) changed += I18n.s(R.string.settings_d27612)
+                    if (loaded.cpus != next.cpus) changed += I18n.s(R.string.settings_976a3e)
+                    if (loaded.nice != next.nice) changed += I18n.s(R.string.engine_ee8ecb)
                 }
-                if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+                if (backendChanged) changed += I18n.s(R.string.models_e778d6)
             }
-            // 2.2.0: GenieX QAIRT bundles take no thread / core setting; only a backend change matters.
-            ModelFormat.QAIRT, ModelFormat.EDGE0 -> if (backendChanged) changed += com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6)
+            // GenieX QAIRT bundles take no thread / core setting; only a backend change matters.
+            ModelFormat.QAIRT, ModelFormat.EDGE0 -> if (backendChanged) changed += I18n.s(R.string.models_e778d6)
         }
         return TierReloadDecision(changed.isNotEmpty(), changed)
     }
@@ -115,13 +119,13 @@ class TierReloadScheduler(
     private val lock = Any()
     /** Only the debounce delay lives here: cancelling it never touches a running reload. */
     private var job: Job? = null
-    /** 1.7.7: evaluations (and the reloads they start) run one at a time and are never cancelled. */
+    /** evaluations (and the reloads they start) run one at a time and are never cancelled. */
     private val evalMutex = Mutex()
     @Volatile var pending: Boolean = false
         private set
     @Volatile var reloads: Int = 0
         private set
-    /** 1.7.7: true while a reload started by this scheduler runs. */
+    /** true while a reload started by this scheduler runs. */
     @Volatile var reloading: Boolean = false
         private set
 
@@ -146,7 +150,7 @@ class TierReloadScheduler(
     }
 
     /**
-     * 1.7.7: before, [onTierChanged] cancelled `job` even while it was inside [reload]; the
+     * before, [onTierChanged] cancelled `job` even while it was inside [reload]; the
      * cancellation hit EngineManager.loadLocked after it had already unloaded the model, which then
      * ended Idle, and the follow-up evaluation found "no model loaded" — a request queued behind that
      * reload got "模型未加载". Now a started evaluation always completes (NonCancellable) and the

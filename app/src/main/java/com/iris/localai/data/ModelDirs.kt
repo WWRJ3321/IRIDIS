@@ -1,11 +1,13 @@
 package com.iris.localai.data
 
-import com.iris.localai.agent.WorkspaceResolver
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.workspace.WorkspaceResolver
 import java.io.File
 import java.io.IOException
 
 /**
- * 2.1.0: where LLM models live. With 全部文件访问 they go to the public `Download/IRIDIS/models`, which
+ * where LLM models live. With 全部文件访问 they go to the public `Download/IRIDIS/models`, which
  * survives an uninstall and the applicationId change (com.iris.localai → com.iris); without it they stay
  * in the app-specific `Android/data/<pkg>/files/models`. Pure java.io (no Android types) so the
  * resolution, the merged listing and the move are unit-tested on temp folders (V210ModelDirsTest);
@@ -36,7 +38,7 @@ object ModelDirs {
 
     /**
      * Shared `Download/IRIDIS/<sub>` with 全部文件访问 (mounted and writable), else [privateDir].
-     * 2.1.1: also used for the voice packs ([sub] = `voice`), with the same fallback.
+     * also used for the voice packs ([sub] = `voice`), with the same fallback.
      */
     fun resolve(
         allFilesAccess: Boolean,
@@ -46,7 +48,7 @@ object ModelDirs {
         usable: (File) -> Boolean = WorkspaceResolver::probe,
         sub: String = SUB,
         /**
-         * 2.5.2: the configured storage location (设置 › 智能体 › 工作区位置) is `Download/IRIDIS` ([followsStorage]):
+         * the configured storage location (设置 › 智能体 › 工作区位置) is `Download/IRIDIS` ([followsStorage]):
          * the shared folder is used when it is writable even without 全部文件访问, so downloads *and*
          * imports land next to the workspace instead of in Android/data. Default false (2.1.0 rule).
          */
@@ -54,17 +56,18 @@ object ModelDirs {
     ): Location {
         val shared = downloadsDir?.let { sharedDir(it, sub) }
         val ok = (allFilesAccess || followStorage) && storageState == WorkspaceResolver.MOUNTED && shared != null && usable(shared)
-        if (ok) ensureNoMedia(shared!!)
-        return Location(if (ok) shared!! else privateDir, ok, shared, privateDir)
+        val dir = if (ok) shared else null
+        if (dir != null) ensureNoMedia(dir)
+        return Location(dir ?: privateDir, ok, shared, privateDir)
     }
 
     /**
-     * 2.5.2: true when the app's storage root (AgentContainer.appRoot: `Download/IRIDIS` for 工作区位置 下载 /
+     * true when the app's storage root (AgentContainer.appRoot: `Download/IRIDIS` for 工作区位置 下载 /
      * 自定义, `filesDir/iridis` for 应用私有目录) is `Download/IRIDIS`. Pure (paths only).
      */
     fun followsStorage(storageRoot: File?, downloadsDir: File?, requestedShared: Boolean = false): Boolean {
         if (downloadsDir == null) return false
-        // 2.6.7: 设置里选的是 下载/自定义 就跟随 Download/IRIDIS——不再看工作区「当时」解析到哪。
+        // 设置里选的是 下载/自定义 就跟随 Download/IRIDIS——不再看工作区「当时」解析到哪。
         // 之前启动时存储没就绪/探测失败一次，工作区退回私有目录，模型页就一直提示「更改位置」。
         if (requestedShared) return true
         if (storageRoot == null) return false
@@ -72,7 +75,7 @@ object ModelDirs {
     }
 
     /**
-     * 2.6.7: 路径比较——规范化、去尾斜杠，并把 /sdcard、/storage/self/primary、/mnt/user/0/primary 等别名
+     * 路径比较——规范化、去尾斜杠，并把 /sdcard、/storage/self/primary、/mnt/user/0/primary 等别名
      * 统一成 /storage/emulated/0（软链接在 FUSE 上不一定能 canonical 出来）。Pure.
      */
     fun samePath(a: File, b: File): Boolean = norm(a) == norm(b)
@@ -91,7 +94,7 @@ object ModelDirs {
         "/data/media/0" to "/storage/emulated/0",
     )
 
-    /** 2.6.7: the folder is the shared `Download/IRIDIS/<sub>` (by path, aliases included). Pure. */
+    /** the folder is the shared `Download/IRIDIS/<sub>` (by path, aliases included). Pure. */
     fun isShared(dir: File, downloadsDir: File?, sub: String = SUB): Boolean =
         downloadsDir != null && samePath(dir, sharedDir(downloadsDir, sub))
 
@@ -139,7 +142,7 @@ object ModelDirs {
     ): File {
         dstDir.mkdirs()
         val target = File(dstDir, src.name)
-        if (target.exists()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, src.name))
+        if (target.exists()) throw IOException(I18n.s(R.string.data_f95dbe, src.name))
         val total = totalBytes(src)
         if (rename(src, target)) { onBytes(total); return target }
         val part = File(dstDir, src.name + ModelRepository.PART_SUFFIX)
@@ -161,13 +164,13 @@ object ModelDirs {
                         }
                     }
                 }
-                if (to.length() != from.length()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81fbbb, from.name))
+                if (to.length() != from.length()) throw IOException(I18n.s(R.string.data_81fbbb, from.name))
             }
             if (src.isDirectory) {
                 src.walkTopDown().filter { it.isFile }.forEach { f -> copyFile(f, File(part, f.relativeTo(src).path)) }
             } else copyFile(src, part)
-            if (totalBytes(part) != total) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_81fbbb, src.name))
-            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+            if (totalBytes(part) != total) throw IOException(I18n.s(R.string.data_81fbbb, src.name))
+            if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
         } catch (t: Throwable) {
             part.deleteRecursively()
             throw t

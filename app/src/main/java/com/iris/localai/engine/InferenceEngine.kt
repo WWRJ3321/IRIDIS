@@ -1,10 +1,12 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import com.iris.localai.data.GenerationStats
 import com.iris.localai.data.LocalModel
 import kotlinx.coroutines.flow.Flow
 
-/** 1.10.12: [images] = absolute paths of pictures attached to this (user) message; only vision models read them. */
+/** [images] = absolute paths of pictures attached to this (user) message; only vision models read them. */
 data class PromptMessage(val role: String, val content: String, val images: List<String> = emptyList()) {
     companion object {
         const val SYSTEM = "system"
@@ -17,20 +19,20 @@ data class LoadConfig(
     val contextLength: Int,
     val threads: Int,
     val flashAttention: Boolean,
-    /** 1.7.1: the one backend to try. Engines no longer fall back internally; [EngineManager] walks the chain. */
+    /** the one backend to try. Engines no longer fall back internally; [EngineManager] walks the chain. */
     val backend: Backend = Backend.CPU,
     /** KV cache type: 0 = F16, 1 = Q8_0, 2 = Q4_0 (llama.cpp; quantised needs Flash Attention). */
     val kvCacheType: Int = 0,
     /** Prefill batch (llama.cpp). */
     val batchSize: Int = 512,
     val useMmap: Boolean = true,
-    /** 1.8.0 crash-diag (MNN only): treat vision models as text-only, skip visual.mnn. */
+    /** crash-diag (MNN only): treat vision models as text-only, skip visual.mnn. */
     val noVisual: Boolean = false,
     /** Resource tier resolved for this device: cores / priority are applied on the engine thread. */
     val resources: ResourcePlan? = null,
     /** 2.2.17, GGUF (llama.cpp): absolute path of the vision projector to load with the model, or null. */
     val mmprojPath: String? = null,
-    /** 2.4.5 设置「识图用 GPU」: allow the projector on an Adreno GPU (off = 2.4.4 rule, CPU there). */
+    /** 设置「识图用 GPU」: allow the projector on an Adreno GPU (off = 2.4.4 rule, CPU there). */
     val mmprojGpu: Boolean = false,
     /** 2.5.0-beta9, GGUF (llama.cpp): MTP draft tokens per step, 0 = normal decoding. */
     val mtpDraft: Int = 0,
@@ -40,7 +42,7 @@ data class LoadConfig(
     val moeCpu: Boolean = false,
     /** 2.5.1, GGUF MoE: 激活专家数覆盖，0 = 模型默认。 */
     val expertUsed: Int = 0,
-    /** 2.5.4: LES 前瞻专家调度（qwen35moe，CPU）。 */
+    /** LES 前瞻专家调度（qwen35moe，CPU）。 */
     val les: Boolean = false,
 )
 
@@ -52,7 +54,7 @@ data class SamplingConfig(
     val repeatPenalty: Float,
     val maxNewTokens: Int,
     val disableThinking: Boolean,
-    /** 2.6.0: gpt-oss / Spark reasoning effort, 0 = model default, 1 low, 2 medium, 3 high. */
+    /** gpt-oss / Spark reasoning effort, 0 = model default, 1 low, 2 medium, 3 high. */
     val thinkEffort: Int = 0,
     /** Decode threads for this request (0 = keep current). Lets the manager throttle on heat. */
     val threads: Int = 0,
@@ -75,31 +77,31 @@ data class ModelDetails(
     val contextLength: Int,
     val trainContextLength: Int,
     val supportsThinking: Boolean,
-    /** 1.10.12: the loaded model can read attached images. */
+    /** the loaded model can read attached images. */
     val supportsVision: Boolean = false,
     /**
-     * 2.1.1: longest side of the picture copy handed to this engine (0 = Attachments.VISION_MAX_SIDE).
+     * longest side of the picture copy handed to this engine (0 = Attachments.VISION_MAX_SIDE).
      * MNN's Qwen-VL encoders keep the picture's own size, so 1024 px meant ~3000 ViT patches on the CPU.
      */
     val visionMaxSide: Int = 0,
     /** The chat template opens <think> itself, so the reply starts mid-reasoning. */
     val thinkingPrefilled: Boolean = false,
-    /** 2.6.0: "oss" / "spark" when the model has its own reasoning-effort levels, else "". */
+    /** "oss" / "spark" when the model has its own reasoning-effort levels, else "". */
     val thinkEffort: String = "",
     val hasChatTemplate: Boolean,
     /** Human-readable backend line, e.g. "GPU · Adreno 830 · OpenCL". */
     val backend: String,
-    /** 1.7.1: the backend really in use (after any fallback). */
+    /** the backend really in use (after any fallback). */
     val activeBackend: Backend = Backend.CPU,
     /** Why the model is not on the backend that was chosen (fallback / crash memory), or null. */
     val fallbackNote: String? = null,
     /**
-     * 1.7.9: the GPU perf hint really in effect (IrisResource log): MNN on OpenCL reports the Adreno
+     * the GPU perf hint really in effect (IrisResource log): MNN on OpenCL reports the Adreno
      * cl_qcom_perf_hint of its context ("low"/"normal"/"high", "none" = driver took none);
      * LiteRT on the GPU "unsupported" (no such API); null on the CPU.
      */
     val gpuHint: String? = null,
-    /** 1.10.2: LiteRT-LM compiled-cache files of this model before / after the load (null = no such cache). */
+    /** LiteRT-LM compiled-cache files of this model before / after the load (null = no such cache). */
     val cacheBefore: CacheSnapshot? = null,
     val cacheAfter: CacheSnapshot? = null,
 )
@@ -124,37 +126,37 @@ interface InferenceEngine {
     /** Thread-safe, non-blocking request to stop the running generation. */
     fun cancel()
 
-    /** 1.7.2: how a tier change made while this engine generates reaches it. */
+    /** how a tier change made while this engine generates reaches it. */
     fun liveApplyMode(): LiveApply = LiveApply.RELOAD
 
-    /** 1.7.2: apply [plan] to the running reply if this engine can; false = it will not. */
+    /** apply [plan] to the running reply if this engine can; false = it will not. */
     fun applyResourcesLive(plan: ResourcePlan): Boolean = false
 
-    /** 1.7.5: cores + nice the engine's own threads have right now (null = not tracked / not live). */
+    /** cores + nice the engine's own threads have right now (null = not tracked / not live). */
     fun livePolicy(): LiveChange? = null
 
-    /** 1.7.5: native thread ids doing the inference work (for the IrisResource CPU report); empty = unknown. */
+    /** native thread ids doing the inference work (for the IrisResource CPU report); empty = unknown. */
     fun resourceThreadIds(): IntArray = IntArray(0)
 
     /** Forget cached conversation state (KV cache / session). */
     suspend fun resetContext()
 
     /**
-     * 2.3: true when the engine matches every request against what its KV cache holds on its own
+     * true when the engine matches every request against what its KV cache holds on its own
      * (llama.cpp: longest common token prefix, the rest re-decoded), so a new chat need not drop the
      * cache: its first turn reuses the shared system prompt (智能体: ~500 tokens) instead of
      * prefilling it again. Engines that only continue an exact history keep the reset.
      */
     val reusesCommonPrefix: Boolean get() = false
 
-    /** 2.4.0: native work that outlives the generation lock is still running (MNN prefill); unload waits for it. */
+    /** native work that outlives the generation lock is still running (MNN prefill); unload waits for it. */
     val busyNative: Boolean get() = false
 
     suspend fun unload()
 }
 
 /**
- * 1.7.8: GGUF length limit vs. a full context. llama.cpp's decode loop runs
+ * GGUF length limit vs. a full context. llama.cpp's decode loop runs
  * `max_new = min(max_new_tokens, n_ctx − kv − 1)` iterations (iris_engine.cpp, decode loop) and
  * reports MaxTokens when it ran out — also when the *context* was the smaller bound. In that case
  * every iteration produced a token, so generated == max_new < max_new_tokens tells the two apart

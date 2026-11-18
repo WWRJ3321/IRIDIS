@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.web
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -11,7 +14,7 @@ import java.net.URLEncoder
 import java.util.Locale
 
 /**
- * 2.0.0 浏览器搜索: the shared in-app browser ([WebViewBrowser]) as a search engine, so web_search
+ * 浏览器搜索: the shared in-app browser ([WebViewBrowser]) as a search engine, so web_search
  * works like searching on the phone (same cookies as the 浏览器 page: a consent or captcha solved
  * there once stays solved). Injected so the search stays testable on the JVM.
  */
@@ -162,7 +165,7 @@ object BrowserSearch {
         val source = if (ti > 0) ls.subList(0, ti).firstOrNull { !isCrumb(it) && it.length <= 40 }.orEmpty() else ""
         val body = (if (ti >= 0) ls.drop(ti + 1) else ls)
             .filter { !isCrumb(it) && it != title && it != source }
-        // 2.1.7: Google News cards put the date on its own line after the snippet ("3 小时前");
+        // Google News cards put the date on its own line after the snippet ("3 小时前");
         // it used to be glued onto the snippet and was often cut off by the length cap.
         var date = body.lastOrNull { DATE_LINE.matches(it) }.orEmpty()
         var text = body.filter { it != date || date.isEmpty() }.joinToString(" ")
@@ -232,7 +235,7 @@ object BrowserSearch {
                 val first = once(if (google) googleUrl(q, hl, news) else bingUrl(q, hl))
                 if (google && news && first.hits.isEmpty() && first.block == null) once(googleUrl(q, hl, false)) else first
             }
-        }.getOrElse { Outcome(label, emptyList()) }
+        }.getOrElse { if (it is InterruptedException) throw it; Outcome(label, emptyList()) }
     }
 
     // ---------- page scripts ----------

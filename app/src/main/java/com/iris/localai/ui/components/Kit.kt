@@ -1,5 +1,9 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.theme.LocalSolidBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -52,7 +56,7 @@ import com.iris.localai.ui.theme.softShadow
 import com.iris.localai.ui.theme.clipDraw
 
 /*
- * 2.2.4 design kit (Kimi-like): floating round buttons and pills with one soft shadow, 20 dp
+ * design kit (Kimi-like): floating round buttons and pills with one soft shadow, 20 dp
  * cards, a top bar without a flat full-width strip. Screens compose these instead of styling
  * surfaces themselves.
  */
@@ -107,14 +111,14 @@ fun IrisPill(
 }
 
 /**
- * 2.2.8: press feedback for rounded glass controls without a ripple (the default indication drew
+ * press feedback for rounded glass controls without a ripple (the default indication drew
  * a square highlight on the pill): a slight content-colour tint drawn in the control's own shape.
  */
 @Composable
 fun Modifier.pressTint(interaction: androidx.compose.foundation.interaction.InteractionSource, shape: androidx.compose.ui.graphics.Shape): Modifier {
     val tintColor = Iris.colors.text
     val pressed by interaction.collectIsPressedAsState()
-    val a by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.07f else 0f, androidx.compose.animation.core.tween(120), label = "pressTint")
+    val a by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.07f else 0f, IrisMotion.Quick.float(), label = "pressTint")
     return this.drawWithContent {
         drawContent()
         if (a > 0f) drawOutline(shape.createOutline(size, layoutDirection, this), tintColor.copy(alpha = a))
@@ -125,13 +129,13 @@ fun Modifier.pressTint(interaction: androidx.compose.foundation.interaction.Inte
 @Composable
 fun IrisCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val c = Iris.colors
-    // 2.5.0 Beta2 柔光: solid neutral card — opaque, no shadow, 0.5 dp low-contrast hairline.
+    // 柔光: solid neutral card — opaque, no shadow, 0.5 dp low-contrast hairline.
     val soft = softStyle()
     Column(
         modifier
             .fillMaxWidth()
             .softShadow(if (c.isDark || soft) IrisElevation.none else IrisElevation.card, IrisRadius.largeShape, c.isDark)
-            // 2.6.2: clip drawing only. A real clip makes Compose hit-test every touch against the
+            // clip drawing only. A real clip makes Compose hit-test every touch against the
             // continuous-corner path (Path.op with a 0.01 px probe); past ~8192 px down a tall card
             // that probe vanishes in float precision and taps are dropped (MCP tools after #20).
             .background(c.surfaceElevated, IrisRadius.largeShape)
@@ -157,21 +161,21 @@ fun IrisTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val c = Iris.colors
-    // 2.2.9: no background band behind the bar (no strip / scrim): only the floating glass back
+    // no background band behind the bar (no strip / scrim): only the floating glass back
     // button, the title and the glass action pill sit over the content. [stripAlpha] is ignored.
-    // 2.2.11: the centred title sits in a frosted glass pill (same height / glass as the back circle)
+    // the centred title sits in a frosted glass pill (same height / glass as the back circle)
     // so content scrolling underneath never collides with the title text. Its side inset follows
     // the wider of the back circle and the action pill, keeping the three groups symmetric.
     val density = androidx.compose.ui.platform.LocalDensity.current
     var actionsWidth by remember { mutableStateOf(0.dp) }
     val sideInset = maxOf(IrisDimens.floatingButton, actionsWidth) + IrisDimens.space8
     Box(modifier.fillMaxWidth()) {
-        // 2.2.13: light top fade (page background → transparent, status bar + ~56 dp) so content that
+        // light top fade (page background → transparent, status bar + ~56 dp) so content that
         // scrolls under the back button and title pill reads as fading out instead of colliding with them.
-        // 2.2.14 纯色背景: a plain bar in the page colour instead of the fade.
-        // 2.5.0-beta10: 柔光 has no blur, so the fade let scrolled text show through the title — solid
+        // 纯色背景: a plain bar in the page colour instead of the fade.
+        // 柔光 has no blur, so the fade let scrolled text show through the title — solid
         // opaque bar there too (as 2.4.6 looked, where the glass blur hid it).
-        if (com.iris.localai.ui.theme.LocalSolidBackground.current || softStyle()) Box(Modifier.matchParentSize().background(c.background))
+        if (LocalSolidBackground.current || softStyle()) Box(Modifier.matchParentSize().background(c.background))
         else Box(
             Modifier.matchParentSize().background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -198,7 +202,7 @@ fun IrisTopBar(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                FloatingIconButton(Icons.AutoMirrored.Outlined.ArrowBack, com.iris.localai.I18n.s(com.iris.localai.R.string.components_5f4112), onClick = onBack)
+                FloatingIconButton(Icons.AutoMirrored.Outlined.ArrowBack, I18n.s(R.string.components_5f4112), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 var hasActions by remember { mutableStateOf(false) }
                 CompositionLocalProvider(LocalPressableIconSize provides IrisDimens.floatingButton) {

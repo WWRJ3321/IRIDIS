@@ -1,33 +1,40 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.GpuPerfHint
+import com.iris.localai.data.TierProfile
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 
 /**
- * 1.7.1: speed is no longer *chosen* (no tok/s target, no pacer sleeping between tokens). The user
+ * speed is no longer *chosen* (no tok/s target, no pacer sleeping between tokens). The user
  * picks how much of the phone inference may use; the model then runs as fast as those resources
  * allow. A tier sets the thread count, which cores the threads may run on, their scheduling
  * priority, the prefill batch size, MNN's power hint, and whether "自动" may put a model on the GPU.
  */
 enum class ResourceTier(val label: String, val short: String, val hint: String) {
-    LOW(com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_58b88a)),
-    MEDIUM(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_6e6d30), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_aed1df), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_a48137)),
-    HIGH(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d4e66e), com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4296d7), com.iris.localai.I18n.s(com.iris.localai.R.string.engine_478e37));
-    // 1.7.8: 「全部」was removed (user request). A stored ordinal 3 is migrated to HIGH
+    LOW(I18n.s(R.string.glass_95f6bb), I18n.s(R.string.glass_95f6bb), I18n.s(R.string.engine_58b88a)),
+    MEDIUM(I18n.s(R.string.engine_6e6d30), I18n.s(R.string.settings_aed1df), I18n.s(R.string.engine_a48137)),
+    HIGH(I18n.s(R.string.engine_d4e66e), I18n.s(R.string.settings_4296d7), I18n.s(R.string.engine_478e37));
+    // 「全部」was removed (user request). A stored ordinal 3 is migrated to HIGH
     // (AppSettings.migrated / sanitized); [of] maps anything out of range to DEFAULT = HIGH too.
 
     companion object {
         val DEFAULT = HIGH
         fun of(i: Int): ResourceTier = entries.getOrElse(i) { DEFAULT }
-        /** 1.7.8: ordinal the removed 「全部」 tier had in ≤ 1.7.7 settings. */
+        /** ordinal the removed 「全部」 tier had in ≤ 1.7.7 settings. */
         const val REMOVED_ALL_ORDINAL = 3
     }
 }
 
 /**
- * 1.7.8: which set of tier profiles applies. On the GPU (and NPU) the heavy maths runs off the CPU;
+ * which set of tier profiles applies. On the GPU (and NPU) the heavy maths runs off the CPU;
  * the tier only places the *host* threads (kernel submission, sampling, tokenizer, the driver's
  * own threads created at load), so it gets its own profile set with different defaults.
  */
 enum class ResourceBackendKind(val label: String) {
-    CPU(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_d30939)), GPU(com.iris.localai.I18n.s(com.iris.localai.R.string.engine_b80954));
+    CPU(I18n.s(R.string.engine_d30939)), GPU(I18n.s(R.string.engine_b80954));
 
     companion object {
         /** null (not loaded yet) = CPU, the profile set a load starts from for CPU-default engines. */
@@ -84,13 +91,13 @@ data class ResourcePlan(
      * Empty = unknown (then the target cores are kept as they are).
      */
     val nonPrimeCpus: List<Int> = emptyList(),
-    /** 1.7.8: the profile set this plan came from (CPU, or GPU/NPU host threads). */
+    /** the profile set this plan came from (CPU, or GPU/NPU host threads). */
     val kind: ResourceBackendKind = ResourceBackendKind.CPU,
     /**
-     * 1.7.9: GPU 性能提示 of this tier (GPU set; default 省电 low / 中 normal / 高 high). Read by MNN on
+     * GPU 性能提示 of this tier (GPU set; default 省电 low / 中 normal / 高 high). Read by MNN on
      * OpenCL at load (Adreno cl_qcom_perf_hint); LiteRT-LM has no such option.
      */
-    val gpuHint: com.iris.localai.data.GpuPerfHint = TierProfiles.defaultGpuHint(tier),
+    val gpuHint: GpuPerfHint = TierProfiles.defaultGpuHint(tier),
 )
 
 object ResourcePlanner {
@@ -99,7 +106,7 @@ object ResourcePlanner {
      * or manual) replaces the tier's thread count but keeps its cores / priority; the core set is
      * widened when it has fewer cores than threads.
      *
-     * 1.7.8: threads / cores / nice come from the user's 资源档配置 ([profile], already resolved and
+     * threads / cores / nice come from the user's 资源档配置 ([profile], already resolved and
      * validated by [TierProfiles.resolve]); null = this phone's default for [kind]. [widenPool] = the
      * cores a live down-switch may add when the target has fewer cores than running threads
      * (default: the 省电 + 中 cores of the same backend kind, see [TierProfiles.widenPool]).
@@ -110,7 +117,7 @@ object ResourcePlanner {
         thermal: Int = 0,
         userThreads: Int = 0,
         kind: ResourceBackendKind = ResourceBackendKind.CPU,
-        profile: com.iris.localai.data.TierProfile? = null,
+        profile: TierProfile? = null,
         widenPool: List<Int>? = null,
     ): ResourcePlan {
         val all = TierProfiles.allCores(topo)
@@ -133,7 +140,7 @@ object ResourcePlanner {
             cpus = pin,
             nice = nice,
             batch = batch,
-            // 1.7.8: the tier never changes the backend (user rule: 档位只调整 CPU 资源).
+            // the tier never changes the backend (user rule: 档位只调整 CPU 资源).
             allowGpu = true,
             allowNpu = true,
             mnnPower = when (tier) { ResourceTier.LOW -> "low"; ResourceTier.MEDIUM -> "normal"; ResourceTier.HIGH -> "high" },

@@ -1,4 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.thinking
+
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
 
 /**
  * Splits a reasoning model's output into its <think> part and the visible answer.
@@ -25,7 +30,7 @@ object ThinkParser {
     fun parse(raw: String, expectThinking: Boolean = false): Parts =
         split(raw, raw.indexOf(OPEN), raw.indexOf(CLOSE), expectThinking)
 
-    /** 2.2.8: untagged text shorter than this is shown as (open) thinking when thinking is expected. */
+    /** untagged text shorter than this is shown as (open) thinking when thinking is expected. */
     const val UNTAGGED_THINK_MAX = 600
     private val REASONING_STARTS = listOf("The user", "Okay", "Let me", "Alright", "用户", "我需要", "首先")
 
@@ -58,7 +63,7 @@ object ThinkParser {
                 answer = stripTags(raw.substring(0, openAt)),
                 thinkingOpen = true,
             )
-            // 2.2.8: no tag yet. Thinking expected (template pre-filled <think>): short or
+            // no tag yet. Thinking expected (template pre-filled <think>): short or
             // reasoning-like text is open thinking until </think> moves it; long plain text is body.
             expectThinking && (raw.length < UNTAGGED_THINK_MAX || looksLikeReasoning(raw)) ->
                 Parts(thinking = raw.trim(), answer = "", thinkingOpen = true)
@@ -70,7 +75,7 @@ object ThinkParser {
     fun stripForHistory(raw: String): String {
         val p = parse(raw)
         if (p.answer.isNotBlank() || p.thinking.isBlank()) return p.answer
-        // 1.13.0: the reply never left its reasoning (hit the length cap). Keep its tail so the
+        // the reply never left its reasoning (hit the length cap). Keep its tail so the
         // round stays in history instead of vanishing (which left two user turns in a row).
         val tail = p.thinking.trim().let { if (it.length > THINK_TAIL) "…" + it.takeLast(THINK_TAIL) else it }
         return "（未完成，仅有思考）$tail"

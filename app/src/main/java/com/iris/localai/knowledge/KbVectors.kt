@@ -7,7 +7,7 @@ import java.io.DataOutputStream
 import java.io.File
 
 /**
- * 2.5.1 向量检索 (pure, JVM-tested): one vector per chunk, keyed by a hash of the chunk text (a moved or renamed
+ * 向量检索 (pure, JVM-tested): one vector per chunk, keyed by a hash of the chunk text (a moved or renamed
  * file keeps its vectors), stored in a small binary file beside index.json that records the model id and the
  * dimension — another model (or dimension) means the vectors are rebuilt.
  */
@@ -52,7 +52,7 @@ class KbVecStore(val modelId: String, val dim: Int) {
 }
 
 object KbVectors {
-    /** 2.5.1: candidates taken from each list (BM25, cosine) before fusion. */
+    /** candidates taken from each list (BM25, cosine) before fusion. */
     const val TOP_EACH = 20
     /** Reciprocal-rank fusion constant. */
     const val RRF_K = 60
@@ -102,7 +102,7 @@ object KbVectors {
         val fused = rrf(listOf(bmList, cosList))
         val gated = fused.filter { (i, _) ->
             val c = if (i < cos.size) cos[i] else Double.NaN
-            // 2.6.1: union — a chunk passes on meaning (cos ≥ minCos) OR on words (BM25 hit that passes KbChat.relevant).
+            // union — a chunk passes on meaning (cos ≥ minCos) OR on words (BM25 hit that passes KbChat.relevant).
             // Before, a chunk with a vector was judged on cosine alone, so a Q4 / short Chinese query below the gate
             // dropped every keyword hit too and nothing was cited.
             val byCos = !c.isNaN() && c >= minCos

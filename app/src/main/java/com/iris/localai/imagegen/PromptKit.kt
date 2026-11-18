@@ -10,7 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * 2.6.8 生图提示词标签库 + 扩写（纯逻辑，单测覆盖；调研见 docs/roadmap/imagegen-prompt.md）。
+ * 生图提示词标签库 + 扩写（纯逻辑，单测覆盖；调研见 docs/roadmap/imagegen-prompt.md）。
  *
  * 标签：每条有分类、中文名、写进提示词的英文值；[danbooru] 为 Danbooru 风格的写法（Anime/Anima 用下划线
  * 之外的空格形式，如 "1girl"、"looking at viewer"）。用户可自定义增删（[TagStore] 存 JSON），内置标签可隐藏。
@@ -128,7 +128,7 @@ object TagStore {
 }
 
 /**
- * 2.6.8 提示词扩写：几句描述 → 模型能吃的完整提示词。有已加载的文本模型就让它改写（[system] / [clean]），
+ * 提示词扩写：几句描述 → 模型能吃的完整提示词。有已加载的文本模型就让它改写（[system] / [clean]），
  * 否则用规则模板（[rules]：补质量标签 + 默认负面词）。标签风格模型（Anima / Anything）用 Danbooru 逗号标签。
  */
 object PromptExpand {
@@ -183,7 +183,7 @@ object PromptExpand {
     }
 }
 
-/** 2.6.8: 标签库文件 filesDir/imagegen/tags.json（自定义 + 隐藏的内置）。 */
+/** 标签库文件 filesDir/imagegen/tags.json（自定义 + 隐藏的内置）。 */
 object TagLibrary {
     private fun file(ctx: android.content.Context) = java.io.File(ctx.filesDir, "imagegen/tags.json")
     @Synchronized fun load(ctx: android.content.Context): TagStore.Data =

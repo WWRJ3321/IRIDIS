@@ -1,5 +1,7 @@
 package com.iris.localai.ui.welcome
 
+import com.iris.localai.I18n
+import com.iris.localai.ui.theme.PageKind
 import com.iris.localai.ui.theme.irisPageBackground
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -46,22 +48,22 @@ import com.iris.localai.ui.theme.LocalReduceMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** 1.14.7: texts of the first-launch welcome (kept here so tests can check them). */
+/** texts of the first-launch welcome (kept here so tests can check them). */
 object WelcomeText {
-    val TAGLINE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_aed7c2)
-    val START: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_85d22d)
+    val TAGLINE: String get() = I18n.s(R.string.welcome_aed7c2)
+    val START: String get() = I18n.s(R.string.welcome_85d22d)
     val DISCLAIMER: String get() =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_ddc5a4)
+        I18n.s(R.string.welcome_ddc5a4)
     /** Title to one-line description, in display order. */
     val FEATURES get() = listOf(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_63cfe9) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_003e25),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.chat_72fbb9) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_874dfe),
-        com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_6f1765) to com.iris.localai.I18n.s(com.iris.localai.R.string.welcome_0a2ebb),
+        I18n.s(R.string.welcome_63cfe9) to I18n.s(R.string.welcome_003e25),
+        I18n.s(R.string.chat_72fbb9) to I18n.s(R.string.welcome_874dfe),
+        I18n.s(R.string.welcome_6f1765) to I18n.s(R.string.welcome_0a2ebb),
     )
 }
 
 /**
- * 1.14.7: shown once before the chat (fresh installs and upgrades alike) until 「开始使用」 sets
+ * shown once before the chat (fresh installs and upgrades alike) until 「开始使用」 sets
  * `AppSettings.welcomeAccepted`. Staggered fade + lift entrance from IrisMotion springs;
  * everything is in place immediately when the system removes animations.
  */
@@ -74,8 +76,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
     val last = 3 + WelcomeText.FEATURES.size
 
     BoxWithConstraints(
-        // 2.5.0: shared page skeleton with the chat (柔光 gradient / 经典 plain colour).
-        Modifier.fillMaxSize().then(Modifier.irisPageBackground(com.iris.localai.ui.theme.PageKind.CHAT)).safeDrawingPadding(),
+        // shared page skeleton with the chat (柔光 gradient / 经典 plain colour).
+        Modifier.fillMaxSize().then(Modifier.irisPageBackground(PageKind.CHAT)).safeDrawingPadding(),
     ) {
         val minHeight = maxHeight
         Column(

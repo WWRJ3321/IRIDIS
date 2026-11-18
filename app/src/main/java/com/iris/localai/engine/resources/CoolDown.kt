@@ -1,12 +1,16 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * 2.6.7 过热断续 + 少算（Edge0 与 llama 等所有引擎共用，入口在 EngineManager）。
+ * 过热断续 + 少算（Edge0 与 llama 等所有引擎共用，入口在 EngineManager）。
  *
  * 用户实测：降线程/限速降温效果差——每个 token 的发热基本固定，降速只是把热摊开。所以这里不降速，
  * 只做两件真正减少总发热的事：
@@ -76,7 +80,7 @@ object CoolDown {
 
     /** 「降温中 46.2°C，降到 42°C 自动继续」 */
     fun waitingText(tempC: Float = ThermalGovernor.tempC): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.cool267_wait, String.format(java.util.Locale.US, "%.1f", tempC), (limitC - HYST_C).toInt())
+        I18n.s(R.string.cool267_wait, String.format(java.util.Locale.US, "%.1f", tempC), (limitC - HYST_C).toInt())
 
     /** Waits (cancellable) until cooled; [onWait] once when it has to wait. */
     suspend fun awaitCool(onWait: (String) -> Unit = {}) {

@@ -7,7 +7,7 @@ package com.iris.localai.ui.markdown
  * Supported: ATX headings, paragraphs, fenced code (``` and ~~~, unterminated fences render
  * as code while streaming), block quotes, ordered/unordered/task lists with nesting,
  * GitHub tables, thematic breaks, and $$ display math (shown as code).
- * 2.2: a closing fence must be at least as long as its opening fence (CommonMark), so a ````html
+ * a closing fence must be at least as long as its opening fence (CommonMark), so a ````html
  * block may contain ``` lines; `![alt](url)` inside a paragraph becomes its own [MdBlock.Image].
  */
 sealed interface MdBlock {
@@ -18,9 +18,9 @@ sealed interface MdBlock {
     data class ListItem(val depth: Int, val marker: String, val text: String, val checked: Boolean?) : MdBlock
     data class Table(val header: List<String>, val align: List<Align>, val rows: List<List<String>>) : MdBlock
     data object Rule : MdBlock
-    /** 2.2: `![alt](url)` split out of a paragraph; [url] is classified by [ImageRefs] when shown. */
+    /** `![alt](url)` split out of a paragraph; [url] is classified by [ImageRefs] when shown. */
     data class Image(val alt: String, val url: String) : MdBlock
-    /** 2.5.8: 独立公式（$$…$$ / \\[…\\]），按 [TexText] 转成可读文本居中显示。 */
+    /** 独立公式（$$…$$ / \\[…\\]），按 [TexText] 转成可读文本居中显示。 */
     data class Math(val tex: String, val closed: Boolean = true) : MdBlock
 
     enum class Align { START, CENTER, END }
@@ -71,7 +71,7 @@ object MarkdownParser {
                 continue
             }
 
-            // 2.5.8: 单行 $$…$$ / \[…\]
+            // 单行 $$…$$ / \[…\]
             val single = SINGLE_MATH.matchEntire(t)
             if (single != null) {
                 flush()
@@ -216,7 +216,7 @@ sealed interface MdInline {
     data class Italic(val children: List<MdInline>) : MdInline
     data class Strike(val children: List<MdInline>) : MdInline
     data class Code(val text: String) : MdInline
-    /** 2.5.8: 行内公式（$…$ / \\(…\\)）。 */
+    /** 行内公式（$…$ / \\(…\\)）。 */
     data class Math(val tex: String) : MdInline
     data class Link(val text: String, val url: String) : MdInline
 }

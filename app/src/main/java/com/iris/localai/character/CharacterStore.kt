@@ -3,7 +3,7 @@ package com.iris.localai.character
 import java.io.File
 
 /**
- * 2.3.2 角色卡 storage: `Download/IRIDIS/characters/<id>/` (or `filesDir/iridis/characters` in
+ * 角色卡 storage: `Download/IRIDIS/characters/<id>/` (or `filesDir/iridis/characters` in
  * 应用私有目录 mode / when the public folder cannot be written), one folder per card:
  * `card.json` (full V3 JSON, unknown fields kept), `avatar.png` (or the imported image type),
  * `assets/…` (other CHARX files, unchanged). Pure java.io (unit-tested).

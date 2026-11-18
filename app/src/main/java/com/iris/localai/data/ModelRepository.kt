@@ -1,5 +1,11 @@
 package com.iris.localai.data
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.edge0.Edge0Assets
+import com.iris.localai.engine.edge0.Edge0Support
+import com.iris.localai.engine.geniex.QairtBundle
+import com.iris.localai.knowledge.KbEmbedModels
 import android.content.Context
 import android.net.Uri
 import android.os.StatFs
@@ -29,7 +35,7 @@ class ModelRepository(private val context: Context) {
     }
 
     /** Re-evaluated on every call (cheap), so granting 全部文件访问 later switches to the shared folder. */
-    // 2.5.2: one resolver for downloads and imports (follows the configured storage location, see ModelStorage).
+    // one resolver for downloads and imports (follows the configured storage location, see ModelStorage).
     fun location(): ModelDirs.Location = ModelStorage.location(privateDir)
 
     /** Where new models are written right now (shared when available). */
@@ -49,29 +55,29 @@ class ModelRepository(private val context: Context) {
             val files = dir.listFiles().orEmpty()
             // Remove leftovers from interrupted imports (but never one that is being written right now).
             files.filter { it.name.endsWith(PART_SUFFIX) && it.name !in activeParts && it.name !in heldParts }.forEach { if (it.isDirectory) it.deleteRecursively() else it.delete() }
-            // 2.5.6: 分块下载的块文件（<name>.part.s<起点>）跟着它的 .part 走
+            // 分块下载的块文件（<name>.part.s<起点>）跟着它的 .part 走
             files.filter { f -> SEG_RE.matches(f.name) && f.name.substringBeforeLast(".s") !in activeParts && f.name.substringBeforeLast(".s") !in heldParts }.forEach { it.delete() }
             files.flatMap { f -> entriesOf(f, mnn) }
-                // 2.2.5: projector files (mmproj) belong to their parent model; never listed as models
+                // projector files (mmproj) belong to their parent model; never listed as models
                 // anywhere (home menu, 档位与加载, 模型管理, GUI pickers). They stay on disk (and move
                 // with the models), they are just not entries.
                 .filterNot { isProjectorFile(it.fileName) }
-                // 2.2.16: split GGUF — only part 1 is a model (llama.cpp opens the rest next to it)
+                // split GGUF — only part 1 is a model (llama.cpp opens the rest next to it)
                 .filterNot { isSplitTail(it.fileName) }
-                .filterNot { com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(it.fileName) } // 2.5.1: 知识库嵌入模型 are not chat models
+                .filterNot { KbEmbedModels.isEmbedFile(it.fileName) } // 知识库嵌入模型 are not chat models
         }
         val list = ModelOrder.apply(ModelDirs.merge(listings) { it.fileName }.map { it.copy(alias = ModelAliases.of(it.fileName)) }.sortedBy { it.displayName.lowercase() }, savedOrder())
         _models.value = list
         list
     }
 
-    /** 2.5.5: 改显示名（不动文件），立即刷新列表。 */
+    /** 改显示名（不动文件），立即刷新列表。 */
     fun rename(fileName: String, name: String?) {
         ModelAliases.set(context, fileName, name)
         _models.value = _models.value.map { if (it.fileName == fileName) it.copy(alias = ModelAliases.of(fileName)) else it }
     }
 
-    /** 2.2.2: the user's own order (模型管理 › 拖动排序); the home menu lists models in this order. */
+    /** the user's own order (模型管理 › 拖动排序); the home menu lists models in this order. */
     private val orderPrefs by lazy { context.getSharedPreferences("iris_model_order", Context.MODE_PRIVATE) }
 
     private fun savedOrder(): List<String> = orderPrefs.getString("order", "").orEmpty().split('\n').filter { it.isNotBlank() }
@@ -88,17 +94,17 @@ class ModelRepository(private val context: Context) {
         orderPrefs.edit().putString("order", merged.joinToString("\n")).apply()
     }
 
-    /** 2.3.5: a GGUF model folder (main .gguf + optional mmproj*.gguf) lists its main(s); everything else as [entryOf]. */
+    /** a GGUF model folder (main .gguf + optional mmproj*.gguf) lists its main(s); everything else as [entryOf]. */
     private fun entriesOf(f: File, mnn: Boolean): List<LocalModel> {
-        // 2.6.5: an Edge0 asset folder holds .gguf files too — never list them as GGUF models.
-        if (f.isDirectory && !f.name.endsWith(PART_SUFFIX) && com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(f)) return listOfNotNull(entryOf(f, mnn))
+        // an Edge0 asset folder holds .gguf files too — never list them as GGUF models.
+        if (f.isDirectory && !f.name.endsWith(PART_SUFFIX) && Edge0Assets.isAssetDir(f)) return listOfNotNull(entryOf(f, mnn))
         if (f.isDirectory && !f.name.endsWith(PART_SUFFIX) && !f.name.startsWith(".") && ModelFormat.GGUF in EngineFactory.supportedFormats) {
             val names = f.list().orEmpty().toList()
             if (!(mnn && MnnModels.isModelDir(f))) {
                 val mains = GgufFolder.mainsIn(names)
                 if (mains.isNotEmpty()) return mains.mapNotNull { n ->
                     val main = File(f, n)
-                    val stem = n.replace(Regex("-00001-of-\\d{5}\\.gguf$", RegexOption.IGNORE_CASE), "")
+                    val stem = n.replace(RX_1, "")
                     val size = main.length() + names.filter { it != n && GgufFolder.isSplitTail(it) && it.startsWith(stem) }.sumOf { File(f, it).length() }
                     if (main.isFile && main.length() > 0) LocalModel(main.name, main.absolutePath, size, ModelFormat.GGUF) else null
                 }
@@ -111,11 +117,11 @@ class ModelRepository(private val context: Context) {
         if (f.name.endsWith(PART_SUFFIX) || f.name.startsWith(".")) return null
         if (f.isDirectory) {
             if (mnn && MnnModels.isModelDir(f)) return LocalModel(f.name, f.absolutePath, MnnModels.folderSize(f), ModelFormat.MNN)
-            if (ModelFormat.EDGE0 in EngineFactory.supportedFormats && com.iris.localai.engine.edge0.Edge0Assets.isAssetDir(f))
+            if (ModelFormat.EDGE0 in EngineFactory.supportedFormats && Edge0Assets.isAssetDir(f))
                 return LocalModel(f.name, f.absolutePath, MnnModels.folderSize(f), ModelFormat.EDGE0)
-            // 2.2.0: Qualcomm AI Hub QAIRT bundle folders (GenieX, full flavour).
+            // Qualcomm AI Hub QAIRT bundle folders (GenieX, full flavour).
             if (ModelFormat.QAIRT in EngineFactory.supportedFormats &&
-                com.iris.localai.engine.geniex.QairtBundle.isFileSet(f.list().orEmpty().toSet())
+                QairtBundle.isFileSet(f.list().orEmpty().toSet())
             ) return LocalModel(f.name, f.absolutePath, MnnModels.folderSize(f), ModelFormat.QAIRT)
             return null
         }
@@ -144,7 +150,7 @@ class ModelRepository(private val context: Context) {
      */
     suspend fun moveToShared(keep: Set<String> = emptySet()): Pair<Int, Int> = withContext(Dispatchers.IO) {
         val loc = location()
-        if (!loc.shared) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_44db6e))
+        if (!loc.shared) throw IOException(I18n.s(R.string.data_44db6e))
         val plan = ModelDirs.planMove(loc.privateDir, loc.dir, { entryOf(it) != null }, keep)
         val total = plan.move.sumOf { ModelDirs.totalBytes(it) }
         var base = 0L
@@ -184,7 +190,7 @@ class ModelRepository(private val context: Context) {
 
     suspend fun delete(model: LocalModel) = withContext(Dispatchers.IO) {
         val f = File(model.path)
-        // 2.3.5: a GGUF model in its own folder → the whole folder (main + mmproj + shards) goes,
+        // a GGUF model in its own folder → the whole folder (main + mmproj + shards) goes,
         // unless the folder is a models root or still holds another main model.
         val parent = f.parentFile
         val roots = location().listDirs.map { it.absolutePath }.toSet() + modelsDir.absolutePath
@@ -192,7 +198,7 @@ class ModelRepository(private val context: Context) {
             GgufFolder.mainsIn(parent.list().orEmpty().toList()).size <= 1
         ) { parent.deleteRecursively(); refresh(); return@withContext }
         if (f.isDirectory) f.deleteRecursively() else f.delete()
-        // 2.2.16: the other parts of a split GGUF and the projector downloaded with it go too
+        // the other parts of a split GGUF and the projector downloaded with it go too
         f.parentFile?.listFiles()?.filter { companionOf(f.name, it.name) }?.forEach { it.delete() }
         refresh()
     }
@@ -217,21 +223,21 @@ class ModelRepository(private val context: Context) {
             ?: throw IOException("不支持的文件类型：$fileName（支持 ${EngineFactory.supportedFormats.flatMap { it.extensions }.joinToString(" / ") { ".$it" }}）")
 
         val modelsDir = this@ModelRepository.modelsDir
-        // 2.3.5: a GGUF goes into models/<name>/ (so a projector can sit next to it); other formats stay loose.
+        // a GGUF goes into models/<name>/ (so a projector can sit next to it); other formats stay loose.
         val ggufDir = if (format == ModelFormat.GGUF) File(modelsDir, GgufFolder.folderFor(fileName)) else null
         val target = File(ggufDir ?: modelsDir, fileName)
-        if (target.exists() || find(fileName) != null || (ggufDir != null && ggufDir.exists() && GgufFolder.mainsIn(ggufDir.list().orEmpty().toList()).isNotEmpty())) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, fileName))
+        if (target.exists() || find(fileName) != null || (ggufDir != null && ggufDir.exists() && GgufFolder.mainsIn(ggufDir.list().orEmpty().toList()).isNotEmpty())) throw IOException(I18n.s(R.string.data_f95dbe, fileName))
         if (size > 0) {
             val free = StatFs(modelsDir.absolutePath).availableBytes
             if (free < size + 256L * 1024 * 1024) {
-                throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(size), Format.bytes(free)))
+                throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(size), Format.bytes(free)))
             }
         }
 
         val part = File(modelsDir, fileName + PART_SUFFIX)
-        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ba8e0, fileName))
+        if (!activeParts.add(part.name)) throw IOException(I18n.s(R.string.data_0ba8e0, fileName))
         try {
-            val input = resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c15415))
+            val input = resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_c15415))
             input.use { ins ->
                 part.outputStream().buffered(1 shl 20).use { out ->
                     val buf = ByteArray(1 shl 20)
@@ -246,7 +252,7 @@ class ModelRepository(private val context: Context) {
                             first = false
                             if (n < 4 || buf[0] != 'G'.code.toByte() || buf[1] != 'G'.code.toByte() ||
                                 buf[2] != 'U'.code.toByte() || buf[3] != 'F'.code.toByte()
-                            ) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0f2c7d))
+                            ) throw IOException(I18n.s(R.string.data_0f2c7d))
                         }
                         out.write(buf, 0, n)
                         copied += n
@@ -257,7 +263,7 @@ class ModelRepository(private val context: Context) {
                     }
                 }
             }
-            target.parentFile?.mkdirs(); if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+            target.parentFile?.mkdirs(); if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
             onProgress(1f)
         } catch (t: Throwable) {
             part.delete()
@@ -272,8 +278,8 @@ class ModelRepository(private val context: Context) {
     private fun sanitizeFileName(name: String): String = ModelFiles.sanitizeFileName(name)
 
     /**
-     * 2.3.5 (#8): copy a user-picked mmproj GGUF next to [model]; returns its file name (always contains "mmproj").
-     * 2.4.5 (#12): models imported before 2.3.5 sit directly in models/ (no folder of their own). Returning
+     * copy a user-picked mmproj GGUF next to [model]; returns its file name (always contains "mmproj").
+     * models imported before 2.3.5 sit directly in models/ (no folder of their own). Returning
      * from the file picker resumes 模型与加载, whose [refresh] deleted every unregistered `.part` in that
      * top-level folder — the copy failed half way and the error was swallowed, so picking did nothing.
      * The `.part` is now registered in [activeParts], the name is tied to the model ([mmprojTargetName]),
@@ -299,15 +305,15 @@ class ModelRepository(private val context: Context) {
         val target = File(dir, name)
         if (target.isFile && (srcSize < 0 || target.length() == srcSize)) return@withContext name
         val part = File(dir, name + PART_SUFFIX)
-        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0ba8e0, name))
+        if (!activeParts.add(part.name)) throw IOException(I18n.s(R.string.data_0ba8e0, name))
         try {
-            (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, name))).use { ins ->
+            (resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_31f711, name))).use { ins ->
                 part.outputStream().buffered(1 shl 20).use { os -> ins.copyTo(os, 1 shl 20) }
             }
-            if (srcSize > 0 && part.length() != srcSize) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_incomplete, name))
+            if (srcSize > 0 && part.length() != srcSize) throw IOException(I18n.s(R.string.mm245_incomplete, name))
             target.parentFile?.mkdirs()
             if (target.exists()) target.delete()
-            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+            if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
         } catch (t: Throwable) { part.delete(); throw t } finally { activeParts.remove(part.name) }
         name
     }
@@ -349,11 +355,11 @@ class ModelRepository(private val context: Context) {
         }
         walk(rootId, "", 0)
         val topNames = entries.filter { '/' !in it.rel }.map { it.rel }.toSet()
-        // 2.6.5: 导入 Edge0 资产目录（整个文件夹原样复制）。
-        val edge0 = com.iris.localai.engine.edge0.Edge0Assets.isFileSet(topNames)
-        if (edge0 && ModelFormat.EDGE0 !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_full_only))
-        if (edge0 && !com.iris.localai.engine.edge0.Edge0Support.deviceOk()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.e265_unsupported))
-        // 2.3.5 (#8): a folder of GGUF files (main + mmproj) → flat GGUF imports, projector linked.
+        // 导入 Edge0 资产目录（整个文件夹原样复制）。
+        val edge0 = Edge0Assets.isFileSet(topNames)
+        if (edge0 && ModelFormat.EDGE0 !in EngineFactory.supportedFormats) throw IOException(I18n.s(R.string.e265_full_only))
+        if (edge0 && !Edge0Support.deviceOk()) throw IOException(I18n.s(R.string.e265_unsupported))
+        // a folder of GGUF files (main + mmproj) → flat GGUF imports, projector linked.
         if (!edge0 && !MnnModels.isModelFileSet(topNames) && topNames.any { GgufFolder.isGguf(it) }) {
             val ggufEntries = entries.filter { '/' !in it.rel && GgufFolder.isGguf(it.rel) }
             val sniffed = ggufEntries.filter { !isProjectorFile(it.rel) }.filter { e ->
@@ -368,30 +374,30 @@ class ModelRepository(private val context: Context) {
             val plan = GgufFolder.classify(topNames, sniffed) ?: throw IOException("文件夹里只有视觉投影 (mmproj)，没有主模型 GGUF")
             if (ModelFormat.GGUF !in EngineFactory.supportedFormats) throw IOException("不支持 GGUF")
             val root = this@ModelRepository.modelsDir
-            // 2.3.5: the pair lives in models/<folder name>/
+            // the pair lives in models/<folder name>/
             val dirName = sanitizeFileName(
                 resolver.query(android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, rootId),
                     arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
                     ?: GgufFolder.folderFor(plan.mains.first()),
             )
             val modelsDir = File(root, dirName)
-            if (modelsDir.exists() || plan.mains.any { find(it) != null }) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, dirName))
+            if (modelsDir.exists() || plan.mains.any { find(it) != null }) throw IOException(I18n.s(R.string.data_f95dbe, dirName))
             modelsDir.mkdirs()
-            plan.copy.values.firstOrNull { File(modelsDir, it).exists() }?.let { throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, it)) }
+            plan.copy.values.firstOrNull { File(modelsDir, it).exists() }?.let { throw IOException(I18n.s(R.string.data_f95dbe, it)) }
             val total = ggufEntries.sumOf { it.size.coerceAtLeast(0) }
             if (total > 0) {
                 val free = StatFs(modelsDir.absolutePath).availableBytes
-                if (free < total + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total), Format.bytes(free)))
+                if (free < total + 256L * 1024 * 1024) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(total), Format.bytes(free)))
             }
             var copied = 0L; var lastReport = 0L
             val buf = ByteArray(1 shl 20)
             for (e in ggufEntries) {
                 val targetName = plan.copy[e.rel] ?: continue
                 val part = File(modelsDir, targetName + PART_SUFFIX)
-                if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_8a5901, targetName))
+                if (!activeParts.add(part.name)) throw IOException(I18n.s(R.string.data_8a5901, targetName))
                 try {
                     val uri = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, e.docId)
-                    (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, e.rel))).use { ins ->
+                    (resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_31f711, e.rel))).use { ins ->
                         part.outputStream().buffered(1 shl 20).use { os ->
                             while (true) {
                                 coroutineContext.ensureActive()
@@ -405,7 +411,7 @@ class ModelRepository(private val context: Context) {
                             }
                         }
                     }
-                    if (!part.renameTo(File(modelsDir, targetName))) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+                    if (!part.renameTo(File(modelsDir, targetName))) throw IOException(I18n.s(R.string.data_04dd9d))
                 } catch (t: Throwable) {
                     part.delete(); if (modelsDir.list().isNullOrEmpty()) modelsDir.delete(); throw t
                 } finally {
@@ -418,14 +424,14 @@ class ModelRepository(private val context: Context) {
             val main = File(modelsDir, plan.mains.first())
             return@withContext LocalModel(main.name, main.absolutePath, main.length(), ModelFormat.GGUF)
         }
-        if (!edge0 && ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_c1bcc7))
+        if (!edge0 && ModelFormat.MNN !in EngineFactory.supportedFormats) throw IOException(I18n.s(R.string.data_c1bcc7))
         val folderFormat = when {
             edge0 -> ModelFormat.EDGE0
             MnnModels.isModelFileSet(topNames) -> ModelFormat.MNN
-            qairt && com.iris.localai.engine.geniex.QairtBundle.isFileSet(topNames) -> ModelFormat.QAIRT
+            qairt && QairtBundle.isFileSet(topNames) -> ModelFormat.QAIRT
             else -> throw IOException(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.data_ac190c) +
-                    if (qairt) com.iris.localai.I18n.s(com.iris.localai.R.string.data_840d31) else "",
+                I18n.s(R.string.data_ac190c) +
+                    if (qairt) I18n.s(R.string.data_840d31) else "",
             )
         }
         val folderName = sanitizeFileName(
@@ -435,14 +441,14 @@ class ModelRepository(private val context: Context) {
         )
         val modelsDir = this@ModelRepository.modelsDir
         val target = File(modelsDir, folderName)
-        if (target.exists() || find(folderName) != null) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_f95dbe, folderName))
+        if (target.exists() || find(folderName) != null) throw IOException(I18n.s(R.string.data_f95dbe, folderName))
         val total = entries.sumOf { it.size.coerceAtLeast(0) }
         if (total > 0) {
             val free = StatFs(modelsDir.absolutePath).availableBytes
-            if (free < total + 256L * 1024 * 1024) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, Format.bytes(total), Format.bytes(free)))
+            if (free < total + 256L * 1024 * 1024) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(total), Format.bytes(free)))
         }
         val part = File(modelsDir, folderName + PART_SUFFIX)
-        if (!activeParts.add(part.name)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_8a5901, folderName))
+        if (!activeParts.add(part.name)) throw IOException(I18n.s(R.string.data_8a5901, folderName))
         try {
             part.deleteRecursively()
             part.mkdirs()
@@ -452,7 +458,7 @@ class ModelRepository(private val context: Context) {
             for (e in entries) {
                 val out = File(part, e.rel).apply { parentFile?.mkdirs() }
                 val uri = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, e.docId)
-                (resolver.openInputStream(uri) ?: throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_31f711, e.rel))).use { ins ->
+                (resolver.openInputStream(uri) ?: throw IOException(I18n.s(R.string.data_31f711, e.rel))).use { ins ->
                     out.outputStream().buffered(1 shl 20).use { os ->
                         while (true) {
                             coroutineContext.ensureActive()
@@ -468,7 +474,7 @@ class ModelRepository(private val context: Context) {
                     }
                 }
             }
-            if (!part.renameTo(target)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_04dd9d))
+            if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
             onProgress(1f)
         } catch (t: Throwable) {
             part.deleteRecursively()
@@ -484,17 +490,17 @@ class ModelRepository(private val context: Context) {
     internal fun claimPart(name: String): Boolean = activeParts.add(name)
     internal fun releasePart(name: String) { activeParts.remove(name) }
 
-    /** 2.3.1: `.part` names of a paused download (MnnHub 「暂停」): kept by [refresh] until it resumes or is cancelled. */
+    /** `.part` names of a paused download (MnnHub 「暂停」): kept by [refresh] until it resumes or is cancelled. */
     private val heldParts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     internal fun holdParts(names: Collection<String>) { heldParts.clear(); heldParts.addAll(names) }
     internal fun unholdParts() { heldParts.clear() }
 
-    /** 2.3.1: `.part` names that must not be deleted now (imports / downloads running, or paused). */
+    /** `.part` names that must not be deleted now (imports / downloads running, or paused). */
     fun protectedParts(): Set<String> = activeParts.toSet() + heldParts
 
     internal companion object {
         const val PART_SUFFIX = ".part"
-        /** 2.5.6: [com.iris.localai.util.ParallelDownload] 的块文件。 */
+        /** [com.iris.localai.util.io.ParallelDownload] 的块文件。 */
         val SEG_RE = Regex(".+\\.part\\.s\\d+$")
     }
 }
@@ -519,12 +525,12 @@ object MnnModels {
     /** "taobao-mnn/Qwen3-1.7B-MNN" or a full huggingface.co / hf-mirror URL → "taobao-mnn/Qwen3-1.7B-MNN". */
     fun parseRepoId(input: String): String? {
         var s = input.trim().removeSuffix("/")
-        s = s.replace(Regex("^https?://(www\\.)?(huggingface\\.co|hf-mirror\\.com)/", RegexOption.IGNORE_CASE), "")
+        s = s.replace(RX_2, "")
         s = s.substringBefore("/tree/").substringBefore("/blob/").substringBefore("/resolve/")
         val parts = s.split('/').filter { it.isNotBlank() }
-        if (parts.size == 1 && Regex("[A-Za-z0-9._-]+").matches(parts[0])) return "taobao-mnn/${parts[0]}"
+        if (parts.size == 1 && RX_3.matches(parts[0])) return "taobao-mnn/${parts[0]}"
         if (parts.size != 2) return null
-        if (!parts.all { Regex("[A-Za-z0-9._-]+").matches(it) }) return null
+        if (!parts.all { RX_3.matches(it) }) return null
         return "${parts[0]}/${parts[1]}"
     }
 }
@@ -550,7 +556,7 @@ object ModelFiles {
     }
 }
 
-/** 2.2.16: part 2…N of a split GGUF (`-00002-of-00003.gguf`). */
+/** part 2…N of a split GGUF (`-00002-of-00003.gguf`). */
 fun isSplitTail(name: String): Boolean =
     GgufSearch.SPLIT.find(name)?.groupValues?.get(1)?.toIntOrNull()?.let { it > 1 } ?: false
 
@@ -567,7 +573,7 @@ fun companionOf(model: String, other: String): Boolean {
 }
 
 /**
- * 2.4.5 (#12): file name for a projector the user picked for [modelFile]. In a shared top-level folder
+ * file name for a projector the user picked for [modelFile]. In a shared top-level folder
  * ([flat]: models imported before 2.3.5) it starts with the model's stem, so it pairs automatically
  * ([com.iris.localai.engine.llama.MmprojPairing.pick]), is deleted with the model ([companionOf]) and
  * never collides with another model's generic `mmproj-F16.gguf`. Always contains "mmproj". Pure.
@@ -581,8 +587,13 @@ fun mmprojTargetName(modelFile: String, picked: String, flat: Boolean): String {
     return if (joined.length <= 180) joined else "${stem.take(160)}-mmproj.gguf"
 }
 
-/** 2.2.5: vision projector files (mmproj etc.) — attached to their parent model, never a model themselves. */
+/** vision projector files (mmproj etc.) — attached to their parent model, never a model themselves. */
 fun isProjectorFile(name: String): Boolean {
     val n = name.lowercase()
     return "mmproj" in n || "projector" in n
 }
+
+// 预编译的正则（原先在函数体内每次调用都编译）。
+private val RX_1 = Regex("-00001-of-\\d{5}\\.gguf$", RegexOption.IGNORE_CASE)
+private val RX_2 = Regex("^https?://(www\\.)?(huggingface\\.co|hf-mirror\\.com)/", RegexOption.IGNORE_CASE)
+private val RX_3 = Regex("[A-Za-z0-9._-]+")

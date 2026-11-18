@@ -3,7 +3,7 @@ package com.iris.localai.engine.llama
 import java.util.Locale
 
 /**
- * 2.5.0-beta9: MTP (multi-token prediction) speculative decoding bookkeeping. Pure Kotlin (unit-tested).
+ * MTP (multi-token prediction) speculative decoding bookkeeping. Pure Kotlin (unit-tested).
  * The native engine reports how many draft tokens it sent for verification and how many the target
  * model accepted; generatedTokens already counts only the tokens shown to the user.
  */

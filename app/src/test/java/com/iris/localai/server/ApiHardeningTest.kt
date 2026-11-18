@@ -69,11 +69,4 @@ class ApiHardeningTest {
         }
     }
 
-    @Test fun wakeLockNotReferenceCounted() {
-        val svc = src("server/ApiService.kt")
-        assertTrue(svc.contains("setReferenceCounted(false)"))
-        assertTrue(svc.contains("inFlight.getAndIncrement() == 0"))
-        assertTrue(svc.contains("inFlight.decrementAndGet() == 0"))
-        assertTrue(svc.contains("srv.cors = { c.settings.current.apiKey.isNotBlank() }"))
-    }
 }

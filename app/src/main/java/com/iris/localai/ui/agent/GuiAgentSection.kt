@@ -1,5 +1,10 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.tools.GuiBlocker
+import com.iris.localai.ui.components.Chevron
+import com.iris.localai.ui.components.IrisDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -22,14 +27,14 @@ import com.iris.localai.ui.icons.IrisIcons
 import kotlinx.coroutines.launch
 
 internal object GuiAgentText {
-    val TITLE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b2740e)
-    val ON: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0413be)
-    val CONNECTING: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_96cd4a)
-    val OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_2696c0)
-    val RESTRICTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_fd59e1)
-    /** 2.1.9: 清后台 turns the service off on HyperOS (2.5.0 Beta5: lock / battery tips only, 保活 removed). */
-    val KEEP: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76907b)
-    val NOTE: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b1aa64)
+    val TITLE: String get() = I18n.s(R.string.agent_b2740e)
+    val ON: String get() = I18n.s(R.string.agent_0413be)
+    val CONNECTING: String get() = I18n.s(R.string.agent_96cd4a)
+    val OFF: String get() = I18n.s(R.string.agent_2696c0)
+    val RESTRICTED: String get() = I18n.s(R.string.agent_fd59e1)
+    /** 清后台 turns the service off on HyperOS (2.5.0 Beta5: lock / battery tips only, 保活 removed). */
+    val KEEP: String get() = I18n.s(R.string.agent_76907b)
+    val NOTE: String get() = I18n.s(R.string.agent_b1aa64)
 }
 
 /** 2.2 设置 › 智能体 › GUI 智能体: 无障碍 status and guide, 自检, and a test run (第一阶段入口). */
@@ -58,32 +63,32 @@ fun GuiAgentSection() {
     SectionTitle(GuiAgentText.TITLE)
     SettingsGroup {
         SettingsRow(
-            com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6279dc), icon = IrisIcons.Eye,
+            I18n.s(R.string.agent_6279dc), icon = IrisIcons.Eye,
             subtitle = when { connected -> GuiAgentText.ON; enabled -> GuiAgentText.CONNECTING; else -> GuiAgentText.OFF },
             onClick = { IrisAccessibilityService.openSettings(context) },
-            trailing = { com.iris.localai.ui.components.Chevron() },
+            trailing = { Chevron() },
         )
         if (!connected) {
             Divider()
-            SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_281ed1), icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
+            SettingsRow(I18n.s(R.string.agent_281ed1), icon = IrisIcons.Info, subtitle = GuiAgentText.RESTRICTED,
                 onClick = { IrisAccessibilityService.openAppInfo(context) })
         }
         Divider()
-        AdvancedFold("gui-agent", com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3183f)) {
+        AdvancedFold("gui-agent", I18n.s(R.string.agent_f3183f)) {
             SettingsRow(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b7d06), icon = IrisIcons.Check,
-                subtitle = check ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_7e9e37),
+                I18n.s(R.string.agent_3b7d06), icon = IrisIcons.Check,
+                subtitle = check ?: I18n.s(R.string.agent_7e9e37),
                 enabled = connected,
-                onClick = { scope.launch { check = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d6a223); check = runner.selfTest() } },
+                onClick = { scope.launch { check = I18n.s(R.string.agent_d6a223); check = runner.selfTest() } },
             )
             Divider()
             SettingsRow(
-                if (run.running) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_31bb97) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3e5caf),
+                if (run.running) I18n.s(R.string.agent_31bb97) else I18n.s(R.string.agent_3e5caf),
                 icon = if (run.running) IrisIcons.Stop else IrisIcons.Agent,
                 subtitle = when {
-                    run.running -> run.lines.lastOrNull() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8d11c5)
+                    run.running -> run.lines.lastOrNull() ?: I18n.s(R.string.agent_8d11c5)
                     run.result != null -> run.result
-                    else -> runner.blockerText(reconnect = false) ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0a2fb8)
+                    else -> runner.blockerText(reconnect = false) ?: I18n.s(R.string.agent_0a2fb8)
                 },
                 enabled = run.running || connected,
                 onClick = { if (run.running) runner.stop() else asking = true },
@@ -92,43 +97,43 @@ fun GuiAgentSection() {
     }
     if (run.lines.isNotEmpty()) GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true)
     GroupFootnote(GuiAgentText.NOTE)
-    // 2.5.0 Beta5: 无障碍保活 card removed.
+    // 无障碍保活 card removed.
 
     if (asking) {
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c43ee1), initial = "", placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_52b807),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_a3e3b8), singleLine = false,
+            title = I18n.s(R.string.agent_c43ee1), initial = "", placeholder = I18n.s(R.string.agent_52b807),
+            confirmText = I18n.s(R.string.agent_a3e3b8), singleLine = false,
             onConfirm = { runner.start(it) }, onDismiss = { asking = false },
         )
     }
 }
 
 /**
- * 2.1.9: the chat's guide when 「操控手机」 cannot start — 无障碍 off (去开启 / 受限设置, the same
+ * the chat's guide when 「操控手机」 cannot start — 无障碍 off (去开启 / 受限设置, the same
  * guide as the settings section) or no vision model (选择模型 opens the model picker).
  */
 @Composable
-fun GuiSetupDialog(blocker: com.iris.localai.agent.GuiBlocker, onDismiss: () -> Unit, onPickModel: () -> Unit) {
+fun GuiSetupDialog(blocker: GuiBlocker, onDismiss: () -> Unit, onPickModel: () -> Unit) {
     val context = LocalContext.current
     when (blocker) {
-        com.iris.localai.agent.GuiBlocker.A11Y_OFF -> com.iris.localai.ui.components.IrisDialog(
-            onDismiss = onDismiss, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e7dfa0),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_5e213d), onConfirm = { onDismiss(); IrisAccessibilityService.openSettings(context) },
-            dismissText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0415c4), onDismissClick = { onDismiss(); IrisAccessibilityService.openAppInfo(context) },
+        GuiBlocker.A11Y_OFF -> IrisDialog(
+            onDismiss = onDismiss, title = I18n.s(R.string.agent_e7dfa0),
+            confirmText = I18n.s(R.string.agent_5e213d), onConfirm = { onDismiss(); IrisAccessibilityService.openSettings(context) },
+            dismissText = I18n.s(R.string.agent_0415c4), onDismissClick = { onDismiss(); IrisAccessibilityService.openAppInfo(context) },
         ) {
             androidx.compose.material3.Text(GuiSetupText.A11Y)
         }
-        com.iris.localai.agent.GuiBlocker.NO_MODEL, com.iris.localai.agent.GuiBlocker.NO_VISION -> com.iris.localai.ui.components.IrisDialog(
-            onDismiss = onDismiss, title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_946fdd),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f2d373), onConfirm = onPickModel,
+        GuiBlocker.NO_MODEL, GuiBlocker.NO_VISION -> IrisDialog(
+            onDismiss = onDismiss, title = I18n.s(R.string.agent_946fdd),
+            confirmText = I18n.s(R.string.chat_f2d373), onConfirm = onPickModel,
         ) {
             androidx.compose.material3.Text(GuiSetupText.VISION)
         }
-        com.iris.localai.agent.GuiBlocker.BUSY -> Unit
+        GuiBlocker.BUSY -> Unit
     }
 }
 
 internal object GuiSetupText {
-    val A11Y: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ca727f) + GuiAgentText.KEEP
-    val VISION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_88f86e)
+    val A11Y: String get() = I18n.s(R.string.agent_ca727f) + GuiAgentText.KEEP
+    val VISION: String get() = I18n.s(R.string.agent_88f86e)
 }

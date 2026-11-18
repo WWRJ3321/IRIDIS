@@ -6,7 +6,7 @@ import com.iris.localai.util.TokenEstimator
 import kotlin.math.ln
 
 /**
- * 2.2.9 C: memory by relevance. ABOUT + PREF always (newest first; over budget the oldest go),
+ * C: memory by relevance. ABOUT + PREF always (newest first; over budget the oldest go),
  * frozen into the system prompt before the first answer; FACT chosen by BM25 against the current
  * question and attached to that user message (like knowledge snippets), so the prefix stays put. Pure.
  */

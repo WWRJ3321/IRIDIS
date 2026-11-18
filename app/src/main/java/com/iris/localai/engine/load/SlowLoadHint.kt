@@ -1,7 +1,12 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
+
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 
 /**
- * 1.9.0: what the chat screen says while a GPU load takes long.
+ * what the chat screen says while a GPU load takes long.
  *
  * Why a first GPU load "never ends": LiteRT-LM's `Engine.initialize()` is one blocking native call
  * (shader compile + writing the GPU program cache to filesDir/litert-cache) with no progress
@@ -18,16 +23,16 @@ object SlowLoadHint {
     /** Subtitle under the model name: 「加载中 · GPU · 63 秒」. */
     fun subtitle(backend: Backend?, secs: Long): String {
         val b = backend?.takeIf { it != Backend.CPU }?.let { " · ${it.label}" } ?: ""
-        return if (secs > 0) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_fb9f29, b, secs) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_c94fef, b)
+        return if (secs > 0) I18n.s(R.string.engine_fb9f29, b, secs) else I18n.s(R.string.engine_c94fef, b)
     }
 
     /** The explanation card, or null while the wait is still normal / not on the GPU. */
     fun notice(backend: Backend?, secs: Long): String? = when {
         backend != Backend.GPU || secs < NOTICE_SECS -> null
-        secs < LONG_SECS -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_28da7c)
-        else -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_243197, secs / 60, secs % 60)
+        secs < LONG_SECS -> I18n.s(R.string.engine_28da7c)
+        else -> I18n.s(R.string.engine_243197, secs / 60, secs % 60)
     }
 
-    val ACTION: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_52746f)
-    val SWITCHED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_ff73c5)
+    val ACTION: String get() = I18n.s(R.string.engine_52746f)
+    val SWITCHED: String get() = I18n.s(R.string.engine_ff73c5)
 }

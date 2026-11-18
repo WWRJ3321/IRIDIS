@@ -1,5 +1,7 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
 import android.content.Context
 import com.iris.localai.data.ModelFormat
 import com.iris.localai.engine.geniex.GenieX
@@ -15,7 +17,7 @@ object EngineFactory {
 
     fun npu(context: Context): NpuSupport? = null
 
-    /** 2.2.0: GenieX is full-flavour only. */
+    /** GenieX is full-flavour only. */
     fun geniex(context: Context): GenieXSupport? = null
 
     @Suppress("UNUSED_PARAMETER")

@@ -1,5 +1,8 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
  * Pure rules for Qualcomm NPU (LiteRT-LM AOT) models, shared by the settings / backend picker
  * ([BackendCapabilities]) and the full flavour's LiteRT engine + QNN runtime, so the device chip
@@ -26,7 +29,7 @@ object NpuIds {
     }
 
     /**
-     * 2.5.5: 同一颗芯片的平板版报另一个型号。用户实机（8.8 英寸平板，系统显示「天玑9500 最高 4.21GHz」）
+     * 同一颗芯片的平板版报另一个型号。用户实机（8.8 英寸平板，系统显示「天玑9500 最高 4.21GHz」）
      * Build.SOC_MODEL = "MT8910"，按 MT6993（天玑 9500）处理：NPU 模型、推荐、机型分级都跟着走。
      */
     val SOC_ALIAS: Map<String, String> = mapOf("mt8910" to "mt6993")
@@ -50,7 +53,7 @@ object NpuIds {
     }
 
     /**
-     * 2.4.4: MediaTek Dimensity SoCs with official LiteRT-LM NeuroPilot builds (litert-community
+     * MediaTek Dimensity SoCs with official LiteRT-LM NeuroPilot builds (litert-community
      * Gemma3-1B-IT `_mt6989` / `_mt6991` / `_mt6993`): 9300, 9400, 9500. Null for any other chip.
      */
     fun mediatekNpu(manufacturer: String?, model: String?): String? {
@@ -82,7 +85,7 @@ object NpuIds {
      */
     fun defaultKv(fileName: String): Int {
         val n = fileName.lowercase()
-        // 2.4.5: litert-community Qwen3-0.6B.mediatek.mt6993 — model card: a16w8, context 4096.
+        // litert-community Qwen3-0.6B.mediatek.mt6993 — model card: a16w8, context 4096.
         return if (GEMMA4.any { it in n } || (n.startsWith("qwen3-0.6b") && "mediatek" in n)) GEMMA4_NPU_KV else UNKNOWN_NPU_KV
     }
 
@@ -95,7 +98,7 @@ object NpuIds {
 }
 
 /**
- * 2.0: what to do when the first reply after a fresh GPU/NPU load ends in ERROR before any output.
+ * what to do when the first reply after a fresh GPU/NPU load ends in ERROR before any output.
  * A generic model is reloaded on the CPU and retried; an NPU-only file (AOT-compiled for one
  * Hexagon) cannot run on the CPU, so the retry would only replace the real native error with
  * "NPU 专用模型不能在 CPU 上运行" — report the NPU error instead.
@@ -130,17 +133,17 @@ object FirstReplyFallback {
 }
 
 /**
- * 2.0: the on-disk QNN runtime is only "installed" when every library it needs is present and
+ * the on-disk QNN runtime is only "installed" when every library it needs is present and
  * non-empty (and, for markers written by 2.0+, has the size recorded at install time). A marker
  * left over a half-deleted or truncated directory used to report 已安装 and then fail at load.
  */
-/** 2.1.1: picks the NPU-relevant lines (QNN / LiteRT dispatch / FastRPC) out of a logcat dump. */
+/** picks the NPU-relevant lines (QNN / LiteRT dispatch / FastRPC) out of a logcat dump. */
 object NpuLog {
     private val KEYS = listOf(
         "qnn", "htp", "dispatch", "adsprpc", "fastrpc", "cdsp", "rpcmem", "litert", "skel",
-        // 2.1.2: the warm-up failure itself is logged by tflite / the LM executor, not QNN.
+        // the warm-up failure itself is logged by tflite / the LM executor, not QNN.
         "tflite", "allocate", "tensor", "enomem", "mmap", "dmabuf",
-        // 2.4.4: MediaTek NeuroPilot (Neuron adapter, APU / MDLA driver).
+        // MediaTek NeuroPilot (Neuron adapter, APU / MDLA driver).
         "neuron", "apusys", "apu", "mdla",
     )
     private val LEVEL = Regex("^[EWF]/")
@@ -152,13 +155,13 @@ object NpuLog {
             .takeLast(max)
             .joinToString("\n")
 
-    /** 2.1.2: when no line matches, the last error / fatal lines of our own process instead of nothing. */
+    /** when no line matches, the last error / fatal lines of our own process instead of nothing. */
     fun fallback(lines: List<String>, max: Int): String =
         lines.filter { Regex("^[EF]/").containsMatchIn(it) }.map { it.trim().take(240) }.distinct().takeLast(max).joinToString("\n")
 }
 
 /**
- * 2.1.2: Gemma 4 sm8750 failed prefill warm-up with 「Failed to allocate tensors」 on a Redmi K90 even
+ * Gemma 4 sm8750 failed prefill warm-up with 「Failed to allocate tensors」 on a Redmi K90 even
  * with the full runtime. Retry with smaller KV sizes (LiteRT-LM #2018: Gemma 4 needs ≥ 1536 =
  * prefill chunk + sliding window) before giving up. null = the size compiled into the file.
  */
@@ -173,7 +176,7 @@ object NpuRetry {
 object NpuRuntimeFiles {
     const val DISPATCH = "libLiteRtDispatch_Qualcomm.so"
     /**
-     * 2.1.1: Google's LiteRT-LM NPU guide pushes libQnnHtpPrepare.so with the other QAIRT libraries;
+     * Google's LiteRT-LM NPU guide pushes libQnnHtpPrepare.so with the other QAIRT libraries;
      * without it the Gemma 4 sm8750 graph failed prefill warm-up ("Failed to allocate tensors").
      * Adds ~85 MB on disk; a runtime installed by 2.1.0 (five files) now reports 需要修复.
      */

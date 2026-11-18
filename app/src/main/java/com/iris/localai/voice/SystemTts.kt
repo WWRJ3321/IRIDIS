@@ -13,7 +13,7 @@ import java.util.UUID
 import kotlin.coroutines.resume
 
 /**
- * 2.2.10 语音 › 朗读引擎「系统 TTS」: Android's TextToSpeech with the system default engine and voice.
+ * 语音 › 朗读引擎「系统 TTS」: Android's TextToSpeech with the system default engine and voice.
  * Each sentence is rendered with synthesizeToFile and handed to the normal PCM pipeline (resampled
  * to the player's rate), so stop / barge-in / echo guard work exactly as with the built-in models.
  */

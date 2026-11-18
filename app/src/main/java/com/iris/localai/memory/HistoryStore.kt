@@ -45,7 +45,7 @@ data class HistoryHit(
 )
 
 /**
- * 1.10.0 raw history: every message and tool step in SQLite with a full-text index, for the
+ * raw history: every message and tool step in SQLite with a full-text index, for the
  * agent's `recall` tool. FTS5 when the platform SQLite has it, FTS4 otherwise (BM25 is then
  * computed from matchinfo). Chinese has no spaces, so the index text puts every CJK character
  * on its own and a CJK query becomes a phrase: substring-exact, and BM25 still ranks by rarity.

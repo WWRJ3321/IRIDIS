@@ -3,7 +3,7 @@ package com.iris.localai.ui.chat
 import com.iris.localai.data.ModelFormat
 
 /**
- * 1.10.10: rules for prefilling the open conversation in the background after a model switch.
+ * rules for prefilling the open conversation in the background after a model switch.
  * KV caches belong to one model, so the first question after switching used to prefill the whole
  * conversation (plus the 智能体 tool prompt) while the user waited. MNN (prompt cache) and
  * llama.cpp (prefix reuse) keep a shared prefix, so prefilling it early makes that wait disappear.

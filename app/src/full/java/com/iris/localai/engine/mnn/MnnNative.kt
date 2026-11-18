@@ -28,9 +28,9 @@ object MnnNative {
 
     @JvmStatic external fun nativeCreate(): Long
     @JvmStatic external fun nativeDestroy(handle: Long)
-    /** 2.0.4: "" when the OpenCL driver opens, otherwise the dlerror() text of every candidate. */
+    /** "" when the OpenCL driver opens, otherwise the dlerror() text of every candidate. */
     @JvmStatic external fun nativeOpenClProbe(): String
-    /** 1.8.0: directory for iris_mnn_load.log ("" = off); exported by the settings button. */
+    /** directory for iris_mnn_load.log ("" = off); exported by the settings button. */
     @JvmStatic external fun nativeSetDiagDir(dirUtf8: ByteArray)
 
     @JvmStatic external fun nativeSetNoVisual(enabled: Boolean)
@@ -38,12 +38,12 @@ object MnnNative {
     @JvmStatic external fun nativeLoad(
         handle: Long, configPathUtf8: ByteArray, backend: String, threads: Int, nCtx: Int,
         tmpDirUtf8: ByteArray, useMmap: Boolean,
-        /** 1.7.4: tier cores (empty = all) + nice for the loading thread; restored after load. */
+        /** tier cores (empty = all) + nice for the loading thread; restored after load. */
         cpus: IntArray, nice: Int, applyPolicy: Boolean,
     ): String?
-    /** 1.7.5: re-pin MNN's existing threads; JSON {targets, affinityOk, niceOk, gone, generating, coresWidened, readback}. */
+    /** re-pin MNN's existing threads; JSON {targets, affinityOk, niceOk, gone, generating, coresWidened, readback}. */
     @JvmStatic external fun nativeApplyLive(handle: Long, cpus: IntArray, nice: Int): String
-    /** 1.7.5: pool worker tids still alive + the last generating thread. */
+    /** pool worker tids still alive + the last generating thread. */
     @JvmStatic external fun nativeThreadIds(handle: Long): IntArray
     @JvmStatic external fun nativeUnload(handle: Long)
     @JvmStatic external fun nativeCancel(handle: Long)

@@ -1,9 +1,12 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.workspace
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.tools.*
+import com.iris.localai.agent.web.*
 import java.io.File
 
 /**
- * 2.1.1: layout of the public `Download/IRIDIS` folder. The root is the app's resource / config
+ * layout of the public `Download/IRIDIS` folder. The root is the app's resource / config
  * folder; only `workspace/` is the agent's sandbox:
  *
  * ```
@@ -27,7 +30,7 @@ object StorageLayout {
     const val KNOWLEDGE = "knowledge"
     const val CONFIG = "config"
     const val WORKSPACE = "workspace"
-    /** 2.3.2 角色卡 (CharacterStore). */
+    /** 角色卡 (CharacterStore). */
     const val CHARACTERS = "characters"
     /** 应用私有目录 mode: `filesDir/iridis` holds skills/ and knowledge/ (beside `filesDir/workspace`). */
     const val PRIVATE_APP_DIR = "iridis"

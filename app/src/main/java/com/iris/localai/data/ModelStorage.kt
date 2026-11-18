@@ -3,7 +3,7 @@ package com.iris.localai.data
 import java.io.File
 
 /**
- * 2.5.2: the one place that resolves a model folder on the device, used by every download *and*
+ * the one place that resolves a model folder on the device, used by every download *and*
  * import (LLM: ModelRepository.import / importFolder / MnnHub; 生图; voice packs and imported TTS;
  * translation packs). Before, each store called [ModelDirs.resolve] with 全部文件访问 as the only
  * switch, so with the storage location (工作区位置) in 下载 but without that permission, imported
@@ -12,7 +12,7 @@ import java.io.File
 object ModelStorage {
     /** The app's storage root (AgentContainer.appRoot); set by AppContainer. Null = unknown (2.1.0 rule). */
     @Volatile var storageRoot: () -> File? = { null }
-    /** 2.6.7: 设置 › 工作区位置 是 下载 / 自定义（模型跟 Download/IRIDIS 走）；set by AppContainer. */
+    /** 设置 › 工作区位置 是 下载 / 自定义（模型跟 Download/IRIDIS 走）；set by AppContainer. */
     @Volatile var requestedShared: () -> Boolean = { false }
 
     fun location(privateDir: File, sub: String = ModelDirs.SUB): ModelDirs.Location {

@@ -1,5 +1,11 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.components.IrisButton
+import com.iris.localai.ui.components.IrisButtonStyle
+import com.iris.localai.ui.theme.IrisSpace
+import com.iris.localai.ui.theme.LocalReduceMotion
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
@@ -70,7 +76,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** 1.12.2 pure helpers of the 文件 page (unit-tested). */
+/** pure helpers of the 文件 page (unit-tested). */
 object FilesOps {
     data class Item(val name: String, val path: String, val dir: Boolean, val size: Long, val modified: Long, val children: Int = 0)
 
@@ -87,7 +93,7 @@ object FilesOps {
 
     /** "a/b/c" → [("工作区",""), ("a","a"), ("b","a/b"), ("c","a/b/c")]. */
     fun crumbs(rel: String): List<Pair<String, String>> {
-        val out = mutableListOf(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4fa8c1) to "")
+        val out = mutableListOf(I18n.s(R.string.agent_4fa8c1) to "")
         var acc = ""
         rel.split('/').filter { it.isNotEmpty() }.forEach { seg -> acc = if (acc.isEmpty()) seg else "$acc/$seg"; out += seg to acc }
         return out
@@ -117,7 +123,7 @@ object FilesOps {
 }
 
 /**
- * 1.12.2 文件: a small file manager for the agent's workspace — browse folders, preview text,
+ * 文件: a small file manager for the agent's workspace — browse folders, preview text,
  * import from the phone, new folder, rename, export, delete (backed up, undoable).
  */
 @Composable
@@ -139,13 +145,13 @@ fun FilesPage(onBack: () -> Unit) {
 
     BackHandler(enabled = rel.isNotEmpty()) { rel = FilesOps.parent(rel) }
 
-    // 1.13.0: null while the folder is read, so an empty state does not flash before the list.
+    // null while the folder is read, so an empty state does not flash before the list.
     val loaded by produceState<Pair<String, List<FilesOps.Item>>?>(null, revision, ws, rel) {
         value = rel to withContext(Dispatchers.IO) { runCatching { FilesOps.list(agent.sandbox.root, rel) }.getOrDefault(emptyList()) }
     }
     val items = loaded?.takeIf { it.first == rel }?.second.orEmpty()
     val loading = loaded?.first != rel
-    val reduceMotion = com.iris.localai.ui.theme.LocalReduceMotion.current
+    val reduceMotion = LocalReduceMotion.current
     val undoCount by produceState(0, revision) { value = withContext(Dispatchers.IO) { agent.undo.count() } }
 
     fun dirFile(): File = if (rel.isEmpty()) agent.sandbox.root else agent.sandbox.resolve(rel)
@@ -161,11 +167,11 @@ fun FilesPage(onBack: () -> Unit) {
                             if (cur.moveToFirst()) cur.getString(0) else null
                         } ?: "file"
                         val name = FilesOps.unique(dir, raw.replace('/', '_'))
-                        context.contentResolver.openInputStream(uri)!!.use { input -> File(dir, name).outputStream().use { input.copyTo(it) } }
+                        (context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("无法打开所选文件")).use { input -> File(dir, name).outputStream().use { input.copyTo(it) } }
                     }.isSuccess
                 }
             }
-            message = if (n == uris.size) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_121c52, n) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ec03b6, n, uris.size - n)
+            message = if (n == uris.size) I18n.s(R.string.agent_121c52, n) else I18n.s(R.string.agent_ec03b6, n, uris.size - n)
             agent.changed()
         }
     }
@@ -177,14 +183,14 @@ fun FilesPage(onBack: () -> Unit) {
             val ok = withContext(Dispatchers.IO) {
                 runCatching { context.contentResolver.openOutputStream(uri)?.use { out -> agent.sandbox.resolve(f.path).inputStream().use { it.copyTo(out) } } != null }.getOrDefault(false)
             }
-            message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_234c82, f.name) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_dd51ab)
+            message = if (ok) I18n.s(R.string.agent_234c82, f.name) else I18n.s(R.string.agent_dd51ab)
         }
     }
 
-    SubpageScaffold(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2a0c47), onBack, scrollUnder = false, actions = {
-        PressableIcon(Icons.AutoMirrored.Outlined.Undo, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e9f3fb), enabled = undoCount > 0) {
+    SubpageScaffold(I18n.s(R.string.chat_2a0c47), onBack, scrollUnder = false, actions = {
+        PressableIcon(Icons.AutoMirrored.Outlined.Undo, I18n.s(R.string.agent_e9f3fb), enabled = undoCount > 0) {
             scope.launch {
-                message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_6336b9, it.message) } } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.agent_40caf8)
+                message = withContext(Dispatchers.IO) { runCatching { agent.undo.undoLast(agent.sandbox) }.getOrElse { I18n.s(R.string.agent_6336b9, it.message) } } ?: I18n.s(R.string.agent_40caf8)
                 agent.changed()
             }
         }
@@ -208,14 +214,14 @@ fun FilesPage(onBack: () -> Unit) {
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space4)) {
-                    com.iris.localai.ui.components.IrisButton(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8d9a07), onClick = { importer.launch(arrayOf("*/*")) }, icon = Icons.Outlined.Add,
-                        style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
+                    IrisButton(
+                        I18n.s(R.string.agent_8d9a07), onClick = { importer.launch(arrayOf("*/*")) }, icon = Icons.Outlined.Add,
+                        style = IrisButtonStyle.Tonal, compact = true,
                     )
                     androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = IrisDimens.space4))
-                    com.iris.localai.ui.components.IrisButton(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485), onClick = { newFolder = true }, icon = Icons.Outlined.CreateNewFolder,
-                        style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
+                    IrisButton(
+                        I18n.s(R.string.agent_f3a485), onClick = { newFolder = true }, icon = Icons.Outlined.CreateNewFolder,
+                        style = IrisButtonStyle.Tonal, compact = true,
                     )
                 }
             }
@@ -223,8 +229,8 @@ fun FilesPage(onBack: () -> Unit) {
             if (items.isEmpty() && !loading) {
                 item(key = "empty") {
                     EmptyState(
-                        title = if (rel.isEmpty()) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e83b67) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_e96910),
-                        message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_1b4e0b),
+                        title = if (rel.isEmpty()) I18n.s(R.string.agent_e83b67) else I18n.s(R.string.agent_e96910),
+                        message = I18n.s(R.string.agent_1b4e0b),
                         icon = Icons.Outlined.FolderOpen,
                         modifier = Modifier.padding(top = 48.dp),
                     )
@@ -243,17 +249,17 @@ fun FilesPage(onBack: () -> Unit) {
                     SettingsRow(
                         it.name,
                         icon = if (it.dir) Icons.Outlined.Folder else Icons.Outlined.Description,
-                        subtitle = (if (it.dir) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b5d2d7, it.children) else FilesOps.size(it.size)) + " · " +
+                        subtitle = (if (it.dir) I18n.s(R.string.agent_b5d2d7, it.children) else FilesOps.size(it.size)) + " · " +
                             java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.ROOT).format(java.util.Date(it.modified)),
                         subtitleMaxLines = 1,
                         onClick = { if (it.dir) rel = it.path else viewing = it },
                         trailing = {
                             Box {
-                                PressableIcon(Icons.Outlined.MoreVert, com.iris.localai.I18n.s(com.iris.localai.R.string.agent_ea320a, it.name), size = 40.dp, iconSize = IrisDimens.space20) { menuFor = it.path }
+                                PressableIcon(Icons.Outlined.MoreVert, I18n.s(R.string.agent_ea320a, it.name), size = 40.dp, iconSize = IrisDimens.space20) { menuFor = it.path }
                                 IrisMenu(expanded = menuFor == it.path, onDismiss = { menuFor = null }) {
-                                    IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { menuFor = null; renaming = it }
-                                    if (!it.dir) IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_961d7f), Icons.Outlined.FileUpload) { menuFor = null; exporting = it; exportLauncher.launch(it.name) }
-                                    IrisMenuItem(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { menuFor = null; deleting = it }
+                                    IrisMenuItem(I18n.s(R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { menuFor = null; renaming = it }
+                                    if (!it.dir) IrisMenuItem(I18n.s(R.string.agent_961d7f), Icons.Outlined.FileUpload) { menuFor = null; exporting = it; exportLauncher.launch(it.name) }
+                                    IrisMenuItem(I18n.s(R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { menuFor = null; deleting = it }
                                 }
                             }
                         },
@@ -261,7 +267,7 @@ fun FilesPage(onBack: () -> Unit) {
                 }
             }
             item(key = "foot") {
-                GroupFootnote(ws.root.path + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d0f22a), monospace = false, modifier = Modifier.padding(top = IrisDimens.space8))
+                GroupFootnote(ws.root.path + I18n.s(R.string.agent_d0f22a), monospace = false, modifier = Modifier.padding(top = IrisDimens.space8))
             }
         }
     }
@@ -274,29 +280,29 @@ fun FilesPage(onBack: () -> Unit) {
                 runCatching {
                     val file = agent.sandbox.resolve(f.path)
                     val bytes = file.inputStream().use { s -> s.readNBytes(64 * 1024) }
-                    if (bytes.take(4096).any { it == 0.toByte() }) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7e40a, FilesOps.size(f.size))
-                    else String(bytes, Charsets.UTF_8).let { if (f.size > bytes.size) it + com.iris.localai.I18n.s(com.iris.localai.R.string.agent_8971dc) else it }
-                }.getOrElse { com.iris.localai.I18n.s(com.iris.localai.R.string.agent_3b78ad, it.message) }
+                    if (bytes.take(4096).any { it == 0.toByte() }) I18n.s(R.string.agent_d7e40a, FilesOps.size(f.size))
+                    else String(bytes, Charsets.UTF_8).let { if (f.size > bytes.size) it + I18n.s(R.string.agent_8971dc) else it }
+                }.getOrElse { I18n.s(R.string.agent_3b78ad, it.message) }
             }
         }
-        IrisDialog(onDismiss = { viewing = null }, title = f.name, confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91), onConfirm = { viewing = null }, dismissText = null) {
+        IrisDialog(onDismiss = { viewing = null }, title = f.name, confirmText = I18n.s(R.string.ui_b15d91), onConfirm = { viewing = null }, dismissText = null) {
             Box(
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
-                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(com.iris.localai.ui.theme.IrisSpace.S),
+                    .heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(IrisSpace.S),
             ) {
-                SelectionContainer { Text(text ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_62a33a), style = IrisType.monoSmall, color = c.text) }
+                SelectionContainer { Text(text ?: I18n.s(R.string.chat_62a33a), style = IrisType.monoSmall, color = c.text) }
             }
         }
     }
     if (newFolder) {
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f3a485), initial = "", placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_d7ec2d),
+            title = I18n.s(R.string.agent_f3a485), initial = "", placeholder = I18n.s(R.string.agent_d7ec2d),
             onConfirm = { name ->
                 newFolder = false
-                if (!FilesOps.validName(name)) { message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0780c6); return@TextInputDialog }
+                if (!FilesOps.validName(name)) { message = I18n.s(R.string.agent_0780c6); return@TextInputDialog }
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { File(dirFile(), FilesOps.unique(dirFile(), name.trim())).mkdirs() }.getOrDefault(false) }
-                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_76ace8, name.trim()) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_c71e1b)
+                    message = if (ok) I18n.s(R.string.agent_76ace8, name.trim()) else I18n.s(R.string.agent_c71e1b)
                     agent.changed()
                 }
             },
@@ -305,11 +311,11 @@ fun FilesPage(onBack: () -> Unit) {
     }
     renaming?.let { f ->
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_c8ce4b), initial = f.name,
+            title = I18n.s(R.string.chat_c8ce4b), initial = f.name,
             onConfirm = { name ->
                 renaming = null
                 val n = name.trim()
-                if (!FilesOps.validName(n) || n == f.name) { if (n != f.name) message = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0780c6); return@TextInputDialog }
+                if (!FilesOps.validName(n) || n == f.name) { if (n != f.name) message = I18n.s(R.string.agent_0780c6); return@TextInputDialog }
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) {
                         runCatching {
@@ -318,7 +324,7 @@ fun FilesPage(onBack: () -> Unit) {
                             !to.exists() && from.renameTo(to)
                         }.getOrDefault(false)
                     }
-                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_eac80a, n) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_f32d54)
+                    message = if (ok) I18n.s(R.string.agent_eac80a, n) else I18n.s(R.string.agent_f32d54)
                     agent.changed()
                 }
             },
@@ -327,19 +333,19 @@ fun FilesPage(onBack: () -> Unit) {
     }
     deleting?.let { f ->
         ConfirmDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_4a78de, f.name),
-            message = if (f.dir) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_47d706, f.children) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_0fbeac),
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad),
+            title = I18n.s(R.string.agent_4a78de, f.name),
+            message = if (f.dir) I18n.s(R.string.agent_47d706, f.children) else I18n.s(R.string.agent_0fbeac),
+            confirmText = I18n.s(R.string.chat_2f4aad),
             onConfirm = {
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) {
                         runCatching {
                             val target = agent.sandbox.resolve(f.path)
-                            target.walkBottomUp().filter { it.isFile }.forEach { agent.undo.snapshot(agent.sandbox, it, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_2f4aad)) }
+                            target.walkBottomUp().filter { it.isFile }.forEach { agent.undo.snapshot(agent.sandbox, it, I18n.s(R.string.chat_2f4aad)) }
                             target.deleteRecursively()
                         }.getOrDefault(false)
                     }
-                    message = if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b0b6b9, f.name) else com.iris.localai.I18n.s(com.iris.localai.R.string.agent_acf066)
+                    message = if (ok) I18n.s(R.string.agent_b0b6b9, f.name) else I18n.s(R.string.agent_acf066)
                     agent.changed()
                 }
             },

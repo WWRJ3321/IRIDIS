@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">जवाब लंबाई सीमा तक पहुँचा, सामग्री अधूरी है; कुछ नहीं लिखा गया</string>
     <string name="ask245_pill">आपकी पुष्टि बाकी: %1$s</string>
     <string name="ask245_reopen">पुष्टि खोलें</string>
-    <string name="vg245_title">विज़न के लिए GPU</string>
+    <string name="vg245_title">विज़न (mmproj)</string>
     <string name="vg245_off">Snapdragon पर mmproj CPU पर। दोबारा लोड पर लागू</string>
     <string name="vg245_on">तेज़ छवि पहचान; कुछ फ़ोन पर अटक सकता है। दोबारा लोड पर लागू</string>
     <string name="mtk245_qwen_purpose">Dimensity 9500 NPU बिल्ड, 4K संदर्भ, सिर्फ़ टेक्स्ट (बीटा)</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">मॉडल बहुत बड़ा है (लगभग %1$s GB), इस फ़ोन की मेमोरी में नहीं आएगा</string>
     <string name="ig27_start">पहले एक मॉडल डाउनलोड करें, या अपनी फ़ाइलों के लिए आख़िर में “मॉडल इम्पोर्ट करें” दबाएँ</string>
     <string name="st27_embed">नॉलेज बेस खोज मॉडल</string>
+    <string name="engine_cl_off">पिछली बार लोड क्रैश होने के बाद सुरक्षा के लिए GPU (OpenCL) बंद किया गया</string>
+    <string name="models_gpu_recheck">GPU फिर से जाँचें</string>
+    <string name="models_gpu_recheck_ok">फिर से जाँचा: GPU उपलब्ध है।</string>
+    <string name="models_gpu_recheck_restart">GPU फिर से चालू; लागू करने के लिए ऐप रीस्टार्ट करें।</string>
+    <string name="models_gpu_recheck_none">अब भी कोई OpenCL ड्राइवर नहीं मिला।</string>
+    <string name="vg27b_note">सामान्य GGUF मॉडल के लिए विज़न का CPU या GPU यहाँ चुनें। मॉडल NPU (GenieX) पर चलने पर विज़न GenieX अपने आप संभालता है, यह सेटिंग लागू नहीं होती। दोबारा लोड करने पर लागू।</string>
 </resources>

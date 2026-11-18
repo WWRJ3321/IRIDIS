@@ -12,7 +12,7 @@ data class ImageRequest(
     val seed: Long = -1,
     val initImagePath: String? = null,
     val strength: Float = 0.75f,
-    /** 2.6.8 低内存模式：用完即释放、VAE 放 CPU（mmap）、尺寸上限 [ImageLowMem.MAX_DIM]。 */
+    /** 低内存模式：用完即释放、VAE 放 CPU（mmap）、尺寸上限 [ImageLowMem.MAX_DIM]。 */
     val lowMem: Boolean = false,
 ) {
     /** Negative prompt actually used: ignored without classifier-free guidance. */
@@ -38,7 +38,7 @@ data class ImageRequest(
 }
 
 /**
- * 2.5.2: the 生图 seed field. Empty (or 「随机」) = a new random seed for every image; only a seed the
+ * the 生图 seed field. Empty (or 「随机」) = a new random seed for every image; only a seed the
  * user typed stays fixed. The seed actually used is shown with the result and never written back into
  * the field (that turned every later image into a repeat until the field was cleared by hand). Pure.
  */
@@ -57,7 +57,7 @@ object ImageSeed {
 }
 
 /**
- * 2.6.8 生图低内存模式（纯规则，单测覆盖）。思路：峰值 = 常驻权重 + 计算缓冲（随像素数涨）。
+ * 生图低内存模式（纯规则，单测覆盖）。思路：峰值 = 常驻权重 + 计算缓冲（随像素数涨）。
  * 1) 长边限到 [MAX_DIM]（等比缩，16 对齐）；2) sd.cpp 的 VAE 也放 CPU（权重留在 mmap，不复制进 Vulkan 缓冲）；
  * 3) 每张图生成完立刻释放全部权重；4) 生成前总是先卸载文本模型。文本编码器本来就在 CPU（mmap）。
  * 原生层的 params_backend=disk / max_vram 需要重编并重新托管 libiris_sd.so，留待交接（见 HANDOFF）。

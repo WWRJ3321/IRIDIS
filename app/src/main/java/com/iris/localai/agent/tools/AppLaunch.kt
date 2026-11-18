@@ -1,7 +1,11 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
+
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 
 /**
- * 2.1.9 「直接打开应用」: finds an installed app by Chinese name, English name or package (fuzzy),
+ * 「直接打开应用」: finds an installed app by Chinese name, English name or package (fuzzy),
  * for the `phone` tool's open_app, the GUI agent's Launch / open / awake and the chat's 「打开微信」.
  * Apps are (label, package) from the launcher query (manifest <queries> MAIN/LAUNCHER). Pure.
  */
@@ -110,7 +114,7 @@ object AppMatcher {
     }
 }
 
-/** 2.1.9: 「打开微信」-style messages that only ask to launch an app (no further steps). Pure. */
+/** 「打开微信」-style messages that only ask to launch an app (no further steps). Pure. */
 object LaunchIntent {
     private val PURE = Regex("^(请|麻烦)?(你)?(帮我|给我|替我)?(打开|启动|开启|运行|进入)(一下)?\\s*(.{1,24}?)\\s*(app|APP|App|应用|软件)?(一下|吧|呗)?[。.!！~～]*$")
     /** Words that mean more than a launch (「打开微信给张三发消息」、「打开蓝牙」-like settings, questions). */

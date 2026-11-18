@@ -28,7 +28,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * 2.1.4 自定义背景. The picked photo (system photo picker, no storage permission) is decoded once,
+ * 自定义背景. The picked photo (system photo picker, no storage permission) is decoded once,
  * scaled down to the screen and copied to filesDir/backgrounds/bg-<time>.jpg; the original URI is
  * not kept. Only the file name is stored in settings ([com.iris.localai.data.AppSettings.backgroundImage]).
  */

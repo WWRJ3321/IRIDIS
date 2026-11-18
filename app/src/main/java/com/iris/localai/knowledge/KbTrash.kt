@@ -3,7 +3,7 @@ package com.iris.localai.knowledge
 import java.io.File
 
 /**
- * 2.3.3: 知识库回收站 — `knowledge/.trash/<id>/` holds one deleted file or folder under its own name
+ * 知识库回收站 — `knowledge/.trash/<id>/` holds one deleted file or folder under its own name
  * plus `.origin` (original relative path, deletion time, folder flag). Restore puts it back (a free
  * name when the place is taken); items older than [KEEP_MS] are purged. `.trash` is never indexed.
  * Pure JVM, unit-tested.
@@ -81,7 +81,7 @@ class KbTrash(private val kbDir: () -> File) {
 }
 
 /**
- * 2.3.4: reference-only removal. A knowledge file IRIDIS cannot move into `.trash` (seen only through the
+ * reference-only removal. A knowledge file IRIDIS cannot move into `.trash` (seen only through the
  * SAF grant / content:// — possibly the user's own file) is never deleted: its path is hidden from the
  * index instead, and restore simply un-hides it. Stored in app storage ([file]), one `state\tdeletedAt\tpath`
  * line each (state `t` = in the 回收站, `p` = removed for good, still hidden, file untouched). Pure JVM.

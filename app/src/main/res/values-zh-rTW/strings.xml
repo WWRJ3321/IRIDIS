@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">回覆達到長度上限，內容不完整，未寫入</string>
     <string name="ask245_pill">待確認：%1$s</string>
     <string name="ask245_reopen">展開確認</string>
-    <string name="vg245_title">識圖用 GPU</string>
+    <string name="vg245_title">識圖（mmproj）</string>
     <string name="vg245_off">驍龍上 mmproj 用 CPU，重新載入生效</string>
     <string name="vg245_on">識圖更快；個別機型可能卡死，重新載入生效</string>
     <string name="mtk245_qwen_purpose">天璣 9500 NPU 專用版，4K 上下文，純文字（實驗）</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">模型太大（約 %1$s GB），這台手機記憶體放不下</string>
     <string name="ig27_start">先下載一個模型，或點最後的「匯入模型」用自己的檔案</string>
     <string name="st27_embed">知識庫檢索模型</string>
+    <string name="engine_cl_off">上次載入當機後，為安全起見已關閉 GPU（OpenCL）</string>
+    <string name="models_gpu_recheck">重新偵測 GPU</string>
+    <string name="models_gpu_recheck_ok">已重新偵測：GPU 可用。</string>
+    <string name="models_gpu_recheck_restart">已重新開啟 GPU，重新啟動 App 後生效。</string>
+    <string name="models_gpu_recheck_none">仍未找到 OpenCL 驅動。</string>
+    <string name="vg27b_note">一般 GGUF 模型的識圖在這裡選 CPU 或 GPU；模型用 NPU（GenieX）時識圖由 GenieX 自動處理，不受此項影響。重新載入生效。</string>
 </resources>

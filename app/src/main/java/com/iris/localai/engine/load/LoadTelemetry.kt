@@ -1,9 +1,13 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.load
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.engine.*
+import com.iris.localai.engine.resources.*
 import kotlinx.serialization.Serializable
 
 /**
- * 1.10.2: real load telemetry (user: 「每次加载模型好慢，>40S」).
+ * real load telemetry (user: 「每次加载模型好慢，>40S」).
  *
  * LiteRT-LM 0.18 names its compiled caches after the model file (runtime/executor/
  * executor_settings_base.cc, util/file_util.cc, tag v0.18.0):
@@ -103,19 +107,19 @@ object LoadTelemetry {
     fun seconds(ms: Long): Long = ((ms + 500) / 1000).coerceAtLeast(1)
 
     fun cacheLabel(c: CacheUse): String? = when (c) {
-        CacheUse.HIT -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_256a0f)
-        CacheUse.MISS -> com.iris.localai.I18n.s(com.iris.localai.R.string.engine_1d33a0)
+        CacheUse.HIT -> I18n.s(R.string.engine_256a0f)
+        CacheUse.MISS -> I18n.s(R.string.engine_1d33a0)
         CacheUse.NONE -> null
     }
 
     /** Model sheet line: 「上次加载 12 秒 · 已用缓存」 / 「上次加载 48 秒 · 首次编译」 / 「上次加载 3 秒」. */
     fun summary(r: LoadRecord): String {
-        val base = if (r.ok) com.iris.localai.I18n.s(com.iris.localai.R.string.engine_687cb5, seconds(r.ms)) else com.iris.localai.I18n.s(com.iris.localai.R.string.engine_7db56c, seconds(r.ms))
+        val base = if (r.ok) I18n.s(R.string.engine_687cb5, seconds(r.ms)) else I18n.s(R.string.engine_7db56c, seconds(r.ms))
         return cacheLabel(r.cache)?.let { "$base · $it" } ?: base
     }
 
     /** Elapsed time while a load runs: 「已用 7 秒」. */
-    fun elapsed(ms: Long): String = com.iris.localai.I18n.s(com.iris.localai.R.string.engine_263f18, (ms / 1000).coerceAtLeast(0))
+    fun elapsed(ms: Long): String = I18n.s(R.string.engine_263f18, (ms / 1000).coerceAtLeast(0))
 
     fun mb(bytes: Long): String = String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1_048_576.0)
 
@@ -142,7 +146,7 @@ object LoadTelemetry {
 }
 
 /**
- * 1.10.2: the maxNumTokens a LiteRT-LM load asks for. Depends only on the model file and the
+ * the maxNumTokens a LiteRT-LM load asks for. Depends only on the model file and the
  * model's own 上下文长度 (settings / model settings) — never on the tier, agent mode, compaction or
  * the backend's threads — so the compiled GPU programs in the cache stay valid between loads.
  */
@@ -152,7 +156,7 @@ object LiteRtLoadKey {
         npuKv ?: if (npuFile) minOf(contextLength, npuDefault) else contextLength
 }
 
-/** 1.10.2: no needless reloads — a load of the model that is already resident is a no-op. */
+/** no needless reloads — a load of the model that is already resident is a no-op. */
 object ReloadRules {
     fun alreadyLoaded(state: EngineState, modelPath: String): Boolean =
         state is EngineState.Ready && state.model.path == modelPath
@@ -165,7 +169,7 @@ object ReloadRules {
     fun tierReloadsLiteRt(activeBackend: Backend?): Boolean = activeBackend == Backend.CPU
 }
 
-/** 1.10.2: background preload of the last-used model at app start. */
+/** background preload of the last-used model at app start. */
 enum class PreloadDecision { LOAD, DISABLED, NO_LAST_MODEL, MODEL_MISSING, ALREADY_LOADING_OR_LOADED, SKIP_AFTER_NATIVE_CRASH }
 
 object PreloadPolicy {

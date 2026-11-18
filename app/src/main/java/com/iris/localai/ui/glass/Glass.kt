@@ -1,5 +1,9 @@
 package com.iris.localai.ui.glass
 
+import com.iris.localai.ui.components.MatteGlass
+import com.iris.localai.ui.theme.IrisStyle
+import com.iris.localai.ui.theme.LocalIrisStyle
+import com.iris.localai.ui.theme.LocalSolidBackground
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.RenderEffect
@@ -40,7 +44,7 @@ import kotlin.math.ceil
 /*
  * IRIS glass — a from-scratch frosted-glass backdrop blur for Compose (no third-party code).
  *
- * 1.7.3: frosted glass only. The 1.7.1/1.7.2 AGSL liquid lens (refraction, dispersion, moving
+ * frosted glass only. The 1.7.1/1.7.2 AGSL liquid lens (refraction, dispersion, moving
  * highlights, press swelling, droplet merging) was removed: on the phone its outward samples hit
  * transparent pixels beyond the clip/screen edge and were forced opaque, which drew a thick black
  * rim, blue dispersion fringes and a square white block that ignored the rounded corners.
@@ -91,9 +95,9 @@ data class GlassStyle(
     val blurRadius: Float = 24f,
     /** null = theme glass tint. */
     val tint: Color? = null,
-    /** 1.13.1: 0 by default — flat look (user: 界面平化); the rim/sheen highlight is opt-in. */
+    /** 0 by default — flat look (user: 界面平化); the rim/sheen highlight is opt-in. */
     val rimAlpha: Float = 0f,
-    /** 1.13.1: top white sheen, off by default (flat). */
+    /** top white sheen, off by default (flat). */
     val sheen: Boolean = false,
     /** Large surfaces (drawer, full-screen) blur at a coarser resolution. */
     val large: Boolean = false,
@@ -111,15 +115,15 @@ fun Modifier.glass(
     style: GlassStyle = GlassStyle(),
 ): Modifier = composed {
     val quality = LocalGlassQuality.current
-    // 2.5.0 Beta2 柔光: solid — no blur at all, an opaque surface-colour fill and a 0.5 dp hairline.
-    val matte = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.SOFT
+    // 柔光: solid — no blur at all, an opaque surface-colour fill and a 0.5 dp hairline.
+    val matte = LocalIrisStyle.current == IrisStyle.SOFT
     val source = if (quality.blurs && !matte) backdrop else null
     val colors = Iris.colors
     val style = if (matte) style.copy(vibrancy = 1f, rimAlpha = 0f, sheen = false) else style
     val baseTint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
     val tint = if (matte) (style.tint ?: colors.surface).copy(alpha = 1f) else baseTint
     val rim = colors.glassRim
-    val solidBg = com.iris.localai.ui.theme.LocalSolidBackground.current
+    val solidBg = LocalSolidBackground.current
     val holder = remember { PanelState() }
     val panelLayer = rememberGraphicsLayer()
 
@@ -172,7 +176,7 @@ fun Modifier.glass(
                 drawOutline(outline, if (solidBg) tint.copy(alpha = 1f) else tint)
                 if (style.sheen && !solidBg) drawOutline(outline, sheen)
                 if (drawRim) drawOutline(outline, rimBrush, style = rimStroke, blendMode = BlendMode.SrcOver)
-                if (matte) drawOutline(outline, com.iris.localai.ui.components.MatteGlass.hairline(colors.isDark), style = Stroke(width = com.iris.localai.ui.components.MatteGlass.HAIRLINE_DP.dp.toPx()))
+                if (matte) drawOutline(outline, MatteGlass.hairline(colors.isDark), style = Stroke(width = MatteGlass.HAIRLINE_DP.dp.toPx()))
             }
         }
 }

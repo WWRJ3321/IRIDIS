@@ -1,5 +1,8 @@
 package com.iris.localai.ui.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.motion.enterOnce
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -51,27 +54,27 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
 import java.io.File
 
-/** 2.4.3: copy of the 生图 history manager. */
+/** copy of the 生图 history manager. */
 object HistoryText {
-    val MANAGE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_manage)
-    val DONE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_done)
-    val SELECT_ALL get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_select_all)
-    val SELECT_NONE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_select_none)
-    val REUSE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_reuse)
-    val COPY_PROMPT get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_copy_prompt)
-    val REUSED get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_reused)
-    val COPIED get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_copied)
-    val NO_PARAMS get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_no_params)
-    val DELETE_ONE_TITLE get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_one_title)
-    val DELETE_ONE_MSG get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_one_msg)
-    fun deleteManyTitle(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_del_many_title, n)
-    fun header(n: Int, bytes: Long) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_header, n, Format.bytes(bytes))
-    fun selected(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_selected, n)
-    fun deleteN(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_delete_n, n)
-    fun negative(t: String) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_negative, t)
-    fun steps(n: Int) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_steps, n)
-    fun seed(v: Any) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_seed, v.toString())
-    fun strength(v: Any) = com.iris.localai.I18n.s(com.iris.localai.R.string.ih243_strength, v.toString())
+    val MANAGE get() = I18n.s(R.string.ih243_manage)
+    val DONE get() = I18n.s(R.string.ih243_done)
+    val SELECT_ALL get() = I18n.s(R.string.ih243_select_all)
+    val SELECT_NONE get() = I18n.s(R.string.ih243_select_none)
+    val REUSE get() = I18n.s(R.string.ih243_reuse)
+    val COPY_PROMPT get() = I18n.s(R.string.ih243_copy_prompt)
+    val REUSED get() = I18n.s(R.string.ih243_reused)
+    val COPIED get() = I18n.s(R.string.ih243_copied)
+    val NO_PARAMS get() = I18n.s(R.string.ih243_no_params)
+    val DELETE_ONE_TITLE get() = I18n.s(R.string.ih243_del_one_title)
+    val DELETE_ONE_MSG get() = I18n.s(R.string.ih243_del_one_msg)
+    fun deleteManyTitle(n: Int) = I18n.s(R.string.ih243_del_many_title, n)
+    fun header(n: Int, bytes: Long) = I18n.s(R.string.ih243_header, n, Format.bytes(bytes))
+    fun selected(n: Int) = I18n.s(R.string.ih243_selected, n)
+    fun deleteN(n: Int) = I18n.s(R.string.ih243_delete_n, n)
+    fun negative(t: String) = I18n.s(R.string.ih243_negative, t)
+    fun steps(n: Int) = I18n.s(R.string.ih243_steps, n)
+    fun seed(v: Any) = I18n.s(R.string.ih243_seed, v.toString())
+    fun strength(v: Any) = I18n.s(R.string.ih243_strength, v.toString())
     fun position(i: Int, n: Int) = "${i + 1} / $n"
 }
 
@@ -111,7 +114,7 @@ internal fun HistoryTile(path: String, selecting: Boolean, selected: Boolean, on
     ) {
         Thumb(path, Modifier.fillMaxSize())
         if (selecting) {
-            if (selected) Box(Modifier.fillMaxSize().clip(com.iris.localai.ui.theme.IrisRadius.mediumShape).border(2.dp, c.accent, com.iris.localai.ui.theme.IrisRadius.mediumShape))
+            if (selected) Box(Modifier.fillMaxSize().clip(IrisRadius.mediumShape).border(2.dp, c.accent, IrisRadius.mediumShape))
             Box(
                 Modifier.align(Alignment.TopEnd).padding(IrisDimens.space6).size(22.dp).clip(CircleShape)
                     .background(if (selected) c.accent else Color.Black.copy(alpha = 0.35f))
@@ -175,7 +178,7 @@ internal fun HistoryViewer(
                     }
                     IrisButton(ImageGenText.SAVE, icon = IrisIcons.Download, style = IrisButtonStyle.Tonal, compact = true, onClick = {
                         val ok = runCatching { ChatImageLoader.saveToGallery(context, file.readBytes()) }.getOrDefault(false)
-                        toast(if (ok) com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_e8561b) else com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6de920))
+                        toast(if (ok) I18n.s(R.string.imagegen_e8561b) else I18n.s(R.string.imagegen_6de920))
                     })
                     IrisButton(ImageGenText.SHARE, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, compact = true, onClick = {
                         runCatching { ChatImageLoader.share(context, file.readBytes()) }

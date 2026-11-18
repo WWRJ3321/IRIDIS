@@ -23,19 +23,19 @@ data class ExecResult(val ok: Boolean, val message: String = "")
 interface GuiDevice {
     suspend fun observe(): GuiObservation
     suspend fun execute(action: GuiAction, obs: GuiObservation): ExecResult
-    /** 2.2.9: after an action, wait until the screen is stable; returns its fingerprint (null = unknown). */
-    /** 2.2.9: the screen's fingerprint right now (null = use the observation's tree). */
+    /** after an action, wait until the screen is stable; returns its fingerprint (null = unknown). */
+    /** the screen's fingerprint right now (null = use the observation's tree). */
     suspend fun snapshot(): ScreenState? = null
     suspend fun waitStable(fallbackMs: Long): ScreenState? { if (fallbackMs > 0) delay(fallbackMs); return null }
-    /** 2.3.0: the node tree only (no screenshot), for scroll-until-found; null = use [observe]. */
+    /** the node tree only (no screenshot), for scroll-until-found; null = use [observe]. */
     suspend fun tree(): UiNode? = observe().tree
 }
 
-/** 2.2.3: one text line found by OCR, in screen pixels (same space as [UiNode.bounds]). */
+/** one text line found by OCR, in screen pixels (same space as [UiNode.bounds]). */
 data class OcrLine(val text: String, val bounds: PxRect)
 
 /**
- * 2.2.3: on-device OCR of a screenshot (full flavour: ML Kit Chinese, bundled). Used only when the
+ * on-device OCR of a screenshot (full flavour: ML Kit Chinese, bundled). Used only when the
  * accessibility tree has few text elements (games, WebView, Flutter); the lines are added to the
  * UI element list as a reference, never used to snap the model's coordinates.
  */
@@ -56,7 +56,7 @@ interface GuiCallbacks {
     /** The model asks a question; null = no answer (stop). */
     suspend fun ask(question: String): String?
     fun onStep(step: GuiStep) {}
-    /** 2.1.9: what step [index] is doing now (the 停止 bar shows it, so a slow model never looks stuck). */
+    /** what step [index] is doing now (the 停止 bar shows it, so a slow model never looks stuck). */
     fun onPhase(index: Int, phase: GuiPhase) {}
 }
 
@@ -70,7 +70,7 @@ enum class GuiStop { DONE, GAVE_UP, MAX_STEPS, STOPPED, ERROR }
 
 data class GuiOutcome(val stop: GuiStop, val message: String, val steps: List<GuiStep>)
 
-/** 2.2.2: where the GUI loop reads the user's 补充; the chat sets [source] while its agent runs. */
+/** where the GUI loop reads the user's 补充; the chat sets [source] while its agent runs. */
 object GuiNotes {
     @Volatile var source: (() -> String?)? = null
     fun take(): String? = runCatching { source?.invoke() }.getOrNull()
@@ -92,9 +92,9 @@ object GuiLimits {
     const val HISTORY_STEPS = 8
     /** Fixed settle time, used only by devices that cannot detect a stable screen ([GuiDevice.waitStable]). */
     const val SETTLE_MS = 800L
-    /** 2.3.0: scroll-until-found gives up after this many scrolls. */
+    /** scroll-until-found gives up after this many scrolls. */
     const val MAX_FIND_SCROLLS = 8
-    /** 2.3.0: system ANR / crash dialogs cleared by the loop itself at most this often per run. */
+    /** system ANR / crash dialogs cleared by the loop itself at most this often per run. */
     const val MAX_AUTO_DISMISS = 2
 }
 
@@ -113,9 +113,9 @@ class GuiAgentLoop(
     private val stop: () -> Boolean = { GuiStopSignal.requested },
     private val includeTree: Boolean = true,
     private val today: String = "",
-    /** 2.2.2: 补充 the user typed during the run (read before each step). */
+    /** 补充 the user typed during the run (read before each step). */
     private val userNotes: () -> String? = { GuiNotes.take() },
-    /** 2.2.3: OCR fallback when the tree has little text (null = none, e.g. the lite flavour). */
+    /** OCR fallback when the tree has little text (null = none, e.g. the lite flavour). */
     private val ocr: GuiOcr? = null,
 ) {
     private val steps = ArrayList<GuiStep>()
@@ -126,7 +126,7 @@ class GuiAgentLoop(
         var formatErrors = 0
         val guard = LoopGuard(warnAt = GuiLimits.REPEAT_WARN, stopAt = GuiLimits.REPEAT_WARN * 2)
         var note: String? = null
-        // 2.3.0 (Mika ideas): stuck advice, step memory, ANR/crash dialogs, done check.
+        // Mika ideas: stuck advice, step memory, ANR/crash dialogs, done check.
         val stuck = StuckTracker()
         val memory = StepMemory()
         var autoDismiss = 0
@@ -220,7 +220,7 @@ class GuiAgentLoop(
                         continue
                     }
                     is GuiVerdict.Confirm -> if (!callbacks.confirm(action, v.reason)) {
-                        // 2.2.9: tell the model and let it decide (another way, ask, or finish).
+                        // tell the model and let it decide (another way, ask, or finish).
                         record(parsed.thought, action, GuiStepStatus.DENIED, v.reason)
                         history += line(action, CANCELLED)
                         note = "$CANCELLED（${v.reason}）。不要重复这个操作；换别的做法、提问，或结束任务。"
@@ -244,7 +244,7 @@ class GuiAgentLoop(
                     continue
                 }
                 val r = device.execute(action, obs)
-                // 2.2.9: wait for a stable screen (not a fixed delay), then report whether it changed.
+                // wait for a stable screen (not a fixed delay), then report whether it changed.
                 val after = device.waitStable(if (action is GuiAction.Wait) 0 else settleMs)
                 val changed = ChangeReport.changed(before, after)
                 val change = ChangeReport.text(before, after)
@@ -273,13 +273,13 @@ class GuiAgentLoop(
     }
 
     /**
-     * 2.3.0 scroll-until-found: scrolls [a] without a model step per scroll until an element whose
+     * scroll-until-found: scrolls [a] without a model step per scroll until an element whose
      * text contains [GuiAction.Scroll.until] is on screen, the list stops moving, or
      * [GuiLimits.MAX_FIND_SCROLLS]. Reports where the text is (reference only; the model taps).
      * Returns (found, message for the model, whether the screen moved).
      */
     private suspend fun scrollUntil(a: GuiAction.Scroll, obs: GuiObservation, current: List<UiElement>): Triple<Boolean, String, Boolean> {
-        val text = a.until!!.trim()
+        val text = requireNotNull(a.until) { "scroll 缺少 until" }.trim()
         fun at(e: UiElement): String { val (x, y) = UiTreeSerializer.gridCentre(e, obs.width, obs.height, profile.scale); return "($x,$y)" }
         UiTreeSerializer.find(current, text)?.let { return Triple(true, "「$text」已在屏幕上 ${at(it)}，不用滚动", false) }
         val step = a.copy(until = null)
@@ -373,7 +373,7 @@ Rules: decide from the screenshot; the UI element list (when given) is only a re
     fun messages(
         profile: GuiProfile, task: String, history: List<String>, obs: GuiObservation, elements: List<UiElement>,
         includeTree: Boolean, note: String?, today: String = "",
-        /** 2.3.0: one line summing up the steps that left the history window. */
+        /** one line summing up the steps that left the history window. */
         earlier: String? = null,
     ): List<PromptMessage> {
         val user = buildString {

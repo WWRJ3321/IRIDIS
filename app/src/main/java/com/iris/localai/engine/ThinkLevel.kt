@@ -1,7 +1,10 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
- * 2.6.0 思考档位: long-press 思考 → 关 / 低 / 中 / 高.
+ * 思考档位: long-press 思考 → 关 / 低 / 中 / 高.
  * Models with their own effort levels (gpt-oss, Spark) get those; the rest (Qwen …) get a cap on
  * the length of the reasoning: 低 1K, 中 4K, 高 none (the answer is then written with thinking off).
  */

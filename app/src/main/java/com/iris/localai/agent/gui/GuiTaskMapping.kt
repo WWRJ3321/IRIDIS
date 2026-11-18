@@ -1,9 +1,9 @@
 package com.iris.localai.agent.gui
 
-import com.iris.localai.agent.GuiTaskResult
-import com.iris.localai.agent.GuiTaskStatus
+import com.iris.localai.agent.tools.GuiTaskResult
+import com.iris.localai.agent.tools.GuiTaskStatus
 
-/** 2.1.9: a GUI loop outcome → what the chat's `screen` call reports. Pure. */
+/** a GUI loop outcome → what the chat's `screen` call reports. Pure. */
 object GuiTaskMapping {
     fun head(stop: GuiStop): String = when (stop) {
         GuiStop.DONE -> "完成"; GuiStop.GAVE_UP -> "未完成"; GuiStop.MAX_STEPS -> "达到步数上限"

@@ -1,5 +1,7 @@
-package com.iris.localai.engine
+package com.iris.localai.engine.resources
 
+import com.iris.localai.engine.*
+import com.iris.localai.engine.load.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -8,7 +10,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * 1.7.5: evidence on a real phone that a lower resource tier really draws less. Logged under tag
+ * evidence on a real phone that a lower resource tier really draws less. Logged under tag
  * IrisResource; 1.7.6 also keeps the last reply's numbers for 设置 › 资源诊断 ([lastReport]).
  *
  * While a reply runs: battery current (BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) every 500 ms,
@@ -61,7 +63,7 @@ class TelemetrySegment(val tier: String, val startCpuMs: Long, val startWallMs: 
     val coreHist = sortedMapOf<Int, Int>()
     var endCpuMs = startCpuMs
     var endWallMs = startWallMs
-    /** 1.7.6: wall time of the first / last output piece in this segment (-1 = none yet). */
+    /** wall time of the first / last output piece in this segment (-1 = none yet). */
     var firstPieceWallMs = -1L
     var lastPieceWallMs = -1L
 
@@ -116,7 +118,7 @@ class ResourceTelemetry(
 ) {
     private val lock = Any()
     private val _lastReport = kotlinx.coroutines.flow.MutableStateFlow<ReplyReport?>(null)
-    /** 1.7.6: the last reply, per tier segment, for 设置 › 资源诊断 (same numbers as the log). */
+    /** the last reply, per tier segment, for 设置 › 资源诊断 (same numbers as the log). */
     val lastReport: kotlinx.coroutines.flow.StateFlow<ReplyReport?> = _lastReport
     private var segments = ArrayList<TelemetrySegment>()
     private var current: TelemetrySegment? = null
@@ -210,7 +212,7 @@ class ResourceTelemetry(
 
     companion object {
         /**
-         * 1.7.6: what 资源诊断 shows. Tokens per segment are the engine's token count split in
+         * what 资源诊断 shows. Tokens per segment are the engine's token count split in
          * proportion to the streamed pieces of each segment. Decode speed of the first segment is
          * timed from its first piece (prefill excluded); a later segment from the tier change.
          */
@@ -276,7 +278,7 @@ class ResourceTelemetry(
     }
 }
 
-/** 1.7.6: one tier's share of the last reply, as shown in 资源诊断. */
+/** one tier's share of the last reply, as shown in 资源诊断. */
 data class SegmentReport(
     val tier: String,
     val wallMs: Long,
@@ -292,7 +294,7 @@ data class SegmentReport(
     val maSamples: Int,
 )
 
-/** 1.7.6: the last reply as a whole. */
+/** the last reply as a whole. */
 data class ReplyReport(
     val atEpochMs: Long,
     val tokens: Int?,

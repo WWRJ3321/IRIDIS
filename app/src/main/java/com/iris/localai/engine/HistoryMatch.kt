@@ -1,7 +1,10 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
- * 1.10.6: whether a new request's history ([b], everything before the new user turn) still matches
+ * whether a new request's history ([b], everything before the new user turn) still matches
  * what the engine's live conversation has already seen ([a]), so its KV cache can be reused instead
  * of re-prefilling the whole prompt (the cause of the slow first token in 智能体 mode).
  *
@@ -36,7 +39,7 @@ object HistoryMatch {
     private fun norm(t: String): String = THINK.replace(t, "").replace(Regex("\\s+"), " ").trim()
 
     /**
-     * 1.13.0: turns safe to seed a fresh conversation with — empty assistant turns dropped and
+     * turns safe to seed a fresh conversation with — empty assistant turns dropped and
      * consecutive same-role turns merged. Strict chat templates (Gemma) reject user,user or an
      * empty model turn, which used to switch the engine to a ChatML fallback for the whole session.
      */

@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * 2.5.1 知识库向量检索 (runtime half; the pure half is [KbVectors]). Owns the embedder (loaded on first use —
+ * 知识库向量检索 (runtime half; the pure half is [KbVectors]). Owns the embedder (loaded on first use —
  * building vectors or a search — and freed after [IDLE_MS] without use), the vector file beside index.json
  * ([KbVecStore.FILE]) and the background fill after documents change (progress in [progress], cancellable).
  * Anything failing here only means BM25 alone: [hits] returns null and the caller keeps its BM25 result.
@@ -159,7 +159,7 @@ class KbSemantic(
 
     companion object {
         private const val KEY = "model"
-        /** 2.5.1: the embedder is freed after this long without use. */
+        /** the embedder is freed after this long without use. */
         const val IDLE_MS = 60_000L
         private const val REAP_TICK_MS = 10_000L
         private const val FILL_DELAY_MS = 1_500L

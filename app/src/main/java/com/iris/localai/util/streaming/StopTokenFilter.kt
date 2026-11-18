@@ -1,4 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.streaming
+
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.thinking.*
 
 /**
  * Removes end-of-turn / special tokens that some converted models leak as plain text

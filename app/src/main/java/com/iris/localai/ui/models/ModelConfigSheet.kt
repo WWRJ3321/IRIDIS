@@ -1,5 +1,22 @@
 package com.iris.localai.ui.models
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.CtxScale
+import com.iris.localai.data.ModelAliases
+import com.iris.localai.data.ModelFormat
+import com.iris.localai.data.TokenLimit
+import com.iris.localai.engine.EngineFeatures
+import com.iris.localai.engine.GgufQuant
+import com.iris.localai.engine.MoeLoad
+import com.iris.localai.engine.MtpTag
+import com.iris.localai.engine.llama.MmprojPairing
+import com.iris.localai.engine.load.CpuFasterHint
+import com.iris.localai.engine.load.ModelCache
+import com.iris.localai.ui.components.SectionFold
+import com.iris.localai.ui.components.TypingDots
+import com.iris.localai.ui.icons.IrisIcons
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +76,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * 1.7.1: one model's backend and parameters. Every value starts out following the global default
+ * one model's backend and parameters. Every value starts out following the global default
  * (shown as "默认"); touching it stores an override for this model only. Opened from the model
  * picker and from 模型管理.
  */
@@ -74,10 +91,12 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     val state by engine.state.collectAsStateWithLifecycle()
     val o = configs[model.id] ?: ModelOverrides()
     val eff = EffectiveModelConfig.resolve(settings, model.format, o)
-    val options = remember(model.id, configs, settings.defaultBackends) { engine.backendOptions(model) }
     var crashTick by remember { mutableIntStateOf(0) }
+    val options = remember(model.id, configs, settings.defaultBackends, crashTick) { engine.backendOptions(model) }
+    val gpuOff = remember(crashTick) { engine.environment().openClOff }
+    var gpuRecheckNote by remember { mutableStateOf<String?>(null) }
     val crashed = remember(model.id, crashTick) { engine.crashMemory.crashed(model.id) }
-    // 2.2.0: GGUF can run on llama.cpp or Qualcomm GenieX (full flavour); 2.1.3: picked by the backend.
+    // GGUF can run on llama.cpp or Qualcomm GenieX (full flavour); 2.1.3: picked by the backend.
     val engineId = engine.engineFor(model, eff, options = options)
     val features = BackendCapabilities.features(model.format, model.fileName, engine = engineId)
     val auto = BackendCapabilities.autoBackend(model.format, model.fileName, options, engine.threadPolicy.nominal(engine.tier).allowGpu)
@@ -89,7 +108,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
     var editSeed by remember { mutableStateOf(false) }
     var pickMmproj by remember { mutableStateOf(false) }
     var mmprojTick by remember { mutableIntStateOf(0) }
-    // 2.4.5 (#12): copying a projector takes a while and could fail; both used to be invisible.
+    // copying a projector takes a while and could fail; both used to be invisible.
     var mmprojBusy by remember { mutableStateOf(false) }
     var mmprojError by remember { mutableStateOf<String?>(null) }
     val mmprojFilePicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
@@ -97,69 +116,69 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             mmprojBusy = true; mmprojError = null
             runCatching { container.models.importMmproj(model, uri) }
                 .onSuccess { n -> set { it.copy(mmproj = n) }; mmprojTick++ }
-                .onFailure { t -> mmprojError = com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_attach_failed, t.message ?: t.javaClass.simpleName) }
+                .onFailure { t -> mmprojError = I18n.s(R.string.mm245_attach_failed, t.message ?: t.javaClass.simpleName) }
             mmprojBusy = false
         }
     }
-    // 2.2.17: projectors in the model's folder (GGUF vision through llama.cpp mtmd).
+    // projectors in the model's folder (GGUF vision through llama.cpp mtmd).
     val mmprojSiblings = remember(model.path, pickMmproj, mmprojTick) {
-        if (model.format != com.iris.localai.data.ModelFormat.GGUF) emptyList()
+        if (model.format != ModelFormat.GGUF) emptyList()
         else java.io.File(model.path).parentFile?.list()?.toList().orEmpty()
     }
-    val mmprojChoices = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.candidates(java.io.File(model.path).name, mmprojSiblings) }
-    val mmprojAuto = remember(mmprojSiblings) { com.iris.localai.engine.llama.MmprojPairing.pick(java.io.File(model.path).name, mmprojSiblings) }
-    // 2.5.0-beta9: MTP layers read from the GGUF header on IO; the switch only appears when present.
+    val mmprojChoices = remember(mmprojSiblings) { MmprojPairing.candidates(java.io.File(model.path).name, mmprojSiblings) }
+    val mmprojAuto = remember(mmprojSiblings) { MmprojPairing.pick(java.io.File(model.path).name, mmprojSiblings) }
+    // MTP layers read from the GGUF header on IO; the switch only appears when present.
     val hasMtp by androidx.compose.runtime.produceState(false, model.path) {
-        // 2.5.0-beta10: every LiteRT-LM model gets the switch too (its drafter lives inside the file).
-        value = model.format == com.iris.localai.data.ModelFormat.LITERT ||
-            model.format == com.iris.localai.data.ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.mtp == true
+        // every LiteRT-LM model gets the switch too (its drafter lives inside the file).
+        value = model.format == ModelFormat.LITERT ||
+            model.format == ModelFormat.GGUF && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            GgufQuant.of(java.io.File(model.path))?.mtp == true
         }
     }
-    // 2.5.1: MoE 信息（专家数 / 默认激活数）从 GGUF 头读取；只有 MoE 才显示「专家按需加载」「激活专家数」。
-    val moeInfo by androidx.compose.runtime.produceState<com.iris.localai.engine.GgufQuant.Info?>(null, model.path) {
-        value = if (model.format != com.iris.localai.data.ModelFormat.GGUF) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.iris.localai.engine.GgufQuant.of(java.io.File(model.path))?.takeIf { it.moe }
+    // MoE 信息（专家数 / 默认激活数）从 GGUF 头读取；只有 MoE 才显示「专家按需加载」「激活专家数」。
+    val moeInfo by androidx.compose.runtime.produceState<GgufQuant.Info?>(null, model.path) {
+        value = if (model.format != ModelFormat.GGUF) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            GgufQuant.of(java.io.File(model.path))?.takeIf { it.moe }
         }
     }
     val c = Iris.colors
 
-    // 2.5.5: 改名后表头立即跟着变（model 参数是打开时的快照）
+    // 改名后表头立即跟着变（model 参数是打开时的快照）
     val liveModels by container.models.models.collectAsStateWithLifecycle()
     val shownName = liveModels.firstOrNull { it.fileName == model.fileName }?.displayName ?: model.displayName
     IrisSheet(onDismiss = onDismiss) {
         SheetHeader(shownName) {
-            IrisButton(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_7468f3), { repo.reset(model.id) }, style = IrisButtonStyle.Text, compact = true, enabled = !o.isEmpty)
+            IrisButton(I18n.s(R.string.settings_7468f3), { repo.reset(model.id) }, style = IrisButtonStyle.Text, compact = true, enabled = !o.isEmpty)
         }
         val maxH = (LocalConfiguration.current.screenHeightDp * 0.78f).dp
         Column(Modifier.heightIn(max = maxH).verticalScroll(rememberScrollState())) {
             Text(
-                com.iris.localai.I18n.s(com.iris.localai.R.string.models_135fd8),
+                I18n.s(R.string.models_135fd8),
                 style = IrisType.caption, color = c.textTertiary,
                 modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space4),
             )
 
-            // 2.1.3: no 「推理引擎」 switch any more — for GGUF the backend decides (NPU = GenieX, GPU / CPU = 内置 llama.cpp).
+            // no 「推理引擎」 switch any more — for GGUF the backend decides (NPU = GenieX, GPU / CPU = 内置 llama.cpp).
 
             // ---- Backend ----
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_e778d6))
+            SectionTitle(I18n.s(R.string.models_e778d6))
             SettingsGroup {
                 BackendRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c), com.iris.localai.I18n.s(com.iris.localai.R.string.models_e367b9, auto.label),
+                    I18n.s(R.string.settings_3aed2c), I18n.s(R.string.models_e367b9, auto.label),
                     selected = o.backend == null, enabled = true,
                 ) { set { it.copy(backend = null) } }
                 options.forEach { opt ->
                     Divider()
-                    // 2.2.14: an OpenCL hang on this device moves GGUF to CPU; retry clears it.
-                    val hung = opt.backend == Backend.GPU && model.format == com.iris.localai.data.ModelFormat.GGUF &&
+                    // an OpenCL hang on this device moves GGUF to CPU; retry clears it.
+                    val hung = opt.backend == Backend.GPU && model.format == ModelFormat.GGUF &&
                         remember(crashTick) { engine.crashMemory.openClHung }
                     val crash = opt.backend in crashed || hung
                     BackendRow(
                         opt.backend.label,
                         when {
-                            !opt.available -> opt.reason ?: com.iris.localai.I18n.s(com.iris.localai.R.string.chat_d1e4a7)
-                            hung -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_7bc0c1)
-                            crash -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_429d7e)
+                            !opt.available -> opt.reason ?: I18n.s(R.string.chat_d1e4a7)
+                            hung -> I18n.s(R.string.models_7bc0c1)
+                            crash -> I18n.s(R.string.models_429d7e)
                             else -> opt.detail
                         },
                         selected = o.backend == opt.backend.name,
@@ -168,102 +187,127 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     ) { set { it.copy(backend = opt.backend.name) } }
                 }
             }
-            loaded?.let { r ->
-                GroupFootnote(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_7e17b1, r.details.backend) + (r.details.fallbackNote?.let { "\n$it" } ?: ""),
-                )
-            }
-            // 1.10.3: 「建议：这个模型在 CPU 上加载更快（可选）」 when its last GPU load was > 60 s and a CPU load was faster.
-            val loadRecords by engine.loadStats.records.collectAsStateWithLifecycle()
-            val nextLabel = remember(model.id, configs, settings.defaultBackends) { runCatching { engine.preferredBackend(model).label }.getOrDefault("") }
-            if (com.iris.localai.engine.CpuFasterHint.shouldShow(loadRecords.values, model.id, nextLabel)) {
+            // 上次加载崩溃后 GPU 被安全关闭：可手动重新检测。
+            if (gpuOff || gpuRecheckNote != null) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        com.iris.localai.engine.CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent,
-                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                        gpuRecheckNote ?: I18n.s(R.string.engine_cl_off), style = IrisType.caption, color = c.textTertiary,
+                        maxLines = 3, modifier = Modifier.weight(1f),
                     )
-                    IrisButton(
-                        com.iris.localai.engine.CpuFasterHint.ACTION, { set { it.copy(backend = Backend.CPU.name) } },
+                    if (gpuOff) IrisButton(
+                        I18n.s(R.string.models_gpu_recheck), {
+                            val restart = engine.crashMemory.retryGpu()
+                            crashTick++
+                            val env = engine.environment()
+                            gpuRecheckNote = when {
+                                !env.hasOpenCl && !env.hasVulkan -> I18n.s(R.string.models_gpu_recheck_none)
+                                restart -> I18n.s(R.string.models_gpu_recheck_restart)
+                                else -> I18n.s(R.string.models_gpu_recheck_ok)
+                            }
+                        },
                         style = IrisButtonStyle.Text, compact = true,
                     )
                 }
             }
-            GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.models_32578b))
+            loaded?.let { r ->
+                GroupFootnote(
+                    I18n.s(R.string.models_7e17b1, r.details.backend) + (r.details.fallbackNote?.let { "\n$it" } ?: ""),
+                )
+            }
+            // 「建议：这个模型在 CPU 上加载更快（可选）」 when its last GPU load was > 60 s and a CPU load was faster.
+            val loadRecords by engine.loadStats.records.collectAsStateWithLifecycle()
+            val nextLabel = remember(model.id, configs, settings.defaultBackends) { runCatching { engine.preferredBackend(model).label }.getOrDefault("") }
+            if (CpuFasterHint.shouldShow(loadRecords.values, model.id, nextLabel)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        CpuFasterHint.TEXT, style = IrisType.caption, color = c.accent,
+                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                    )
+                    IrisButton(
+                        CpuFasterHint.ACTION, { set { it.copy(backend = Backend.CPU.name) } },
+                        style = IrisButtonStyle.Text, compact = true,
+                    )
+                }
+            }
+            GroupFootnote(I18n.s(R.string.models_32578b))
 
             // ---- Behaviour ----
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_a04961))
+            SectionTitle(I18n.s(R.string.models_a04961))
             SettingsGroup {
-                // 2.5.5: 自定义显示名（不改文件名）
+                // 自定义显示名（不改文件名）
                 SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename),
-                    subtitle = com.iris.localai.data.ModelAliases.of(model.fileName)?.let { com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename_file, model.fileName) }
-                        ?: com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename_sub),
+                    I18n.s(R.string.v255_rename),
+                    subtitle = ModelAliases.of(model.fileName)?.let { I18n.s(R.string.v255_rename_file, model.fileName) }
+                        ?: I18n.s(R.string.v255_rename_sub),
                     onClick = { editName = true },
                 )
                 Divider()
                 SegmentedRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_1d878d), listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.models_112be9), com.iris.localai.I18n.s(com.iris.localai.R.string.components_849320), com.iris.localai.I18n.s(com.iris.localai.R.string.components_d58a55)),
+                    I18n.s(R.string.models_1d878d), listOf(I18n.s(R.string.models_112be9), I18n.s(R.string.components_849320), I18n.s(R.string.components_d58a55)),
                     when (o.thinking) { null -> 0; true -> 1; false -> 2 },
                     { i -> set { it.copy(thinking = when (i) { 1 -> true; 2 -> false; else -> null }) } },
-                    subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_4ebee0),
+                    subtitle = I18n.s(R.string.models_4ebee0),
                 )
                 Divider()
                 SettingsRow(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_24c18d),
-                    subtitle = o.systemPrompt?.takeIf { it.isNotBlank() } ?: com.iris.localai.I18n.s(com.iris.localai.R.string.models_df255e),
+                    I18n.s(R.string.models_24c18d),
+                    subtitle = o.systemPrompt?.takeIf { it.isNotBlank() } ?: I18n.s(R.string.models_df255e),
                     subtitleMaxLines = 2,
                     onClick = { editPrompt = true },
                 )
             }
 
             // ---- Context & length ----
-            SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_dfd0cd))
+            SectionTitle(I18n.s(R.string.models_dfd0cd))
             SettingsGroup {
                 val fixed = features.fixedContext
                 if (fixed != null) {
-                    SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_2c1185, fixed), enabled = false)
+                    SettingsRow(I18n.s(R.string.models_3b5663), subtitle = I18n.s(R.string.models_2c1185, fixed), enabled = false)
                 } else {
                     OvSlider(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_3b5663), com.iris.localai.data.CtxScale.toPos(eff.contextLength), o.contextLength == null, com.iris.localai.data.CtxScale.RANGE, "${eff.contextLength}",
-                        onChange = { v -> set { it.copy(contextLength = com.iris.localai.data.CtxScale.fromPos(v, 512)) } },
+                        I18n.s(R.string.models_3b5663), CtxScale.toPos(eff.contextLength), o.contextLength == null, CtxScale.RANGE, "${eff.contextLength}",
+                        onChange = { v -> set { it.copy(contextLength = CtxScale.fromPos(v, 512)) } },
                         onReset = { set { it.copy(contextLength = null) } },
                     )
                 }
                 Divider()
                 OvSlider(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_422a72), com.iris.localai.data.TokenLimit.toSlider(eff.maxNewTokens, 8192, 128), o.maxNewTokens == null, 128f..8320f, com.iris.localai.data.TokenLimit.label(eff.maxNewTokens),
-                    onChange = { v -> set { it.copy(maxNewTokens = com.iris.localai.data.TokenLimit.fromSlider(v, 8192, 128)) } },
+                    I18n.s(R.string.models_422a72), TokenLimit.toSlider(eff.maxNewTokens, 8192, 128), o.maxNewTokens == null, 128f..8320f, TokenLimit.label(eff.maxNewTokens),
+                    onChange = { v -> set { it.copy(maxNewTokens = TokenLimit.fromSlider(v, 8192, 128)) } },
                     onReset = { set { it.copy(maxNewTokens = null) } },
                 )
             }
 
             moeInfo?.let { mi ->
-                // 2.5.5: 流式按需加载从「高级」折叠里移出，单独成组。
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.v255_moe_section))
+                // 流式按需加载从「高级」折叠里移出，单独成组。
+                SectionTitle(I18n.s(R.string.v255_moe_section))
                 SettingsGroup {
-                    // 2.5.1: 专家按需加载（MoE）：默认 = 自动（内存不足时开），开关 + 「恢复默认」，不新增分段控件。
-                    OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
-                        subtitle = com.iris.localai.I18n.s(if (o.moeCpu == null) com.iris.localai.R.string.v251_moe_cpu_auto else com.iris.localai.R.string.v251_moe_cpu_sub),
+                    // 专家按需加载（MoE）：默认 = 自动（内存不足时开），开关 + 「恢复默认」，不新增分段控件。
+                    OvSwitch(I18n.s(R.string.v251_moe_cpu), eff.moeCpu ?: false, o.moeCpu == null,
+                        subtitle = I18n.s(if (o.moeCpu == null) R.string.v251_moe_cpu_auto else R.string.v251_moe_cpu_sub),
                         onChange = { on -> set { it.copy(moeCpu = on) } }, onReset = { set { it.copy(moeCpu = null) } })
-                    // 2.5.4: LES 前瞻专家调度（只 qwen35moe）
-                    if (com.iris.localai.engine.MoeLoad.lesSupported(mi)) {
+                    // LES 前瞻专家调度（只 qwen35moe）
+                    if (MoeLoad.lesSupported(mi)) {
                         Divider()
-                        // 2.5.6: 手动选了 GPU 时，自动不开 LES
-                        val gpuPicked = o.backend == com.iris.localai.engine.Backend.GPU.name
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v254_les), eff.les ?: ((eff.moeCpu ?: false) && !gpuPicked), o.les == null,
-                            subtitle = com.iris.localai.I18n.s(if (o.les == null) com.iris.localai.R.string.v254_les_auto else com.iris.localai.R.string.v254_les_sub),
+                        // 手动选了 GPU 时，自动不开 LES
+                        val gpuPicked = o.backend == Backend.GPU.name
+                        OvSwitch(I18n.s(R.string.v254_les), eff.les ?: ((eff.moeCpu ?: false) && !gpuPicked), o.les == null,
+                            subtitle = I18n.s(if (o.les == null) R.string.v254_les_auto else R.string.v254_les_sub),
                             onChange = { on -> set { it.copy(les = on) } }, onReset = { set { it.copy(les = null) } })
                     }
                     Divider()
-                    // 2.5.1: 激活专家数 0 = 模型默认，1..min(32, 专家数)
-                    val maxExp = minOf(com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)
+                    // 激活专家数 0 = 模型默认，1..min(32, 专家数)
+                    val maxExp = minOf(MoeLoad.MAX_EXPERTS_UI, mi.expertCount).coerceAtLeast(1)
                     OvSlider(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts), eff.expertUsed.coerceAtMost(maxExp).toFloat(), o.expertUsed == null, 0f..maxExp.toFloat(),
-                        if (eff.expertUsed == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_default, mi.expertUsed) else "${eff.expertUsed.coerceAtMost(maxExp)}",
-                        subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v251_experts_sub), steps = (maxExp - 1).coerceAtLeast(0),
+                        I18n.s(R.string.v251_experts), eff.expertUsed.coerceAtMost(maxExp).toFloat(), o.expertUsed == null, 0f..maxExp.toFloat(),
+                        if (eff.expertUsed == 0) I18n.s(R.string.v251_experts_default, mi.expertUsed) else "${eff.expertUsed.coerceAtMost(maxExp)}",
+                        subtitle = I18n.s(R.string.v251_experts_sub), steps = (maxExp - 1).coerceAtLeast(0),
                         onChange = { v -> set { it.copy(expertUsed = v.toInt()) } }, onReset = { set { it.copy(expertUsed = null) } },
                     )
                 }
@@ -272,17 +316,17 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             // 2.0.x: what is rarely touched folds away; unsupported options are not drawn one by
             // one as grey rows any more but named once under their group.
             val unsupported = UnsupportedOptions.names(features, model.format)
-            com.iris.localai.ui.components.SectionFold("model-adv-" + model.id, com.iris.localai.I18n.s(com.iris.localai.R.string.models_528fa3)) {
+            SectionFold("model-adv-" + model.id, I18n.s(R.string.models_528fa3)) {
                 // ---- Sampling ----
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_42ac9b))
+                SectionTitle(I18n.s(R.string.models_42ac9b))
                 SettingsGroup {
-                    OvSlider(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_c9bf0b), eff.temperature, o.temperature == null, 0f..2f, f2(eff.temperature),
+                    OvSlider(I18n.s(R.string.settings_c9bf0b), eff.temperature, o.temperature == null, 0f..2f, f2(eff.temperature),
                         onChange = { v -> set { it.copy(temperature = (v * 20).toInt() / 20f) } }, onReset = { set { it.copy(temperature = null) } })
                     Divider()
                     OvSlider("Top-P", eff.topP, o.topP == null, 0.05f..1f, f2(eff.topP),
                         onChange = { v -> set { it.copy(topP = (v * 20).toInt() / 20f) } }, onReset = { set { it.copy(topP = null) } })
                     Divider()
-                    OvSlider("Top-K", eff.topK.toFloat(), o.topK == null, 0f..100f, if (eff.topK == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.ui_b15d91) else "${eff.topK}",
+                    OvSlider("Top-K", eff.topK.toFloat(), o.topK == null, 0f..100f, if (eff.topK == 0) I18n.s(R.string.ui_b15d91) else "${eff.topK}",
                         onChange = { v -> set { it.copy(topK = v.toInt()) } }, onReset = { set { it.copy(topK = null) } })
                     Divider()
                     if (features.minP) {
@@ -291,47 +335,47 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     }
                     Divider()
                     if (features.repeatPenalty) {
-                        OvSlider(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_43a45e), eff.repeatPenalty, o.repeatPenalty == null, 1f..1.5f, f2(eff.repeatPenalty),
+                        OvSlider(I18n.s(R.string.settings_43a45e), eff.repeatPenalty, o.repeatPenalty == null, 1f..1.5f, f2(eff.repeatPenalty),
                             onChange = { v -> set { it.copy(repeatPenalty = (v * 100).toInt() / 100f) } }, onReset = { set { it.copy(repeatPenalty = null) } })
                     }
                     Divider()
-                    if (model.format == com.iris.localai.data.ModelFormat.GGUF) {
-                        OvSlider(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e4596e), eff.repeatLastN.toFloat(), o.repeatLastN == null, 0f..512f, "${eff.repeatLastN} tokens",
-                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_5be881),
+                    if (model.format == ModelFormat.GGUF) {
+                        OvSlider(I18n.s(R.string.settings_e4596e), eff.repeatLastN.toFloat(), o.repeatLastN == null, 0f..512f, "${eff.repeatLastN} tokens",
+                            subtitle = I18n.s(R.string.models_5be881),
                             onChange = { v -> set { it.copy(repeatLastN = (v / 16).toInt() * 16) } }, onReset = { set { it.copy(repeatLastN = null) } })
                     }
                     Divider()
                     if (features.presenceFrequency) {
-                        OvSlider(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_8f9adc), eff.presencePenalty, o.presencePenalty == null, -2f..2f, f2(eff.presencePenalty),
+                        OvSlider(I18n.s(R.string.settings_8f9adc), eff.presencePenalty, o.presencePenalty == null, -2f..2f, f2(eff.presencePenalty),
                             onChange = { v -> set { it.copy(presencePenalty = (v * 20).toInt() / 20f) } }, onReset = { set { it.copy(presencePenalty = null) } })
                         Divider()
-                        OvSlider(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_4de5f1), eff.frequencyPenalty, o.frequencyPenalty == null, -2f..2f, f2(eff.frequencyPenalty),
+                        OvSlider(I18n.s(R.string.settings_4de5f1), eff.frequencyPenalty, o.frequencyPenalty == null, -2f..2f, f2(eff.frequencyPenalty),
                             onChange = { v -> set { it.copy(frequencyPenalty = (v * 20).toInt() / 20f) } }, onReset = { set { it.copy(frequencyPenalty = null) } })
                     }
                     Divider()
                     if (features.seed) {
                         SettingsRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.models_b0db48), subtitle = if (o.seed == null) com.iris.localai.I18n.s(com.iris.localai.R.string.models_bf8c1c, seedText(eff.seed)) else seedText(eff.seed),
+                            I18n.s(R.string.models_b0db48), subtitle = if (o.seed == null) I18n.s(R.string.models_bf8c1c, seedText(eff.seed)) else seedText(eff.seed),
                             onClick = { editSeed = true },
                         )
                     }
                 }
 
                 // ---- Performance ----
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_c3318e))
+                SectionTitle(I18n.s(R.string.models_c3318e))
                 SettingsGroup {
                     val tierPlan = engine.threadPolicy.nominal(engine.tier)
                     OvSlider(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_aadb83), eff.threads.toFloat(), o.threads == null, 0f..12f,
-                        if (eff.threads == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, tierPlan.threads) else "${eff.threads}", steps = 11,
+                        I18n.s(R.string.models_aadb83), eff.threads.toFloat(), o.threads == null, 0f..12f,
+                        if (eff.threads == 0) I18n.s(R.string.settings_eb0286, tierPlan.threads) else "${eff.threads}", steps = 11,
                         onChange = { v -> set { it.copy(threads = v.toInt()) } }, onReset = { set { it.copy(threads = null) } },
                     )
                     Divider()
                     if (features.batchSize) {
                         OvSlider(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b65a0d), eff.batchSize.toFloat(), o.batchSize == null, 0f..2048f,
-                            if (eff.batchSize == 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_eb0286, tierPlan.batch) else "${eff.batchSize}",
-                            subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_92e1b7),
+                            I18n.s(R.string.settings_b65a0d), eff.batchSize.toFloat(), o.batchSize == null, 0f..2048f,
+                            if (eff.batchSize == 0) I18n.s(R.string.settings_eb0286, tierPlan.batch) else "${eff.batchSize}",
+                            subtitle = I18n.s(R.string.models_92e1b7),
                             onChange = { v -> set { it.copy(batchSize = (v / 64).toInt() * 64) } }, onReset = { set { it.copy(batchSize = null) } },
                         )
                     }
@@ -342,67 +386,67 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                     Divider()
                     if (features.kvQuant) {
                         SegmentedRow(
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1747d7) + if (o.kvCacheType == null) com.iris.localai.I18n.s(com.iris.localai.R.string.models_c63342) else "",
+                            I18n.s(R.string.settings_1747d7) + if (o.kvCacheType == null) I18n.s(R.string.models_c63342) else "",
                             listOf("F16", "Q8_0", "Q4_0"), eff.kvCacheType,
                             { i -> set { it.copy(kvCacheType = i) } },
-                            subtitle = if (eff.flashAttention) com.iris.localai.I18n.s(com.iris.localai.R.string.models_f3d41d) else com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1cf9cd),
+                            subtitle = if (eff.flashAttention) I18n.s(R.string.models_f3d41d) else I18n.s(R.string.settings_1cf9cd),
                         )
                     }
                     Divider()
                     if (features.mmap) {
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_475473), eff.useMmap, o.useMmap == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.models_f1f0d5),
+                        OvSwitch(I18n.s(R.string.settings_475473), eff.useMmap, o.useMmap == null, subtitle = I18n.s(R.string.models_f1f0d5),
                             onChange = { on -> set { it.copy(useMmap = on) } }, onReset = { set { it.copy(useMmap = null) } })
                     }
-                    if (model.format == com.iris.localai.data.ModelFormat.GGUF) {
+                    if (model.format == ModelFormat.GGUF) {
                         Divider()
                         SettingsRow(
-                            // 2.3.5 (#8): always offered for GGUF — 挂载视觉投影 (mmproj)
-                            com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_attach),
+                            // always offered for GGUF — 挂载视觉投影 (mmproj)
+                            I18n.s(R.string.mm235_attach),
                             subtitle = when (o.mmproj) {
-                                null -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_a73152) + (mmprojAuto ?: com.iris.localai.I18n.s(com.iris.localai.R.string.models_a21729))
-                                com.iris.localai.engine.llama.MmprojPairing.OFF -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_8bfbde)
+                                null -> I18n.s(R.string.models_a73152) + (mmprojAuto ?: I18n.s(R.string.models_a21729))
+                                MmprojPairing.OFF -> I18n.s(R.string.models_8bfbde)
                                 else -> o.mmproj
-                            } + com.iris.localai.I18n.s(com.iris.localai.R.string.models_875dd5),
+                            } + I18n.s(R.string.models_875dd5),
                             onClick = { pickMmproj = true },
                         )
                     }
                     if (hasMtp) {
                         Divider()
-                        OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.v259_mtp_sub) +
-                            (if (com.iris.localai.engine.MtpTag.gpuNote(eff.backend, loaded?.details?.backend)) com.iris.localai.I18n.s(com.iris.localai.R.string.v2510_mtp_gpu) else ""),
+                        OvSwitch(I18n.s(R.string.v259_mtp), eff.mtp, o.mtp == null, subtitle = I18n.s(R.string.v259_mtp_sub) +
+                            (if (MtpTag.gpuNote(eff.backend, loaded?.details?.backend)) I18n.s(R.string.v2510_mtp_gpu) else ""),
                             onChange = { on -> set { it.copy(mtp = on) } }, onReset = { set { it.copy(mtp = null) } })
                     }
                     Divider()
-                    OvSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_810ed9), eff.warmup, o.warmup == null, subtitle = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_004e27),
+                    OvSwitch(I18n.s(R.string.settings_810ed9), eff.warmup, o.warmup == null, subtitle = I18n.s(R.string.settings_004e27),
                         onChange = { on -> set { it.copy(warmup = on) } }, onReset = { set { it.copy(warmup = null) } })
                 }
 
-                if (unsupported.isNotEmpty()) GroupFootnote(com.iris.localai.I18n.s(com.iris.localai.R.string.models_773920) + unsupported.joinToString(com.iris.localai.I18n.s(com.iris.localai.R.string.agent_b50566)))
+                if (unsupported.isNotEmpty()) GroupFootnote(I18n.s(R.string.models_773920) + unsupported.joinToString(I18n.s(R.string.agent_b50566)))
                 // ---- 1.13.1: this model's on-disk caches ----
                 val ctx = LocalContext.current
                 var cacheTick by remember { mutableIntStateOf(0) }
                 var cacheBytes by remember { mutableStateOf<Long?>(null) }
                 androidx.compose.runtime.LaunchedEffect(model.fileName, cacheTick) {
                     cacheBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        com.iris.localai.engine.ModelCache.bytes(com.iris.localai.engine.ModelCache.files(ctx, model.fileName))
+                        ModelCache.bytes(ModelCache.files(ctx, model.fileName))
                     }
                 }
                 var cacheNote by remember { mutableStateOf<String?>(null) }
-                SectionTitle(com.iris.localai.I18n.s(com.iris.localai.R.string.models_e80c31))
+                SectionTitle(I18n.s(R.string.models_e80c31))
                 SettingsGroup {
                     val b = cacheBytes
                     SettingsRow(
-                        com.iris.localai.I18n.s(com.iris.localai.R.string.models_8ded69),
+                        I18n.s(R.string.models_8ded69),
                         subtitle = cacheNote ?: when {
-                            b == null -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_dc020b)
-                            b == 0L -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_373e22) + if (model.format == com.iris.localai.data.ModelFormat.GGUF) com.iris.localai.I18n.s(com.iris.localai.R.string.models_67478c) else ""
-                            else -> com.iris.localai.I18n.s(com.iris.localai.R.string.models_7c5be1, cacheSize(b)) + if (loaded != null) com.iris.localai.I18n.s(com.iris.localai.R.string.models_1bb7db) else ""
+                            b == null -> I18n.s(R.string.models_dc020b)
+                            b == 0L -> I18n.s(R.string.models_373e22) + if (model.format == ModelFormat.GGUF) I18n.s(R.string.models_67478c) else ""
+                            else -> I18n.s(R.string.models_7c5be1, cacheSize(b)) + if (loaded != null) I18n.s(R.string.models_1bb7db) else ""
                         },
                         enabled = (b ?: 0L) > 0L,
                         onClick = {
                             scope.launch {
-                                val (n, freed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.iris.localai.engine.ModelCache.clear(ctx, model.fileName) }
-                                cacheNote = com.iris.localai.I18n.s(com.iris.localai.R.string.models_cfd753, n, cacheSize(freed))
+                                val (n, freed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ModelCache.clear(ctx, model.fileName) }
+                                cacheNote = I18n.s(R.string.models_cfd753, n, cacheSize(freed))
                                 cacheTick++
                             }
                         },
@@ -414,7 +458,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
             if (loaded != null) {
                 Spacer(Modifier.height(IrisDimens.space12))
                 IrisButton(
-                    com.iris.localai.I18n.s(com.iris.localai.R.string.models_466ae2), { scope.launch { engine.reload() } }, icon = com.iris.localai.ui.icons.IrisIcons.Reload,
+                    I18n.s(R.string.models_466ae2), { scope.launch { engine.reload() } }, icon = IrisIcons.Reload,
                     style = IrisButtonStyle.Tonal,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
                 )
@@ -425,56 +469,56 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
 
     if (editName) {
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.v255_rename),
-            initial = com.iris.localai.data.ModelAliases.of(model.fileName) ?: model.fileDisplayName,
+            title = I18n.s(R.string.v255_rename),
+            initial = ModelAliases.of(model.fileName) ?: model.fileDisplayName,
             onConfirm = { t -> container.models.rename(model.fileName, t.takeIf { it.trim() != model.fileDisplayName }) },
             onDismiss = { editName = false },
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
+            confirmText = I18n.s(R.string.settings_be5fbb),
             placeholder = model.fileDisplayName,
             allowEmpty = true,
         )
     }
     if (editPrompt) {
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_24c18d),
+            title = I18n.s(R.string.models_24c18d),
             initial = o.systemPrompt.orEmpty(),
             onConfirm = { t -> set { it.copy(systemPrompt = t.trim().ifEmpty { null }) } },
             onDismiss = { editPrompt = false },
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
-            placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.models_cfe653),
+            confirmText = I18n.s(R.string.settings_be5fbb),
+            placeholder = I18n.s(R.string.models_cfe653),
             singleLine = false,
             allowEmpty = true,
         )
     }
     if (pickMmproj) {
-        IrisDialog(onDismiss = { pickMmproj = false }, title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_f08420), confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.agent_769d88), onConfirm = { pickMmproj = false }, dismissText = null) {
+        IrisDialog(onDismiss = { pickMmproj = false }, title = I18n.s(R.string.models_f08420), confirmText = I18n.s(R.string.agent_769d88), onConfirm = { pickMmproj = false }, dismissText = null) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_fd346f), o.mmproj == null, subtitle = mmprojAuto ?: com.iris.localai.I18n.s(com.iris.localai.R.string.models_d0a02b)) { set { it.copy(mmproj = null) } }
-                CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.models_57ed11), o.mmproj == com.iris.localai.engine.llama.MmprojPairing.OFF) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
+                CheckRow(I18n.s(R.string.models_fd346f), o.mmproj == null, subtitle = mmprojAuto ?: I18n.s(R.string.models_d0a02b)) { set { it.copy(mmproj = null) } }
+                CheckRow(I18n.s(R.string.models_57ed11), o.mmproj == MmprojPairing.OFF) { set { it.copy(mmproj = MmprojPairing.OFF) } }
                 mmprojChoices.forEach { f -> CheckRow(f, o.mmproj == f) { set { it.copy(mmproj = f) } } }
-                // 2.3.5 (#8): pick / replace from a file; 移除 = never load one
-                if (mmprojBusy) SettingsRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm245_copying), trailing = { com.iris.localai.ui.components.TypingDots() })
-                else CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
-                mmprojError?.let { err -> Text(err, style = com.iris.localai.ui.theme.IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = com.iris.localai.ui.theme.IrisSpace.L, vertical = com.iris.localai.ui.theme.IrisSpace.XS)) }
-                if (o.mmproj != com.iris.localai.engine.llama.MmprojPairing.OFF && (o.mmproj != null || mmprojAuto != null))
-                    CheckRow(com.iris.localai.I18n.s(com.iris.localai.R.string.mm235_remove), false) { set { it.copy(mmproj = com.iris.localai.engine.llama.MmprojPairing.OFF) } }
+                // pick / replace from a file; 移除 = never load one
+                if (mmprojBusy) SettingsRow(I18n.s(R.string.mm245_copying), trailing = { TypingDots() })
+                else CheckRow(I18n.s(R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
+                mmprojError?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.XS)) }
+                if (o.mmproj != MmprojPairing.OFF && (o.mmproj != null || mmprojAuto != null))
+                    CheckRow(I18n.s(R.string.mm235_remove), false) { set { it.copy(mmproj = MmprojPairing.OFF) } }
             }
         }
     }
     if (editSeed) {
         TextInputDialog(
-            title = com.iris.localai.I18n.s(com.iris.localai.R.string.models_b0db48),
+            title = I18n.s(R.string.models_b0db48),
             initial = if (eff.seed < 0) "" else eff.seed.toString(),
             onConfirm = { t -> set { it.copy(seed = t.trim().toIntOrNull()?.coerceAtLeast(0) ?: -1) } },
             onDismiss = { editSeed = false },
-            confirmText = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_be5fbb),
-            placeholder = com.iris.localai.I18n.s(com.iris.localai.R.string.models_3e1d97),
+            confirmText = I18n.s(R.string.settings_be5fbb),
+            placeholder = I18n.s(R.string.models_3e1d97),
             allowEmpty = true,
         )
     }
 }
 
-private fun seedText(seed: Int) = if (seed < 0) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_2beef4) else com.iris.localai.I18n.s(com.iris.localai.R.string.models_23cc34, seed)
+private fun seedText(seed: Int) = if (seed < 0) I18n.s(R.string.settings_2beef4) else I18n.s(R.string.models_23cc34, seed)
 
 @Composable
 private fun BackendRow(
@@ -484,10 +528,10 @@ private fun BackendRow(
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (trailingAction != null) {
-                Text(com.iris.localai.I18n.s(com.iris.localai.R.string.chat_4403fc), style = IrisType.labelSmall, color = Iris.colors.accent, modifier = Modifier.clickable(onClick = trailingAction).padding(IrisDimens.space8))
+                Text(I18n.s(R.string.chat_4403fc), style = IrisType.labelSmall, color = Iris.colors.accent, modifier = Modifier.clickable(onClick = trailingAction).padding(IrisDimens.space8))
             }
             Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-                if (selected) Icon(Icons.Outlined.Check, com.iris.localai.I18n.s(com.iris.localai.R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+                if (selected) Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
             }
         }
     }
@@ -495,15 +539,15 @@ private fun BackendRow(
 
 /** 2.0.x: options this engine does not have, named once instead of one grey row each (unit-tested). */
 object UnsupportedOptions {
-    fun names(f: com.iris.localai.engine.EngineFeatures, format: com.iris.localai.data.ModelFormat): List<String> = buildList {
+    fun names(f: EngineFeatures, format: ModelFormat): List<String> = buildList {
         if (!f.minP) add("Min-P")
-        if (!f.repeatPenalty) add(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_43a45e))
-        if (format != com.iris.localai.data.ModelFormat.GGUF) add(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_e4596e))
-        if (!f.presenceFrequency) add(com.iris.localai.I18n.s(com.iris.localai.R.string.models_68cc4a))
-        if (!f.seed) add(com.iris.localai.I18n.s(com.iris.localai.R.string.models_b0db48))
-        if (!f.batchSize) add(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_b65a0d))
+        if (!f.repeatPenalty) add(I18n.s(R.string.settings_43a45e))
+        if (format != ModelFormat.GGUF) add(I18n.s(R.string.settings_e4596e))
+        if (!f.presenceFrequency) add(I18n.s(R.string.models_68cc4a))
+        if (!f.seed) add(I18n.s(R.string.models_b0db48))
+        if (!f.batchSize) add(I18n.s(R.string.settings_b65a0d))
         if (!f.flashAttention) add("Flash Attention")
-        if (!f.kvQuant) add(com.iris.localai.I18n.s(com.iris.localai.R.string.settings_1747d7))
+        if (!f.kvQuant) add(I18n.s(R.string.settings_1747d7))
         if (!f.mmap) add("mmap")
     }
 }
@@ -513,25 +557,25 @@ private fun OvSlider(
     title: String, value: Float, inherited: Boolean, range: ClosedFloatingPointRange<Float>, display: String,
     subtitle: String? = null, steps: Int = 0, onChange: (Float) -> Unit, onReset: () -> Unit,
 ) {
-    SliderRow(title, value, range, if (inherited) com.iris.localai.I18n.s(com.iris.localai.R.string.models_82a38b, display) else display, subtitle = subtitle, steps = steps, onChange = onChange)
+    SliderRow(title, value, range, if (inherited) I18n.s(R.string.models_82a38b, display) else display, subtitle = subtitle, steps = steps, onChange = onChange)
     if (!inherited) ResetLink(onReset)
 }
 
 @Composable
 private fun OvSwitch(title: String, checked: Boolean, inherited: Boolean, subtitle: String? = null, onChange: (Boolean) -> Unit, onReset: () -> Unit) {
-    SwitchRow(title + if (inherited) com.iris.localai.I18n.s(com.iris.localai.R.string.models_c63342) else "", checked, subtitle = subtitle, onChange = onChange)
+    SwitchRow(title + if (inherited) I18n.s(R.string.models_c63342) else "", checked, subtitle = subtitle, onChange = onChange)
     if (!inherited) ResetLink(onReset)
 }
 
 @Composable
 private fun ResetLink(onReset: () -> Unit) {
     Text(
-        com.iris.localai.I18n.s(com.iris.localai.R.string.models_24eeac), style = IrisType.labelSmall, color = Iris.colors.accent,
+        I18n.s(R.string.models_24eeac), style = IrisType.labelSmall, color = Iris.colors.accent,
         modifier = Modifier.padding(start = IrisDimens.rowPadding, bottom = IrisDimens.space8).clickable(onClick = onReset).padding(vertical = IrisDimens.space4),
     )
 }
 
-/** 1.13.1: bytes as KB / MB / GB for the cache row. */
+/** bytes as KB / MB / GB for the cache row. */
 internal fun cacheSize(b: Long): String = when {
     b >= 1L shl 30 -> String.format(Locale.US, "%.2f GB", b / (1024.0 * 1024 * 1024))
     b >= 1L shl 20 -> String.format(Locale.US, "%.1f MB", b / (1024.0 * 1024))

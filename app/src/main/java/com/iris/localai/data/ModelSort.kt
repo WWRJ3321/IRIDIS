@@ -1,7 +1,7 @@
 package com.iris.localai.data
 
 /**
- * 2.6.6: 下载模型 › 推荐 — order inside a section: model series name first (natural order, digits by
+ * 下载模型 › 推荐 — order inside a section: model series name first (natural order, digits by
  * value: Qwen3 < Qwen3.5 < Qwen3.6), then download size (small → big), then the full name. Pure, unit-tested.
  *
  * Series = the name before its first parameter-size token ("4B", "E2B", "0.8B", "24B-A2B", "-35B"),

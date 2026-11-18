@@ -1,5 +1,8 @@
 package com.iris.localai.ui.components
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.ui.feedback.FeedbackEvent
 import com.iris.localai.ui.theme.IrisDimens
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
@@ -49,7 +52,7 @@ import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.theme.LocalReduceMotion
 
 /**
- * 1.7.6 resource tier slider, shared by the composer card and the settings page. It is the
+ * resource tier slider, shared by the composer card and the settings page. It is the
  * 1.7.0–1.7.4 card slider brought back (12 dp rounded track, a small dot per tier, a 26 dp white
  * knob with a soft drop shadow and a hairline edge, knob springing stop to stop under the finger),
  * with the filled part in a muted light → deep blue instead of grey. No halo, no thick ring.
@@ -58,16 +61,7 @@ import com.iris.localai.ui.theme.LocalReduceMotion
  * the right ("实时生效" / "空闲时重载生效" / "正在重载模型…").
  */
 object TierSliderStyle {
-    // Low-saturation (matte) blues. Light card: powder blue → slate/denim blue.
-    val LightStart = Color(0xFFC3D3E6)
-    val LightEnd = Color(0xFF4B6890)
-    // Dark card: the deep end stays bright enough to separate from the dark surface.
-    val DarkStart = Color(0xFF4A5B73)
-    val DarkEnd = Color(0xFF7F9CC6)
-
-    fun start(dark: Boolean) = if (dark) DarkStart else LightStart
-    fun end(dark: Boolean) = if (dark) DarkEnd else LightEnd
-    /** 2.2.5: the fill follows the theme accent (light tint of it → the accent itself). */
+    /** the fill follows the theme accent (light tint of it → the accent itself). */
     fun start(dark: Boolean, accent: Color, surface: Color) = androidx.compose.ui.graphics.lerp(surface, accent, if (dark) 0.35f else 0.28f)
     @Suppress("UNUSED_PARAMETER") fun end(dark: Boolean, accent: Color) = accent
 
@@ -124,12 +118,12 @@ fun TierSlider(
     fun move(i: Int) {
         if (i != cur) {
             cur = i
-            feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK)
+            feedback.perform(FeedbackEvent.TICK)
         }
     }
     fun done() {
         if (cur != latestIndex) {
-            feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.TOGGLE)
+            feedback.perform(FeedbackEvent.TOGGLE)
             latestChange(cur)
         }
     }
@@ -164,7 +158,7 @@ fun TierSlider(
                 .fillMaxWidth()
                 .height(TierSliderStyle.HEIGHT_DP.dp)
                 .semantics {
-                    contentDescription = com.iris.localai.I18n.s(com.iris.localai.R.string.components_43448c)
+                    contentDescription = I18n.s(R.string.components_43448c)
                     stateDescription = labels.getOrElse(cur) { "" }
                     setProgress { v ->
                         move(kotlin.math.round(v * (count - 1)).toInt().coerceIn(0, count - 1)); done(); true

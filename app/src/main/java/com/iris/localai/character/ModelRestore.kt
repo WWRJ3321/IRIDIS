@@ -1,7 +1,7 @@
 package com.iris.localai.character
 
 /**
- * 2.3.4: leaving a card chat whose card loaded its bound model no longer leaves the user guessing:
+ * leaving a card chat whose card loaded its bound model no longer leaves the user guessing:
  * a one-time hint offers to switch back to the model that was loaded before the card (no auto switch).
  */
 object ModelRestore {

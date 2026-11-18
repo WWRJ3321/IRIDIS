@@ -1,7 +1,7 @@
 package com.iris.localai.memory
 
 /**
- * 2.2.9: rule-based 「记住？」 suggestions from what the user said (no model call). Pure.
+ * rule-based 「记住？」 suggestions from what the user said (no model call). Pure.
  * At most one suggestion per turn; questions, hypotheticals and quotes of other people never match.
  */
 object MemorySuggest {

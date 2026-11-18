@@ -1,5 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.io
 
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -7,7 +11,7 @@ import android.os.PowerManager
 import android.provider.Settings
 
 /**
- * 1.10.13: background generation needs the system to leave IRIS alone. The foreground service +
+ * background generation needs the system to leave IRIS alone. The foreground service +
  * wake lock (GenerationService) is not enough on HyperOS / MIUI with 省电策略 = 智能限制: the app is
  * frozen anyway and the reply only continues when it is reopened.
  */

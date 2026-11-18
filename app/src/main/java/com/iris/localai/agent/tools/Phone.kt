@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -23,7 +26,7 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/** 1.12.0: what the `phone` tool can do; the Android side is [AndroidPhoneActions]. */
+/** what the `phone` tool can do; the Android side is [AndroidPhoneActions]. */
 interface PhoneActions {
     fun setAlarm(hour: Int, minute: Int, label: String?): String
     fun startTimer(seconds: Int, label: String?): String
@@ -36,17 +39,17 @@ interface PhoneActions {
     fun paste(): String?
     fun openUrl(url: String): String
     fun dial(number: String): String
-    /** 2.5.0-beta7: torch on the back camera; [mode] = on | off | toggle. */
+    /** torch on the back camera; [mode] = on | off | toggle. */
     fun flashlight(mode: String): String
-    /** 2.5.0-beta7: [stream] = media | ring | alarm (null + query → all); [percent] null = query. */
+    /** [stream] = media | ring | alarm (null + query → all); [percent] null = query. */
     fun volume(stream: String?, percent: Int?): String
-    /** 2.5.0-beta7: [mode] = silent | vibrate | normal; null = query. */
+    /** [mode] = silent | vibrate | normal; null = query. */
     fun ringerMode(mode: String?): String
-    /** 2.5.0-beta7: screen brightness 0–100 %; null = query. Needs WRITE_SETTINGS, else opens that page. */
+    /** screen brightness 0–100 %; null = query. Needs WRITE_SETTINGS, else opens that page. */
     fun brightness(percent: Int?): String
-    /** 2.5.0-beta7: open a system settings page: wifi | bluetooth | location | airplane | display | battery | app ([pkg] for app details). */
+    /** open a system settings page: wifi | bluetooth | location | airplane | display | battery | app ([pkg] for app details). */
     fun openSettings(page: String, pkg: String?): String
-    /** 2.5.0-beta7: battery level and charging state. */
+    /** battery level and charging state. */
     fun battery(): String
 }
 
@@ -93,7 +96,7 @@ object PhoneTool : AgentTool {
             "open_app", "open", "launch" -> {
                 val q = Args.str(args, "name", "app", "app_name", "appName", "package", "target", "text") ?: throw IllegalArgumentException("缺少参数 name（应用名）。要在 App 里点击、发消息等多步操作，请改用 screen(task)")
                 val apps = p.apps()
-                // 2.1.9: Chinese / English / package, fuzzy; not found → the close names.
+                // Chinese / English / package, fuzzy; not found → the close names.
                 val app = matchApp(q, apps) ?: return AppMatcher.notFound(q, apps).let { ToolResult(false, "Error: $it", it.substringBefore('。')) }
                 p.openApp(app.second); ok("Opened ${app.first}")
             }
@@ -111,7 +114,7 @@ object PhoneTool : AgentTool {
                 if (n.length < 3) throw IllegalArgumentException("号码无效")
                 ok(p.dial(n))
             }
-            // 2.5.0-beta7: device controls.
+            // device controls.
             "flashlight", "torch", "flash", "手电筒" -> {
                 val raw = Args.str(args, "state", "mode", "value", "on", "text") ?: "toggle"
                 val m = torchMode(raw) ?: throw IllegalArgumentException("state 应为 on|off|toggle")
@@ -146,7 +149,7 @@ object PhoneTool : AgentTool {
         }
     }
 
-    /** 2.5.0-beta7: "on"/"开"/true → on, "off"/"关"/false → off, "toggle"/"切换" → toggle. */
+    /** "on"/"开"/true → on, "off"/"关"/false → off, "toggle"/"切换" → toggle. */
     fun torchMode(raw: String): String? = when (raw.trim().lowercase()) {
         "on", "open", "true", "1", "开", "打开", "开启" -> "on"
         "off", "close", "false", "0", "关", "关闭", "关掉" -> "off"

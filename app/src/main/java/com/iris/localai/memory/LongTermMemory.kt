@@ -1,5 +1,7 @@
 package com.iris.localai.memory
 
+import com.iris.localai.data.Conversation
+import com.iris.localai.data.Role
 import com.iris.localai.util.TokenEstimator
 import kotlinx.serialization.Serializable
 import java.io.File
@@ -148,7 +150,7 @@ object MemoryOps {
 }
 
 /**
- * 2.2.9: adapter over [MemoryStore] (memory.json in the same directory). The items are rendered
+ * adapter over [MemoryStore] (memory.json in the same directory). The items are rendered
  * back into the old USER.md / MEMORY.md text so the snapshot / injection is unchanged.
  */
 class MemoryDocs(dir: File) {
@@ -165,26 +167,26 @@ class MemoryDocs(dir: File) {
     fun edit(op: (List<MemoryItem>) -> ItemsEdit): ItemsEdit = store.editItems(op)
 
     /**
-     * 2.2.9 C: the frozen block for a new conversation: ABOUT + PREF only (newest first, within
+     * C: the frozen block for a new conversation: ABOUT + PREF only (newest first, within
      * [maxTokens]); FACTs are recalled per turn ([turn]). "" when there is nothing saved.
      */
     fun snapshot(maxTokens: Int = Int.MAX_VALUE / 2): String = MemoryRecall.block(MemoryRecall.fixed(store.items(), maxTokens))
 
-    /** 2.2.9 C: the FACT block for the user message [query] ("" when nothing is relevant). */
+    /** C: the FACT block for the user message [query] ("" when nothing is relevant). */
     fun turn(query: String, maxTokens: Int): String = MemoryRecall.turnBlock(store.items(), query, maxTokens)
 }
 
 /** How the snapshot enters the system prompt. Pure. */
 object MemoryPrompt {
-    /** 2.3: shorter (was 35 estimated tokens); same meaning. */
+    /** shorter (was 35 estimated tokens); same meaning. */
     const val HEADER = "【长期记忆】（可能过时，以用户当前说法为准）"
 
-    /** 2.2.9: line under the frozen ABOUT/PREF block, and under a turn's 【相关记忆】. */
+    /** line under the frozen ABOUT/PREF block, and under a turn's 【相关记忆】. */
     const val NOTE = "（以上记忆可能过时，以用户当前说法为准）"
     const val TURN_NOTE = "（相关记忆，可能过时，以用户当前说法为准；无关就忽略）"
 
     /**
-     * 2.2.9: the system-prompt block for a frozen [snapshot]. New snapshots carry their own plain
+     * the system-prompt block for a frozen [snapshot]. New snapshots carry their own plain
      * labels (【关于用户】/【用户偏好】); an older one taken as USER.md / MEMORY.md text is relabelled.
      * Over [maxTokens] whole lines go from the end (the snapshot is newest first per section).
      */
@@ -228,9 +230,9 @@ object MemoryPrompt {
      * meantime — e.g. with 「记住：…」 — is seen by the first reply). After the first real reply the
      * snapshot stays frozen (stable prompt prefix for the KV cache).
      */
-    fun needsSnapshot(conv: com.iris.localai.data.Conversation, epoch: Int): Boolean =
+    fun needsSnapshot(conv: Conversation, epoch: Int): Boolean =
         conv.memorySnapshot == null || conv.memoryEpoch != epoch ||
-            conv.messages.none { it.role == com.iris.localai.data.Role.ASSISTANT && it.modelName != null && (it.content.isNotBlank() || it.agentSteps.isNotEmpty()) }
+            conv.messages.none { it.role == Role.ASSISTANT && it.modelName != null && (it.content.isNotBlank() || it.agentSteps.isNotEmpty()) }
 }
 
 /**
@@ -282,7 +284,7 @@ object MemoryCommand {
     }
 }
 
-/** 1.10.0 settings (prefs `iris_agent`, key `memory`; no existing key changes). */
+/** settings (prefs `iris_agent`, key `memory`; no existing key changes). */
 @Serializable
 data class MemorySettings(
     /** Master switch: off = no injection, no memory tool. */
@@ -293,9 +295,9 @@ data class MemorySettings(
     /** Deterministic compaction when the conversation outgrows the window (≤2.2.8, kept for downgrade; see [autoCompact]). */
     val autoCompactAgent: Boolean = true,
     val autoCompactChat: Boolean = true,
-    /** 2.2.9 E: the one 「快满时自动整理」 switch (智能体 and 对话). */
+    /** E: the one 「快满时自动整理」 switch (智能体 and 对话). */
     val autoCompact: Boolean = true,
-    /** 2.2.9 E: [autoCompact] was derived once from autoCompactAgent || autoCompactChat. */
+    /** E: [autoCompact] was derived once from autoCompactAgent || autoCompactChat. */
     val autoCompactMerged: Boolean = false,
     /** Bumped by 清空记忆: snapshots frozen before it are no longer injected. */
     val epoch: Int = 0,
@@ -305,16 +307,16 @@ data class MemorySettings(
      * then turns it off keeps it off.
      */
     val chatInjectDefaultApplied: Boolean = false,
-    /** 2.2.9: 「聊天时提议记住」 — the 「＋ 记住？」 chip under a reply. */
+    /** 「聊天时提议记住」 — the 「＋ 记住？」 chip under a reply. */
     val suggest: Boolean = true,
 ) {
     fun migrated(): MemorySettings {
         val m = if (chatInjectDefaultApplied) this else copy(injectChat = true, chatInjectDefaultApplied = true)
-        // 2.2.9 E: the two compaction switches become one; on if either was on.
+        // E: the two compaction switches become one; on if either was on.
         return if (m.autoCompactMerged) m else m.copy(autoCompact = m.autoCompactAgent || m.autoCompactChat, autoCompactMerged = true)
     }
 
-    /** 2.2.9 E: sets 「快满时自动整理」 (legacy fields follow, so a downgrade keeps the choice). */
+    /** E: sets 「快满时自动整理」 (legacy fields follow, so a downgrade keeps the choice). */
     fun withAutoCompact(on: Boolean): MemorySettings = copy(autoCompact = on, autoCompactAgent = on, autoCompactChat = on, autoCompactMerged = true)
 
     fun inject(agentMode: Boolean): Boolean = enabled && if (agentMode) injectAgent else injectChat

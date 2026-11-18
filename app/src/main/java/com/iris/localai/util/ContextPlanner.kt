@@ -1,5 +1,9 @@
 package com.iris.localai.util
 
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import com.iris.localai.data.ContextStrategy
 import com.iris.localai.engine.PromptMessage
 import kotlin.math.ceil
@@ -36,7 +40,7 @@ data class ContextRequest(
     val messages: List<CtxMessage>,
     val strategy: ContextStrategy,
     /**
-     * 2.3: text that leads the history instead of joining the system prompt (the 智能体 compaction
+     * text that leads the history instead of joining the system prompt (the 智能体 compaction
      * summary): it changes whenever the history is folded, and in the system prompt it forced the
      * whole cached prefix to be prefilled again. Placed in front of the first kept message.
      */
@@ -68,7 +72,7 @@ data class ContextPlan(
     val contextShift: Boolean = false,
     /** Tokens to keep at the start on a context shift (system prompt + summary + attention sink). */
     val keepTokens: Int = 4,
-    /** 2.2.9 E: history messages that really go into the prompt (for 「模型现在能看到最近 N 条」). */
+    /** E: history messages that really go into the prompt (for 「模型现在能看到最近 N 条」). */
     val visibleMessages: Int = 0,
 )
 
@@ -102,7 +106,7 @@ object ContextPlanner {
             val i = active.indexOfFirst { it.id == r.summaryUpToId }
             if (i >= 0) { summary = r.summary; dropped += i + 1; active = active.drop(i + 1) }
         }
-        // 2.3: the system prompt stays byte-identical for the KV cache; the summary (and the
+        // the system prompt stays byte-identical for the KV cache; the summary (and the
         // compaction lead) go in front of the history instead.
         val system = r.system.trim()
         val lead = leadText(r.lead, summary)
@@ -195,14 +199,14 @@ object ContextPlanner {
         return list to removedMsgs
     }
 
-    /** 2.3: compaction lead + 自动摘要 summary (with its header), blank parts left out. */
+    /** compaction lead + 自动摘要 summary (with its header), blank parts left out. */
     fun leadText(lead: String, summary: String): String = listOf(
         lead.trim(),
         summary.trim().takeIf { it.isNotEmpty() }?.let { "$SUMMARY_HEADER\n$it" }.orEmpty(),
     ).filter { it.isNotEmpty() }.joinToString("\n\n")
 
     /**
-     * 2.3: [lead] in front of the history — joined to the first message when it is the user's
+     * [lead] in front of the history — joined to the first message when it is the user's
      * (no extra turn, alternation kept for strict templates), else as a user turn of its own.
      */
     fun withLead(history: List<PromptMessage>, lead: String): List<PromptMessage> {

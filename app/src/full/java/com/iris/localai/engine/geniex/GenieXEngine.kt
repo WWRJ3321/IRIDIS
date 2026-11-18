@@ -1,5 +1,8 @@
 package com.iris.localai.engine.geniex
 
+import com.iris.localai.engine.ChannelThink
+import com.iris.localai.engine.LengthRule
+import com.iris.localai.engine.ThinkSupport
 import android.content.Context
 import android.util.Log
 import com.geniex.sdk.LlmWrapper
@@ -20,7 +23,7 @@ import com.iris.localai.engine.Backend
 import com.iris.localai.engine.EngineException
 import com.iris.localai.engine.GenEvent
 import com.iris.localai.engine.InferenceEngine
-import com.iris.localai.engine.LiveApply
+import com.iris.localai.engine.resources.LiveApply
 import com.iris.localai.engine.LoadConfig
 import com.iris.localai.engine.ModelDetails
 import com.iris.localai.engine.PromptMessage
@@ -42,7 +45,7 @@ import java.io.File
 import kotlinx.coroutines.flow.onCompletion
 
 /**
- * 2.2.0: Qualcomm GenieX 0.8.0 engine (full flavour).
+ * Qualcomm GenieX 0.8.0 engine (full flavour).
  *  - GGUF files through GenieX's `llama_cpp` runtime on the NPU (Hexagon, default) / GPU (OpenCL) / CPU;
  *    a sibling `mmproj-*.gguf` ([GenieXVision.findMmproj]) turns on the VLM path (images).
  *  - AI Hub QAIRT bundle folders through the `qairt` runtime, NPU only; `vision_encoder.bin` in the
@@ -85,7 +88,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 val dir = File(model.path)
                 val names = dir.list().orEmpty().toSet()
                 QairtBundle.missing(names)?.let { throw EngineException("QAIRT 模型文件夹不完整：$it（请完整解压 AI Hub 下载的 Genie 包）") }
-                // 2.4.1: a bundle built for another Hexagon generation or a newer QAIRT fails with a bare
+                // a bundle built for another Hexagon generation or a newer QAIRT fails with a bare
                 // "Model loading failed"; say why before trying.
                 val meta = listOf(QairtCompat.HTP_EXT_CONFIG, QairtBundle.METADATA, QairtBundle.GENIE_CONFIG)
                     .filter { it in names }
@@ -142,18 +145,18 @@ class GenieXEngine(context: Context) : InferenceEngine {
             }
             cached = emptyList()
             backendLabel = when {
-                // 2.1.2: short labels — the sheet and chat header only need engine + backend.
+                // short labels — the sheet and chat header only need engine + backend.
                 qairt -> "${GenieX.tag(Backend.NPU)}（QAIRT）"
                 else -> GenieX.tag(backend)
             } + if (visionOk) " · 视觉" else ""
             Log.i(TAG, "loaded ${model.fileName}: $backendLabel ctx=$ctx threads=$threads mmproj=${mmproj != null}")
             onProgress(1f)
-            val thinks = com.iris.localai.engine.ThinkSupport.supports(File(model.path), GenieXSampling::thinkingModel)
-            // 2.2.8: a template that opens <think> itself means the reply streams without the open tag.
+            val thinks = ThinkSupport.supports(File(model.path), GenieXSampling::thinkingModel)
+            // a template that opens <think> itself means the reply streams without the open tag.
             val prefilled = thinks && runCatching {
                 val probe = vlm?.applyChatTemplate(arrayOf(VlmChatMessage(role = "user", contents = arrayListOf(VlmContent("text", "hi")))), null, true)?.getOrThrow()?.formattedText
                     ?: llm?.applyChatTemplate(arrayOf(ChatMessage(role = "user", content = "hi")), null, true)?.getOrThrow()?.formattedText
-                com.iris.localai.engine.ThinkSupport.promptEndsWithOpenThink(probe)
+                ThinkSupport.promptEndsWithOpenThink(probe)
             }.getOrDefault(false)
             ModelDetails(
                 description = model.displayName,
@@ -201,7 +204,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
             val started = System.currentTimeMillis()
             val out = StringBuilder()
             try {
-                // 2.1.2: GGUF too. llama.cpp's prefix rollback on regenerate / edit left the Hexagon
+                // GGUF too. llama.cpp's prefix rollback on regenerate / edit left the Hexagon
                 // backend producing nothing; a history that does not extend the cache resets first.
                 if (!GenieXTurns.canContinue(cached, turns)) {
                     if (cached.isNotEmpty()) { l?.reset(); v?.reset() }
@@ -239,7 +242,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 while (true) {
                 done = null
                 val flow = v?.generateStreamFlow(prompt, gen) ?: l!!.generateStreamFlow(prompt, config = gen)
-                val channel = com.iris.localai.engine.ChannelThink()
+                val channel = ChannelThink()
                 flow.onCompletion { channel.push("", final = true).takeIf { it.isNotEmpty() && !cancelled }?.let { send(GenEvent.Piece(it)) } }.collect { r ->
                     when (r) {
                         is LlmStreamResult.Token -> {
@@ -257,7 +260,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                                     prefillMs = p.promptTimeMs.toLong(),
                                     generateMs = p.decodeTimeMs.toLong(),
                                 ),
-                                if (reason == StopReason.CONTEXT_FULL) com.iris.localai.engine.LengthRule.contextFullMessage(p.generatedTokens.toInt(), params.maxNewTokens) else null,
+                                if (reason == StopReason.CONTEXT_FULL) LengthRule.contextFullMessage(p.generatedTokens.toInt(), params.maxNewTokens) else null,
                             )
                         }
                         is LlmStreamResult.Error -> {
@@ -269,7 +272,7 @@ class GenieXEngine(context: Context) : InferenceEngine {
                         else -> {}
                     }
                 }
-                // 2.1.2: an empty reply that nobody stopped — reset the KV cache and try once more.
+                // an empty reply that nobody stopped — reset the KV cache and try once more.
                 if (GenieXRetry.shouldRetryEmpty(attempt, cancelled, out.isEmpty(), done?.reason)) {
                     attempt++
                     withContext(NonCancellable) { runCatching { l?.reset(); v?.reset() } }

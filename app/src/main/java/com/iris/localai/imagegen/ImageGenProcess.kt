@@ -1,5 +1,7 @@
 package com.iris.localai.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import android.app.Service
 import android.content.ComponentName
 import android.content.Context
@@ -25,7 +27,7 @@ import java.io.File
 import kotlin.coroutines.resume
 
 /**
- * 2.4.6 生图独立进程: every generation (sd.cpp GPU/CPU/NPU and the QNN SD1.5 graphs) runs in the
+ * 生图独立进程: every generation (sd.cpp GPU/CPU/NPU and the QNN SD1.5 graphs) runs in the
  * `:imagegen` process. A native crash (OpenCL driver, Hexagon, OOM kill) now ends only that process:
  * the chat, the agent, the terminal and the local API keep running, and the 生图 page shows an error.
  * The GPU / HTP crash markers SdCppEngine writes before each attempt are files, so the next
@@ -158,7 +160,7 @@ class RemoteImageGen(private val context: Context) {
     }
 
     suspend fun generate(req: ImageRequest, model: ImageModel, forceOnce: Boolean, onProgress: (Int, Int) -> Unit): Result<ByteArray> = lock.withLock {
-        val svc = connect() ?: return@withLock Result.failure(ProcessDied(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_proc_start_failed)))
+        val svc = connect() ?: return@withLock Result.failure(ProcessDied(I18n.s(R.string.imagegen_proc_start_failed)))
         busy = true
         try {
             suspendCancellableCoroutine { cont ->
@@ -183,7 +185,7 @@ class RemoteImageGen(private val context: Context) {
                 }
                 onDeath = {
                     onDeath = null
-                    if (cont.isActive) cont.resume(Result.failure(ProcessDied(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_proc_died))))
+                    if (cont.isActive) cont.resume(Result.failure(ProcessDied(I18n.s(R.string.imagegen_proc_died))))
                 }
                 cont.invokeOnCancellation { cancel() }
                 val m = Message.obtain(null, ImageGenIpc.GENERATE).apply {

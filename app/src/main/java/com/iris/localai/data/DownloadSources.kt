@@ -1,6 +1,8 @@
 package com.iris.localai.data
 
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -16,7 +18,7 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
 /**
- * 2.2.16: where model files come from. huggingface.co is mostly unreachable in mainland China, so
+ * where model files come from. huggingface.co is mostly unreachable in mainland China, so
  * 自动 (default) probes the sources and picks the fastest reachable one: 魔搭 ModelScope first when the
  * repo has a verified copy there, then hf-mirror.com (a host swap of huggingface.co), then Hugging Face.
  * Every download falls through to the next source on failure or a 20 s stall, resuming the `.part`
@@ -24,10 +26,10 @@ import javax.net.ssl.SSLException
  */
 @kotlinx.serialization.Serializable
 enum class DownloadSource(val label: String, val baseUrl: String, val short: String) {
-    AUTO(com.iris.localai.I18n.s(com.iris.localai.R.string.data_3e6ca1), "", com.iris.localai.I18n.s(com.iris.localai.R.string.settings_3aed2c)),
-    MODELSCOPE(com.iris.localai.I18n.s(com.iris.localai.R.string.data_01529c), "https://www.modelscope.cn", com.iris.localai.I18n.s(com.iris.localai.R.string.data_662005)),
-    HF_MIRROR(com.iris.localai.I18n.s(com.iris.localai.R.string.data_50ae18), "https://hf-mirror.com", "hf-mirror"),
-    HUGGING_FACE(com.iris.localai.I18n.s(com.iris.localai.R.string.data_941c0b), "https://huggingface.co", "HuggingFace");
+    AUTO(I18n.s(R.string.data_3e6ca1), "", I18n.s(R.string.settings_3aed2c)),
+    MODELSCOPE(I18n.s(R.string.data_01529c), "https://www.modelscope.cn", I18n.s(R.string.data_662005)),
+    HF_MIRROR(I18n.s(R.string.data_50ae18), "https://hf-mirror.com", "hf-mirror"),
+    HUGGING_FACE(I18n.s(R.string.data_941c0b), "https://huggingface.co", "HuggingFace");
 
     val concrete: Boolean get() = this != AUTO
 
@@ -40,7 +42,7 @@ enum class DownloadSource(val label: String, val baseUrl: String, val short: Str
 
 /** One place to fetch a file from. [source] = null: not a Hugging Face file (S3, GitHub…), fetched as is. */
 data class SourceUrl(val source: DownloadSource?, val url: String) {
-    val label: String get() = source?.label ?: (runCatching { java.net.URI(url).host }.getOrNull() ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_d911cf))
+    val label: String get() = source?.label ?: (runCatching { java.net.URI(url).host }.getOrNull() ?: I18n.s(R.string.data_d911cf))
 }
 
 object DownloadSources {
@@ -67,13 +69,13 @@ object DownloadSources {
             "Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-MNN",
         ).forEach { put("taobao-mnn/$it", MsRepo("MNN/$it")) }
         listOf("E2B", "E4B", "12B").forEach { put("litert-community/gemma-4-$it-it-litert-lm", MsRepo("litert-community/gemma-4-$it-it-litert-lm")) }
-        // 2.4.4: gated on Hugging Face (Gemma terms), open on ModelScope; the mt69xx files match HF by size (HF hides the SHA of gated files).
+        // gated on Hugging Face (Gemma terms), open on ModelScope; the mt69xx files match HF by size (HF hides the SHA of gated files).
         put("litert-community/Gemma3-1B-IT", MsRepo("litert-community/Gemma3-1B-IT"))
         listOf("1.7B", "4B").forEach { put("XHToken/Spark-X2.6-$it-GGUF", MsRepo("XHToken/Spark-X2.6-$it-GGUF")) }
-        // 2.4.3: GGUF twins of the MNN entries — same ids on ModelScope, sizes + SHA-256 checked against HF 2026-11-06.
+        // GGUF twins of the MNN entries — same ids on ModelScope, sizes + SHA-256 checked against HF 2026-11-06.
         (listOf("Qwen3.5-0.8B", "Qwen3.5-2B", "Qwen3.5-4B", "Qwen3.5-9B", "Qwen3-0.6B", "Qwen3-1.7B", "Qwen3-4B", "Qwen3-8B").map { "lmstudio-community/$it-GGUF" } +
             listOf("0.8B", "2B", "4B").map { "Jackrong/Qwen3.5-$it-Claude-4.6-Opus-Reasoning-Distilled-GGUF" }).forEach { put(it, MsRepo(it)) }
-        // 2.5.5: 南北阁 bartowski 仓库魔搭同名，Q4_K_M 大小一致（2026-11-14）
+        // 南北阁 bartowski 仓库魔搭同名，Q4_K_M 大小一致（2026-11-14）
         put("bartowski/Nanbeige_Nanbeige4.2-3B-GGUF", MsRepo("bartowski/Nanbeige_Nanbeige4.2-3B-GGUF"))
         put("taobao-mnn/stable-diffusion-v1-5-mnn-general", MsRepo("MNN/stable-diffusion-v1-5-mnn", "general/"))
         put("csukuangfj/sherpa-onnx-zipformer-ctc-zh-int8-2025-07-03", MsRepo("csukuangfj/sherpa-onnx-zipformer-ctc-zh-int8-2025-07-03"))
@@ -150,7 +152,7 @@ object DownloadSources {
     @Volatile var onLastGood: (DownloadSource) -> Unit = {}
 
     /**
-     * 2.6.7 测速收敛：按「源 + 仓库」只测一次，同一时间多个文件/分块共享同一次测速（进行中的也共享）。
+     * 测速收敛：按「源 + 仓库」只测一次，同一时间多个文件/分块共享同一次测速（进行中的也共享）。
      * 通的结果本次 App 运行期一直复用；不通的 10 分钟后才重测（之前不通的每个文件都重测，HF 在国内必超时，
      * 于是「下载链接不多却访问一大堆链接」）。
      */
@@ -163,7 +165,7 @@ object DownloadSources {
     const val FAIL_TTL = 10 * 60_000L
     /** Probes actually sent this run (tests / 日志). */
     @Volatile var probesSent = 0; private set
-    /** 2.6.7: lines like 「测速 hf-mirror 320 ms」/「下载 hf-mirror …」 for logcat and the download detail. */
+    /** lines like 「测速 hf-mirror 320 ms」/「下载 hf-mirror …」 for logcat and the download detail. */
     private val events = ArrayDeque<String>()
     fun log(kind: String, line: String) {
         synchronized(events) { events.addLast("$kind $line"); while (events.size > 50) events.removeFirst() }
@@ -216,16 +218,16 @@ object DownloadSources {
 
     /** 「测速 魔搭 120 ms · hf-mirror 380 ms · HuggingFace ×」 for the download detail. Pure. */
     fun speedLine(order: List<DownloadSource>, lat: Map<DownloadSource, Long?>): String =
-        com.iris.localai.I18n.s(com.iris.localai.R.string.dl267_speed) + " " +
+        I18n.s(R.string.dl267_speed) + " " +
             order.joinToString(" · ") { s -> s.short + " " + (lat[s]?.let { "$it ms" } ?: "×") }
 
     /** Plain-language reason for a failed attempt (shown with the source name). */
     fun describe(e: Throwable): String = when (e) {
-        is UnknownHostException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_a749ad)
-        is SocketTimeoutException -> if (e.message?.contains("connect", true) == true) com.iris.localai.I18n.s(com.iris.localai.R.string.data_5f4aa5) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_253482, STALL_MS / 1000)
-        is ConnectException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_757a73)
-        is SSLException -> com.iris.localai.I18n.s(com.iris.localai.R.string.data_d93e0d)
-        else -> e.message?.takeIf { it.isNotBlank() }?.substringBefore("：http")?.take(80) ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_0bffc6)
+        is UnknownHostException -> I18n.s(R.string.data_a749ad)
+        is SocketTimeoutException -> if (e.message?.contains("connect", true) == true) I18n.s(R.string.data_5f4aa5) else I18n.s(R.string.data_253482, STALL_MS / 1000)
+        is ConnectException -> I18n.s(R.string.data_757a73)
+        is SSLException -> I18n.s(R.string.data_d93e0d)
+        else -> e.message?.takeIf { it.isNotBlank() }?.substringBefore("：http")?.take(80) ?: I18n.s(R.string.data_0bffc6)
     }
 
     /** ~3 s Range 0-0 request; round-trip ms, or null when unreachable / not there. */
@@ -261,7 +263,7 @@ object DownloadSources {
      * Fetches one file trying [cands] in order. The `.part` file is kept between sources,
      * so the next one resumes (HTTP Range) — every source serves the same bytes; the expected size guards
      * that. [onSwitch] gets a Chinese line when moving on. Throws with every source's failure.
-     * 2.5.0-beta8: a failed try that still grew `.part` ([HttpDownload.partFile]) resets that source's count,
+     * a failed try that still grew `.part` ([HttpDownload.partFile]) resets that source's count,
      * so a big model on a flaky phone network keeps resuming on the same source instead of failing at 30–50 %
      * after two stalls. [attemptsPerSource] tries in a row without progress move on to the next source (as
      * before); [maxAttemptsPerSource] failed tries in total on one source stop it either way (no endless loop).
@@ -279,7 +281,7 @@ object DownloadSources {
         attemptsPerSource: Int = 2,
         maxAttemptsPerSource: Int = MAX_ATTEMPTS_PER_SOURCE,
     ) {
-        if (cands.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_cde279))
+        if (cands.isEmpty()) throw IOException(I18n.s(R.string.data_cde279))
         val errors = ArrayList<String>()
         val part = HttpDownload.partFile(target)
         for ((i, c) in cands.withIndex()) {
@@ -306,13 +308,13 @@ object DownloadSources {
                 }
             }
             val why = describe(last ?: IOException())
-            errors += com.iris.localai.I18n.s(com.iris.localai.R.string.chat_b9fef6, c.label, why)
-            cands.getOrNull(i + 1)?.let { onSwitch(com.iris.localai.I18n.s(com.iris.localai.R.string.data_0c59da, c.label, why, it.label)) }
+            errors += I18n.s(R.string.chat_b9fef6, c.label, why)
+            cands.getOrNull(i + 1)?.let { onSwitch(I18n.s(R.string.data_0c59da, c.label, why, it.label)) }
         }
-        throw IOException(if (cands.size == 1) com.iris.localai.I18n.s(com.iris.localai.R.string.settings_ce1a3a, errors.single()) else com.iris.localai.I18n.s(com.iris.localai.R.string.data_300628) + errors.joinToString("\n"))
+        throw IOException(if (cands.size == 1) I18n.s(R.string.settings_ce1a3a, errors.single()) else I18n.s(R.string.data_300628) + errors.joinToString("\n"))
     }
 
-    /** 2.5.0-beta8: failed tries in total on one source before giving it up, progress or not. */
+    /** failed tries in total on one source before giving it up, progress or not. */
     const val MAX_ATTEMPTS_PER_SOURCE = 20
     const val MAX_RETRY_DELAY_MS = 30_000L
 

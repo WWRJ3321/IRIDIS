@@ -1907,7 +1907,7 @@
     <string name="agent245_cut_nothing">La respuesta llegó al límite de longitud; contenido incompleto, no se escribió nada</string>
     <string name="ask245_pill">Pendiente: %1$s</string>
     <string name="ask245_reopen">Abrir la confirmación</string>
-    <string name="vg245_title">Usar GPU para visión</string>
+    <string name="vg245_title">Visión (mmproj)</string>
     <string name="vg245_off">mmproj en CPU en Snapdragon. Al recargar</string>
     <string name="vg245_on">Visión más rápida; puede colgarse en algunos móviles. Al recargar</string>
     <string name="mtk245_qwen_purpose">Versión para la NPU del Dimensity 9500, contexto de 4K, solo texto (beta)</string>
@@ -2181,4 +2181,10 @@
     <string name="ig27_too_big">Modelo demasiado grande (unos %1$s GB) para la memoria de este teléfono</string>
     <string name="ig27_start">Descarga primero un modelo o toca «Importar modelo» al final para usar tus archivos</string>
     <string name="st27_embed">Modelo de búsqueda de la base de conocimiento</string>
+    <string name="engine_cl_off">La GPU (OpenCL) se desactivó por seguridad tras el último fallo al cargar</string>
+    <string name="models_gpu_recheck">Volver a detectar GPU</string>
+    <string name="models_gpu_recheck_ok">Detectado de nuevo: la GPU está disponible.</string>
+    <string name="models_gpu_recheck_restart">GPU reactivada; reinicia la app para que surta efecto.</string>
+    <string name="models_gpu_recheck_none">Sigue sin encontrarse un controlador OpenCL.</string>
+    <string name="vg27b_note">Para modelos GGUF normales, elige aquí CPU o GPU para la visión. Si el modelo usa la NPU (GenieX), GenieX gestiona la visión automáticamente y este ajuste no se aplica. Se aplica al recargar.</string>
 </resources>

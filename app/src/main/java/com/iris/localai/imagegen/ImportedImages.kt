@@ -5,7 +5,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
- * 2.6.9: 用户自己导入的生图模型（规避再分发/商用许可风险：App 不托管、不下载这些权重）。
+ * 用户自己导入的生图模型（规避再分发/商用许可风险：App 不托管、不下载这些权重）。
  *
  * 只支持「扩散模型 + LLM 文本编码器 + VAE」三件套的 sd.cpp 架构——现有 libiris_sd.so 的 JNI 只传
  * diffusion_model_path / llm_path / vae_path（见 cpp/sdcpp/sd_jni.cpp），所以 SD1.5/SDXL 单文件、
@@ -18,7 +18,7 @@ enum class ImportArch(val label: String, val llmPath: String, val vaePath: Strin
     ANIMA("Anima", "${ImageCatalog.SHARED_DIR}/Qwen3-0.6B-Base.Q8_0.gguf", "${ImageCatalog.ANIMA_OLD_ID}/qwen_image_vae.safetensors", 30, 4f, true),
     Z_IMAGE("Z-Image", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "z-image-turbo/ae.safetensors", 8, 1f, false),
     FLUX2_4B("FLUX.2 Klein 4B", "${ImageCatalog.SHARED_DIR}/Qwen3-4B-Q4_K_M.gguf", "flux2-klein-4b/flux2-vae.safetensors", 4, 1f, false),
-    /** 2.6.12: Anima 的 NPU 包（一整个文件夹的 QNN 文件，只在 HTP v79 上跑）。 */
+    /** Anima 的 NPU 包（一整个文件夹的 QNN 文件，只在 HTP v79 上跑）。 */
     ANIMA_NPU("Anima NPU", "", "", 8, 1f, true, npuPack = true),
 }
 
@@ -33,7 +33,7 @@ data class ImportedImage(
     val vae: String,
     val steps: Int,
     val cfg: Float,
-    /** 2.7.0 通用导入（arch = [AUTO]）：单文件模型与 CLIP / T5 编码器，均为相对路径，可空。 */
+    /** 通用导入（arch = [AUTO]）：单文件模型与 CLIP / T5 编码器，均为相对路径，可空。 */
     val model: String = "",
     val clipL: String = "",
     val clipG: String = "",
@@ -55,7 +55,7 @@ data class ImportedImage(
             id = id, tier = Tier.MID, name = name, backend = Backend.SDCPP,
             files = listOf(ImageCatalog.SD_LIB), // 只有引擎库需要下载；权重是用户的文件
             fixedSize = null, defaultSteps = steps, defaultCfg = cfg,
-            note = "", // 2.7.0: 导入的模型不按牌子标注
+            note = "", // 导入的模型不按牌子标注
             sdFiles = sdFiles,
             tagStyle = a?.tagStyle == true || tagStyle,
             imported = true,
@@ -65,7 +65,7 @@ data class ImportedImage(
 
 object ImportedImages {
     const val PREFIX = "imp-"
-    /** 2.7.0: 通用导入的 arch 字段值（不按牌子分）。 */
+    /** 通用导入的 arch 字段值（不按牌子分）。 */
     const val AUTO = "AUTO"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 

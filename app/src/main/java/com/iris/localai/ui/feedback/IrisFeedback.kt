@@ -1,5 +1,7 @@
 package com.iris.localai.ui.feedback
 
+import com.iris.localai.IrisApp
+import com.iris.localai.util.diagnostics.SystemStatus
 import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioAttributes
@@ -14,7 +16,7 @@ import androidx.compose.ui.platform.LocalView
 import com.iris.localai.R
 
 /**
- * 2.1.0: one place for haptics + sound feedback. Call sites name *what happened*
+ * one place for haptics + sound feedback. Call sites name *what happened*
  * ([FeedbackEvent]); [IrisFeedbackPolicy] (pure, JVM-tested) decides which haptic and which
  * sound that means and whether either may play right now.
  */
@@ -106,7 +108,7 @@ class IrisFeedback internal constructor(private val view: View) {
     }
 
     private fun env(): FeedbackEnv {
-        val s = runCatching { (app as com.iris.localai.IrisApp).container.settings.current }.getOrNull()
+        val s = runCatching { (app as IrisApp).container.settings.current }.getOrNull()
         val audio = app.getSystemService(AudioManager::class.java)
         val nm = app.getSystemService(NotificationManager::class.java)
         return FeedbackEnv(
@@ -115,7 +117,7 @@ class IrisFeedback internal constructor(private val view: View) {
             ringerNormal = audio?.let { IrisFeedbackPolicy.ringerNormal(it.ringerMode) } ?: false,
             dndOff = nm?.let { IrisFeedbackPolicy.dndOff(it.currentInterruptionFilter) } ?: false,
             voiceActive = FeedbackVoice.overlayOpen || FeedbackVoice.dictating ||
-                com.iris.localai.util.SystemStatus.live.value.voiceActive,
+                SystemStatus.live.value.voiceActive,
         )
     }
 

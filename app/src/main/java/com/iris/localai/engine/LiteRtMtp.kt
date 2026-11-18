@@ -1,7 +1,10 @@
 package com.iris.localai.engine
 
+import com.iris.localai.engine.load.*
+import com.iris.localai.engine.resources.*
+
 /**
- * 2.5.0-beta10: LiteRT-LM speculative decoding (Gemma 4 .litertlm files ship an MTP drafter since
+ * LiteRT-LM speculative decoding (Gemma 4 .litertlm files ship an MTP drafter since
  * 2026-05) behind the same 「MTP 加速（实验）」 switch. Pure Kotlin (unit-tested).
  */
 object LiteRtMtp {

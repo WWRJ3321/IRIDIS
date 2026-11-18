@@ -1,5 +1,8 @@
-package com.iris.localai.agent
+package com.iris.localai.agent.tools
 
+import com.iris.localai.agent.core.*
+import com.iris.localai.agent.web.*
+import com.iris.localai.agent.workspace.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject

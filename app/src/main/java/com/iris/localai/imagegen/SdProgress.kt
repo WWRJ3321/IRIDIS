@@ -1,12 +1,12 @@
 package com.iris.localai.imagegen
 
 /**
- * 2.4.2: what the 生图 progress line says (pure, unit-tested).
+ * what the 生图 progress line says (pure, unit-tested).
  *
  * sd.cpp reports three kinds of progress through one callback: weight loading (tensor counts — it loads
  * the text encoder and then the diffusion model lazily, inside the first generation: e.g. 386/386 then
  * 452/452), denoising steps (0/N when step 1 starts, then 1/N…N/N) and, at large sizes, VAE decode tiles.
- * 2.4.1 printed them all as 「第 x/y 步」, so a finished weight load looked like a frozen 452/452 step
+ * printed them all as 「第 x/y 步」, so a finished weight load looked like a frozen 452/452 step
  * while the (slow) first step was running.
  */
 object SdProgress {
@@ -61,7 +61,7 @@ object SdProgress {
     const val LOG_HINT_SEC = 120L
 }
 
-/** 2.4.2: the app's own recent sd.cpp / thermal log lines (logcat of this process), for 「复制生图日志」. */
+/** the app's own recent sd.cpp / thermal log lines (logcat of this process), for 「复制生图日志」. */
 object SdLog {
     fun recent(lines: Int = 400): String = runCatching {
         val p = ProcessBuilder("logcat", "-d", "-v", "time", "-t", lines.toString(), "-s", "IrisSd:V", "IrisSdq:V", "IrisThermal:V", "AndroidRuntime:E", "DEBUG:V")

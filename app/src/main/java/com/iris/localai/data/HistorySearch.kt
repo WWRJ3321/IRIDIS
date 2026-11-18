@@ -1,7 +1,7 @@
 package com.iris.localai.data
 
 /**
- * 2.6.3: 聊天历史全文搜索 — titles and message text. Matching / snippets are pure and unit-tested;
+ * 聊天历史全文搜索 — titles and message text. Matching / snippets are pure and unit-tested;
  * [MessageSearchIndex] keeps the plain text of each saved conversation in memory (re-read only when
  * its updatedAt changes) so typing does not decode every JSON file again.
  */

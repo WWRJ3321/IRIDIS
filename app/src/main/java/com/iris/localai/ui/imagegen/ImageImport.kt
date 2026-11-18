@@ -47,7 +47,7 @@ import com.iris.localai.ui.theme.IrisType
 import com.iris.localai.ui.components.irisTextFieldColors
 import kotlinx.coroutines.launch
 
-/** 2.6.9: 模型行末尾的「导入模型」卡片（与 ModelChip 同尺寸同样式）；导入中显示进度。 */
+/** 模型行末尾的「导入模型」卡片（与 ModelChip 同尺寸同样式）；导入中显示进度。 */
 @Composable
 internal fun ImportChip(progress: Float?, file: String, onClick: () -> Unit) {
     val c = Iris.colors
@@ -94,7 +94,7 @@ internal fun ImportDialog(vm: ImageGenViewModel, onDismiss: () -> Unit) {
     var plan by remember { mutableStateOf<ImageGenViewModel.ImportPlan?>(null) }
     var steps by remember { mutableStateOf("") }
     var cfg by remember { mutableStateOf("") }
-    // 2.7.0: 一次选全部文件（主模型、文本编码器、VAE，或 NPU 包），读文件头自动识别各自用途
+    // 一次选全部文件（主模型、文本编码器、VAE，或 NPU 包），读文件头自动识别各自用途
     val pickMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { picked ->
         if (picked.isNotEmpty()) scope.launch {
             uris = (uris + picked).distinct()

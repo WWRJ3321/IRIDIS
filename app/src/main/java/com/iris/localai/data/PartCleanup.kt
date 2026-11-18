@@ -3,7 +3,7 @@ package com.iris.localai.data
 import java.io.File
 
 /**
- * 2.6.3: 「清除已下载」 for a paused download — removes its `.part` files / folders and the
+ * 「清除已下载」 for a paused download — removes its `.part` files / folders and the
  * parallel-download segment files (`<name>.part.s<start>`). Pure name matching is unit-tested.
  */
 object PartCleanup {

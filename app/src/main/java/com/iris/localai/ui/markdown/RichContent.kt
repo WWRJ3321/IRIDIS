@@ -1,6 +1,8 @@
 package com.iris.localai.ui.markdown
 
-import com.iris.localai.agent.NetGuard
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.agent.web.NetGuard
 import java.io.File
 
 /**
@@ -49,7 +51,7 @@ object HtmlSandbox {
             "connect-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
 
     /**
-     * 2.5.2: script errors used to fail silently (a blank 3D scene). This first script shows them in a
+     * script errors used to fail silently (a blank 3D scene). This first script shows them in a
      * small bar at the bottom of the preview: uncaught errors, rejected promises, scripts that failed
      * to load, and a missing WebGL context.
      */
@@ -65,13 +67,13 @@ object HtmlSandbox {
         "var gc=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(k){var x=gc.apply(this,arguments);" +
         "if(!x&&/webgl/i.test(String(k)))show('WebGL unavailable ('+k+')');return x;};})();</script>"
 
-    /** 2.5.4: sent after the preview changes size, so pages sized from innerWidth / innerHeight re-fit. */
+    /** sent after the preview changes size, so pages sized from innerWidth / innerHeight re-fit. */
     const val RESIZE_JS: String = "try{window.dispatchEvent(new Event('resize'))}catch(e){}"
 
     private val FILL_CSS = Regex("(?:html|body)[^{}]*\\{[^}]*height\\s*:\\s*100(?:%|vh)", RegexOption.IGNORE_CASE)
     private val FILL_JS = Regex("<canvas\\b|innerHeight|WebGLRenderer|getContext\\s*\\(\\s*['\"]webgl", RegexOption.IGNORE_CASE)
 
-    /** 2.5.4: the page fills its viewport (3D / canvas / html,body height:100%) rather than having a content height. */
+    /** the page fills its viewport (3D / canvas / html,body height:100%) rather than having a content height. */
     fun fillsViewport(source: String): Boolean = FILL_CSS.containsMatchIn(source) || FILL_JS.containsMatchIn(source)
 
     private fun head(allowImages: Boolean, importMap: String? = null) =
@@ -89,7 +91,7 @@ object HtmlSandbox {
             return "<!DOCTYPE html><html><head>$h<style>html,body{margin:0;padding:8px;background:#fff}" +
                 "svg{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body>${source0.trim()}</body></html>"
         }
-        // 2.2.17: CDN Three.js → bundled copy; import map entries for "three" / "three/addons/".
+        // CDN Three.js → bundled copy; import map entries for "three" / "three/addons/".
         val (source, importMap) = ThreeAssets.prepare(source0)
         val h = head(allowImages, importMap)
         HEAD_TAG.find(source)?.let { m -> return source.substring(0, m.range.last + 1) + h + source.substring(m.range.last + 1) }
@@ -142,10 +144,10 @@ sealed interface ImageSource {
 }
 
 object ImageRefs {
-    val NETWORK_OFF: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_c9a595)
-    val HTTP_ONLY: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_2d0a38)
-    val UNSUPPORTED: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_89b4ff)
-    val LOCAL_ADDRESS: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.markdown_78a4bf)
+    val NETWORK_OFF: String get() = I18n.s(R.string.markdown_c9a595)
+    val HTTP_ONLY: String get() = I18n.s(R.string.markdown_2d0a38)
+    val UNSUPPORTED: String get() = I18n.s(R.string.markdown_89b4ff)
+    val LOCAL_ADDRESS: String get() = I18n.s(R.string.markdown_78a4bf)
     /** ~6 MB of image bytes as base64. */
     const val MAX_DATA_CHARS = 8_000_000
 

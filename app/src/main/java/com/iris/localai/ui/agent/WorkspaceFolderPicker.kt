@@ -1,5 +1,9 @@
 package com.iris.localai.ui.agent
 
+import com.iris.localai.ui.components.IrisButton
+import com.iris.localai.ui.components.IrisButtonStyle
+import com.iris.localai.ui.components.TextInputDialog
+import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +35,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 2.3.3: in-app folder browser over the mounted storage volumes (real paths, needs 全部文件访问) for
+ * in-app folder browser over the mounted storage volumes (real paths, needs 全部文件访问) for
  * the 自定义位置 agent workspace. [validate] returns a problem text or null; 「选择此文件夹」 picks the
  * folder shown. Hidden folders are not listed.
  */
@@ -66,25 +70,25 @@ fun WorkspaceFolderPicker(
         Column {
             if (roots.size > 1) Row(Modifier.horizontalScroll(rememberScrollState())) {
                 roots.forEachIndexed { i, r ->
-                    com.iris.localai.ui.components.IrisButton(
+                    IrisButton(
                         if (i == 0) I18n.s(R.string.ws233_internal) else r.name,
                         { dir = r; error = null },
-                        style = com.iris.localai.ui.components.IrisButtonStyle.Tonal, compact = true,
+                        style = IrisButtonStyle.Tonal, compact = true,
                     )
-                    Spacer(Modifier.width(com.iris.localai.ui.theme.IrisSpace.S))
+                    Spacer(Modifier.width(IrisSpace.S))
                 }
             }
-            Text(dir.path, style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.padding(vertical = com.iris.localai.ui.theme.IrisSpace.XS))
-            error?.let { Text(it, style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(bottom = com.iris.localai.ui.theme.IrisSpace.XS)) }
+            Text(dir.path, style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.padding(vertical = IrisSpace.XS))
+            error?.let { Text(it, style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(bottom = IrisSpace.XS)) }
             Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
                 if (root == null) SettingsRow("..", icon = IrisIcons.Folder, subtitle = I18n.s(R.string.ws233_up), onClick = { dir.parentFile?.let { dir = it }; error = null })
                 subs.forEach { f -> SettingsRow(f.name, icon = IrisIcons.Folder, onClick = { dir = f; error = null }) }
                 SettingsRow(I18n.s(R.string.kb232_new_folder), icon = IrisIcons.FolderPlus, onClick = { creating = true })
             }
-            Spacer(Modifier.height(com.iris.localai.ui.theme.IrisSpace.XS))
+            Spacer(Modifier.height(IrisSpace.XS))
         }
     }
-    if (creating) com.iris.localai.ui.components.TextInputDialog(
+    if (creating) TextInputDialog(
         title = I18n.s(R.string.kb232_new_folder), initial = "", placeholder = I18n.s(R.string.kb232_folder_name),
         onConfirm = { name ->
             val n = name.trim().replace(Regex("[/\\\\:*?\"<>|\\u0000]"), "_")

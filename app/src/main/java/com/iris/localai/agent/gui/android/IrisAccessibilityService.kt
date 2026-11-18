@@ -1,10 +1,13 @@
 /*
- * 2.3.0: parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
+ * parts of this file (element compaction / unlabeled-controls check, accessibility scroll)
  * are adapted from Mika (https://github.com/wangzan101/mika), Copyright 2026 wangzan101,
  * Apache License 2.0. Modified for IRIDIS.
  */
 package com.iris.localai.agent.gui.android
 
+import com.iris.localai.agent.gui.NPoint
+import com.iris.localai.agent.gui.SwipeDir
+import com.iris.localai.agent.tools.AppMatcher
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.ComponentName
@@ -79,12 +82,12 @@ class IrisAccessibilityService : AccessibilityService() {
             return list.split(':').any { it.equals(me, ignoreCase = true) }
         }
 
-        /** 2.1.9: whether IRIDIS may switch the service back on itself (granted once over adb / Shizuku). */
+        /** whether IRIDIS may switch the service back on itself (granted once over adb / Shizuku). */
         fun canSelfEnable(context: Context): Boolean =
             context.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         /**
-         * 2.1.9: HyperOS turns the service off when 清后台 kills IRIDIS. With WRITE_SECURE_SETTINGS the
+         * HyperOS turns the service off when 清后台 kills IRIDIS. With WRITE_SECURE_SETTINGS the
          * app puts it back in the enabled list (app start / before a task). True = it asked the system.
          */
         fun selfEnable(context: Context): Boolean {
@@ -117,7 +120,7 @@ class IrisAccessibilityService : AccessibilityService() {
     }
 }
 
-/** 2.1.9: the `:`-separated enabled-services list with [me] added once (unit-tested). */
+/** the `:`-separated enabled-services list with [me] added once (unit-tested). */
 object A11yList {
     fun remove(list: String, me: String): String =
         list.split(':').map { it.trim() }.filter { it.isNotEmpty() && !it.equals(me, ignoreCase = true) }.joinToString(":")
@@ -151,7 +154,7 @@ class AccessibilityGuiDevice(
     override suspend fun execute(action: GuiAction, obs: GuiObservation): ExecResult {
         val s = svc()
         val w = obs.width; val h = obs.height
-        fun px(p: com.iris.localai.agent.gui.NPoint) = CoordMap.toPixels(p, w, h)
+        fun px(p: NPoint) = CoordMap.toPixels(p, w, h)
         return when (action) {
             is GuiAction.Tap -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, 60)) }
             is GuiAction.LongPress -> px(action.at).let { (x, y) -> gesture(s, stroke(x, y, x, y, 0, action.durationMs.coerceIn(100, 5000))) }
@@ -175,14 +178,14 @@ class AccessibilityGuiDevice(
         }
     }
 
-    /** 2.3.0: node tree only (no screenshot) for scroll-until-found. */
+    /** node tree only (no screenshot) for scroll-until-found. */
     override suspend fun tree(): UiNode? {
         val s = IrisAccessibilityService.instance ?: return null
         return withContext(Dispatchers.Default) { runCatching { s.rootInActiveWindow?.let { NodeCopy.copy(it) } }.getOrNull() }
     }
 
     /**
-     * 2.3.0 (after Mika's AndroidScreen.scroll): the list's own accessibility scroll first (exact,
+     * (after Mika's AndroidScreen.scroll): the list's own accessibility scroll first (exact,
      * no fling), the swipe gesture when no scrollable node is found or it refuses.
      */
     private suspend fun scroll(s: IrisAccessibilityService, a: GuiAction.Scroll, w: Int, h: Int): ExecResult {
@@ -201,15 +204,15 @@ class AccessibilityGuiDevice(
         }
         if (target != null) {
             val wanted = when (a.dir) {
-                com.iris.localai.agent.gui.SwipeDir.DOWN -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
-                com.iris.localai.agent.gui.SwipeDir.UP -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
-                com.iris.localai.agent.gui.SwipeDir.LEFT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
-                com.iris.localai.agent.gui.SwipeDir.RIGHT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
+                SwipeDir.DOWN -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
+                SwipeDir.UP -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
+                SwipeDir.LEFT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
+                SwipeDir.RIGHT -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
             }
             val ids = target.actionList.map { it.id }
             val id = when {
                 wanted.id in ids -> wanted.id
-                a.dir == com.iris.localai.agent.gui.SwipeDir.DOWN || a.dir == com.iris.localai.agent.gui.SwipeDir.RIGHT ->
+                a.dir == SwipeDir.DOWN || a.dir == SwipeDir.RIGHT ->
                     AccessibilityNodeInfo.ACTION_SCROLL_FORWARD.takeIf { it in ids }
                 else -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD.takeIf { it in ids }
             }
@@ -220,13 +223,13 @@ class AccessibilityGuiDevice(
         return gesture(s, stroke(x1, y1, x2, y2, 0, sw.durationMs))
     }
 
-    /** 2.2.9: tree fingerprint of the active window (no screenshot: those are rate-limited by the system). */
+    /** tree fingerprint of the active window (no screenshot: those are rate-limited by the system). */
     override suspend fun snapshot(): ScreenState? {
         val s = IrisAccessibilityService.instance ?: return null
         return withContext(Dispatchers.Default) { runCatching { s.rootInActiveWindow?.let { ScreenFingerprint.of(NodeCopy.copy(it)) } }.getOrNull() }
     }
 
-    /** 2.2.9: poll every 150 ms until two samples match (min 250 ms, max 2.5 s). */
+    /** poll every 150 ms until two samples match (min 250 ms, max 2.5 s). */
     override suspend fun waitStable(fallbackMs: Long): ScreenState? = StableWait.await({ snapshot() })
 
     private fun screenSize(s: IrisAccessibilityService): Pair<Int, Int> {
@@ -358,8 +361,8 @@ class AccessibilityGuiDevice(
         val pm = context.packageManager
         val apps = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
             .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.distinctBy { it.second }
-        // 2.1.9: PackageManager launch by 中文名 / English / package (fuzzy), never by hunting for the icon.
-        val hit = com.iris.localai.agent.AppMatcher.match(app, apps) ?: return ExecResult(false, com.iris.localai.agent.AppMatcher.notFound(app, apps))
+        // PackageManager launch by 中文名 / English / package (fuzzy), never by hunting for the icon.
+        val hit = AppMatcher.match(app, apps) ?: return ExecResult(false, AppMatcher.notFound(app, apps))
         val i = pm.getLaunchIntentForPackage(hit.second) ?: return ExecResult(false, "无法打开 ${hit.first}")
         return runCatching {
             (IrisAccessibilityService.instance ?: context).startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

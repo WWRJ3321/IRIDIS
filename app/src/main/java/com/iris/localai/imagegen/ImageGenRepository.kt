@@ -1,5 +1,13 @@
 package com.iris.localai.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.IrisApp
+import com.iris.localai.R
+import com.iris.localai.agent.tools.ChatModelYield
+import com.iris.localai.agent.tools.ImageGenBackend
+import com.iris.localai.agent.tools.ImageMemory
+import com.iris.localai.data.ModelStorage
+import com.iris.localai.engine.resources.ThermalCutoff
 import android.content.Context
 import com.iris.localai.data.ModelDirs
 import java.io.File
@@ -39,9 +47,9 @@ object ImageGenFiles {
      * Models waiting for the Hexagon runtime have no files yet, so never count as downloaded.
      */
     fun isDownloaded(imagegenRoot: File, model: ImageModel): Boolean {
-        // 2.6.12: 导入的 NPU 包 = 文件夹里该有的文件都在
+        // 导入的 NPU 包 = 文件夹里该有的文件都在
         if (model.imported && model.animaQnn) return AnimaQnnFiles(modelDir(imagegenRoot, model)).missing().isEmpty()
-        // 2.6.9: 导入的模型 = 三个文件都在（大小不定）+ 引擎库已下载
+        // 导入的模型 = 三个文件都在（大小不定）+ 引擎库已下载
         if (model.imported) return model.sdFiles?.let { f -> f.paths().all { File(imagegenRoot, it).isFile } } == true &&
             File(imagegenRoot, ImageCatalog.SD_LIB.path).let { it.isFile && it.length() == ImageCatalog.SD_LIB.size }
         if (model.files.isNotEmpty()) return model.files.all { rf ->
@@ -70,7 +78,7 @@ object ImageGenFiles {
             .filter { it.isFile && it.name.startsWith(PREFIX) && it.name.endsWith(".png") }
             .sortedByDescending { it.name } // the stamp sorts by time; "IMG_x_2.png" > "IMG_x.png"
 
-    /** 2.4.3: what [parametersText] wrote, read back (null fields when a line is missing or foreign). */
+    /** what [parametersText] wrote, read back (null fields when a line is missing or foreign). */
     data class Params(
         val prompt: String, val negative: String = "",
         val steps: Int? = null, val cfg: Float? = null, val seed: Long? = null,
@@ -97,7 +105,7 @@ object ImageGenFiles {
         )
     }
 
-    /** 2.4.3: only generated results (`images/IMG_*.png`) may be deleted from the history. */
+    /** only generated results (`images/IMG_*.png`) may be deleted from the history. */
     fun isHistoryFile(f: File): Boolean =
         f.name.startsWith(PREFIX) && f.name.endsWith(".png") && f.parentFile?.name == IMAGES_SUB
 
@@ -107,7 +115,7 @@ object ImageGenFiles {
         val bytes = runCatching { PngParams.insert(png, parameters) }.getOrDefault(png)
         val part = File(file.path + ".part")
         part.writeBytes(bytes)
-        if (!part.renameTo(file)) { part.delete(); throw java.io.IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, file.path)) }
+        if (!part.renameTo(file)) { part.delete(); throw java.io.IOException(I18n.s(R.string.util_310b87, file.path)) }
         return file
     }
 }
@@ -125,7 +133,7 @@ class ImageGenRepository(internal val context: Context) {
     }
 
     /** `Download/IRIDIS/models/imagegen` with 全部文件访问, else the app-specific folder. */
-    fun modelsLocation(): ModelDirs.Location = com.iris.localai.data.ModelStorage.location(privateModels, ImageGenFiles.MODELS_SUB)
+    fun modelsLocation(): ModelDirs.Location = ModelStorage.location(privateModels, ImageGenFiles.MODELS_SUB)
 
     /** Where a new download goes: the root that already holds a partial/complete copy, else the current write dir. */
     fun downloadRoot(model: ImageModel): File {
@@ -142,7 +150,7 @@ class ImageGenRepository(internal val context: Context) {
         return catalog.filter { m -> dirs.any { ImageGenFiles.isDownloaded(it, m) } }.map { it.id }.toSet()
     }
 
-    private val agent get() = (context.applicationContext as com.iris.localai.IrisApp).container.agent
+    private val agent get() = (context.applicationContext as IrisApp).container.agent
 
     /** The agent workspace (Download/IRIDIS/workspace or the private one). */
     fun workspaceRoot(): File = agent.workspace.value.root
@@ -164,7 +172,7 @@ class ImageGenRepository(internal val context: Context) {
             .sortedByDescending { it.name }
     }
 
-    /** 2.4.3: deletes history images (results only; other paths are ignored). Returns the paths actually gone. */
+    /** deletes history images (results only; other paths are ignored). Returns the paths actually gone. */
     fun deleteHistory(paths: Collection<String>): Set<String> {
         val known = history().map { it.absolutePath }.toSet()
         return paths.filter { p ->
@@ -173,21 +181,21 @@ class ImageGenRepository(internal val context: Context) {
         }.toSet()
     }
 
-    /** 2.4.3: the parameters embedded in a result, null for an image without them. */
+    /** the parameters embedded in a result, null for an image without them. */
     fun params(path: String): ImageGenFiles.Params? =
         runCatching { ImageGenFiles.parseParameters(PngParams.read(File(path).readBytes())) }.getOrNull()
 }
 
 /**
- * 2.1.7: generate_image's view of 生图 — downloaded models that can run (not waiting for the Hexagon
+ * generate_image's view of 生图 — downloaded models that can run (not waiting for the Hexagon
  * runtime), the engine, and saving into the workspace.
  */
 class RepositoryImageGenBackend(
     private val repo: ImageGenRepository,
     private val engine: ImageGenEngine = ImageGenEngines.get(repo.context),
-    /** 2.5.7: the chat model's unload / reload (null = not wired, e.g. tests). */
-    private val yielder: () -> com.iris.localai.agent.ChatModelYield? = { null },
-) : com.iris.localai.agent.ImageGenBackend {
+    /** the chat model's unload / reload (null = not wired, e.g. tests). */
+    private val yielder: () -> ChatModelYield? = { null },
+) : ImageGenBackend {
     override suspend fun makeRoom(model: ImageModel): (suspend () -> Unit)? {
         val y = yielder() ?: return null
         val bytes = ImageGenFiles.sizeBytes(model) ?: return null
@@ -195,7 +203,7 @@ class RepositoryImageGenBackend(
             val am = repo.context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
         }.getOrDefault(0L)
-        if (!com.iris.localai.agent.ImageMemory.mustYield(avail, bytes)) return null
+        if (!ImageMemory.mustYield(avail, bytes)) return null
         return y.yieldModel()
     }
 
@@ -205,7 +213,7 @@ class RepositoryImageGenBackend(
 
     override fun runnableModels(): List<ImageModel> {
         val dl = runCatching { repo.downloaded() }.getOrDefault(emptySet())
-        // 2.5.1: catalog 已排除 MNN CPU；这里再保险一次
+        // catalog 已排除 MNN CPU；这里再保险一次
         return repo.catalog.filter { it.id in dl && ImageRules.listed(it) }
     }
 
@@ -238,18 +246,18 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     @Volatile private var sd: SdCppEngine? = null
 
-    /** 2.4.0: the stable-diffusion.cpp engine (FLUX.2 Klein / Z-Image), created on first use. */
+    /** the stable-diffusion.cpp engine (FLUX.2 Klein / Z-Image), created on first use. */
     fun sdEngine(): SdCppEngine = sd ?: synchronized(this) {
         sd ?: SdCppEngine(rootOf = { m -> repo.downloadedDir(m)?.parentFile }, stateDir = context.filesDir, availMb = ::availMb, totalMb = ::totalMb).also { sd = it }
     }
 
-    /** 2.4.1: ActivityManager.MemoryInfo.availMem in MB (MAX when unknown). */
+    /** ActivityManager.MemoryInfo.availMem in MB (MAX when unknown). */
     private fun availMb(): Long = runCatching {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem / (1024L * 1024L)
     }.getOrDefault(Long.MAX_VALUE)
 
-    /** 2.4.3: ActivityManager.MemoryInfo.totalMem in MB (MAX when unknown). */
+    /** ActivityManager.MemoryInfo.totalMem in MB (MAX when unknown). */
     private fun totalMb(): Long = runCatching {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem / (1024L * 1024L)
@@ -272,9 +280,9 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
         val probe = DeviceProbe.nativeProbe(context)
         val dir = DeviceProbe.qnnRuntimeDir(context.filesDir, probe.htpArch ?: DeviceProbe.htpArch(DeviceProbe.socModel()))
         return when {
-            !probe.libLoaded -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6b0e80, probe.error ?: '?'))
-            dir == null -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_f724e7))
-            !(probe.backendOk && probe.deviceOk) -> UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_a999cf, probe.error ?: '?'))
+            !probe.libLoaded -> UnavailableEngine(I18n.s(R.string.imagegen_6b0e80, probe.error ?: '?'))
+            dir == null -> UnavailableEngine(I18n.s(R.string.imagegen_f724e7))
+            !(probe.backendOk && probe.deviceOk) -> UnavailableEngine(I18n.s(R.string.imagegen_a999cf, probe.error ?: '?'))
             else -> synchronized(this) {
                 qnn ?: QnnSdEngine(modelDir = { repo.downloadedDir(it) }, loader = NativeQnnGraphLoader(dir), perf = NativeHtpPerf).also { qnn = it }
             }
@@ -284,13 +292,13 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     /** Frees the NPU graphs [IdleReleaser.DEFAULT_TIMEOUT_MS] after the last generation (page or generate_image). */
     private val idle = IdleReleaser { release() }
 
-    /** 2.4.6: in the app process, generations go to the `:imagegen` process ([RemoteImageGen]). */
+    /** in the app process, generations go to the `:imagegen` process ([RemoteImageGen]). */
     private val remote: RemoteImageGen? by lazy { if (REMOTE && !ImageGenIpc.isImageGenProcess()) RemoteImageGen.get(context) else null }
 
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> {
         val r = remote ?: return generateLocal(req, model, onProgress)
-        // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image (app process state).
-        com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return Result.failure(IllegalStateException(it)) }
+        // 终止温度: refuse while still over the cutoff, otherwise arm again for this image (app process state).
+        ThermalCutoff.startOrRefuse()?.let { return Result.failure(IllegalStateException(it)) }
         val force = sd?.forceOnce == true
         sd?.forceOnce = false
         return r.generate(req, model, force, onProgress)
@@ -300,8 +308,8 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     suspend fun generateLocal(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
         idle.track {
             if (remote == null && !ImageGenIpc.isImageGenProcess()) {
-                // 2.4.2 终止温度: refuse while still over the cutoff, otherwise arm again for this image.
-                com.iris.localai.engine.ThermalCutoff.startOrRefuse()?.let { return@track Result.failure(IllegalStateException(it)) }
+                // 终止温度: refuse while still over the cutoff, otherwise arm again for this image.
+                ThermalCutoff.startOrRefuse()?.let { return@track Result.failure(IllegalStateException(it)) }
             }
             val e = runCatching { engineFor(model) }.getOrElse { return@track Result.failure(it) }
             active = e
@@ -310,26 +318,26 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
 
     override fun cancel() { remote?.cancel(); active?.cancel() }
 
-    /** 2.2.10 终止温度: a generation is running, or NPU graphs are held. */
+    /** 终止温度: a generation is running, or NPU graphs are held. */
     val busy: Boolean get() = active != null || remote?.busy == true
 
     /** Frees the NPU graphs (≈1.1 GB) now, until the next generation. */
     fun release() { remote?.release(); qnn?.release(); anima?.release(); sd?.release() }
 
     /**
-     * 2.6.12: Anima NPU 包只认 HTP v79；包按 QAIRT 2.50.40 编译，优先用 GenieX 运行库（同版本），没有再用 QNN 运行库。
+     * Anima NPU 包只认 HTP v79；包按 QAIRT 2.50.40 编译，优先用 GenieX 运行库（同版本），没有再用 QNN 运行库。
      * libiris_imagegen 的运行库全进程只有一份，切过来前先放掉 SD1.5 的图。
      */
     private fun animaEngine(): ImageGenEngine {
         anima?.let { return it }
         val arch = DeviceProbe.htpArch(DeviceProbe.socModel())
-        if (arch != 79) return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_chip))
+        if (arch != 79) return UnavailableEngine(I18n.s(R.string.ig270_npu_chip))
         val gx = File(context.filesDir, "geniex").listFiles().orEmpty()
             .filter { it.isDirectory && it.name.startsWith("rt-") && it.name.endsWith("-v79") }
             .firstOrNull { d -> listOf("libQnnHtp.so", "libQnnSystem.so", "libQnnHtpV79Stub.so", "libQnnHtpV79Skel.so").all { File(d, it).isFile } }
         val dir = gx ?: DeviceProbe.qnnRuntimeDir(context.filesDir, 79)
-            ?: return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.ig270_npu_runtime))
-        QnnNative.loadError?.let { return UnavailableEngine(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_6b0e80, it)) }
+            ?: return UnavailableEngine(I18n.s(R.string.ig270_npu_runtime))
+        QnnNative.loadError?.let { return UnavailableEngine(I18n.s(R.string.imagegen_6b0e80, it)) }
         return synchronized(this) {
             qnn?.release()
             anima ?: AnimaQnnEngine(modelDir = { repo.downloadedDir(it) }, loader = NativeQnnGraphLoader(dir), perf = NativeHtpPerf).also { anima = it }
@@ -340,7 +348,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     fun releaseWhenIdle() { remote?.releaseWhenIdle(); idle.releaseWhenIdle() }
 
     companion object {
-        /** 2.4.6 kill switch for the separate `:imagegen` process. */
+        /** kill switch for the separate `:imagegen` process. */
         const val REMOTE = true
         @Volatile private var instance: ImageGenEngines? = null
         fun get(context: Context): ImageGenEngines =

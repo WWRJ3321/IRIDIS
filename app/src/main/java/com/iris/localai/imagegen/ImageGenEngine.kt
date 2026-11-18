@@ -9,7 +9,7 @@ interface ImageGenEngine {
     fun cancel()
 }
 
-/** 2.1.7: the 生图 page ships before the native runtime; every request fails with [MESSAGE]. */
+/** the 生图 page ships before the native runtime; every request fails with [MESSAGE]. */
 class StubEngine : ImageGenEngine {
     override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
         Result.failure(IllegalStateException(MESSAGE))

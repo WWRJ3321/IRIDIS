@@ -1,5 +1,8 @@
 package com.iris.localai.data
 
+import com.iris.localai.engine.MoeLoad
+import com.iris.localai.engine.geniex.GenieX
+import com.iris.localai.engine.geniex.GgufEngineRule
 import android.content.Context
 import com.iris.localai.engine.Backend
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +15,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
- * 1.7.1: per-model settings, keyed by model id (file / folder name). Every field is nullable:
+ * per-model settings, keyed by model id (file / folder name). Every field is nullable:
  * null = follow the global default in [AppSettings]. "恢复默认" simply deletes the entry.
  */
 @Serializable
@@ -74,8 +77,8 @@ data class ModelOverrides(
         threads = threads?.coerceIn(0, 16),
         batchSize = batchSize?.coerceIn(0, 2048),
         kvCacheType = kvCacheType?.coerceIn(0, 2),
-        engine = com.iris.localai.engine.geniex.GenieX.parseEngine(engine),
-        expertUsed = expertUsed?.coerceIn(0, com.iris.localai.engine.MoeLoad.MAX_EXPERTS_UI),
+        engine = GenieX.parseEngine(engine),
+        expertUsed = expertUsed?.coerceIn(0, MoeLoad.MAX_EXPERTS_UI),
     )
 
     /** Keys whose change only takes effect after reloading the model. */
@@ -105,17 +108,17 @@ data class EffectiveModelConfig(
     val warmup: Boolean,
     val thinking: Boolean,
     val systemPrompt: String,
-    /** 2.2.0: engine for GGUF files ([com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA] / ENGINE_GENIEX). */
-    val engine: String = com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
-    /** 2.2.17: [ModelOverrides.mmproj] as is (null = 自动). */
+    /** engine for GGUF files ([com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA] / ENGINE_GENIEX). */
+    val engine: String = GenieX.ENGINE_LLAMA,
+    /** [ModelOverrides.mmproj] as is (null = 自动). */
     val mmproj: String? = null,
-    /** 2.5.0-beta9: MTP speculative decoding requested (only used when the GGUF has MTP layers). */
+    /** MTP speculative decoding requested (only used when the GGUF has MTP layers). */
     val mtp: Boolean = false,
-    /** 2.5.1: [ModelOverrides.moeCpu] as is (null = 自动). */
+    /** [ModelOverrides.moeCpu] as is (null = 自动). */
     val moeCpu: Boolean? = null,
-    /** 2.5.1: 激活专家数，0 = 模型默认. */
+    /** 激活专家数，0 = 模型默认. */
     val expertUsed: Int = 0,
-    /** 2.5.4: [ModelOverrides.les] as is (null = 自动). */
+    /** [ModelOverrides.les] as is (null = 自动). */
     val les: Boolean? = null,
 ) {
     companion object {
@@ -143,9 +146,9 @@ data class EffectiveModelConfig(
                 warmup = m.warmup ?: s.warmup,
                 thinking = m.thinking ?: s.deepThinking,
                 systemPrompt = m.systemPrompt ?: s.systemPrompt,
-                engine = com.iris.localai.engine.geniex.GenieX.parseEngine(m.engine)
-                    ?: com.iris.localai.engine.geniex.GenieX.parseEngine(s.ggufEngine)
-                    ?: com.iris.localai.engine.geniex.GenieX.ENGINE_LLAMA,
+                engine = GenieX.parseEngine(m.engine)
+                    ?: GenieX.parseEngine(s.ggufEngine)
+                    ?: GenieX.ENGINE_LLAMA,
                 mmproj = m.mmproj,
                 mtp = m.mtp ?: false,
                 moeCpu = m.moeCpu,
@@ -168,7 +171,7 @@ class ModelConfigRepository(context: Context) {
     fun get(modelId: String?): ModelOverrides = modelId?.let { _configs.value[it] } ?: ModelOverrides()
 
     fun update(modelId: String, block: (ModelOverrides) -> ModelOverrides) = synchronized(lock) {
-        val next = com.iris.localai.engine.geniex.GgufEngineRule.migrate(block(get(modelId)).sanitized())
+        val next = GgufEngineRule.migrate(block(get(modelId)).sanitized())
         val map = _configs.value.toMutableMap()
         if (next.isEmpty) map.remove(modelId) else map[modelId] = next
         if (map == _configs.value) return@synchronized
@@ -180,8 +183,8 @@ class ModelConfigRepository(context: Context) {
 
     private fun read(): Map<String, ModelOverrides> = runCatching {
         if (!file.isFile) emptyMap() else json.decodeFromString(serializer, file.readText())
-            // 2.1.3: an old per-model 「推理引擎」 is read once and folded into the backend.
-            .mapValues { com.iris.localai.engine.geniex.GgufEngineRule.migrate(it.value.sanitized()) }
+            // an old per-model 「推理引擎」 is read once and folded into the backend.
+            .mapValues { GgufEngineRule.migrate(it.value.sanitized()) }
             .filterValues { !it.isEmpty }
     }.getOrDefault(emptyMap())
 
@@ -195,7 +198,7 @@ class ModelConfigRepository(context: Context) {
 }
 
 
-/** 2.2.14: 「无限」 max reply length — a sentinel above the slider's range. */
+/** 「无限」 max reply length — a sentinel above the slider's range. */
 object TokenLimit {
     const val UNLIMITED = 1_000_000
     const val LABEL = "无限"
@@ -217,7 +220,7 @@ object TokenLimit {
         if (!isUnlimited(n)) n else if (llama) UNLIMITED else contextLength.coerceAtLeast(256)
 }
 
-/** 2.5.6: context length limits (512 – 512K) and the log2 slider scale (each step doubles). */
+/** context length limits (512 – 512K) and the log2 slider scale (each step doubles). */
 object CtxScale {
     const val MIN = 512
     const val MAX = 524288

@@ -1,12 +1,14 @@
 package com.iris.localai.ui.glass
 
+import com.iris.localai.I18n
+import com.iris.localai.R
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 
 /**
  * How glass surfaces are drawn right now.
  *
- * 1.7.3: the AGSL liquid lens was removed (on the phone it drew a thick black rim, blue dispersion
+ * the AGSL liquid lens was removed (on the phone it drew a thick black rim, blue dispersion
  * fringes and a square white block that ignored the rounded corners). Only frosted glass remains.
  */
 enum class GlassMode {
@@ -42,7 +44,7 @@ object GlassPolicy {
     const val LEVEL_ECO = 0
     const val LEVEL_BALANCED = 1
     const val LEVEL_RICH = 2
-    val LEVEL_LABELS = listOf(com.iris.localai.I18n.s(com.iris.localai.R.string.glass_95f6bb), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_f07d8f), com.iris.localai.I18n.s(com.iris.localai.R.string.glass_83bf12))
+    val LEVEL_LABELS = listOf(I18n.s(R.string.glass_95f6bb), I18n.s(R.string.glass_f07d8f), I18n.s(R.string.glass_83bf12))
 
     /** PowerManager.THERMAL_STATUS_* (kept as ints so this stays a plain unit-tested object). */
     const val THERMAL_MODERATE = 2
@@ -80,7 +82,7 @@ object GlassPolicy {
         return when {
             thermalStatus >= THERMAL_MODERATE ->
                 base.copy(downsampleSmall = 3, downsampleLarge = 4, windowBlur = false, downgradedBy = GlassQuality.Downgrade.THERMAL)
-            // 1.13.0: while the model runs (often on the same GPU) the blur works on a quarter-size
+            // while the model runs (often on the same GPU) the blur works on a quarter-size
             // copy: the frosted look stays, its GPU cost drops ~4×.
             generating -> base.copy(downsampleSmall = maxOf(base.downsampleSmall * 2, 3), downsampleLarge = maxOf(base.downsampleLarge * 2, 4))
             else -> base

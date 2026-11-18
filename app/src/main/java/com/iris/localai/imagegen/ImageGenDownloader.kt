@@ -1,8 +1,12 @@
 package com.iris.localai.imagegen
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.data.Format
+import com.iris.localai.util.io.ParallelDownload
 import com.iris.localai.data.DownloadSource
 import com.iris.localai.data.DownloadSources
-import com.iris.localai.util.HttpDownload
+import com.iris.localai.util.io.HttpDownload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +73,7 @@ object ZipExtract {
                 val rel = flattened(e.name, top) ?: continue
                 if (e.isDirectory) continue
                 val f = File(root, rel).canonicalFile
-                if (!f.path.startsWith(root.path + File.separator)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_36db28, e.name))
+                if (!f.path.startsWith(root.path + File.separator)) throw IOException(I18n.s(R.string.imagegen_36db28, e.name))
                 f.parentFile?.mkdirs()
                 val part = File(f.path + ".part")
                 var lastReport = done
@@ -86,7 +90,7 @@ object ZipExtract {
                     }
                 }
                 f.delete()
-                if (!part.renameTo(f)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, f.name))
+                if (!part.renameTo(f)) throw IOException(I18n.s(R.string.util_310b87, f.name))
                 out += f
             }
             onProgress(total, total)
@@ -95,7 +99,7 @@ object ZipExtract {
     }
 }
 
-/** 2.2.12: one zip entry cut out of a remote zip by byte range ([RemoteFile.isZipSlice]). */
+/** one zip entry cut out of a remote zip by byte range ([RemoteFile.isZipSlice]). */
 object ZipSlice {
     /**
      * [slice] starts with the entry's local file header; inflates (or copies, method 0) its data into [out]
@@ -107,9 +111,9 @@ object ZipSlice {
         java.io.RandomAccessFile(slice, "r").use { raf ->
             val h = ByteArray(30); raf.readFully(h)
             fun u16(i: Int) = (h[i].toInt() and 0xFF) or ((h[i + 1].toInt() and 0xFF) shl 8)
-            if (u16(0) != 0x4b50 || u16(2) != 0x0403) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_371496, slice.name))
+            if (u16(0) != 0x4b50 || u16(2) != 0x0403) throw IOException(I18n.s(R.string.imagegen_371496, slice.name))
             val method = u16(8)
-            if (method != 0 && method != 8) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_0777c1, method, slice.name))
+            if (method != 0 && method != 8) throw IOException(I18n.s(R.string.imagegen_0777c1, method, slice.name))
             raf.seek(30L + u16(26) + u16(28))
             val raw = java.io.BufferedInputStream(java.io.FileInputStream(raf.fd), 256 * 1024)
             val ins = if (method == 8) java.util.zip.InflaterInputStream(raw, java.util.zip.Inflater(true), 256 * 1024) else raw
@@ -126,11 +130,11 @@ object ZipSlice {
                     if (done - last >= (4L shl 20)) { last = done; onProgress(done, size) }
                 }
             }
-            if (done != size) { part.delete(); throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_1d5bf5, done, size, out.name)) }
-            if (crc >= 0 && sum.value != crc) { part.delete(); throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_65c161, out.name)) }
+            if (done != size) { part.delete(); throw IOException(I18n.s(R.string.imagegen_1d5bf5, done, size, out.name)) }
+            if (crc >= 0 && sum.value != crc) { part.delete(); throw IOException(I18n.s(R.string.imagegen_65c161, out.name)) }
         }
         out.delete()
-        if (!part.renameTo(out)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.util_310b87, out.name))
+        if (!part.renameTo(out)) throw IOException(I18n.s(R.string.util_310b87, out.name))
         onProgress(size, size)
     }
 }
@@ -180,12 +184,12 @@ object ImageDownloads {
         probe: (String) -> Long? = DownloadSources::probeOnce,
         onSource: (DownloadSource?) -> Unit = {},
     ) {
-        if (model.files.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ca539c))
+        if (model.files.isEmpty()) throw IOException(I18n.s(R.string.imagegen_ca539c))
         val dir = ImageGenFiles.modelDir(root, model).apply { mkdirs() }
         val free = dir.usableSpace
         val need = bytesNeeded(root, model)
         if (free in 1 until need) {
-            throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.data_9c1de2, com.iris.localai.data.Format.bytes(need), com.iris.localai.data.Format.bytes(free)))
+            throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(need), Format.bytes(free)))
         }
         val total = model.files.sumOf { it.size }
         var done = model.files.sumOf { have(root, model, it) }
@@ -208,7 +212,7 @@ object ImageDownloads {
                 publish(ImageDl.Extracting(0, f.unpacked.sumOf { it.size }))
                 if (f.isZipSlice) ZipSlice.extract(target, File(dir, f.unpacked.single().path), f.unpacked.single().size, f.crc) { d, t -> publish(ImageDl.Extracting(d, t)) }
                 else ZipExtract.extract(target, dir) { d, t -> publish(ImageDl.Extracting(d, t)) }
-                if (!unpacked(root, model, f)) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ac40fd, target.name))
+                if (!unpacked(root, model, f)) throw IOException(I18n.s(R.string.imagegen_ac40fd, target.name))
                 target.delete()
                 publish(ImageDl.Downloading(done, total, ""))
             }
@@ -220,12 +224,12 @@ object ImageDownloads {
     /** Removes the model folder from every root. */
     fun delete(roots: List<File>, model: ImageModel, others: List<ImageModel> = ImageCatalog.known): Boolean {
         val ok = roots.map { ImageGenFiles.modelDir(it, model) }.filter { it.exists() }.all { it.deleteRecursively() }
-        // 2.4.0: a shared file (the Qwen3-4B text encoder) goes only when no other downloaded model uses it.
+        // a shared file (the Qwen3-4B text encoder) goes only when no other downloaded model uses it.
         for (root in roots) for (path in model.sharedPaths) {
             val usedElsewhere = others.any { o -> o.id != model.id && path in o.sharedPaths && ImageGenFiles.modelDir(root, o).exists() }
             if (!usedElsewhere) File(root, path).delete()
         }
-        // 2.6.9: 导入的模型只删自己目录（复用的文本编码器 / VAE 属于别的模型），并移出清单
+        // 导入的模型只删自己目录（复用的文本编码器 / VAE 属于别的模型），并移出清单
         if (model.imported) ImportedImages.remove(model.id)
         return ok
     }
@@ -235,11 +239,11 @@ object ImageDownloads {
  * App-scoped 生图 model downloads (like MnnHub: jobs live in AppContainer.scope, so they keep going
  * when the 生图 page is closed). One job per model; [states] drives the page's progress bars.
  */
-class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: Fetcher = { u, t, e, b -> com.iris.localai.util.ParallelDownload.fetch(u, t, e, b) }) {
+class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: Fetcher = { u, t, e, b -> ParallelDownload.fetch(u, t, e, b) }) {
     private val _states = MutableStateFlow<Map<String, ImageDl>>(emptyMap())
     val states: StateFlow<Map<String, ImageDl>> = _states.asStateFlow()
     private val jobs = mutableMapOf<String, Job>()
-    /** 2.4.4: id of the last model whose download finished (for the 「下载完成」 notification). */
+    /** id of the last model whose download finished (for the 「下载完成」 notification). */
     @Volatile var lastFinished: String? = null; private set
 
     fun isActive(id: String): Boolean = synchronized(jobs) { jobs[id]?.isActive == true }
@@ -259,20 +263,20 @@ class ImageGenDownloader(private val scope: CoroutineScope, private val fetch: F
                 _states.update { it - model.id }
                 throw e
             } catch (e: Throwable) {
-                _states.update { it + (model.id to ImageDl.Failed(e.message ?: com.iris.localai.I18n.s(com.iris.localai.R.string.data_65e200))) }
+                _states.update { it + (model.id to ImageDl.Failed(e.message ?: I18n.s(R.string.data_65e200))) }
             }
         }
         jobs[model.id] = job
         job
     }
 
-    /** 2.2.16 「换源重试」: the failed download again with the source it was using moved last. */
+    /** 「换源重试」: the failed download again with the source it was using moved last. */
     fun retryOtherSource(model: ImageModel, root: File, source: DownloadSource, onDone: () -> Unit = {}): Job? =
         start(model, root, source, lastSource[model.id] ?: DownloadSource.HF_MIRROR, onDone)
 
     private suspend fun downloadInto(root: File, model: ImageModel, source: DownloadSource, demote: DownloadSource?) {
         val publish: (ImageDl) -> Unit = { s -> _states.update { it + (model.id to s) } }
-        if (model.files.isEmpty()) throw IOException(com.iris.localai.I18n.s(com.iris.localai.R.string.imagegen_ca539c))
+        if (model.files.isEmpty()) throw IOException(I18n.s(R.string.imagegen_ca539c))
         ImageDownloads.download(root, model, source, fetch, publish, demote = demote, onSource = { s -> if (s != null) lastSource[model.id] = s })
     }
 

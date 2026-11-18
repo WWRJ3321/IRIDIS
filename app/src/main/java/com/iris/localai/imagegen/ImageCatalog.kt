@@ -1,7 +1,7 @@
 package com.iris.localai.imagegen
 
 enum class Tier { LOW, MID, HIGH }
-/** 2.4.0: SDCPP = upstream stable-diffusion.cpp on the GPU (ggml Vulkan) with CPU fallback. */
+/** SDCPP = upstream stable-diffusion.cpp on the GPU (ggml Vulkan) with CPU fallback. */
 enum class Backend { QNN, MNN_CPU, SDCPP }
 
 /** A file inside a downloaded archive, after flattening its top-level folder; [path] is relative to the model folder. */
@@ -18,7 +18,7 @@ data class RemoteFile(
     val path: String,
     val unpacked: List<UnpackedFile> = emptyList(),
     /**
-     * 2.2.12: ≥ 0 = [size] bytes starting here are ONE zip entry (local header + compressed data) cut out of the
+     * ≥ 0 = [size] bytes starting here are ONE zip entry (local header + compressed data) cut out of the
      * remote zip at [url] with an HTTP Range request; it is inflated into [unpacked]`[0]` (checked against [crc]).
      * Lets a model take only the files it needs from a bigger archive.
      */
@@ -42,11 +42,11 @@ data class ImageModel(
     val defaultCfg: Float,
     /** HF repo the files come from (informational; when [files] is empty its file list would be resolved at download time). */
     val hfRepo: String? = null,
-    /** 2.2.12: prompt / negative put into empty (or still-default) fields when this model is picked. */
+    /** prompt / negative put into empty (or still-default) fields when this model is picked. */
     val defaultPrompt: String = "",
     val defaultNegative: String = "",
     /**
-     * 2.2.12 QNN graph conventions. AI Hub's VAE divides by 0.18215 itself and returns [0,1];
+     * QNN graph conventions. AI Hub's VAE divides by 0.18215 itself and returns [0,1];
      * Local Dream's expects latent / 0.18215 and returns [-1,1] (NCHW, detected from the tensor shape).
      */
     val vaeInScale: Float = 1f,
@@ -55,18 +55,18 @@ data class ImageModel(
     val minHtpArch: Int = 73,
     /** One line under the name on the 生图 page (empty = none). */
     val note: String = "",
-    /** 2.4.0: [Backend.SDCPP] models — which downloaded file is the diffusion model, text encoder and VAE. */
+    /** [Backend.SDCPP] models — which downloaded file is the diffusion model, text encoder and VAE. */
     val sdFiles: SdFiles? = null,
-    /** 2.4.3: runs on the Hexagon NPU through libiris_sdq.so (sd.cpp Qualcomm branch, HTP v79+), FP8 DiT. */
+    /** runs on the Hexagon NPU through libiris_sdq.so (sd.cpp Qualcomm branch, HTP v79+), FP8 DiT. */
     val sdq: Boolean = false,
-    /** 2.6.8: Danbooru 标签风格的模型（Anima / Anything）：提示词扩写与标签库用逗号标签写法。 */
+    /** Danbooru 标签风格的模型（Anima / Anything）：提示词扩写与标签库用逗号标签写法。 */
     val tagStyle: Boolean = false,
-    /** 2.6.8: 非 Apache/MIT 许可的模型：卡片上的一行摘要 + 原文链接，首次下载前要用户确认。 */
+    /** 非 Apache/MIT 许可的模型：卡片上的一行摘要 + 原文链接，首次下载前要用户确认。 */
     val licenseNote: String = "",
     val licenseUrl: String = "",
-    /** 2.6.9: 用户导入的模型（[ImportedImages]），可改名，删除时连清单一起删。 */
+    /** 用户导入的模型（[ImportedImages]），可改名，删除时连清单一起删。 */
     val imported: Boolean = false,
-    /** 2.6.12: 导入的 Anima NPU 包（QNN context binary，[AnimaQnnEngine]）。 */
+    /** 导入的 Anima NPU 包（QNN context binary，[AnimaQnnEngine]）。 */
     val animaQnn: Boolean = false,
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
@@ -161,7 +161,7 @@ object ImageCatalog {
         val te = if (htpArch == 75)
             RemoteFile("${AIHUB_SD15}snapdragon_8gen3.zip", 124_431_624L, "$id/.part/text_encoder.slice",
                 listOf(UnpackedFile("text_encoder.bin", 163_029_904L)), zipEntryAt = 585_291_399L, crc = 0x0ec6f127L)
-        else if (htpArch == 81) // 2.5.0-beta8: 8 Elite Gen 5 (v81), local header read 2026-11-10
+        else if (htpArch == 81) // 8 Elite Gen 5 (v81), local header read 2026-11-10
             RemoteFile("${AIHUB_SD15}snapdragon_8_elite_gen5_for_galaxy.zip", 124_443_624L, "$id/.part/text_encoder.slice",
                 listOf(UnpackedFile("text_encoder.bin", 163_087_248L)), zipEntryAt = 586_326_016L, crc = 0x38d41ee9L)
         else
@@ -186,10 +186,10 @@ object ImageCatalog {
     /** For this phone's chip (unknown chip → the 8 Elite text encoder). */
     val ANYTHING_V5: ImageModel by lazy { anythingV5(runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()) }
 
-    /** 2.4.0: files more than one model uses (the Qwen3-4B text encoder), relative to the imagegen root. */
+    /** files more than one model uses (the Qwen3-4B text encoder), relative to the imagegen root. */
     const val SHARED_DIR = "_shared"
 
-    // 2.4.3 sdq library sizes / SHA-256 (CI native-sdq.yml output, tag SDQ_TAG).
+    // sdq library sizes / SHA-256 (CI native-sdq.yml output, tag SDQ_TAG).
     const val SDQ_JNI_SIZE = 55_852_080L
     const val SDQ_JNI_SHA = "547c7f18216abfb82fbed7abfedbd15a5d2aadfd7c1388c77b3a46eaf4469bde"
     const val SDQ_V79_SIZE = 917_960L
@@ -200,7 +200,7 @@ object ImageCatalog {
     private fun hf(repo: String, rev: String, file: String) = "https://huggingface.co/$repo/resolve/$rev/$file"
 
     /**
-     * 2.4.0: libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI; 2.7.0 adds nativeLoadEx, built by scripts/build-sd-native-arm64host.sh) is not in the APK; it is
+     * libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI; 2.7.0 adds nativeLoadEx, built by scripts/build-sd-native-arm64host.sh) is not in the APK; it is
      * downloaded with the first sd.cpp model and only loaded after its SHA-256 matches [SD_LIB_SHA256] (SdNative).
      */
     const val SD_LIB_SHA256 = "eaabba922f7f15b4137f05dc2056026371e586159205096c2e994fe4787f7e9d"
@@ -253,7 +253,7 @@ object ImageCatalog {
     )
 
     /**
-     * 2.4.3: Hexagon NPU image engine (scripts/build-sdq-native.sh, CI native-sdq.yml): stable-diffusion.cpp's
+     * Hexagon NPU image engine (scripts/build-sdq-native.sh, CI native-sdq.yml): stable-diffusion.cpp's
      * Qualcomm branch (leejet/stable-diffusion.cpp PR #1970 by happyyzy, MIT) + JNI, with the HTP v79 / v81 skels.
      * Downloaded with the NPU models from the GitHub tag [SDQ_TAG]; each file is loaded only when its SHA-256 matches.
      */
@@ -273,7 +273,7 @@ object ImageCatalog {
         2_375_773_472L, "$SHARED_DIR/Qwen3-4B-Q4_0.gguf",
     )
 
-    /** 2.4.3: Z-Image Turbo FP8 E4M3 DiT (Kijai/Z-Image_comfy_fp8_scaled, Apache-2.0) on the NPU; listing read 2026-11-06. */
+    /** Z-Image Turbo FP8 E4M3 DiT (Kijai/Z-Image_comfy_fp8_scaled, Apache-2.0) on the NPU; listing read 2026-11-06. */
     val Z_IMAGE_NPU = ImageModel(
         id = "z-image-turbo-npu", tier = Tier.HIGH, name = "Z-Image Turbo（NPU）", backend = Backend.SDCPP,
         files = listOf(
@@ -291,7 +291,7 @@ object ImageCatalog {
         sdq = true,
     )
 
-    /** 2.4.3: FLUX.2 Klein 4B FP8 (black-forest-labs/FLUX.2-klein-4b-fp8, Apache-2.0) on the NPU; listing read 2026-11-06. */
+    /** FLUX.2 Klein 4B FP8 (black-forest-labs/FLUX.2-klein-4b-fp8, Apache-2.0) on the NPU; listing read 2026-11-06. */
     val FLUX2_KLEIN_NPU = ImageModel(
         id = "flux2-klein-4b-npu", tier = Tier.MID, name = "FLUX.2 Klein 4B（NPU）", backend = Backend.SDCPP,
         files = listOf(
@@ -310,7 +310,7 @@ object ImageCatalog {
     )
 
     /**
-     * 2.6.10: 内置 Anima Turbo 已移除（非商用许可，App 内提供下载会影响收捐助）。Anima 只能用户自己「导入模型」。
+     * 内置 Anima Turbo 已移除（非商用许可，App 内提供下载会影响收捐助）。Anima 只能用户自己「导入模型」。
      * 旧版下载过的目录 anima-turbo/ 留给存储页删除；导入预设仍可复用其中的文件。
      */
     const val ANIMA_OLD_ID = "anima-turbo"
@@ -319,32 +319,32 @@ object ImageCatalog {
     val builtIn: List<ImageModel> = listOf(SD15_QNN, ANYTHING_V5, SD15_MNN, FLUX2_KLEIN, Z_IMAGE_TURBO, FLUX2_KLEIN_NPU, Z_IMAGE_NPU)
 
     /**
-     * 2.4.3: the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer).
-     * 2.5.1: MNN CPU 生图（sd15-mnn）隐藏：不进下载列表 / runnableModels / generate_image；已下载的在存储页删除。
+     * the NPU (sdq) models are listed only on HTP v79+ chips (8 Elite and newer).
+     * MNN CPU 生图（sd15-mnn）隐藏：不进下载列表 / runnableModels / generate_image；已下载的在存储页删除。
      */
     private val builtInListed: List<ImageModel> by lazy {
         val arch = runCatching { DeviceProbe.htpArch(DeviceProbe.socModel()) }.getOrNull()
         builtIn.filter { ImageRules.listed(it) && it.id !in LEGACY_IDS && (!it.sdq || ImageRules.sdqListed(arch)) }
     }
 
-    /** 2.6.12: 不再提供下载的模型（非商用转换包）；旧版下载过的仍可用、可删除。 */
+    /** 不再提供下载的模型（非商用转换包）；旧版下载过的仍可用、可删除。 */
     val LEGACY_IDS = setOf(ANYTHING_V5_ID)
     val legacy: List<ImageModel> get() = builtIn.filter { it.id in LEGACY_IDS }
 
-    /** 2.6.9: 内置 + 用户导入的（导入清单变了就跟着变）。 */
+    /** 内置 + 用户导入的（导入清单变了就跟着变）。 */
     val known: List<ImageModel> get() = builtIn + ImportedImages.models()
     val all: List<ImageModel> get() = builtInListed + ImportedImages.models()
 
-    /** 2.5.1: 已隐藏模型的目录名（存储页单独列出以便删除）。 */
+    /** 已隐藏模型的目录名（存储页单独列出以便删除）。 */
     const val SD15_MNN_ID = "sd15-mnn"
 
     fun byId(id: String): ImageModel? = known.firstOrNull { it.id == id }
 }
 
-/** 2.4.3 pure rules (unit-tested). */
+/** pure rules (unit-tested). */
 object ImageRules {
     const val SDQ_MIN_HTP = 79
     fun sdqListed(htpArch: Int?): Boolean = (htpArch ?: 0) >= SDQ_MIN_HTP
-    /** 2.5.1: Backend.MNN_CPU 不再列出（下载、生图选择、generate_image 都排除）。 */
+    /** Backend.MNN_CPU 不再列出（下载、生图选择、generate_image 都排除）。 */
     fun listed(m: ImageModel): Boolean = m.backend != Backend.MNN_CPU
 }

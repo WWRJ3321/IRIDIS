@@ -3,7 +3,7 @@ package com.iris.localai.data
 import android.content.Context
 
 /**
- * 2.5.5: 模型自定义显示名（不改文件名）。按文件名存一份，[ModelRepository.refresh] 时填进 [LocalModel.alias]。
+ * 模型自定义显示名（不改文件名）。按文件名存一份，[ModelRepository.refresh] 时填进 [LocalModel.alias]。
  * 纯内存表 + SharedPreferences，单元测试里不 init 就是空表。
  */
 object ModelAliases {

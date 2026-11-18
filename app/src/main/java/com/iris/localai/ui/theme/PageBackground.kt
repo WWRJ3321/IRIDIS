@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
 
 /**
- * 2.5.0 shared page skeleton. Beta2: every style draws the plain page colour (柔光 no longer sets
+ * shared page skeleton. Beta2: every style draws the plain page colour (柔光 no longer sets
  * [IrisColors.backgroundTop], so its accent gradient is gone; 经典 / 纯色背景 / 自定义背景 as ≤ 2.4.6). Chat, welcome and every
  * subpage draw their background through this one place.
  */

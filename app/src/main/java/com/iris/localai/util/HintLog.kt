@@ -1,11 +1,17 @@
 package com.iris.localai.util
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.streaming.*
+import com.iris.localai.util.thinking.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * 2.2.17 D 「最近提示」: transient notices (banner / toast: load errors, GPU→CPU fallback notes,
+ * D 「最近提示」: transient notices (banner / toast: load errors, GPU→CPU fallback notes,
  * download failures, tool errors…) are also kept here, so they can be read again afterwards
  * (模型与加载 → 最近提示). In memory only, newest first, short: a repeat of the same text within
  * [MERGE_MS] only moves it to the top and counts it, so a looping notice cannot flood the list.
@@ -18,11 +24,11 @@ object HintLog {
     const val MAX_CHARS = 2000
 
     object Source {
-        val CHAT: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.chat_859362)
-        val MODEL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.service_a3db60)
-        val DOWNLOAD: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.settings_f26ef9)
-        val TOOL: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.util_20dce2)
-        val SYSTEM: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.files_8a8b89)
+        val CHAT: String get() = I18n.s(R.string.chat_859362)
+        val MODEL: String get() = I18n.s(R.string.service_a3db60)
+        val DOWNLOAD: String get() = I18n.s(R.string.settings_f26ef9)
+        val TOOL: String get() = I18n.s(R.string.util_20dce2)
+        val SYSTEM: String get() = I18n.s(R.string.files_8a8b89)
     }
 
     private val _items = MutableStateFlow<List<Hint>>(emptyList())

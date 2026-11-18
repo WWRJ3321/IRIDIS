@@ -1,4 +1,9 @@
-package com.iris.localai.util
+package com.iris.localai.util.streaming
+
+import com.iris.localai.util.*
+import com.iris.localai.util.diagnostics.*
+import com.iris.localai.util.io.*
+import com.iris.localai.util.thinking.*
 
 /**
  * Typewriter pacing for streamed text (unit-tested). Tokens arrive in bursts (a whole word or
@@ -25,7 +30,7 @@ class TypewriterPacer(
         private set
 
     /**
-     * 1.7.1: measured arrival speed of the stream (chars/s), or 0 while unknown. Only fed when the
+     * measured arrival speed of the stream (chars/s), or 0 while unknown. Only fed when the
      * caller passes a clock ([step]'s nowSec), which the UI does.
      */
     var arrival: Float = 0f
