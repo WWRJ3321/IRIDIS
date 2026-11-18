@@ -274,7 +274,7 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
             return sdEngine()
         }
         if (model.backend != Backend.QNN) return stub
-        if (model.animaQnn) return animaEngine()
+        if (model.animaQnn) return animaEngine(model)
         anima?.release()
         qnn?.let { return it }
         val probe = DeviceProbe.nativeProbe(context)
@@ -325,17 +325,20 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     fun release() { remote?.release(); qnn?.release(); anima?.release(); sd?.release() }
 
     /**
-     * Anima NPU 包只认 HTP v79；包按 QAIRT 2.50.40 编译，优先用 GenieX 运行库（同版本），没有再用 QNN 运行库。
+     * Anima NPU 包：8 Elite 布局只认 HTP v79，[AnimaLdFiles] 布局 v75 起；包按 QAIRT 2.50.40 编译，优先用 GenieX 运行库（同版本），没有再用 QNN 运行库。
      * libiris_imagegen 的运行库全进程只有一份，切过来前先放掉 SD1.5 的图。
      */
-    private fun animaEngine(): ImageGenEngine {
-        anima?.let { return it }
+    private fun animaEngine(model: ImageModel): ImageGenEngine {
         val arch = DeviceProbe.htpArch(DeviceProbe.socModel())
-        if (arch != 79) return UnavailableEngine(I18n.s(R.string.ig270_npu_chip))
+        // 另一种布局（QNN 2.28 / v75 编译）在 v75 及更新的芯片上试；8 Elite 布局只认 v79
+        val ld = repo.downloadedDir(model)?.let { AnimaQnnFiles(it).ld } == true
+        if (ld) { if (arch == null || arch < AnimaLdFiles.MIN_ARCH) return UnavailableEngine(I18n.s(R.string.ig273_npu_chip_ld)) }
+        else if (arch != 79) return UnavailableEngine(I18n.s(R.string.ig270_npu_chip))
+        anima?.let { return it }
         val gx = File(context.filesDir, "geniex").listFiles().orEmpty()
-            .filter { it.isDirectory && it.name.startsWith("rt-") && it.name.endsWith("-v79") }
-            .firstOrNull { d -> listOf("libQnnHtp.so", "libQnnSystem.so", "libQnnHtpV79Stub.so", "libQnnHtpV79Skel.so").all { File(d, it).isFile } }
-        val dir = gx ?: DeviceProbe.qnnRuntimeDir(context.filesDir, 79)
+            .filter { it.isDirectory && it.name.startsWith("rt-") && it.name.endsWith("-v$arch") }
+            .firstOrNull { d -> listOf("libQnnHtp.so", "libQnnSystem.so", "libQnnHtpV${arch}Stub.so", "libQnnHtpV${arch}Skel.so").all { File(d, it).isFile } }
+        val dir = gx ?: DeviceProbe.qnnRuntimeDir(context.filesDir, arch)
             ?: return UnavailableEngine(I18n.s(R.string.ig270_npu_runtime))
         QnnNative.loadError?.let { return UnavailableEngine(I18n.s(R.string.imagegen_6b0e80, it)) }
         return synchronized(this) {

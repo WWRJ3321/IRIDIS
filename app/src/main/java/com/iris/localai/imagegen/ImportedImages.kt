@@ -39,8 +39,12 @@ data class ImportedImage(
     val clipG: String = "",
     val t5: String = "",
     val tagStyle: Boolean = false,
+    /** NPU 包布局："" = 8 Elite 布局，[PACK_LD] = [AnimaLdFiles] 布局。 */
+    val pack: String = "",
 ) {
     val sdFiles: SdFiles get() = SdFiles(diffusion, llm, vae, model, clipL, clipG, t5)
+
+    companion object { const val PACK_LD = "ld" }
 
     val archOrNull: ImportArch? get() = ImportArch.entries.firstOrNull { it.name == arch }
 
@@ -49,7 +53,7 @@ data class ImportedImage(
         if (a?.npuPack == true) return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.QNN,
             files = emptyList(), fixedSize = null, defaultSteps = steps, defaultCfg = 1f,
-            note = "NPU", minHtpArch = 79, tagStyle = true, imported = true, animaQnn = true,
+            note = "NPU", minHtpArch = if (pack == PACK_LD) AnimaLdFiles.MIN_ARCH else 79, tagStyle = true, imported = true, animaQnn = true,
         )
         return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.SDCPP,

@@ -2190,4 +2190,5 @@
     <string name="ig27c_count">%1$d 件</string>
     <string name="ig27c_none">一致するタグはありません</string>
     <string name="ig27c_cat">カテゴリ</string>
+    <string name="ig273_npu_chip_ld">この NPU パックには Snapdragon 8 Gen 3 以降が必要です</string>
 </resources>

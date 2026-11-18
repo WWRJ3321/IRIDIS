@@ -2190,4 +2190,5 @@
     <string name="ig27c_count">%1$d 條</string>
     <string name="ig27c_none">沒有符合的標籤</string>
     <string name="ig27c_cat">分類</string>
+    <string name="ig273_npu_chip_ld">這個 NPU 包需要驍龍 8 Gen 3 或更新的晶片</string>
 </resources>
