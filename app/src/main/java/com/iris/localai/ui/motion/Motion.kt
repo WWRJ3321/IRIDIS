@@ -124,6 +124,8 @@ object IrisMotion {
     const val MORPH_REDUCED_MS = 120
     /** 生图进行中的彩色流动一圈的时长。 */
     const val IMAGE_GEN_FLOW_MS = 6000
+    /** 生图占位框：单色底上一道柔光扫过一次的时长。 */
+    const val IMAGE_GEN_SHIMMER_MS = 1800
 
     /** A one-shot 0 → 1 progress (archive wave, rise, decrypt sweep). */
     fun <T> progress(periodMs: Int): androidx.compose.animation.core.DurationBasedAnimationSpec<T> =

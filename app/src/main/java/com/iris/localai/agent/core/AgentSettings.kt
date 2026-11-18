@@ -435,7 +435,10 @@ class AgentContainer(context: Context) {
         enabledTools = enabledTools,
         llm = llm,
         chunkTokens = chunkTokens,
-        knowledge = KnowledgeSearch { q, n -> knowledge.search(q, n) },
+        knowledge = object : KnowledgeSearch {
+            override fun search(query: String, limit: Int) = knowledge.search(query, limit)
+            override fun cite(files: Collection<String>) = knowledge.cite(files)
+        },
         imageGen = imageGen,
         imageModelId = settings.current.imageModel,
         imageMakeRoom = settings.current.imageMakeRoom,

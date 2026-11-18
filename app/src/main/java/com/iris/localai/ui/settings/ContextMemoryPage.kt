@@ -267,7 +267,7 @@ private fun UsageBlock(u: ContextUsage) {
     val c = Iris.colors
     val frac by animateFloatAsState(u.fraction, motionSpec(IrisMotion.Gentle, 0.001f), label = "ctxCardFrac")
     val fill = if (u.nearFull) c.danger else c.accent
-    val track = c.outline.copy(alpha = 0.45f)
+    val track = c.surfaceVariant // same light track as IrisProgressBar (the outline grey read too dark)
     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.rowVerticalPadding + IrisDimens.space4)) {
         // row title metrics (IrisType.title grew to 20 sp in 2.5.0 and no longer matched the rows).
         Text(ContextText.usageTitle(u), style = IrisType.row, color = c.text)

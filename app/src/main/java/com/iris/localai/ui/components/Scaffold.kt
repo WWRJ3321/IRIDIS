@@ -132,21 +132,11 @@ fun SubpageScaffold(
  */
 @Composable
 fun LargeTitle(modifier: Modifier = Modifier) {
-    val state = LocalLargeTitle.current ?: return
-    val c = Iris.colors
-    LaunchedEffect(state) { state.hasLargeTitle = true }
-    val inset = LocalTopBarInset.current
-    Box(
-        modifier.fillMaxWidth().padding(top = inset).height(IrisDimens.largeTitleHeight)
-            .padding(start = IrisDimens.groupGutter + IrisSpace.M, end = IrisDimens.pageGutter),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            state.title, style = IrisType.largeTitle, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            // Fades as it slides under the bar, so the two titles never read as duplicates.
-            modifier = Modifier.graphicsLayer { alpha = 1f - (state.collapse * 1.4f).coerceIn(0f, 1f) },
-        )
-    }
+    // 2.7.0-beta2: every subpage uses the same header (back button + centred pill title), so the
+    // big left-aligned title is no longer drawn; this only keeps the body clear of the top bar.
+    // hasLargeTitle stays false, so the bar title is always fully visible (no half-faded pill).
+    LocalLargeTitle.current ?: return
+    Spacer(modifier.fillMaxWidth().height(LocalTopBarInset.current + IrisDimens.space4))
 }
 
 /** Reports a LazyColumn's scroll position to the enclosing [SubpageScaffold] (large-title collapse). */

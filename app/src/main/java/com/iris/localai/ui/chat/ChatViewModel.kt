@@ -10,6 +10,7 @@ import com.iris.localai.agent.core.AgentPrompt
 import com.iris.localai.agent.core.Permission
 import com.iris.localai.agent.core.UserDecision
 import com.iris.localai.agent.tools.ActivateTool
+import com.iris.localai.agent.tools.MemoryTool
 import com.iris.localai.agent.tools.AgentTool
 import com.iris.localai.agent.tools.AgentTools
 import com.iris.localai.agent.tools.AppMatcher
@@ -1071,7 +1072,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     /** 2.2 「技能」 sheet: installed skills (only while the skill tool is on) and the enabled agent tools. */
     fun refCatalog(): RefCatalog {
         val ag = c.agent.settings.current
-        val tools = AgentTools.all.filter { ag.isEnabled(it) && it.name != SkillTool.name && it.name != ActivateTool.name }
+        val memoryOn = c.agent.memorySettings.current.enabled
+        // 长期记忆关闭时智能体拿不到记忆工具，@ 菜单也不再列出它。
+        val tools = AgentTools.all.filter { ag.isEnabled(it) && it.name != SkillTool.name && it.name != ActivateTool.name && (it.name != MemoryTool.name || memoryOn) }
         val skillOn = AgentTools.all.any { it.name == SkillTool.name && ag.isEnabled(it) }
         val skills = if (skillOn) runCatching { c.agent.skills.all() }.getOrDefault(emptyList()) else emptyList()
         return RefCatalog(

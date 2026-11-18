@@ -350,12 +350,16 @@ fun ColumnScope.ModelLoadSettings(vm: SettingsViewModel) {
                 }
             }
 
-            vm.npu?.let { npu ->
-                SectionTitle("NPU")
-                SettingsGroup { NpuRuntimeRow(npu, onInstall = vm::installNpu, onCancel = vm::cancelNpu, onDelete = vm::deleteNpu) }
+            // one NPU section: the QNN runtime and (full flavour) GenieX in one card, one short note.
+            if (vm.npu != null || vm.geniex != null) {
+                val mtk = vm.npu?.vendor == NpuVendor.MEDIATEK
+                SectionTitle(if (mtk) "NPU" else I18n.s(R.string.npu27_section))
+                SettingsGroup {
+                    vm.npu?.let { npu -> NpuRuntimeRow(npu, onInstall = vm::installNpu, onCancel = vm::cancelNpu, onDelete = vm::deleteNpu) }
+                    vm.geniex?.let { gx -> GenieXRuntimeRow(gx, onInstall = vm::installGeniex, onCancel = vm::cancelGeniex, onDelete = vm::deleteGeniex) }
+                }
+                if (vm.geniex != null) GroupFootnote(I18n.s(R.string.settings_9a3ae4))
             }
-
-            vm.geniex?.let { gx -> GenieXSection(vm, gx) }
 
             // 识图（mmproj）：GGUF 视觉投影器跑 CPU 还是 GPU；GPU = 原「识图用 GPU」开关打开（沿用 visionGpu，不迁移）。
             SettingsGroup {
@@ -773,7 +777,7 @@ private fun NpuRuntimeRow(
         is NpuState.Downloading ->
             I18n.s(R.string.settings_2b5c7e, s.downloaded shr 20, s.total shr 20) to (I18n.s(R.string.chat_625fb2) to onCancel)
         NpuState.Installed ->
-            (if (mtk) I18n.s(R.string.mtk244_installed, chip) else I18n.s(R.string.settings_d9c3a7, chip)) to (I18n.s(R.string.chat_2f4aad) to onDelete)
+            (if (mtk) I18n.s(R.string.mtk244_installed, chip) else I18n.s(R.string.npu27_qnn_installed)) to (I18n.s(R.string.chat_2f4aad) to onDelete)
         is NpuState.Failed -> I18n.s(R.string.settings_ce1a3a, s.message) to (I18n.s(R.string.settings_132c5c) to install)
         is NpuState.NeedsRepair ->
             I18n.s(R.string.settings_501bdb, chip, s.reason) to (I18n.s(R.string.settings_f82661) to install)

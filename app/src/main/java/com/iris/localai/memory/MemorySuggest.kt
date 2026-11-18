@@ -20,6 +20,7 @@ object MemorySuggest {
     private val HYPOTHETICAL = Regex("如果|假如|比如|举例|例如|假设|要是")
     private val QUESTION_WORD = Regex("什么|怎么|为什么|哪|谁|多少|几点|是否|能不能|可不可以|可以吗")
     private val REQUEST = Regex("帮我|给我|请你|替我")
+    private val SPACES = Regex("\\s+")
     private val QUOTE = Regex("(?:他|她|它|他们|她们|别人|有人|朋友|同事)(?:说|觉得|认为|讲)")
 
     fun detect(userText: String, items: List<MemoryItem> = emptyList(), ignored: Set<String> = emptySet()): List<Suggestion> {
@@ -36,7 +37,7 @@ object MemorySuggest {
     fun kindOf(text: String): MemoryItem.Kind? = check(text)?.kind
 
     private fun check(raw: String): Suggestion? {
-        val trimmed = raw.replace(Regex("\\s+"), " ").trim()
+        val trimmed = raw.replace(SPACES, " ").trim()
         if (trimmed.endsWith("?") || trimmed.endsWith("？")) return null
         val s = trimmed.trimEnd('。', '.', '!', '！', ';', '；', '~', '～', ' ')
         if (s.endsWith("吗") || s.endsWith("呢") || s.endsWith("吧")) return null
@@ -46,8 +47,9 @@ object MemorySuggest {
         val kind = when {
             MY_X_IS.containsMatchIn(compact) -> MemoryItem.Kind.ABOUT
             RULE.containsMatchIn(compact) -> MemoryItem.Kind.PREF
-            LIKE.containsMatchIn(compact) -> MemoryItem.Kind.PREF
+            // a request in the same sentence (「我喜欢猫，帮我画一只」) is a task, not a preference to keep.
             REQUEST.containsMatchIn(s) || TRANSIENT.containsMatchIn(compact) -> return null
+            LIKE.containsMatchIn(compact) -> MemoryItem.Kind.PREF
             ABOUT.containsMatchIn(compact) -> MemoryItem.Kind.ABOUT
             else -> return null
         }

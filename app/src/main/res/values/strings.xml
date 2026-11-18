@@ -554,7 +554,7 @@
     <string name="settings_48b9fe">查看各第三方组件的许可证原文</string>
     <string name="settings_843d86">开源组件</string>
     <string name="settings_1b6949">开发者选项</string>
-    <string name="settings_bdd372">MIT · GGUF 推理 · v1.0.0</string>
+    <string name="settings_bdd372">MIT · GGUF 推理 · 785322d</string>
     <string name="settings_fd49fd">Apache-2.0（已修改）· MNN 推理 · 3.6.1</string>
     <string name="settings_934216">Apache-2.0 · .litertlm 推理 · 0.18.0</string>
     <string name="settings_ac8dbd">Apache-2.0 · NPU 调度层</string>
@@ -584,7 +584,7 @@
     <string name="settings_132c5c">重试</string>
     <string name="settings_501bdb">%1$s · 未安装完整，需要修复（%2$s）。重新下载即可修复</string>
     <string name="settings_f82661">修复</string>
-    <string name="settings_42e701">NPU 运行库（高通 Hexagon）</string>
+    <string name="settings_42e701">NPU 运行库</string>
     <string name="settings_0ccfb8">高通 NPU 运行库许可</string>
     <string name="settings_513cdf">该运行库（Qualcomm AI Engine Direct / QNN 2.50）为高通专有软件，不属于本项目开源部分，将从 Maven Central 下载。下载即表示你同意高通的许可条款。</string>
     <string name="settings_ad7951">同意并下载</string>
@@ -856,7 +856,7 @@
     <string name="agent_2ca522">一条一件事，例如：回答尽量简洁</string>
     <string name="agent_37f497">%1$s / %2$s 字</string>
     <string name="agent_84fa29">上下文、记忆和知识库</string>
-    <string name="agent_1415ca">关闭后不再注入记忆，智能体也不能使用「长期记忆」工具</string>
+    <string name="agent_1415ca">关闭后不注入记忆，智能体也不能用记忆工具</string>
     <string name="agent_d63f7c">每个新对话开始时把记忆快照放进智能体的系统提示</string>
     <string name="agent_4edca2">对话模式也带上记忆快照（会占用一些上下文）</string>
     <string name="agent_1025dc">记忆只存在本机，最多 200 条。聊天里说「记住：…」或点「记住？」即可添加，新对话起生效。</string>
@@ -1151,7 +1151,7 @@
     <string name="settings_8c4fa6">全部保存在这台手机里，不上传</string>
     <string name="settings_949d51">高级设置在开发者选项</string>
     <string name="settings_f7ccc4">索引、压缩细节在 关于 › 开发者选项</string>
-    <string name="settings_7f2a54">发现「我是…」「以后都…」这类话，回答下方出现一个「记住？」，点一下才保存</string>
+    <string name="settings_7f2a54">提到偏好或身份时，回答下出现「记住？」</string>
     <string name="settings_65e375">回答时参考知识库</string>
     <string name="settings_cca5e7">问到相关内容时，自动把对应段落交给模型，并在回答下标出出处</string>
     <string name="settings_1cd2f0">最近记住：</string>
@@ -1164,7 +1164,7 @@
     <string name="settings_fc69cd">KV 平移</string>
     <string name="settings_6649d1">KV 上下文平移</string>
     <string name="settings_0ab786">GenieX（高通）</string>
-    <string name="settings_9a3ae4">GGUF 模型选 NPU 时用 GenieX 运行。AI Hub QAIRT 模型文件夹可直接导入，仅在 NPU 上运行。</string>
+    <string name="settings_9a3ae4">GGUF 选 NPU 时由 GenieX 运行；QAIRT 模型文件夹可直接导入。</string>
     <string name="settings_dc39b3">%1$s。GenieX 引擎所需；约 %2$s MB 下载，只保留本机用到的库，安装后约 %3$s MB</string>
     <string name="settings_cd84be">（本机不支持 QAIRT 包，仅 GGUF）</string>
     <string name="settings_d58a87">%1$s · 已安装（GenieX %2$s）</string>
@@ -2082,7 +2082,7 @@
     <string name="think_lv_low">低</string>
     <string name="think_lv_mid">中</string>
     <string name="think_lv_high">高</string>
-    <string name="about262_privacy">对话、推理和语音都在本机完成，内容不会上传。只有这几种情况会联网：下载模型和语音包；智能体用联网工具搜索或读网页；你开启本地 API。</string>
+    <string name="about262_privacy">对话、推理和语音都在本机完成。仅在下载模型、智能体联网搜索或开启本地 API 时联网。</string>
     <string name="about262_bergamot">MPL-2.0 · 离线翻译 · main@9271618</string>
     <string name="kb262_embed_tap_dl">未下载 · 点击去下载</string>
     <string name="img262_edit">编辑</string>
@@ -2187,5 +2187,9 @@
     <string name="models_gpu_recheck_ok">已重新检测：GPU 可用。</string>
     <string name="models_gpu_recheck_restart">已重新开启 GPU，重启应用后生效。</string>
     <string name="models_gpu_recheck_none">仍未找到 OpenCL 驱动。</string>
-    <string name="vg27b_note">普通 GGUF 模型的识图在这里选 CPU 或 GPU；模型用 NPU（GenieX）时识图由 GenieX 自动处理，不受此项影响。重新加载生效。</string>
+    <string name="vg27b_note">普通 GGUF 识图用；NPU 模式自动处理</string>
+    <string name="npu27_section">NPU（高通）</string>
+    <string name="npu27_qnn_installed">已安装 · QNN 2.50</string>
+    <string name="npu27_geniex_installed">已安装 · GenieX %1$s</string>
+    <string name="ctx27_takeover">对话由开发者选项接管，智能体仍按此项</string>
 </resources>

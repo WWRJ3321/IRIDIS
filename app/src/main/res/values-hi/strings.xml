@@ -553,7 +553,7 @@
     <string name="settings_48b9fe">तृतीय-पक्ष घटकों के मूल लाइसेंस देखें</string>
     <string name="settings_843d86">ओपन-सोर्स घटक</string>
     <string name="settings_1b6949">डेवलपर विकल्प</string>
-    <string name="settings_bdd372">MIT · GGUF इनफ़रेंस · v1.0.0</string>
+    <string name="settings_bdd372">MIT · GGUF इनफ़रेंस · 785322d</string>
     <string name="settings_fd49fd">Apache-2.0 (संशोधित) · MNN इन्फ़रेंस · 3.6.1</string>
     <string name="settings_934216">Apache-2.0 · .litertlm इन्फ़रेंस · 0.18.0</string>
     <string name="settings_ac8dbd">Apache-2.0 · NPU शेड्यूलिंग परत</string>
@@ -583,7 +583,7 @@
     <string name="settings_132c5c">फिर कोशिश करें</string>
     <string name="settings_501bdb">%1$s · अधूरा इंस्टॉल, मरम्मत ज़रूरी (%2$s)। फिर से डाउनलोड करने पर ठीक होगा</string>
     <string name="settings_f82661">मरम्मत करें</string>
-    <string name="settings_42e701">NPU रनटाइम (Qualcomm Hexagon)</string>
+    <string name="settings_42e701">NPU रनटाइम</string>
     <string name="settings_0ccfb8">Qualcomm NPU रनटाइम लाइसेंस</string>
     <string name="settings_513cdf">यह रनटाइम (Qualcomm AI Engine Direct / QNN 2.50) Qualcomm का स्वामित्व वाला सॉफ़्टवेयर है, इस ओपन-सोर्स प्रोजेक्ट का हिस्सा नहीं, और Maven Central से डाउनलोड होता है। डाउनलोड करके आप Qualcomm की लाइसेंस शर्तों से सहमत होते हैं।</string>
     <string name="settings_ad7951">सहमत होकर डाउनलोड करें</string>
@@ -855,7 +855,7 @@
     <string name="agent_2ca522">हर प्रविष्टि में एक बात, जैसे: जवाब छोटे रखें</string>
     <string name="agent_37f497">%1$s / %2$s अक्षर</string>
     <string name="agent_84fa29">संदर्भ, मेमोरी और ज्ञानकोश</string>
-    <string name="agent_1415ca">बंद होने पर मेमोरी नहीं जोड़ी जाती और एजेंट \"लंबी अवधि की मेमोरी\" टूल इस्तेमाल नहीं कर सकता</string>
+    <string name="agent_1415ca">बंद होने पर मेमोरी नहीं जुड़ती और एजेंट मेमोरी टूल नहीं चला सकता</string>
     <string name="agent_d63f7c">हर नई चैट की शुरुआत में मेमोरी स्नैपशॉट एजेंट के सिस्टम प्रॉम्प्ट में जोड़ें</string>
     <string name="agent_4edca2">चैट मोड में भी मेमोरी स्नैपशॉट जोड़ें (कुछ संदर्भ इस्तेमाल होगा)</string>
     <string name="agent_1025dc">मेमोरी सिर्फ़ इस डिवाइस पर रहती है, अधिकतम 200। चैट में \"याद रखो: …\" कहें या \"याद रखें?\" टैप करें। नई चैट से लागू होगी।</string>
@@ -1150,7 +1150,7 @@
     <string name="settings_8c4fa6">सब कुछ इसी फ़ोन में सहेजा जाता है, अपलोड नहीं होता</string>
     <string name="settings_949d51">उन्नत सेटिंग्स डेवलपर विकल्पों में हैं</string>
     <string name="settings_f7ccc4">इंडेक्स और कम्प्रेशन की जानकारी परिचय › डेवलपर विकल्प में है</string>
-    <string name="settings_7f2a54">\"मैं…हूँ\" या \"आगे से…\" जैसी बातें मिलने पर जवाब के नीचे \"याद रखें?\" दिखता है, टैप करने पर ही सहेजा जाता है</string>
+    <string name="settings_7f2a54">पसंद या अपने बारे में कुछ बताने पर जवाब के नीचे “याद रखें?” दिखता है</string>
     <string name="settings_65e375">जवाब में नॉलेज बेस का उपयोग करें</string>
     <string name="settings_cca5e7">संबंधित सवाल पर सही अंश अपने आप मॉडल को दिए जाते हैं और जवाब के नीचे स्रोत दिखाया जाता है</string>
     <string name="settings_1cd2f0">हाल ही में याद रखा:</string>
@@ -1163,7 +1163,7 @@
     <string name="settings_fc69cd">KV शिफ़्ट</string>
     <string name="settings_6649d1">KV संदर्भ शिफ़्ट</string>
     <string name="settings_0ab786">GenieX (Qualcomm)</string>
-    <string name="settings_9a3ae4">NPU चुनने पर GGUF मॉडल GenieX से चलते हैं। AI Hub QAIRT मॉडल फ़ोल्डर सीधे इम्पोर्ट किए जा सकते हैं और केवल NPU पर चलते हैं।</string>
+    <string name="settings_9a3ae4">NPU पर GGUF, GenieX से चलता है; QAIRT मॉडल फ़ोल्डर सीधे इम्पोर्ट हो सकते हैं।</string>
     <string name="settings_dc39b3">%1$s। GenieX इंजन के लिए ज़रूरी; लगभग %2$s MB डाउनलोड, केवल इस डिवाइस में उपयोग होने वाली लाइब्रेरी रखी जाती हैं, इंस्टॉल के बाद लगभग %3$s MB</string>
     <string name="settings_cd84be">(इस डिवाइस पर QAIRT पैकेज समर्थित नहीं, केवल GGUF)</string>
     <string name="settings_d58a87">%1$s · इंस्टॉल है (GenieX %2$s)</string>
@@ -2081,7 +2081,7 @@
     <string name="think_lv_low">कम</string>
     <string name="think_lv_mid">मध्यम</string>
     <string name="think_lv_high">अधिक</string>
-    <string name="about262_privacy">चैट, इनफ़रेंस और आवाज़ सब इसी डिवाइस पर चलते हैं, कुछ भी अपलोड नहीं होता। नेटवर्क सिर्फ़ इनके लिए: मॉडल और वॉइस पैक डाउनलोड; एजेंट के ऑनलाइन टूल से खोज या वेब पेज पढ़ना; आपके चालू करने पर लोकल API।</string>
+    <string name="about262_privacy">चैट, इनफ़रेंस और आवाज़ सब इसी डिवाइस पर। इंटरनेट सिर्फ़ मॉडल डाउनलोड, एजेंट की वेब खोज या लोकल API चालू करने पर।</string>
     <string name="about262_bergamot">MPL-2.0 · ऑफ़लाइन अनुवाद · main@9271618</string>
     <string name="kb262_embed_tap_dl">डाउनलोड नहीं · डाउनलोड के लिए टैप करें</string>
     <string name="img262_edit">संपादित करें</string>
@@ -2186,5 +2186,9 @@
     <string name="models_gpu_recheck_ok">फिर से जाँचा: GPU उपलब्ध है।</string>
     <string name="models_gpu_recheck_restart">GPU फिर से चालू; लागू करने के लिए ऐप रीस्टार्ट करें।</string>
     <string name="models_gpu_recheck_none">अब भी कोई OpenCL ड्राइवर नहीं मिला।</string>
-    <string name="vg27b_note">सामान्य GGUF मॉडल के लिए विज़न का CPU या GPU यहाँ चुनें। मॉडल NPU (GenieX) पर चलने पर विज़न GenieX अपने आप संभालता है, यह सेटिंग लागू नहीं होती। दोबारा लोड करने पर लागू।</string>
+    <string name="vg27b_note">सामान्य GGUF विज़न के लिए; NPU पर अपने आप</string>
+    <string name="npu27_section">NPU (Qualcomm)</string>
+    <string name="npu27_qnn_installed">इंस्टॉल · QNN 2.50</string>
+    <string name="npu27_geniex_installed">इंस्टॉल · GenieX %1$s</string>
+    <string name="ctx27_takeover">चैट डेवलपर विकल्पों से; एजेंट अब भी यही सेटिंग मानता है</string>
 </resources>

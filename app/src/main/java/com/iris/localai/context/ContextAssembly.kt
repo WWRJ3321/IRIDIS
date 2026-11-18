@@ -82,7 +82,8 @@ object ContextAssembly {
 
     /** E: a strategy other than 按 token 预算 was chosen in 开发者选项 → 「已由开发者选项接管」. */
     fun devTakeover(strategy: ContextStrategy): Boolean = strategy != ContextStrategy.TOKEN_BUDGET
-    const val TAKEOVER = "已由开发者选项接管"
+    /** 只有对话模式被接管（[autoAllowed]：智能体模式仍按「快满时自动整理」），文案说清这一点；7 语言。 */
+    val TAKEOVER: String get() = com.iris.localai.I18n.s(com.iris.localai.R.string.ctx27_takeover)
 
     /** The memory block for a conversation: its frozen ABOUT + PREF snapshot (2.2.9), capped to the window. */
     fun memoryBlock(conv: Conversation, inject: Boolean, contextTokens: Int, epoch: Int = 0): String =
