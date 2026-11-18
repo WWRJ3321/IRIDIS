@@ -25,7 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import com.iris.localai.ui.components.glassSurface
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -131,9 +131,12 @@ internal fun ThinkPill(
         shown.targetState = open
         if (shown.currentState || shown.targetState) {
             val reduce = LocalReduceMotion.current
+            // transparent margin around the bar (as IrisMenu): the popup window no longer clips the
+            // soft shadow into a hard square band; the offset compensates so the bar stays put.
+            val m = with(density) { com.iris.localai.ui.components.MenuGeometry.MARGIN.roundToPx() }
             val dy = with(density) { (ThinkLevelBar.HEIGHT_DP + ThinkLevelBar.GAP_DP).dp.roundToPx() }
             val origin = androidx.compose.ui.graphics.TransformOrigin(0.15f, 1f)
-            Popup(alignment = Alignment.TopStart, offset = IntOffset(0, -dy)) {
+            Popup(alignment = Alignment.TopStart, offset = IntOffset(-m, -dy - m)) {
               androidx.compose.animation.AnimatedVisibility(
                 visibleState = shown,
                 enter = if (reduce) androidx.compose.animation.fadeIn(IrisMotion.Quick.float())
@@ -144,11 +147,10 @@ internal fun ThinkPill(
                     androidx.compose.animation.scaleOut(IrisMotion.Quick.float(), targetScale = 0.92f, transformOrigin = origin),
               ) {
                 val c = Iris.colors
+                Box(Modifier.padding(com.iris.localai.ui.components.MenuGeometry.MARGIN)) {
                 Row(
                     Modifier
-                        .shadow(6.dp, IrisRadius.pillShape)
-                        .clip(IrisRadius.pillShape)
-                        .background(c.surface)
+                        .glassSurface(IrisRadius.full, com.iris.localai.ui.theme.IrisElevation.menu)
                         .height(ThinkLevelBar.HEIGHT_DP.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -163,6 +165,7 @@ internal fun ThinkPill(
                             Text(t, style = IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = if (on) c.onAccent else c.text, maxLines = 1)
                         }
                     }
+                }
                 }
               }
             }

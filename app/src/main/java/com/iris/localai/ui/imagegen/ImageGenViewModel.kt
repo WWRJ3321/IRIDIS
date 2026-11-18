@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -130,6 +131,8 @@ data class ImageGenUi(
     /** 标签库（内置 + 自定义）与当前分类。 */
     val tags: List<PromptTag> = PromptTags.BUILTIN,
     val tagCat: TagCat = TagCat.SUBJECT,
+    /** 「AI 补全提示词」开着但没加载聊天模型（只补画质词）——界面给明确提示。 */
+    val expandNoModel: Boolean = false,
     /** 正在扩写；上一张实际用的（扩写后）提示词。 */
     val expanding: Boolean = false,
     val usedPrompt: String? = null,
@@ -265,6 +268,11 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addTag(cat: TagCat, zh: String, en: String) = changeTags { TagStore.add(it, cat, zh, en) }
     fun removeTag(t: PromptTag) = changeTags { TagStore.remove(it, t) }
+    fun editTag(old: PromptTag, cat: TagCat, zh: String, en: String) = changeTags { TagStore.edit(it, old, cat, zh, en) }
+
+    /** A chat model is loaded (AI 补全提示词 can use it). */
+    val chatModelLoaded: kotlinx.coroutines.flow.Flow<Boolean> =
+        container.engine.state.map { it is com.iris.localai.engine.EngineState.Ready }
     /** 恢复内置标签（清掉隐藏，保留自定义）。 */
     fun resetTags() = changeTags { it.copy(hidden = emptySet()) }
 
@@ -300,7 +308,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }.getOrNull()
             out?.let { ex.clean(it, prompt) }?.let { return it }
-        }
+        } else if (eng.readyModel == null) _ui.update { it.copy(expandNoModel = true) }
         return ex.rules(prompt, model.tagStyle)
     }
 
@@ -523,7 +531,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         job = viewModelScope.launch {
             // 扩写在卸载文本模型之前（要用它）。
             val req = if (s.expand && req0.initImagePath == null) {
-                _ui.update { it.copy(expanding = true) }
+                _ui.update { it.copy(expanding = true, expandNoModel = false) }
                 val p = expandPrompt(req0.prompt, model)
                 _ui.update { it.copy(expanding = false, usedPrompt = p.takeIf { x -> x != req0.prompt }) }
                 req0.copy(prompt = p, negative = PromptExpand.negative(req0.negative, model.tagStyle))

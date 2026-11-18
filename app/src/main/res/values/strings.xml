@@ -46,7 +46,6 @@
     <string name="ch232_err_image">无法读取这张图片</string>
     <string name="ch232_delete_q">删除「%1$s」？</string>
     <string name="ch232_delete_msg">角色卡文件和头像会被删除，已有的对话保留。</string>
-    <string name="ch232_avatar_hint">点按头像选择图片</string>
     <string name="ch232_f_name">名字</string>
     <string name="ch232_f_personality">性格</string>
     <string name="ch232_f_scenario">场景</string>
@@ -54,21 +53,16 @@
     <string name="ch232_f_alt">备选开场白 %1$d</string>
     <string name="ch232_add_alt">添加备选开场白</string>
     <string name="ch232_f_tags">标签</string>
-    <string name="ch232_h_tags">用逗号分隔</string>
     <string name="ch232_bind_title">绑定（可选）</string>
     <string name="ch232_bind_model">模型</string>
     <string name="ch232_bind_voice">朗读音色</string>
     <string name="ch232_voice_set">已绑定：%1$s（点按取消）</string>
     <string name="ch232_bind_style">生图风格</string>
-    <string name="ch232_h_style">加在生图提示词前，如 anime, watercolor</string>
     <string name="ch232_follow_current">跟随当前</string>
     <string name="ch232_missing">本机没有，会用当前的</string>
-    <string name="ch232_bind_note">开始和这个角色对话时切换到绑定的模型和音色（本机没有就保持当前）；朗读音色点按即绑定当前音色。生图风格只在智能体调用生图时生效。</string>
     <string name="ch232_advanced">高级</string>
     <string name="ch232_f_examples">对话示例</string>
-    <string name="ch232_h_examples">每段以 &lt;START&gt; 开头，如 {{user}}: 你好 / {{char}}: …</string>
     <string name="ch232_f_system">系统提示词</string>
-    <string name="ch232_h_system">留空用默认；{{original}} = 你在设置里的系统提示词</string>
     <string name="ch232_f_post">历史后指令</string>
     <string name="ch232_f_notes">作者备注</string>
     <string name="ch232_lore">内置世界书：%1$d 条已启用，按关键词触发，加在最新一条消息后（预算约为上下文的 10%%）</string>
@@ -1840,9 +1834,6 @@
     <string name="imagegen_6b0e80">NPU 生图原生库未加载：%1$s</string>
     <string name="imagegen_a999cf">QNN 后端初始化失败：%1$s</string>
     <string name="ch235_f_prompt">设定</string>
-    <string name="ch235_h_prompt">直接写提示词：TA 是谁、什么性格、怎么说话、和你是什么关系……</string>
-    <string name="ch235_h_first">可选。角色说的第一句话</string>
-    <string name="ch235_advanced_sub">性格、场景、备选开场白、标签、对话示例、系统提示词等（兼容酒馆角色卡）</string>
     <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
     <string name="imagegen_sd240_cancelled">已停止生成</string>
     <string name="imagegen_sd240_noimg2img">这个模型暂不支持以图生图</string>
@@ -2130,8 +2121,8 @@
     <string name="cool267_stop_sub">不等这条说完</string>
     <string name="cool267_wait">降温中 %1$s°C，降到 %2$d°C 自动继续</string>
     <string name="cool267_short">降温中</string>
-    <string name="ig268_expand">扩写提示词</string>
-    <string name="ig268_expand_sub">几句描述自动补全细节</string>
+    <string name="ig268_expand">AI 补全提示词</string>
+    <string name="ig268_expand_sub">用当前聊天模型把简短描述扩写成详细英文提示词</string>
     <string name="ig268_lowmem">低内存模式</string>
     <string name="ig268_lowmem_sub">长边≤768，用完即释放，稍慢</string>
     <string name="ig268_add_tag">添加标签</string>
@@ -2139,7 +2130,7 @@
     <string name="ig268_tag_zh">显示名（可选）</string>
     <string name="ig268_del_tag">删除标签「%1$s」？</string>
     <string name="ig268_reset_tags">恢复内置</string>
-    <string name="ig268_expanding">正在扩写提示词…</string>
+    <string name="ig268_expanding">正在用聊天模型补全提示词…</string>
     <string name="ig268_used">实际提示词：%1$s</string>
     <string name="ig268_license_title">许可确认</string>
     <string name="ig268_license_msg">%1$s：仅限非商用，生成的图片可商用。\n许可原文：%2$s\n继续下载即表示同意。</string>
@@ -2192,4 +2183,12 @@
     <string name="npu27_qnn_installed">已安装 · QNN 2.50</string>
     <string name="npu27_geniex_installed">已安装 · GenieX %1$s</string>
     <string name="ctx27_takeover">对话由开发者选项接管，智能体仍按此项</string>
+    <string name="ig27c_nomodel">未加载聊天模型，只会补上常用画质词。先在模型页加载一个聊天模型。</string>
+    <string name="ig27c_manage">管理词库</string>
+    <string name="ig27c_search">搜索标签</string>
+    <string name="ig27c_all">全部</string>
+    <string name="ig27c_edit_tag">编辑标签</string>
+    <string name="ig27c_count">%1$d 条</string>
+    <string name="ig27c_none">没有匹配的标签</string>
+    <string name="ig27c_cat">分类</string>
 </resources>

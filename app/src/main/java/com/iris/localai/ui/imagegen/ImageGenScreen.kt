@@ -6,6 +6,12 @@ import com.iris.localai.imagegen.Backend
 import com.iris.localai.imagegen.ImageCatalog
 import com.iris.localai.imagegen.ImageSeed
 import com.iris.localai.imagegen.PromptTag
+import androidx.compose.ui.text.style.TextOverflow
+import com.iris.localai.ui.components.PressableIcon
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.items as lazyItems
+import androidx.compose.foundation.lazy.LazyColumn
+import com.iris.localai.imagegen.PromptTags
 import com.iris.localai.imagegen.SdCppEngine
 import com.iris.localai.imagegen.SdProgress
 import com.iris.localai.imagegen.TagCat
@@ -180,7 +186,15 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     // 标签库——添加 / 删除
     var addingTag by remember { mutableStateOf(false) }
     var removingTag by remember { mutableStateOf<PromptTag?>(null) }
-    if (addingTag) TagAddDialog(s.tagCat, onAdd = { zh, en -> vm.addTag(s.tagCat, zh, en) }, onDismiss = { addingTag = false })
+    var editingTag by remember { mutableStateOf<PromptTag?>(null) }
+    var managingTags by remember { mutableStateOf(false) }
+    val chatLoaded by vm.chatModelLoaded.collectAsStateWithLifecycle(initialValue = true)
+    if (managingTags) TagManagerDialog(
+        s.tags, start = s.tagCat, onEdit = { editingTag = it }, onDelete = { removingTag = it },
+        onAdd = { addingTag = true }, onReset = vm::resetTags, onDismiss = { managingTags = false },
+    )
+    if (addingTag) TagEditDialog(null, s.tagCat, onSave = { cat, zh, en -> vm.addTag(cat, zh, en) }, onDismiss = { addingTag = false })
+    editingTag?.let { t -> TagEditDialog(t, t.cat, onSave = { cat, zh, en -> vm.editTag(t, cat, zh, en) }, onDismiss = { editingTag = null }) }
     removingTag?.let { t ->
         ConfirmDialog(
             title = I18n.s(R.string.ig268_del_tag, tagLabel(t)), message = t.text(s.model.tagStyle),
@@ -223,7 +237,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     Field(s.prompt, ImageGenText.PROMPT, minLines = 3) { v -> vm.edit { it.copy(prompt = v) } }
                     // 标签库：分类 → 点标签追加，长按删除，「+」添加
                     TagRow(s, onCat = { c -> vm.edit { it.copy(tagCat = c) } }, onTag = vm::useTag, onLong = { removingTag = it },
-                        onAdd = { addingTag = true }, onReset = vm::resetTags)
+                        onAdd = { addingTag = true }, onManage = { managingTags = true })
                     val fixed = s.model.fixedSize
                     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
                         Text(I18n.s(R.string.imagegen_c8339f), style = IrisType.row, color = Iris.colors.text)
@@ -235,8 +249,9 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     }
                     AdvancedFold("imagegen-adv") {
                         Field(s.negative, ImageGenText.NEGATIVE, minLines = 2) { v -> vm.edit { it.copy(negative = v) } }
+                        // what it does, said right on the switch; without a loaded chat model it says so plainly.
                         SwitchRow(I18n.s(R.string.ig268_expand), s.expand,
-                            subtitle = I18n.s(R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
+                            subtitle = if (s.expand && !chatLoaded) I18n.s(R.string.ig27c_nomodel) else I18n.s(R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
                         SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
                         SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
                         // empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
@@ -285,6 +300,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
                     if (s.expanding) Text(I18n.s(R.string.ig268_expanding), style = IrisType.caption, color = Iris.colors.textSecondary,
+                        modifier = Modifier.padding(bottom = IrisDimens.space6))
+                    if (s.expandNoModel && !s.expanding) Text(I18n.s(R.string.ig27c_nomodel), style = IrisType.caption, color = Iris.colors.textSecondary,
                         modifier = Modifier.padding(bottom = IrisDimens.space6))
                     // sd.cpp models — GPU or CPU for the next image, 「重试 GPU」 after a crash, 「改用 CPU」.
                     // NPU models — only 「重试 NPU」 after the app died during an NPU run.
@@ -540,7 +557,7 @@ private fun catLabel(c: TagCat): String =
 @Composable
 private fun TagRow(
     s: ImageGenUi, onCat: (TagCat) -> Unit, onTag: (PromptTag) -> Unit,
-    onLong: (PromptTag) -> Unit, onAdd: () -> Unit, onReset: () -> Unit,
+    onLong: (PromptTag) -> Unit, onAdd: () -> Unit, onManage: () -> Unit,
 ) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space6)) {
@@ -549,29 +566,94 @@ private fun TagRow(
         }
         Spacer(Modifier.height(IrisDimens.space6))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-            for (t in s.tags.filter { it.cat == s.tagCat }) {
-                Box(
-                    Modifier.clip(IrisRadius.pillShape).border(1.dp, c.outline, IrisRadius.pillShape)
-                        .combinedClickable(onClick = { onTag(t) }, onLongClick = { onLong(t) })
-                        .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
-                ) { Text(tagLabel(t), style = IrisType.labelSmall, color = if (t.custom) c.accent else c.textSecondary) }
-            }
             Pill("+", selected = false, onClick = onAdd)
-            Pill(I18n.s(R.string.ig268_reset_tags), selected = false, onClick = onReset)
+            Pill(I18n.s(R.string.ig27c_manage), selected = false, onClick = onManage)
+            for (t in s.tags.filter { it.cat == s.tagCat }) TagChip(t, onClick = { onTag(t) }, onLong = { onLong(t) })
         }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun TagAddDialog(cat: TagCat, onAdd: (String, String) -> Unit, onDismiss: () -> Unit) {
-    var zh by remember { mutableStateOf("") }
-    var en by remember { mutableStateOf("") }
+private fun TagChip(t: PromptTag, onClick: () -> Unit, onLong: (() -> Unit)? = null) {
+    val c = Iris.colors
+    Box(
+        Modifier.clip(IrisRadius.pillShape).border(1.dp, c.outline, IrisRadius.pillShape)
+            .combinedClickable(onClick = onClick, onLongClick = onLong)
+            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
+    ) { Text(tagLabel(t), style = IrisType.labelSmall, color = if (t.custom) c.accent else c.textSecondary, maxLines = 1) }
+}
+
+/** 词库管理：搜索 + 分类筛选，逐条编辑 / 删除，添加，恢复内置。 */
+@Composable
+private fun TagManagerDialog(
+    tags: List<PromptTag>, start: TagCat, onEdit: (PromptTag) -> Unit, onDelete: (PromptTag) -> Unit,
+    onAdd: () -> Unit, onReset: () -> Unit, onDismiss: () -> Unit,
+) {
+    val c = Iris.colors
+    var query by remember { mutableStateOf("") }
+    var cat by remember { mutableStateOf<TagCat?>(start) }
+    val shown = remember(tags, cat, query) { PromptTags.filter(tags, cat, query) }
     IrisDialog(
-        onDismiss = onDismiss, title = I18n.s(R.string.ig268_add_tag) + " · " + catLabel(cat),
-        confirmText = I18n.s(R.string.ig268_add_tag), confirmEnabled = en.isNotBlank(),
-        onConfirm = { onAdd(zh, en); onDismiss() },
+        onDismiss = onDismiss, title = I18n.s(R.string.ig27c_manage),
+        confirmText = I18n.s(R.string.agent_769d88), onConfirm = onDismiss, dismissText = null,
     ) {
         Column {
+            OutlinedTextField(
+                query, { query = it.take(40) }, singleLine = true,
+                placeholder = { Text(I18n.s(R.string.ig27c_search), style = IrisType.secondary, color = c.textTertiary) },
+                leadingIcon = { Icon(IrisIcons.Search, null, tint = c.textTertiary) },
+                shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(IrisDimens.space8))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                Pill(I18n.s(R.string.ig27c_all), selected = cat == null) { cat = null }
+                for (k in TagCat.entries) Pill(catLabel(k), selected = k == cat) { cat = k }
+            }
+            Spacer(Modifier.height(IrisDimens.space6))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(I18n.s(R.string.ig27c_count, shown.size), style = IrisType.caption, color = c.textTertiary, modifier = Modifier.weight(1f))
+                IrisButton(I18n.s(R.string.ig268_reset_tags), onClick = onReset, style = IrisButtonStyle.Text, compact = true)
+                IrisButton(I18n.s(R.string.ig268_add_tag), onClick = onAdd, style = IrisButtonStyle.Tonal, compact = true)
+            }
+            if (shown.isEmpty()) Text(I18n.s(R.string.ig27c_none), style = IrisType.secondary, color = c.textTertiary,
+                modifier = Modifier.padding(vertical = IrisDimens.space16))
+            else LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                lazyItems(shown, key = { it.key }) { t ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = IrisDimens.space2), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(tagLabel(t), style = IrisType.body, color = if (t.custom) c.accent else c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text((if (cat == null) catLabel(t.cat) + " · " else "") + t.en, style = IrisType.caption, color = c.textTertiary,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        PressableIcon(IrisIcons.Edit, I18n.s(R.string.ig27c_edit_tag), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { onEdit(t) }
+                        PressableIcon(IrisIcons.Trash, I18n.s(R.string.chat_2f4aad), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { onDelete(t) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 添加（[tag] == null）或编辑一个标签：分类 + 英文提示词 + 显示名。 */
+@Composable
+private fun TagEditDialog(tag: PromptTag?, cat0: TagCat, onSave: (TagCat, String, String) -> Unit, onDismiss: () -> Unit) {
+    var zh by remember { mutableStateOf(if (tag == null || tag.zh == tag.en) "" else tag.zh) }
+    var en by remember { mutableStateOf(tag?.en ?: "") }
+    var cat by remember { mutableStateOf(cat0) }
+    val c = Iris.colors
+    IrisDialog(
+        onDismiss = onDismiss, title = I18n.s(if (tag == null) R.string.ig268_add_tag else R.string.ig27c_edit_tag),
+        confirmText = I18n.s(if (tag == null) R.string.ig268_add_tag else R.string.settings_be5fbb), confirmEnabled = en.isNotBlank(),
+        onConfirm = { onSave(cat, zh, en); onDismiss() },
+    ) {
+        Column {
+            Text(I18n.s(R.string.ig27c_cat), style = IrisType.caption, color = c.textSecondary)
+            Spacer(Modifier.height(IrisDimens.space4))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                for (k in TagCat.entries) Pill(catLabel(k), selected = k == cat) { cat = k }
+            }
+            Spacer(Modifier.height(IrisDimens.space8))
             OutlinedTextField(en, { en = it.take(80) }, label = { Text(I18n.s(R.string.ig268_tag_en)) }, singleLine = true,
                 shape = IrisRadius.mediumShape, colors = irisTextFieldColors(), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(zh, { zh = it.take(20) }, label = { Text(I18n.s(R.string.ig268_tag_zh)) }, singleLine = true,

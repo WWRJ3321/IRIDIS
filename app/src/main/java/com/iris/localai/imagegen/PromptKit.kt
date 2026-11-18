@@ -16,8 +16,9 @@ import kotlinx.serialization.json.jsonPrimitive
  * 之外的空格形式，如 "1girl"、"looking at viewer"）。用户可自定义增删（[TagStore] 存 JSON），内置标签可隐藏。
  */
 enum class TagCat(val zh: String, val en: String) {
-    SUBJECT("主体", "Subject"), STYLE("风格", "Style"), LIGHT("光线", "Lighting"),
-    COMPOSE("构图", "Composition"), QUALITY("画质", "Quality"), NEGATIVE("负面", "Negative");
+    QUALITY("画质", "Quality"), STYLE("风格", "Style"), PERSON("人物", "Character"), SUBJECT("主体", "Subject"),
+    SCENE("场景", "Scene"), COMPOSE("构图", "Composition"), LIGHT("光线", "Lighting"), COLOR("色调氛围", "Color & mood"),
+    NEGATIVE("负面", "Negative");
     companion object { fun of(s: String?): TagCat = entries.firstOrNull { it.name.equals(s, true) } ?: SUBJECT }
 }
 
@@ -67,12 +68,24 @@ object PromptTags {
         t(TagCat.NEGATIVE, "多手指", "extra fingers, bad hands", "bad hands, extra digits"),
         t(TagCat.NEGATIVE, "水印文字", "watermark, text", "watermark, signature, text"),
         t(TagCat.NEGATIVE, "压缩噪点", "jpeg artifacts", "jpeg artifacts"),
-    )
+    ) + PromptTagData.parse()
+
+    /** 搜索 + 分类筛选：[cat] 为 null = 全部分类；[query] 匹配中文名、英文值、Danbooru 写法（不分大小写）。 */
+    fun filter(tags: List<PromptTag>, cat: TagCat?, query: String): List<PromptTag> {
+        val q = query.trim()
+        return tags.filter { t ->
+            (cat == null || t.cat == cat) && (q.isEmpty() || t.zh.contains(q, true) || t.en.contains(q, true) || (t.danbooru ?: "").contains(q, true))
+        }
+    }
+
+    fun isBuiltin(tag: PromptTag): Boolean = BUILTIN.any { it.key == tag.key }
 
     /** 内置（去掉隐藏的）+ 自定义，按分类顺序。 */
     fun merged(custom: List<PromptTag>, hidden: Set<String>): List<PromptTag> =
-        (BUILTIN.filter { it.key !in hidden } + custom.filter { c -> BUILTIN.none { it.key == c.key } || c.key in hidden })
-            .sortedBy { it.cat.ordinal }
+        custom.map { it.key }.toSet().let { mine ->
+            // a custom tag with a built-in's key is that built-in edited: it replaces the original.
+            (BUILTIN.filter { it.key !in hidden && it.key !in mine } + custom).sortedBy { it.cat.ordinal }
+        }
 
     /** 智能体可读的紧凑清单（每类一行），给模型挑选；标签风格模型列 Danbooru 写法。 */
     fun forModel(tags: List<PromptTag>, tagStyle: Boolean, maxPerCat: Int = 24): String =
@@ -119,6 +132,19 @@ object TagStore {
         if (v.isEmpty()) return d
         val tag = PromptTag(cat, zh.trim().take(20).ifEmpty { v }, v, null, custom = true)
         return d.copy(custom = d.custom.filter { it.key != tag.key } + tag, hidden = d.hidden - tag.key)
+    }
+
+    /**
+     * 修改：先删旧的（内置的记为隐藏），再按新值加一条自定义标签；英文值为空则不改。
+     * 修改内置标签时保留它的 Danbooru 写法（英文值没变时）。
+     */
+    fun edit(d: Data, old: PromptTag, cat: TagCat, zh: String, en: String): Data {
+        val v = en.trim().take(80)
+        if (v.isEmpty()) return d
+        val removed = remove(d, old)
+        val db = if (v.equals(old.en, true)) old.danbooru else null
+        val tag = PromptTag(cat, zh.trim().take(20).ifEmpty { v }, v, db, custom = true)
+        return removed.copy(custom = removed.custom.filter { it.key != tag.key } + tag, hidden = removed.hidden - tag.key)
     }
 
     /** 删除：自定义的直接删，内置的记为隐藏。 */

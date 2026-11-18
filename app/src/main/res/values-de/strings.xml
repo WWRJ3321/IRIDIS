@@ -45,7 +45,6 @@
     <string name="ch232_err_image">Bild konnte nicht gelesen werden</string>
     <string name="ch232_delete_q">„%1$s“ löschen?</string>
     <string name="ch232_delete_msg">Kartendatei und Avatar werden gelöscht; bestehende Chats bleiben.</string>
-    <string name="ch232_avatar_hint">Auf den Avatar tippen, um ein Bild zu wählen</string>
     <string name="ch232_f_name">Name</string>
     <string name="ch232_f_personality">Persönlichkeit</string>
     <string name="ch232_f_scenario">Szenario</string>
@@ -53,21 +52,16 @@
     <string name="ch232_f_alt">Alternative Begrüßung %1$d</string>
     <string name="ch232_add_alt">Begrüßung hinzufügen</string>
     <string name="ch232_f_tags">Tags</string>
-    <string name="ch232_h_tags">Durch Kommas getrennt</string>
     <string name="ch232_bind_title">Verknüpfungen (optional)</string>
     <string name="ch232_bind_model">Modell</string>
     <string name="ch232_bind_voice">Vorlesestimme</string>
     <string name="ch232_voice_set">Verknüpft: %1$s (tippen zum Entfernen)</string>
     <string name="ch232_bind_style">Bildstil</string>
-    <string name="ch232_h_style">Wird vor Bild-Prompts gesetzt, z. B. anime, watercolor</string>
     <string name="ch232_follow_current">Aktuelle verwenden</string>
     <string name="ch232_missing">nicht auf dem Gerät, aktuelle wird genutzt</string>
-    <string name="ch232_bind_note">Ein Chat mit dieser Figur wechselt zum verknüpften Modell und zur Stimme (fehlt etwas, bleibt das Aktuelle). Tippe auf die Stimme, um die aktuelle zu verknüpfen. Der Bildstil gilt, wenn der Agent Bilder erzeugt.</string>
     <string name="ch232_advanced">Erweitert</string>
     <string name="ch232_f_examples">Beispieldialog</string>
-    <string name="ch232_h_examples">Jeder Block beginnt mit &lt;START&gt;, z. B. {{user}}: Hallo / {{char}}: …</string>
     <string name="ch232_f_system">Systemprompt</string>
-    <string name="ch232_h_system">Leer = Standard; {{original}} = dein Systemprompt aus den Einstellungen</string>
     <string name="ch232_f_post">Anweisungen nach dem Verlauf</string>
     <string name="ch232_f_notes">Notizen des Autors</string>
     <string name="ch232_lore">Eingebettetes Lorebook: %1$d Einträge aktiv, per Stichwort ausgelöst und hinter die neueste Nachricht gesetzt (Budget ca. 10 %% des Kontexts)</string>
@@ -1839,9 +1833,6 @@
     <string name="imagegen_6b0e80">Native NPU-Bildgenerierungsbibliothek nicht geladen: %1$s</string>
     <string name="imagegen_a999cf">Initialisierung des QNN-Backends fehlgeschlagen: %1$s</string>
     <string name="ch235_f_prompt">Prompt</string>
-    <string name="ch235_h_prompt">Schreib einfach den Prompt: wer die Figur ist, Charakter, Sprechweise, Beziehung zu dir …</string>
-    <string name="ch235_h_first">Optional. Der erste Satz der Figur</string>
-    <string name="ch235_advanced_sub">Persönlichkeit, Szenario, alternative Begrüßungen, Tags, Beispiele, System-Prompt … (Tavern-Karten)</string>
     <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
     <string name="imagegen_sd240_cancelled">Generation stopped</string>
     <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
@@ -2129,8 +2120,8 @@
     <string name="cool267_stop_sub">Antwort nicht zu Ende schreiben</string>
     <string name="cool267_wait">Abkühlen %1$s°C, weiter bei %2$d°C</string>
     <string name="cool267_short">kühlt</string>
-    <string name="ig268_expand">Prompt erweitern</string>
-    <string name="ig268_expand_sub">Ergänzt Details zu kurzen Ideen</string>
+    <string name="ig268_expand">KI-Prompt-Vervollständigung</string>
+    <string name="ig268_expand_sub">Das geladene Chatmodell macht aus einer kurzen Idee einen ausführlichen englischen Prompt</string>
     <string name="ig268_lowmem">Wenig-Speicher-Modus</string>
     <string name="ig268_lowmem_sub">Lange Seite ≤768, gibt Speicher sofort frei, etwas langsamer</string>
     <string name="ig268_add_tag">Tag hinzufügen</string>
@@ -2138,7 +2129,7 @@
     <string name="ig268_tag_zh">Bezeichnung (optional)</string>
     <string name="ig268_del_tag">Tag „%1$s“ löschen?</string>
     <string name="ig268_reset_tags">Standard wiederherstellen</string>
-    <string name="ig268_expanding">Prompt wird erweitert…</string>
+    <string name="ig268_expanding">Prompt wird mit dem Chatmodell vervollständigt…</string>
     <string name="ig268_used">Verwendeter Prompt: %1$s</string>
     <string name="ig268_license_title">Lizenz</string>
     <string name="ig268_license_msg">%1$s: nur nicht-kommerziell; erzeugte Bilder dürfen kommerziell genutzt werden.\nLizenz: %2$s\nMit dem Download stimmen Sie zu.</string>
@@ -2191,4 +2182,12 @@
     <string name="npu27_qnn_installed">Installiert · QNN 2.50</string>
     <string name="npu27_geniex_installed">Installiert · GenieX %1$s</string>
     <string name="ctx27_takeover">Chat folgt den Entwickleroptionen; der Agent nutzt weiter diese Einstellung</string>
+    <string name="ig27c_nomodel">Kein Chatmodell geladen – es werden nur übliche Qualitätswörter ergänzt. Lade zuerst auf der Modellseite ein Chatmodell.</string>
+    <string name="ig27c_manage">Tags verwalten</string>
+    <string name="ig27c_search">Tags suchen</string>
+    <string name="ig27c_all">Alle</string>
+    <string name="ig27c_edit_tag">Tag bearbeiten</string>
+    <string name="ig27c_count">%1$d Tags</string>
+    <string name="ig27c_none">Keine passenden Tags</string>
+    <string name="ig27c_cat">Kategorie</string>
 </resources>
