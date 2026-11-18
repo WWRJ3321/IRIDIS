@@ -45,7 +45,6 @@
     <string name="ch232_err_image">No se pudo leer la imagen</string>
     <string name="ch232_delete_q">¿Eliminar «%1$s»?</string>
     <string name="ch232_delete_msg">Se eliminan la tarjeta y el avatar; los chats existentes se conservan.</string>
-    <string name="ch232_avatar_hint">Toca el avatar para elegir una imagen</string>
     <string name="ch232_f_name">Nombre</string>
     <string name="ch232_f_personality">Personalidad</string>
     <string name="ch232_f_scenario">Escenario</string>
@@ -53,21 +52,16 @@
     <string name="ch232_f_alt">Saludo alternativo %1$d</string>
     <string name="ch232_add_alt">Añadir saludo alternativo</string>
     <string name="ch232_f_tags">Etiquetas</string>
-    <string name="ch232_h_tags">Separadas por comas</string>
     <string name="ch232_bind_title">Vinculaciones (opcional)</string>
     <string name="ch232_bind_model">Modelo</string>
     <string name="ch232_bind_voice">Voz de lectura</string>
     <string name="ch232_voice_set">Vinculada: %1$s (toca para quitar)</string>
     <string name="ch232_bind_style">Estilo de imagen</string>
-    <string name="ch232_h_style">Se antepone a los prompts de imagen, p. ej. anime, watercolor</string>
     <string name="ch232_follow_current">Usar el actual</string>
     <string name="ch232_missing">no está en el dispositivo, se usa el actual</string>
-    <string name="ch232_bind_note">Al empezar un chat con este personaje se cambia al modelo y la voz vinculados (si faltan, se mantiene lo actual). Toca la voz para vincular la actual. El estilo de imagen se aplica cuando el agente genera imágenes.</string>
     <string name="ch232_advanced">Avanzado</string>
     <string name="ch232_f_examples">Diálogo de ejemplo</string>
-    <string name="ch232_h_examples">Cada bloque empieza con &lt;START&gt;, p. ej. {{user}}: Hola / {{char}}: …</string>
     <string name="ch232_f_system">Prompt de sistema</string>
-    <string name="ch232_h_system">Vacío = predeterminado; {{original}} = tu prompt de sistema de ajustes</string>
     <string name="ch232_f_post">Instrucciones tras el historial</string>
     <string name="ch232_f_notes">Notas del creador</string>
     <string name="ch232_lore">Lorebook integrado: %1$d entradas activas, se activan por palabra clave y se añaden tras el último mensaje (presupuesto ~10 %% del contexto)</string>
@@ -1839,9 +1833,6 @@
     <string name="imagegen_6b0e80">Biblioteca nativa de generación de imágenes NPU no cargada: %1$s</string>
     <string name="imagegen_a999cf">Error al inicializar el backend QNN: %1$s</string>
     <string name="ch235_f_prompt">Prompt</string>
-    <string name="ch235_h_prompt">Escribe el prompt directamente: quién es, su carácter, cómo habla, su relación contigo…</string>
-    <string name="ch235_h_first">Opcional. La primera frase del personaje</string>
-    <string name="ch235_advanced_sub">Personalidad, escenario, saludos alternativos, etiquetas, ejemplos, prompt de sistema… (tarjetas Tavern)</string>
     <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
     <string name="imagegen_sd240_cancelled">Generation stopped</string>
     <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
@@ -2129,8 +2120,8 @@
     <string name="cool267_stop_sub">Sin terminar la respuesta</string>
     <string name="cool267_wait">Enfriando %1$s°C, sigue a %2$d°C</string>
     <string name="cool267_short">enfriando</string>
-    <string name="ig268_expand">Ampliar prompt</string>
-    <string name="ig268_expand_sub">Completa detalles a partir de una idea breve</string>
+    <string name="ig268_expand">Completar prompt con IA</string>
+    <string name="ig268_expand_sub">Usa el modelo de chat cargado para convertir una idea breve en un prompt detallado en inglés</string>
     <string name="ig268_lowmem">Modo de poca memoria</string>
     <string name="ig268_lowmem_sub">Lado largo ≤768, libera memoria tras cada imagen, algo más lento</string>
     <string name="ig268_add_tag">Añadir etiqueta</string>
@@ -2138,7 +2129,7 @@
     <string name="ig268_tag_zh">Nombre (opcional)</string>
     <string name="ig268_del_tag">¿Eliminar la etiqueta «%1$s»?</string>
     <string name="ig268_reset_tags">Restaurar integradas</string>
-    <string name="ig268_expanding">Ampliando prompt…</string>
+    <string name="ig268_expanding">Completando el prompt con el modelo de chat…</string>
     <string name="ig268_used">Prompt usado: %1$s</string>
     <string name="ig268_license_title">Licencia</string>
     <string name="ig268_license_msg">%1$s: solo uso no comercial; las imágenes generadas pueden usarse comercialmente.\nLicencia: %2$s\nAl descargar, aceptas.</string>
@@ -2191,4 +2182,12 @@
     <string name="npu27_qnn_installed">Instalado · QNN 2.50</string>
     <string name="npu27_geniex_installed">Instalado · GenieX %1$s</string>
     <string name="ctx27_takeover">El chat sigue las opciones de desarrollador; el agente usa este ajuste</string>
+    <string name="ig27c_nomodel">No hay modelo de chat cargado: solo se añaden palabras de calidad comunes. Carga primero uno en la página de modelos.</string>
+    <string name="ig27c_manage">Gestionar etiquetas</string>
+    <string name="ig27c_search">Buscar etiquetas</string>
+    <string name="ig27c_all">Todas</string>
+    <string name="ig27c_edit_tag">Editar etiqueta</string>
+    <string name="ig27c_count">%1$d etiquetas</string>
+    <string name="ig27c_none">No hay etiquetas que coincidan</string>
+    <string name="ig27c_cat">Categoría</string>
 </resources>

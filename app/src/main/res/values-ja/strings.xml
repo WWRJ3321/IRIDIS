@@ -45,7 +45,6 @@
     <string name="ch232_err_image">この画像を読み込めません</string>
     <string name="ch232_delete_q">「%1$s」を削除しますか？</string>
     <string name="ch232_delete_msg">カードと画像は削除されます。既存の会話は残ります。</string>
-    <string name="ch232_avatar_hint">画像をタップして選択</string>
     <string name="ch232_f_name">名前</string>
     <string name="ch232_f_personality">性格</string>
     <string name="ch232_f_scenario">シナリオ</string>
@@ -53,21 +52,16 @@
     <string name="ch232_f_alt">別の挨拶 %1$d</string>
     <string name="ch232_add_alt">別の挨拶を追加</string>
     <string name="ch232_f_tags">タグ</string>
-    <string name="ch232_h_tags">カンマ区切り</string>
     <string name="ch232_bind_title">ひも付け（任意）</string>
     <string name="ch232_bind_model">モデル</string>
     <string name="ch232_bind_voice">読み上げの声</string>
     <string name="ch232_voice_set">設定済み：%1$s（タップで解除）</string>
     <string name="ch232_bind_style">画像のスタイル</string>
-    <string name="ch232_h_style">画像プロンプトの前に付きます（例：anime, watercolor）</string>
     <string name="ch232_follow_current">現在の設定</string>
     <string name="ch232_missing">この端末にないため現在の設定を使用</string>
-    <string name="ch232_bind_note">このキャラとの会話を始めると、ひも付けたモデルと声に切り替わります（端末にない場合はそのまま）。声の行をタップすると現在の声を設定します。画像スタイルはエージェントが画像を生成するときに使われます。</string>
     <string name="ch232_advanced">詳細</string>
     <string name="ch232_f_examples">会話例</string>
-    <string name="ch232_h_examples">各ブロックは &lt;START&gt; で始めます。例：{{user}}: こんにちは / {{char}}: …</string>
     <string name="ch232_f_system">システムプロンプト</string>
-    <string name="ch232_h_system">空欄で既定；{{original}} = 設定のシステムプロンプト</string>
     <string name="ch232_f_post">履歴後の指示</string>
     <string name="ch232_f_notes">作者メモ</string>
     <string name="ch232_lore">内蔵ワールド情報：%1$d 件有効。キーワードで発動し、最新メッセージの後に追加（予算はコンテキストの約 10%%）</string>
@@ -1839,9 +1833,6 @@
     <string name="imagegen_6b0e80">NPU 画像生成ネイティブライブラリが読み込まれていません：%1$s</string>
     <string name="imagegen_a999cf">QNN バックエンドの初期化に失敗しました：%1$s</string>
     <string name="ch235_f_prompt">設定</string>
-    <string name="ch235_h_prompt">プロンプトをそのまま書く：誰なのか、性格、話し方、あなたとの関係……</string>
-    <string name="ch235_h_first">任意。キャラクターの最初のひとこと</string>
-    <string name="ch235_advanced_sub">性格、シナリオ、別の挨拶、タグ、会話例、システムプロンプトなど（Tavern カード互換）</string>
     <string name="engine_vk236">Vulkan（Mali / Immortalis · Q4_0 / Q4_K）</string>
     <string name="imagegen_sd240_cancelled">Generation stopped</string>
     <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
@@ -2129,8 +2120,8 @@
     <string name="cool267_stop_sub">回答の途中でも止める</string>
     <string name="cool267_wait">冷却中 %1$s°C、%2$d°Cで再開</string>
     <string name="cool267_short">冷却中</string>
-    <string name="ig268_expand">プロンプト拡張</string>
-    <string name="ig268_expand_sub">短い説明から詳細を補完</string>
+    <string name="ig268_expand">AIでプロンプト補完</string>
+    <string name="ig268_expand_sub">読み込み中のチャットモデルで短い説明を詳しい英語プロンプトにします</string>
     <string name="ig268_lowmem">省メモリモード</string>
     <string name="ig268_lowmem_sub">長辺≤768、毎回解放、やや遅い</string>
     <string name="ig268_add_tag">タグを追加</string>
@@ -2138,7 +2129,7 @@
     <string name="ig268_tag_zh">表示名（任意）</string>
     <string name="ig268_del_tag">タグ「%1$s」を削除しますか？</string>
     <string name="ig268_reset_tags">標準に戻す</string>
-    <string name="ig268_expanding">プロンプトを拡張中…</string>
+    <string name="ig268_expanding">チャットモデルでプロンプトを補完中…</string>
     <string name="ig268_used">使用したプロンプト：%1$s</string>
     <string name="ig268_license_title">ライセンス確認</string>
     <string name="ig268_license_msg">%1$s：非商用のみ。生成画像は商用利用可。\nライセンス：%2$s\nダウンロードで同意したものとみなします。</string>
@@ -2191,4 +2182,12 @@
     <string name="npu27_qnn_installed">インストール済み · QNN 2.50</string>
     <string name="npu27_geniex_installed">インストール済み · GenieX %1$s</string>
     <string name="ctx27_takeover">会話は開発者オプションに従い、エージェントはこの設定を使用</string>
+    <string name="ig27c_nomodel">チャットモデルが未読み込みのため、一般的な画質語だけを追加します。先にモデル画面で読み込んでください。</string>
+    <string name="ig27c_manage">タグを管理</string>
+    <string name="ig27c_search">タグを検索</string>
+    <string name="ig27c_all">すべて</string>
+    <string name="ig27c_edit_tag">タグを編集</string>
+    <string name="ig27c_count">%1$d 件</string>
+    <string name="ig27c_none">一致するタグはありません</string>
+    <string name="ig27c_cat">カテゴリ</string>
 </resources>

@@ -45,7 +45,6 @@
     <string name="ch232_err_image">यह इमेज पढ़ी नहीं जा सकी</string>
     <string name="ch232_delete_q">“%1$s” हटाएँ?</string>
     <string name="ch232_delete_msg">कार्ड फ़ाइल और अवतार हट जाएँगे; मौजूदा चैट बनी रहेंगी।</string>
-    <string name="ch232_avatar_hint">इमेज चुनने के लिए अवतार पर टैप करें</string>
     <string name="ch232_f_name">नाम</string>
     <string name="ch232_f_personality">व्यक्तित्व</string>
     <string name="ch232_f_scenario">परिदृश्य</string>
@@ -53,21 +52,16 @@
     <string name="ch232_f_alt">वैकल्पिक अभिवादन %1$d</string>
     <string name="ch232_add_alt">वैकल्पिक अभिवादन जोड़ें</string>
     <string name="ch232_f_tags">टैग</string>
-    <string name="ch232_h_tags">कॉमा से अलग करें</string>
     <string name="ch232_bind_title">बाइंडिंग (वैकल्पिक)</string>
     <string name="ch232_bind_model">मॉडल</string>
     <string name="ch232_bind_voice">पढ़ने की आवाज़</string>
     <string name="ch232_voice_set">बाइंड: %1$s (हटाने के लिए टैप करें)</string>
     <string name="ch232_bind_style">इमेज शैली</string>
-    <string name="ch232_h_style">इमेज प्रॉम्प्ट से पहले जुड़ता है, जैसे anime, watercolor</string>
     <string name="ch232_follow_current">मौजूदा उपयोग करें</string>
     <string name="ch232_missing">इस डिवाइस पर नहीं, मौजूदा उपयोग होगा</string>
-    <string name="ch232_bind_note">इस किरदार से चैट शुरू करने पर बाइंड किया गया मॉडल और आवाज़ लग जाते हैं (न हों तो मौजूदा रहते हैं)। मौजूदा आवाज़ बाइंड करने के लिए आवाज़ पर टैप करें। इमेज शैली तब लागू होती है जब एजेंट इमेज बनाता है।</string>
     <string name="ch232_advanced">उन्नत</string>
     <string name="ch232_f_examples">उदाहरण संवाद</string>
-    <string name="ch232_h_examples">हर हिस्सा &lt;START&gt; से शुरू करें, जैसे {{user}}: नमस्ते / {{char}}: …</string>
     <string name="ch232_f_system">सिस्टम प्रॉम्प्ट</string>
-    <string name="ch232_h_system">खाली = डिफ़ॉल्ट; {{original}} = सेटिंग्स का आपका सिस्टम प्रॉम्प्ट</string>
     <string name="ch232_f_post">इतिहास के बाद निर्देश</string>
     <string name="ch232_f_notes">निर्माता के नोट्स</string>
     <string name="ch232_lore">अंतर्निहित लोरबुक: %1$d प्रविष्टियाँ सक्रिय, कीवर्ड से ट्रिगर होकर नवीनतम संदेश के बाद जुड़ती हैं (बजट संदर्भ का लगभग 10%%)</string>
@@ -1839,9 +1833,6 @@
     <string name="imagegen_6b0e80">NPU छवि निर्माण नेटिव लाइब्रेरी लोड नहीं हुई: %1$s</string>
     <string name="imagegen_a999cf">QNN बैकएंड आरंभ करना विफल: %1$s</string>
     <string name="ch235_f_prompt">प्रॉम्प्ट</string>
-    <string name="ch235_h_prompt">सीधे प्रॉम्प्ट लिखें: वह कौन है, स्वभाव, बोलने का ढंग, आपसे रिश्ता…</string>
-    <string name="ch235_h_first">वैकल्पिक। किरदार की पहली पंक्ति</string>
-    <string name="ch235_advanced_sub">स्वभाव, परिदृश्य, वैकल्पिक अभिवादन, टैग, उदाहरण, सिस्टम प्रॉम्प्ट… (Tavern कार्ड)</string>
     <string name="engine_vk236">Vulkan (Mali / Immortalis · Q4_0 / Q4_K)</string>
     <string name="imagegen_sd240_cancelled">Generation stopped</string>
     <string name="imagegen_sd240_noimg2img">This model does not support image-to-image yet</string>
@@ -2129,8 +2120,8 @@
     <string name="cool267_stop_sub">मौजूदा जवाब पूरा न करें</string>
     <string name="cool267_wait">ठंडा हो रहा %1$s°C, %2$d°C पर जारी</string>
     <string name="cool267_short">ठंडा हो रहा</string>
-    <string name="ig268_expand">प्रॉम्प्ट बढ़ाएँ</string>
-    <string name="ig268_expand_sub">छोटे विवरण से ब्योरे जोड़ता है</string>
+    <string name="ig268_expand">AI से प्रॉम्प्ट पूरा करें</string>
+    <string name="ig268_expand_sub">लोड किया गया चैट मॉडल छोटे विवरण को विस्तृत अंग्रेज़ी प्रॉम्प्ट में बदलता है</string>
     <string name="ig268_lowmem">कम मेमोरी मोड</string>
     <string name="ig268_lowmem_sub">लंबी भुजा ≤768, हर चित्र के बाद मेमोरी खाली, थोड़ा धीमा</string>
     <string name="ig268_add_tag">टैग जोड़ें</string>
@@ -2138,7 +2129,7 @@
     <string name="ig268_tag_zh">लेबल (वैकल्पिक)</string>
     <string name="ig268_del_tag">टैग “%1$s” हटाएँ?</string>
     <string name="ig268_reset_tags">डिफ़ॉल्ट वापस लाएँ</string>
-    <string name="ig268_expanding">प्रॉम्प्ट बढ़ाया जा रहा है…</string>
+    <string name="ig268_expanding">चैट मॉडल से प्रॉम्प्ट पूरा किया जा रहा है…</string>
     <string name="ig268_used">उपयोग किया गया प्रॉम्प्ट: %1$s</string>
     <string name="ig268_license_title">लाइसेंस</string>
     <string name="ig268_license_msg">%1$s: केवल गैर-व्यावसायिक; बनाए गए चित्र व्यावसायिक रूप से उपयोग हो सकते हैं।\nलाइसेंस: %2$s\nडाउनलोड करना सहमति है।</string>
@@ -2191,4 +2182,12 @@
     <string name="npu27_qnn_installed">इंस्टॉल · QNN 2.50</string>
     <string name="npu27_geniex_installed">इंस्टॉल · GenieX %1$s</string>
     <string name="ctx27_takeover">चैट डेवलपर विकल्पों से; एजेंट अब भी यही सेटिंग मानता है</string>
+    <string name="ig27c_nomodel">कोई चैट मॉडल लोड नहीं है, इसलिए केवल सामान्य गुणवत्ता शब्द जोड़े जाएँगे। पहले मॉडल पेज पर चैट मॉडल लोड करें।</string>
+    <string name="ig27c_manage">टैग प्रबंधित करें</string>
+    <string name="ig27c_search">टैग खोजें</string>
+    <string name="ig27c_all">सभी</string>
+    <string name="ig27c_edit_tag">टैग संपादित करें</string>
+    <string name="ig27c_count">%1$d टैग</string>
+    <string name="ig27c_none">कोई मेल खाता टैग नहीं</string>
+    <string name="ig27c_cat">श्रेणी</string>
 </resources>
