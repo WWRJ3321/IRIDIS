@@ -364,7 +364,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             heads[u] = h
             Triple(u, n, det.role(n, h))
         }
-        if (files.any { it.third == FileRole.NPU }) return@withContext ImportPlan(files, npu = true, defaults = Defaults(8, 1f, true))
+        if (det.isNpuPlan(files.map { it.second })) return@withContext ImportPlan(files, npu = true, defaults = Defaults(8, 1f, true))
         fun s(id: Int, vararg a: Any) = I18n.s(id, *a)
         files.firstOrNull { it.third == FileRole.UNKNOWN }?.let { return@withContext ImportPlan(files, error = s(R.string.ig27_unknown, it.second)) }
         val mains = files.filter { it.third == FileRole.CHECKPOINT || it.third == FileRole.DIFFUSION }
@@ -458,33 +458,57 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             val dir = File(root, id)
             val err = withContext(Dispatchers.IO) {
                 runCatching {
-                    val picked = uris.map { it to nameOf(it) }.filter { it.second in AnimaQnnFiles.NAMES }.distinctBy { it.second }
-                    val total = picked.sumOf { sizeOf(it.first).coerceAtLeast(0L) }.coerceAtLeast(1L)
+                    val named = uris.map { it to nameOf(it) }
+                    val zips = named.filter { ImportDetect.isZip(it.second) }
+                    val picked = named.filter { it.second in AnimaQnnFiles.NAMES }.distinctBy { it.second }
+                    val total = (zips + picked).sumOf { sizeOf(it.first).coerceAtLeast(0L) }.coerceAtLeast(1L)
                     var done = 0L
-                    dir.mkdirs()
-                    _ui.update { it.copy(importing = 0f) }
-                    for ((uri, fn) in picked) {
+                    var last = 0L
+                    fun tick(n: Int) {
+                        done += n
+                        val now = System.currentTimeMillis()
+                        if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
+                    }
+                    fun save(fn: String, ins: java.io.InputStream, count: Boolean) {
                         val part = File(dir, "$fn.part")
                         _ui.update { it.copy(importFile = fn) }
-                        getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
-                            part.outputStream().use { os ->
-                                val buf = ByteArray(1 shl 20)
-                                var last = 0L
-                                while (true) {
-                                    val n = ins.read(buf)
-                                    if (n < 0) break
-                                    os.write(buf, 0, n); done += n
-                                    val now = System.currentTimeMillis()
-                                    if (now - last >= 200) { last = now; _ui.update { it.copy(importing = (done.toFloat() / total).coerceIn(0f, 1f)) } }
-                                }
+                        part.outputStream().use { os ->
+                            val buf = ByteArray(1 shl 20)
+                            while (true) {
+                                val n = ins.read(buf)
+                                if (n < 0) break
+                                os.write(buf, 0, n); if (count) tick(n)
                             }
-                        } ?: throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
+                        }
                         if (!part.renameTo(File(dir, fn))) throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
                     }
-                    val miss = AnimaQnnFiles(dir).missing()
+                    dir.mkdirs()
+                    _ui.update { it.copy(importing = 0f) }
+                    // 整包 zip：只解出包内认得的文件（按文件名，忽略 zip 里的目录层级）；进度按读过的压缩字节算
+                    for ((uri, zn) in zips) {
+                        val raw = getApplication<Application>().contentResolver.openInputStream(uri) ?: throw IllegalStateException(I18n.s(R.string.ig269_bad_file, zn))
+                        val counted = object : java.io.FilterInputStream(raw.buffered(1 shl 20)) {
+                            override fun read(): Int = super.read().also { if (it >= 0) tick(1) }
+                            override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) tick(it) }
+                        }
+                        java.util.zip.ZipInputStream(counted).use { z ->
+                            while (true) {
+                                val e = z.nextEntry ?: break
+                                val fn = e.name.substringAfterLast('/')
+                                if (!e.isDirectory && fn in AnimaQnnFiles.NAMES && !File(dir, fn).exists()) save(fn, z, count = false)
+                            }
+                        }
+                    }
+                    for ((uri, fn) in picked) {
+                        getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins -> save(fn, ins, count = true) }
+                            ?: throw IllegalStateException(I18n.s(R.string.ig269_bad_file, fn))
+                    }
+                    val files = AnimaQnnFiles(dir)
+                    val miss = files.missing()
                     if (miss.isNotEmpty()) throw IllegalStateException(I18n.s(R.string.ig270_npu_missing, miss.joinToString()))
                     val a = ImportArch.ANIMA_NPU
-                    imp.put(ImportedImage(id, imp.cleanName(name, I18n.s(R.string.ig27_npu)), a.name, id, id, id, steps.coerceIn(1, 50), 1f))
+                    imp.put(ImportedImage(id, imp.cleanName(name, I18n.s(R.string.ig27_npu)), a.name, id, id, id, steps.coerceIn(1, 50), 1f,
+                        pack = if (files.ld) ImportedImage.PACK_LD else ""))
                     null
                 }.exceptionOrNull()
             }

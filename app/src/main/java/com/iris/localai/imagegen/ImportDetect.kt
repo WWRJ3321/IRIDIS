@@ -87,7 +87,13 @@ object ImportDetect {
     private val IMAGE_GGUF_ARCH = setOf("sd1", "sd2", "sdxl", "sd3", "flux", "flux2", "z_image", "qwen_image", "chroma", "anima", "wan", "lumina2")
 
     /** 的 NPU 包文件名（[AnimaQnnFiles.NAMES]）。 */
-    fun isNpuFile(fileName: String) = fileName in AnimaQnnFiles.NAMES
+    fun isNpuFile(fileName: String) = fileName in AnimaQnnFiles.NAMES || isZip(fileName)
+
+    /** NPU 包整包 zip（导入时解出包内认得的文件）。 */
+    fun isZip(fileName: String) = fileName.lowercase().endsWith(".zip")
+
+    /** 这批文件是 NPU 包：至少有一个 zip 或非通用名（[AnimaQnnFiles.WEAK] 之外）的包内文件。 */
+    fun isNpuPlan(names: List<String>) = names.any { isZip(it) || (it in AnimaQnnFiles.NAMES && it !in AnimaQnnFiles.WEAK) }
 
     fun role(fileName: String, head: FileHead?): FileRole {
         if (isNpuFile(fileName) && !fileName.endsWith(".gguf") && !fileName.endsWith(".safetensors")) return FileRole.NPU

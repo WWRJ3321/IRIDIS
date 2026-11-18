@@ -2191,4 +2191,5 @@
     <string name="ig27c_count">%1$d 条</string>
     <string name="ig27c_none">没有匹配的标签</string>
     <string name="ig27c_cat">分类</string>
+    <string name="ig273_npu_chip_ld">这个 NPU 包需要骁龙 8 Gen 3 或更新的芯片</string>
 </resources>

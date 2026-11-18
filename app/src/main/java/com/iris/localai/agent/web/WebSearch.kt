@@ -45,8 +45,8 @@ object WebSearchTool : AgentTool {
     override val group = ToolGroup.WEB
     override val name = "web_search"
     override val label = "联网搜索"
-    override val description = "搜索网页或新闻，返回前几条结果的标题、摘要和链接"
-    override val promptLine = "web_search(query, news?: bool) | web_search(url): read one page"
+    override val description = "搜索网页或新闻，返回前几条结果的标题、摘要和链接；有链接就用 web_fetch（或 url 参数）直接读该页"
+    override val promptLine = "web_search(query, news?: bool) | have a link? web_fetch(url) / web_search(url): read that page, don't search it"
     override val risk = ToolRisk.NETWORK
     override val defaultPermission: Permission = Permission.ALLOW
 
@@ -56,6 +56,8 @@ object WebSearchTool : AgentTool {
         val q = query(args)?.trim()
             ?: throw IllegalArgumentException("缺少参数 query")
         if (q.isEmpty()) throw IllegalArgumentException("缺少参数 query")
+        // 小模型常把整条链接当搜索词：直接读该页
+        SearchText.asUrl(q)?.let { u -> return WebFetchTool.run(JsonObject(mapOf("url" to JsonPrimitive(u))), env) }
         val news = Args.bool(args, "news") ?: SearchText.looksLikeNews(q)
         // 谷歌/必应（浏览器） search in the shared in-app browser; a captcha (or no readable
         // results) falls back to Bing over HTTP for this query, with the reason in the output.
@@ -113,6 +115,19 @@ object SearchText {
     private val NEWS = Regex("(?i)新闻|新聞|头条|頭條|热点|熱點|最新消息|今日要闻|\\bnews\\b|headlines?")
 
     fun looksLikeNews(q: String): Boolean = NEWS.containsMatchIn(q)
+
+    private val BARE_HOST = Regex("^(?:www\\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,24}(?::\\d{1,5})?(?:[/?#]\\S*)?$", RegexOption.IGNORE_CASE)
+
+    /** 搜索词（去空白、去包裹的引号/尖括号）本身是 http(s) 链接或「域名/路径」时返回要读的 URL，否则 null。 */
+    fun asUrl(q: String): String? {
+        val t = q.trim().trim('"', '\'', '<', '>', '`', '“', '”').trim()
+        if (t.isEmpty() || t.any { it.isWhitespace() }) return null
+        if (Regex("^https?://\\S+$", RegexOption.IGNORE_CASE).matches(t)) return t
+        // 裸域名要带路径（github.com/a/b）或以 www. 开头，免得把「node.js」「v2.6」之类当网址
+        if (!BARE_HOST.matches(t)) return null
+        if (!(t.contains('/') || t.startsWith("www.", ignoreCase = true))) return null
+        return "https://$t"
+    }
 
     fun rssUrl(q: String, news: Boolean): String {
         val e = URLEncoder.encode(q, "UTF-8")

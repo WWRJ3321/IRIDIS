@@ -2190,4 +2190,5 @@
     <string name="ig27c_count">%1$d tags</string>
     <string name="ig27c_none">No matching tags</string>
     <string name="ig27c_cat">Category</string>
+    <string name="ig273_npu_chip_ld">This NPU pack needs Snapdragon 8 Gen 3 or newer</string>
 </resources>

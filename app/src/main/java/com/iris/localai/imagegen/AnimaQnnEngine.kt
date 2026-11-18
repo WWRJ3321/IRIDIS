@@ -16,9 +16,10 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * 用户导入的 Anima NPU 包（QNN context binary，HTP v79 / 骁龙 8 Elite）放在一个文件夹里。
- * 文件名与切分方式是包本身的约定：文本编码器 text.bin（Qwen3-0.6B + 6 层 adapter → 256×1024 上下文），
- * 扩散模型四段 part0..3.bin（每段 7 层），解码器 dec.bin（taew2_1），以及 CPU 上查的两张词表和两个分词器。
+ * 用户导入的 Anima NPU 包（QNN context binary）放在一个文件夹里，认两种布局：
+ * - 8 Elite 布局（HTP v79）：文本编码器 text.bin（Qwen3-0.6B + 6 层 adapter → 256×1024 上下文），
+ *   扩散模型四段 part0..3.bin（每段 7 层），解码器 dec.bin（taew2_1），以及 CPU 上查的两张词表和两个分词器。
+ * - 另一种常见布局（[AnimaLdFiles]，QNN 2.28 / HTP v75 起）：clip.bin、unet_part1/2.bin、vae_decoder.bin、token_emb.bin 等。
  */
 data class AnimaQnnFiles(val dir: File) {
     val text = File(dir, "text.bin")
@@ -30,18 +31,25 @@ data class AnimaQnnFiles(val dir: File) {
     val qwenTok = File(dir, "qwen_tokenizer.json")
     val t5Tok = File(dir, "t5_tokenizer.json")
 
+    /** 文件夹是 [AnimaLdFiles] 布局。 */
+    val ld: Boolean get() = AnimaLdFiles.looksLike(dir)
+
     fun missing(): List<String> {
+        if (ld) return AnimaLdFiles(dir).missing()
         val need = listOf(text, dec, t5, qwenTok, t5Tok) + parts
         val m = need.filter { !it.isFile }.map { it.name }
         return if (!qwenF16.isFile && !qwenQ8.isFile) m + qwenF16.name else m
     }
 
     companion object {
-        /** 导入时收的文件名（其它一律跳过）。 */
-        val NAMES = setOf(
+        val ELITE_NAMES = setOf(
             "text.bin", "part0.bin", "part1.bin", "part2.bin", "part3.bin", "dec.bin",
             "qwen_embed_f16.raw", "qwen_embed_q8.raw", "t5_embed_f16.raw", "qwen_tokenizer.json", "t5_tokenizer.json",
         )
+        /** 导入时收的文件名（两种布局；其它一律跳过）。 */
+        val NAMES = ELITE_NAMES + AnimaLdFiles.NAMES
+        /** 单独出现时不足以说明是 NPU 包的通用文件名。 */
+        val WEAK = setOf("config.json", "tokenizer.json", "ANIMA")
     }
 }
 
@@ -120,6 +128,8 @@ class AnimaQnnEngine(
     private var parts: List<QnnGraph> = emptyList()
     private var dec: QnnGraph? = null
 
+    private val ldRunner = AnimaLdRunner(loader) { cancelled.get() }
+
     class CancelledException : RuntimeException("已取消")
 
     override fun cancel() = cancelled.set(true)
@@ -129,6 +139,18 @@ class AnimaQnnEngine(
             cancelled.set(false)
             synchronized(lock) {
                 val d = modelDir(model) ?: error(QnnSdEngine.NOT_DOWNLOADED)
+                if (AnimaQnnFiles(d).ld) {
+                    if (dir != null) releaseLocked(keepTables = false)
+                    ldRunner.prepare(d)
+                    runCatching { perf.burst() }
+                    try {
+                        val (w, h, argb) = ldRunner.generate(req.prompt, req.steps.coerceIn(1, 50), req.seed, req.lowMem, onProgress)
+                        return@synchronized encodePng(argb, w, h)
+                    } finally {
+                        runCatching { perf.relax() }
+                    }
+                }
+                ldRunner.release()
                 prepare(d)
                 val (w, h) = AnimaMath.pickSize(sizes, req.width, req.height)
                 val t = tok!!.encode(req.prompt)
@@ -331,7 +353,7 @@ class AnimaQnnEngine(
     }
 
     /** 释放 NPU 上的图（约 2 GB）。 */
-    fun release() = synchronized(lock) { releaseLocked(keepTables = false) }
+    fun release() = synchronized(lock) { releaseLocked(keepTables = false); ldRunner.release() }
 
     private fun encodePng(argb: IntArray, w: Int, h: Int): ByteArray {
         val bmp = android.graphics.Bitmap.createBitmap(argb, w, h, android.graphics.Bitmap.Config.ARGB_8888)

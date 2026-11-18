@@ -56,7 +56,7 @@ class AnimaQnnTest {
         assertTrue(m.animaQnn && m.imported); assertEquals(79, m.minHtpArch)
         val d = Files.createTempDirectory("pack").toFile()
         assertTrue(AnimaQnnFiles(d).missing().size == 10)
-        (AnimaQnnFiles.NAMES - "qwen_embed_q8.raw").forEach { File(d, it).writeText("x") }
+        (AnimaQnnFiles.ELITE_NAMES - "qwen_embed_q8.raw").forEach { File(d, it).writeText("x") }
         assertTrue(AnimaQnnFiles(d).missing().isEmpty())
         d.deleteRecursively()
     }

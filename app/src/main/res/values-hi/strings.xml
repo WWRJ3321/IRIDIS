@@ -2190,4 +2190,5 @@
     <string name="ig27c_count">%1$d टैग</string>
     <string name="ig27c_none">कोई मेल खाता टैग नहीं</string>
     <string name="ig27c_cat">श्रेणी</string>
+    <string name="ig273_npu_chip_ld">इस NPU पैक के लिए Snapdragon 8 Gen 3 या नया चिप चाहिए</string>
 </resources>
