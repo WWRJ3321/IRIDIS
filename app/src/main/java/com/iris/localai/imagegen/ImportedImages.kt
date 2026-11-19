@@ -41,6 +41,8 @@ data class ImportedImage(
     val tagStyle: Boolean = false,
     /** NPU 包布局："" = 8 Elite 布局，[PACK_LD] = [AnimaLdFiles] 布局。 */
     val pack: String = "",
+    /** Anima NPU 包的调度偏移（高级里调，默认 3.0）。 */
+    val shift: Float = AnimaMath.DEFAULT_SHIFT,
 ) {
     val sdFiles: SdFiles get() = SdFiles(diffusion, llm, vae, model, clipL, clipG, t5)
 
@@ -54,6 +56,7 @@ data class ImportedImage(
             id = id, tier = Tier.MID, name = name, backend = Backend.QNN,
             files = emptyList(), fixedSize = null, defaultSteps = steps, defaultCfg = 1f,
             note = "NPU", minHtpArch = if (pack == PACK_LD) AnimaLdFiles.MIN_ARCH else 79, tagStyle = true, imported = true, animaQnn = true,
+            animaShift = AnimaMath.clampShift(shift),
         )
         return ImageModel(
             id = id, tier = Tier.MID, name = name, backend = Backend.SDCPP,

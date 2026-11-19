@@ -175,7 +175,7 @@ internal class AnimaLdRunner(private val loader: QnnGraphLoader, private val can
     }
 
     /** 返回 (宽, 高, ARGB)。 */
-    fun generate(prompt: String, steps: Int, seed: Long, lowMem: Boolean, onProgress: (Int, Int) -> Unit): Triple<Int, Int, IntArray> {
+    fun generate(prompt: String, steps: Int, seed: Long, lowMem: Boolean, onProgress: (Int, Int) -> Unit, shift: Float = AnimaMath.DEFAULT_SHIFT): Triple<Int, Int, IntArray> {
         val ctx = runText(prompt)
         check()
         loadDraw()
@@ -184,7 +184,7 @@ internal class AnimaLdRunner(private val loader: QnnGraphLoader, private val can
         val (lh, lw) = AnimaLdMath.latentHw(sampleSpec.dims)
         val nl = sampleSpec.elements
         require(nl == 16 * lh * lw) { "sample 形状不符（${sampleSpec.dims}）" }
-        val sig = AnimaMath.sigmas(steps)
+        val sig = AnimaMath.sigmas(steps, shift)
         val rng = Random(if (seed < 0) System.nanoTime() else seed)
         val lat = FloatArray(nl) { rng.nextGaussian().toFloat() * sig[0] }
         val out1 = p1.outputs.associate { it.name to TensorCodec.alloc(it) }

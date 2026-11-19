@@ -1,5 +1,8 @@
 package com.iris.localai.memory
 
+import com.iris.localai.I18n
+import com.iris.localai.R
+
 import com.iris.localai.data.Conversation
 import com.iris.localai.data.Role
 import com.iris.localai.util.TokenEstimator
@@ -179,11 +182,11 @@ class MemoryDocs(dir: File) {
 /** How the snapshot enters the system prompt. Pure. */
 object MemoryPrompt {
     /** shorter (was 35 estimated tokens); same meaning. */
-    const val HEADER = "【长期记忆】（可能过时，以用户当前说法为准）"
+    const val HEADER = "【长期记忆】（冲突时以用户当前说法为准）"
 
     /** line under the frozen ABOUT/PREF block, and under a turn's 【相关记忆】. */
-    const val NOTE = "（以上记忆可能过时，以用户当前说法为准）"
-    const val TURN_NOTE = "（相关记忆，可能过时，以用户当前说法为准；无关就忽略）"
+    const val NOTE = "（冲突时以用户当前说法为准）"
+    const val TURN_NOTE = "（相关记忆；冲突时以用户当前说法为准，用不上就不提）"
 
     /**
      * the system-prompt block for a frozen [snapshot]. New snapshots carry their own plain
@@ -269,17 +272,23 @@ object MemoryCommand {
         return if (t.startsWith("我") || t.startsWith("用户") || t.startsWith("i ") || t.startsWith("i'm") || t.startsWith("my ")) MemoryTarget.USER else MemoryTarget.MEMORY
     }
 
-    const val DISABLED = "长期记忆已关闭，没有保存"
+    val DISABLED: String get() = I18n.s(R.string.mem27e_off)
+
+    /** 「关于你」/「记住的事」 in the UI language. */
+    fun targetLabel(target: MemoryTarget): String = when (target) {
+        MemoryTarget.USER -> I18n.s(R.string.mem27e_user)
+        MemoryTarget.MEMORY -> I18n.s(R.string.mem27e_memory)
+    }
 
     /** What the user sees after a save ([MemoryOps] messages are written for the model, in English). */
     fun userMessage(r: ItemsEdit, entry: String, target: MemoryTarget): String = when (r) {
-        is ItemsEdit.Ok -> if (r.replaced != null) "已更新：$entry（原：${r.replaced}）" else "已记住：$entry（「${target.label}」，之后的新对话都会参考）"
+        is ItemsEdit.Ok -> if (r.replaced != null) I18n.s(R.string.mem27e_updated, entry, r.replaced) else I18n.s(R.string.mem27e_saved, entry, targetLabel(target))
         is ItemsEdit.Err -> when {
-            r.message.startsWith("already") -> "这条已经记过了：$entry"
-            r.message.startsWith("memory is full") -> "记忆已满（最多 ${MemoryStore.MAX_ITEMS} 条），请先在记忆列表里删掉一些"
-            r.message.startsWith("entry too long") -> "这条太长了（每条最多 $ENTRY_MAX 字），请精简后再试"
-            r.message.startsWith("content is empty") -> "没有可记住的内容"
-            else -> "没有保存：${r.message}"
+            r.message.startsWith("already") -> I18n.s(R.string.mem27e_dup, entry)
+            r.message.startsWith("memory is full") -> I18n.s(R.string.mem27e_full, MemoryStore.MAX_ITEMS)
+            r.message.startsWith("entry too long") -> I18n.s(R.string.mem27e_long, ENTRY_MAX)
+            r.message.startsWith("content is empty") -> I18n.s(R.string.mem27e_empty)
+            else -> I18n.s(R.string.mem27e_notsaved, r.message)
         }
     }
 }

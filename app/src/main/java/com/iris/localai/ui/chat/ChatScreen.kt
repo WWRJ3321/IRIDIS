@@ -190,6 +190,7 @@ fun ChatScreen(
     }
     val currentPlan by vm.plan.collectAsStateWithLifecycle()
     val summaries by vm.summaries.collectAsStateWithLifecycle()
+    val customOrder by vm.customOrder.collectAsStateWithLifecycle()
     val models by vm.models.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val guiSetup by vm.guiSetup.collectAsStateWithLifecycle()
@@ -325,6 +326,8 @@ fun ChatScreen(
                 onRename = vm::rename,
                 onPin = vm::togglePin,
                 onDelete = vm::delete,
+                customOrder = customOrder,
+                onReorder = vm::reorderChats,
                 onModels = { scope.launch { drawer.close() }; onOpenModels() },
                 onSettings = { scope.launch { drawer.close() }; onOpenSettings() },
                 onApi = { scope.launch { drawer.close() }; onOpenApi() },

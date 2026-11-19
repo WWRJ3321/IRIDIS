@@ -64,7 +64,6 @@
     <string name="ch232_f_system">システムプロンプト</string>
     <string name="ch232_f_post">履歴後の指示</string>
     <string name="ch232_f_notes">作者メモ</string>
-    <string name="ch232_lore">内蔵ワールド情報：%1$d 件有効。キーワードで発動し、最新メッセージの後に追加（予算はコンテキストの約 10%%）</string>
     <string name="ch232_user_default">ユーザー</string>
     <string name="data232_bonsai">Ternary Bonsai 2 %1$s（テスト）</string>
     <string name="data232_bonsai_purpose">3 値の低ビットモデルで非常に小さい。CPU / GPU のみ、実機未検証</string>
@@ -2191,4 +2190,18 @@
     <string name="ig27c_none">一致するタグはありません</string>
     <string name="ig27c_cat">カテゴリ</string>
     <string name="ig273_npu_chip_ld">この NPU パックには Snapdragon 8 Gen 3 以降が必要です</string>
+    <string name="mem27e_off">長期記憶がオフのため保存していません</string>
+    <string name="mem27e_user">あなたについて</string>
+    <string name="mem27e_memory">覚えたこと</string>
+    <string name="mem27e_saved">覚えました：%1$s（「%2$s」、今後の新しい会話で参照）</string>
+    <string name="mem27e_updated">更新しました：%1$s（元：%2$s）</string>
+    <string name="mem27e_dup">すでに覚えています：%1$s</string>
+    <string name="mem27e_full">記憶がいっぱいです（最大 %1$d 件）。先に記憶一覧から削除してください</string>
+    <string name="mem27e_long">長すぎます（1 件最大 %1$d 文字）。短くしてください</string>
+    <string name="mem27e_empty">覚える内容がありません</string>
+    <string name="mem27e_notsaved">保存していません：%1$s</string>
+    <string name="ig27e_zip_bad">圧縮ファイルが壊れているか、ダウンロードが完了していません。もう一度ダウンロードしてください</string>
+    <string name="ig27e_shift">スケジュールシフト</string>
+    <string name="hd27e_chats">会話</string>
+    <string name="mm27e_npu_note">このモデルは NPU ではチャットのみです。画像認識には GPU / CPU に切り替えてください</string>
 </resources>

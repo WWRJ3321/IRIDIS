@@ -10,7 +10,7 @@ import com.iris.localai.agent.core.AgentPrompt
 import com.iris.localai.agent.core.Permission
 import com.iris.localai.agent.core.UserDecision
 import com.iris.localai.agent.tools.ActivateTool
-import com.iris.localai.agent.tools.MemoryTool
+import com.iris.localai.agent.tools.MemoryGate
 import com.iris.localai.agent.tools.AgentTool
 import com.iris.localai.agent.tools.AgentTools
 import com.iris.localai.agent.tools.AppMatcher
@@ -555,6 +555,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (viewing.value?.id == id) viewing.update { it?.copy(title = title) }
     }
 
+    /** 侧栏长按拖动后的新顺序（显示顺序的全部 id）。 */
+    val customOrder = c.conversations.customOrder
+    fun reorderChats(ids: List<String>) = viewModelScope.launch { c.conversations.reorder(ids) }
+
     fun togglePin(id: String, pinned: Boolean) = viewModelScope.launch {
         c.conversations.setPinned(id, pinned)
         if (conversation.value.id == id) conversation.update { it.copy(pinned = pinned) }
@@ -1074,7 +1078,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val ag = c.agent.settings.current
         val memoryOn = c.agent.memorySettings.current.enabled
         // 长期记忆关闭时智能体拿不到记忆工具，@ 菜单也不再列出它。
-        val tools = AgentTools.all.filter { ag.isEnabled(it) && it.name != SkillTool.name && it.name != ActivateTool.name && (it.name != MemoryTool.name || memoryOn) }
+        val tools = AgentTools.all.filter { MemoryGate.listed(it, ag, memoryOn) && it.name != SkillTool.name && it.name != ActivateTool.name }
         val skillOn = AgentTools.all.any { it.name == SkillTool.name && ag.isEnabled(it) }
         val skills = if (skillOn) runCatching { c.agent.skills.all() }.getOrDefault(emptyList()) else emptyList()
         return RefCatalog(

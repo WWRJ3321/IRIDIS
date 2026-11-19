@@ -6,6 +6,8 @@ import com.iris.localai.R
 import com.iris.localai.engine.GenEvent
 import com.iris.localai.engine.PromptMessage
 import com.iris.localai.engine.Requester
+import com.iris.localai.imagegen.AnimaMath
+import com.iris.localai.imagegen.ImportErrors
 import com.iris.localai.imagegen.AnimaQnnFiles
 import com.iris.localai.imagegen.Defaults
 import com.iris.localai.imagegen.Family
@@ -438,7 +440,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }.exceptionOrNull()
             }
             if (err != null) withContext(Dispatchers.IO) { dir.deleteRecursively() }
-            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> e.message ?: e.toString() }) }
+            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> ImportErrors.message(e) }) }
             refresh()
             if (err == null) imp.get(id)?.toModel()?.let { m ->
                 selectModel(m)
@@ -513,9 +515,19 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }.exceptionOrNull()
             }
             if (err != null) withContext(Dispatchers.IO) { dir.deleteRecursively() }
-            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> e.message ?: e.toString() }) }
+            _ui.update { it.copy(importing = null, importFile = "", catalogRev = it.catalogRev + 1, error = err?.let { e -> ImportErrors.message(e) }) }
             refresh()
             if (err == null) imp.get(id)?.toModel()?.let { selectModel(it) }
+        }
+    }
+
+    /** Anima NPU 模型的调度偏移（高级）：存进该导入模型，下次生成起用。 */
+    fun setAnimaShift(m: ImageModel, v: Float) {
+        val shift = AnimaMath.clampShift(v)
+        if (!m.imported || !m.animaQnn || shift == m.animaShift) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { ImportedImages.get(m.id)?.let { e -> if (e.shift != shift) ImportedImages.put(e.copy(shift = shift)) } }
+            _ui.update { it.copy(catalogRev = it.catalogRev + 1) }
         }
     }
 

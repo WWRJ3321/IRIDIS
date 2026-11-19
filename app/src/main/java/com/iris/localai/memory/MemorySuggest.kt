@@ -23,8 +23,21 @@ object MemorySuggest {
     private val SPACES = Regex("\\s+")
     private val QUOTE = Regex("(?:他|她|它|他们|她们|别人|有人|朋友|同事)(?:说|觉得|认为|讲)")
 
+    // English: the same rules for sentences written in English (lower-cased, spaces kept).
+    private val EN_MY_X_IS = Regex("^my (birthday|name|email|e-mail|phone( number)?|job|company|pronouns|timezone|time zone) is .+")
+    private val EN_RULE = Regex("^(?:please )?(?:from now on|in (?:the )?future|always|never(?! mind)|don'?t ever|do not ever) .{3,}")
+    private val EN_LIKE = Regex("^(?:actually |usually |generally )?i (?:really |much |also |always |usually )?(like|love|prefer|hate|dislike|don'?t like|do not like|enjoy)\\b.+")
+    private val EN_ABOUT = Regex("^i(?:'m| am) (?:a|an|from|based in|allergic to|vegetarian|vegan)\\b.+|^i (?:live|work|use|have|own|study)\\b.+|^my name'?s .+|^call me .+")
+    private val EN_TRANSIENT = Regex("^i (?:have|had) (?:a|one|another|some) (?:quick |small )?(?:question|problem|issue|idea)|^i (?:live|work) (?:on|with) (?:this|that|it)\\b")
+    private val EN_HYPOTHETICAL = Regex("\\b(if|suppose|supposing|for example|for instance|e\\.g\\.|imagine|let'?s say|what if)\\b")
+    private val EN_QUESTION = Regex("^(what|how|why|where|who|which|when|can|could|would|should|is|are|do|does|did)\\b")
+    private val EN_REQUEST = Regex("\\b(help me|can you|could you|would you|please (write|make|draw|give|tell|find|show|translate|explain))\\b")
+    private val EN_QUOTE = Regex("\\b(he|she|they|someone|somebody|people|my (friend|colleague|coworker)|a friend) (said|says|thinks|think|told|believes)\\b")
+    private val EN_SENTENCE_END = Regex("(?<=[a-z0-9)])\\.\\s+")
+    private val LATIN = Regex("^[A-Za-z]")
+
     fun detect(userText: String, items: List<MemoryItem> = emptyList(), ignored: Set<String> = emptySet()): List<Suggestion> {
-        for (m in SENTENCE.findAll(userText)) {
+        for (m in SENTENCE.findAll(userText.replace(EN_SENTENCE_END, ".\n"))) {
             val s = check(m.value) ?: continue
             if (MemoryMerge.isDup(items, s.text)) continue
             if (MemoryMerge.key(s.text) in ignored) continue
@@ -38,6 +51,7 @@ object MemorySuggest {
 
     private fun check(raw: String): Suggestion? {
         val trimmed = raw.replace(SPACES, " ").trim()
+        if (LATIN.containsMatchIn(trimmed)) return checkEn(trimmed)
         if (trimmed.endsWith("?") || trimmed.endsWith("？")) return null
         val s = trimmed.trimEnd('。', '.', '!', '！', ';', '；', '~', '～', ' ')
         if (s.endsWith("吗") || s.endsWith("呢") || s.endsWith("吧")) return null
@@ -51,6 +65,23 @@ object MemorySuggest {
             REQUEST.containsMatchIn(s) || TRANSIENT.containsMatchIn(compact) -> return null
             LIKE.containsMatchIn(compact) -> MemoryItem.Kind.PREF
             ABOUT.containsMatchIn(compact) -> MemoryItem.Kind.ABOUT
+            else -> return null
+        }
+        return Suggestion(MemoryCommand.entryFrom(s), kind)
+    }
+
+    private fun checkEn(trimmed: String): Suggestion? {
+        if (trimmed.endsWith("?")) return null
+        val s = trimmed.trimEnd('.', '!', ';', '~', ' ')
+        if (s.replace(" ", "").length < MIN || s.length > MAX) return null
+        val l = s.lowercase().replace('’', '\'')
+        if (EN_HYPOTHETICAL.containsMatchIn(l) || EN_QUOTE.containsMatchIn(l) || EN_QUESTION.containsMatchIn(l)) return null
+        val kind = when {
+            EN_MY_X_IS.containsMatchIn(l) -> MemoryItem.Kind.ABOUT
+            EN_RULE.containsMatchIn(l) -> MemoryItem.Kind.PREF
+            EN_REQUEST.containsMatchIn(l) || EN_TRANSIENT.containsMatchIn(l) -> return null
+            EN_LIKE.containsMatchIn(l) -> MemoryItem.Kind.PREF
+            EN_ABOUT.containsMatchIn(l) -> MemoryItem.Kind.ABOUT
             else -> return null
         }
         return Suggestion(MemoryCommand.entryFrom(s), kind)

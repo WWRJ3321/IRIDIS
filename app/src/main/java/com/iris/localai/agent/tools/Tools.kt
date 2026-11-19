@@ -69,6 +69,8 @@ class ToolEnv(
     val history: HistorySearch? = null,
     /** long-term memory for `memory` (null = memory switched off). */
     val memory: MemoryDocs? = null,
+    /** the 长期记忆 switch read live at call time (off = memory refuses even if [memory] was set when the run started). */
+    val memoryOn: () -> Boolean = { true },
     /** The conversation being answered (recall's default scope). */
     val conversationId: String? = null,
     /** Message ids recall leaves out (the request being answered). */
@@ -549,8 +551,7 @@ object AgentTools {
      * missing (recall without the history database, memory while memory is off).
      */
     fun enabled(s: AgentSettings, historyAvailable: Boolean, memoryOn: Boolean, knowledgeOn: Boolean = false, imageGenOn: Boolean = false): List<AgentTool> =
-        all.filter { s.isEnabled(it) }.filter {
-            (it.name != MemoryTool.name || memoryOn) &&
+        all.filter { MemoryGate.listed(it, s, memoryOn) }.filter {
                 // generate_image only while a runnable image model is downloaded (no prompt cost otherwise).
                 (it.name != GenerateImageTool.name || imageGenOn)
         } + runCatching { mcp() }.getOrDefault(emptyList())

@@ -422,6 +422,7 @@ class AgentContainer(context: Context) {
         sandbox, undo, fetcher = fetcher,
         history = history?.let { HistorySearchAdapter(it) },
         memory = memoryDocs.takeIf { memorySettings.current.enabled },
+        memoryOn = { memorySettings.current.enabled },
         conversationId = conversationId, recallExclude = exclude,
         external = externalFiles(),
         accessHint = accessHint(),

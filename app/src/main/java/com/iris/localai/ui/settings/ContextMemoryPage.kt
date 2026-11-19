@@ -83,9 +83,8 @@ object ContextMemoryText {
     /** 长期记忆 — the switch that was the memory tool row on 设置 › 智能体. */
     val MEMORY_SWITCH: String get() = I18n.s(R.string.agent_de49f7)
     val MEMORY_SWITCH_SUB: String get() = I18n.s(R.string.agent_1415ca)
-    /** On = memory on and the agent's memory tool on (either off means the agent cannot remember). */
-    fun memoryOn(memoryEnabled: Boolean, s: AgentSettings): Boolean =
-        memoryEnabled && s.isEnabled(MemoryTool)
+    /** the switch shows the master setting; the agent's memory tool follows it ([com.iris.localai.agent.tools.MemoryGate]). */
+    @Suppress("UNUSED_PARAMETER") fun memoryOn(memoryEnabled: Boolean, s: AgentSettings): Boolean = memoryEnabled
     fun withMemoryTool(s: AgentSettings, on: Boolean): AgentSettings =
         s.copy(enabled = s.enabled + (MemoryTool.name to on))
 

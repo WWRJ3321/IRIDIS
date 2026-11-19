@@ -68,6 +68,8 @@ data class ImageModel(
     val imported: Boolean = false,
     /** 导入的 Anima NPU 包（QNN context binary，[AnimaQnnEngine]）。 */
     val animaQnn: Boolean = false,
+    /** Anima NPU：流匹配调度偏移（每个导入模型单独存，[ImportedImage.shift]）。 */
+    val animaShift: Float = AnimaMath.DEFAULT_SHIFT,
 ) {
     /** Files under [ImageCatalog.SHARED_DIR] other models may use too (kept when this one is deleted). */
     val sharedPaths: List<String> get() = files.map { it.path }.filter { it.startsWith(ImageCatalog.SHARED_DIR + "/") }

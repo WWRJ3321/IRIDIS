@@ -59,6 +59,17 @@ object RecallTool : AgentTool {
     }
 }
 
+/**
+ * One rule for the 长期记忆 switch (设置 › 上下文与记忆) and the agent's `memory` tool: the switch is the
+ * only control, so the tool is listed exactly when memory is on (the old per-tool flag no longer hides
+ * it while the switch shows on), and a call made after the switch went off is refused.
+ */
+object MemoryGate {
+    const val OFF_ERROR = "Error: long-term memory is turned off in settings"
+    fun listed(tool: AgentTool, s: AgentSettings, memoryOn: Boolean): Boolean =
+        if (tool.name == MemoryTool.name) memoryOn else s.isEnabled(tool)
+}
+
 /** add / replace / remove entries of USER.md or MEMORY.md (bounded, outside the workspace). */
 object MemoryTool : AgentTool {
     override val group = ToolGroup.MEMORY
@@ -69,7 +80,7 @@ object MemoryTool : AgentTool {
     override val risk = ToolRisk.MEMORY
 
     override fun run(args: JsonObject, env: ToolEnv): ToolResult {
-        val docs = env.memory ?: return ToolResult(false, "Error: long-term memory is turned off in settings", "记忆已关闭")
+        val docs = env.memory?.takeIf { env.memoryOn() } ?: return ToolResult(false, MemoryGate.OFF_ERROR, "记忆已关闭")
         val action = (Args.str(args, "action", "op", "operation", "mode") ?: "add").trim().lowercase()
         val target = MemoryTarget.parse(Args.str(args, "target", "file", "doc", "where"))
             ?: return ToolResult(false, "Error: target must be user or memory", "目标无效")

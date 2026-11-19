@@ -64,7 +64,6 @@
     <string name="ch232_f_system">System prompt</string>
     <string name="ch232_f_post">Post-history instructions</string>
     <string name="ch232_f_notes">Creator notes</string>
-    <string name="ch232_lore">Embedded lorebook: %1$d entries enabled, triggered by keywords and added after the newest message (budget about 10%% of the context)</string>
     <string name="ch232_user_default">User</string>
     <string name="data232_bonsai">Ternary Bonsai 2 %1$s (test)</string>
     <string name="data232_bonsai_purpose">Ternary low-bit model, very small; CPU / GPU only, not yet tested on a phone</string>
@@ -2191,4 +2190,18 @@
     <string name="ig27c_none">No matching tags</string>
     <string name="ig27c_cat">Category</string>
     <string name="ig273_npu_chip_ld">This NPU pack needs Snapdragon 8 Gen 3 or newer</string>
+    <string name="mem27e_off">Long-term memory is off, nothing was saved</string>
+    <string name="mem27e_user">About you</string>
+    <string name="mem27e_memory">Remembered</string>
+    <string name="mem27e_saved">Remembered: %1$s (%2$s, used in new chats from now on)</string>
+    <string name="mem27e_updated">Updated: %1$s (was: %2$s)</string>
+    <string name="mem27e_dup">Already remembered: %1$s</string>
+    <string name="mem27e_full">Memory is full (up to %1$d items). Delete some in the memory list first</string>
+    <string name="mem27e_long">Too long (up to %1$d characters each). Shorten it and try again</string>
+    <string name="mem27e_empty">Nothing to remember</string>
+    <string name="mem27e_notsaved">Not saved: %1$s</string>
+    <string name="ig27e_zip_bad">The archive is damaged or wasn\'t fully downloaded. Please download it again</string>
+    <string name="ig27e_shift">Schedule shift</string>
+    <string name="hd27e_chats">Chats</string>
+    <string name="mm27e_npu_note">On the NPU this model can only chat. Switch to GPU / CPU for image understanding</string>
 </resources>

@@ -141,7 +141,7 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 val e = runCatching { jni.loadMmproj(h, mp.toByteArray(Charsets.UTF_8), projGpu) }
                     .getOrElse { I18n.s(R.string.engine_f7cffe, it.message ?: it.javaClass.simpleName) }
                 if (e == null) vision = true
-                else { visionNote = I18n.s(R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
+                else { visionNote = if (npu) I18n.s(R.string.mm27e_npu_note) else I18n.s(R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
             }
             visionLoaded = vision
             val vm = if (vision) runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }.getOrDefault(m) else m

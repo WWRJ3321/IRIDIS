@@ -64,7 +64,6 @@
     <string name="ch232_f_system">सिस्टम प्रॉम्प्ट</string>
     <string name="ch232_f_post">इतिहास के बाद निर्देश</string>
     <string name="ch232_f_notes">निर्माता के नोट्स</string>
-    <string name="ch232_lore">अंतर्निहित लोरबुक: %1$d प्रविष्टियाँ सक्रिय, कीवर्ड से ट्रिगर होकर नवीनतम संदेश के बाद जुड़ती हैं (बजट संदर्भ का लगभग 10%%)</string>
     <string name="ch232_user_default">उपयोगकर्ता</string>
     <string name="data232_bonsai">Ternary Bonsai 2 %1$s (परीक्षण)</string>
     <string name="data232_bonsai_purpose">टर्नरी लो-बिट मॉडल, बहुत छोटा; केवल CPU / GPU, फ़ोन पर अभी परीक्षण नहीं</string>
@@ -2191,4 +2190,18 @@
     <string name="ig27c_none">कोई मेल खाता टैग नहीं</string>
     <string name="ig27c_cat">श्रेणी</string>
     <string name="ig273_npu_chip_ld">इस NPU पैक के लिए Snapdragon 8 Gen 3 या नया चिप चाहिए</string>
+    <string name="mem27e_off">दीर्घकालिक स्मृति बंद है, कुछ सहेजा नहीं गया</string>
+    <string name="mem27e_user">आपके बारे में</string>
+    <string name="mem27e_memory">याद रखी बातें</string>
+    <string name="mem27e_saved">याद रखा: %1$s (%2$s, अब से नई चैट में उपयोग होगा)</string>
+    <string name="mem27e_updated">अपडेट किया: %1$s (पहले: %2$s)</string>
+    <string name="mem27e_dup">पहले से याद है: %1$s</string>
+    <string name="mem27e_full">स्मृति भरी है (अधिकतम %1$d)। पहले सूची से कुछ हटाएँ</string>
+    <string name="mem27e_long">बहुत लंबा (हर एक में अधिकतम %1$d अक्षर)। छोटा करके फिर कोशिश करें</string>
+    <string name="mem27e_empty">याद रखने को कुछ नहीं</string>
+    <string name="mem27e_notsaved">सहेजा नहीं गया: %1$s</string>
+    <string name="ig27e_zip_bad">आर्काइव खराब है या पूरा डाउनलोड नहीं हुआ। कृपया फिर से डाउनलोड करें</string>
+    <string name="ig27e_shift">शेड्यूल शिफ्ट</string>
+    <string name="hd27e_chats">चैट</string>
+    <string name="mm27e_npu_note">NPU पर यह मॉडल केवल चैट कर सकता है। चित्र पहचान के लिए GPU / CPU पर स्विच करें</string>
 </resources>

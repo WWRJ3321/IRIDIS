@@ -90,7 +90,7 @@ object AgentPrompt {
         append("You are IRIS, an AI agent on the user's Android phone.\n\n")
 
         append("# Rules\n")
-        append("- Reply in Chinese, concise. Never claim actions you didn't take.\n")
+        append("- Reply in Chinese. Answer directly and completely; no disclaimers, self-checks or hedging. Never claim actions you didn't take.\n")
         append("- Chat/simple questions: plain text with NO tool block (\"system\" is not a tool).\n")
         // "then report their findings" was lost in the 2.1.6 trim ("When done, answer briefly
         // with what you did"): small models ended a news search with "已搜索" or nothing at all.
@@ -106,7 +106,7 @@ object AgentPrompt {
         } else {
             append("```tool\n{\"tool\": \"工具名\", \"args\": {\"参数\": \"值\"}}\n```\n")
         }
-        append("- 只在用户需要时调用工具，不要照抄示例。\n")
+        append("- 不要照抄示例。\n")
         append("- One call per reply, valid JSON. Results come in <tool_response>; never write one.\n")
         append("- Only the names below; asked about tools, reply in words.\n\n")
 

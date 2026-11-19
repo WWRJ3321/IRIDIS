@@ -2,6 +2,18 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.7.0 Beta3（未真机测试）
+**本版未在真机测试。**
+
+- 提议记住（「＋ 记住？」）支持英文句子（如 "I prefer short answers"、"My birthday is …"、"From now on …"），问题、假设、转述与请求句同样不提议；记住后的提示与「关于你 / 记住的事」7 种语言显示。
+- 长期记忆开关与智能体记忆工具统一：开关只看「长期记忆」本身，关掉后智能体拿不到记忆工具，进行中的回复里再调用也会被拒绝，不写入。
+- 生图导入：压缩包损坏或没下载完整（zip 解压出错、文件提前结束）时提示「压缩包损坏或没下载完整，请重新下载」，不再显示原始报错。
+- Lite 版编译检查通过。
+- Anima NPU 导入模型的生图「高级」新增「调度偏移」（1.0–6.0，步长 0.5，默认 3.0），每个导入模型单独保存。
+- 侧栏对话列表：长按后拖动可调整顺序，顺序保存在 order.json；新对话排在最上面，置顶对话仍在最前（只在同组内拖动）。长按不拖仍进入多选。
+- 文案：编辑角色页去掉内置世界书状态行；NPU 模型加载识图投影时提示「这个模型在 NPU 上只能聊天，识图请切到 GPU / CPU」；更新日志中较早的 Anima 条目改为中性表述。
+- 注入模型的提示词改得更短更直接：智能体规则改为「直接、完整地回答，不加免责声明、自查或含糊其辞」，去掉重复的「只在需要时调用工具」；长期记忆提示去掉「可能过时」改为「冲突时以用户当前说法为准」；知识库参考资料说明压成一句；非中文界面的回复语言提示缩短。工具调用格式不变。
+
 ## 2.7.0 Beta2（未真机测试）
 **本版未在真机测试。**
 
@@ -34,7 +46,7 @@
 ## 2.6.12 Beta（未真机测试）
 **本版未在真机测试。**
 
-- 新增导入「Anima NPU」：骁龙 8 Elite（HTP v79）上用 NPU 跑 Anima Turbo。导入时多选 NPU 包里的文件（text.bin、part0–3.bin、dec.bin、qwen/t5 词表 .raw、两个 tokenizer.json），复制进模型目录；App 不内置、不下载。
+- 新增 Anima NPU 导入：骁龙 8 Elite（HTP v79）上用 NPU 生图。导入时多选 NPU 包里的文件（text.bin、part0–3.bin、dec.bin、qwen/t5 词表 .raw、两个 tokenizer.json），复制进模型目录。
 - 新引擎 AnimaQnnEngine（Kotlin，基于现有 libiris_imagegen QNN 运行器）：Qwen BPE + T5 Unigram 分词（ComfyUI 权重语法）、CPU 查词表 → text.bin → 四段扩散 × 步数（Euler，shift 3 simple）→ dec.bin。CFG 固定 1，负面提示词不生效；单尺寸包固定 512×512，多尺寸包（ms/）按宽高比挑最近的尺寸。
 - 运行库优先用 GenieX 的 QNN 2.50.40（与包同版本），没有再用 QNN 运行库。
 - libiris_imagegen.so 全新编写（只依赖 QNN 公开头文件，不再含第三方非商用代码）：新增按名字打开多图文件；没有打开的图时可切换运行库目录；不依赖 C++ 标准库。arm64 主机用 scripts/build-imagegen-arm64host.sh 编译。
@@ -49,13 +61,13 @@
 ## 2.6.10（未真机测试）
 **本版未在真机测试。**
 
-- 移除内置 Anima Turbo（ImageCatalog.ANIMA_TURBO 及其三个下载地址）：CircleStone Labs 非商用许可，App 内提供下载会影响收捐助。Anima 系列只能用户自己「导入模型」。旧目录 anima-turbo/ 加入存储页隐藏目录可删除；导入预设仍可复用其中的 qwen_image_vae 与共享的 Qwen3-0.6B-Base。
+- 生图模型列表调整：Anima 改为通过「导入模型」使用（移除 ImageCatalog.ANIMA_TURBO 下载项）。旧目录 anima-turbo/ 加入存储页隐藏目录可删除；导入预设仍可复用其中的 qwen_image_vae 与共享的 Qwen3-0.6B-Base。
 - 导入说明文案去掉模型牌子（7 种语言）。
 
 ## 2.6.9（未真机测试）
 **本版未在真机测试。**
 
-- 新增生图「导入模型」（生图页模型行末尾）：用户自备 .gguf / .safetensors 文件导入（规避再分发/商用许可风险，App 不托管不下载这些权重）。架构预设 Anima / Z-Image / FLUX.2 Klein 4B（各带默认步数与 CFG，可改）；文本编码器与 VAE 默认复用同一模型目录里已下载的（Qwen3-0.6B / Qwen3-4B、qwen_image_vae / ae / flux2-vae），没有就一起选文件。复制时校验扩展名与文件头（GGUF 魔数 / safetensors 头），进度在导入卡片上；文件放到生图模型目录 imp-xxxx/，清单 filesDir/imagegen/imported.json（:imagegen 进程同样读取）。引擎库 libiris_sd.so 没下过会自动补下。导入的模型可改名、删除（只删自己的文件，复用的不动），智能体 generate_image 与本地 API 同样可用。仅限 diffusion + LLM 文本编码器 + VAE 三件套：现有 JNI 只传这三个路径，SD1.5/SDXL 单文件与 FLUX.1（clip_l+t5）需要改 JNI 并重新托管库，记入交接。
+- 新增生图「导入模型」（生图页模型行末尾）：导入 .gguf / .safetensors 文件。架构预设 Anima / Z-Image / FLUX.2 Klein 4B（各带默认步数与 CFG，可改）；文本编码器与 VAE 默认复用同一模型目录里已下载的（Qwen3-0.6B / Qwen3-4B、qwen_image_vae / ae / flux2-vae），没有就一起选文件。复制时校验扩展名与文件头（GGUF 魔数 / safetensors 头），进度在导入卡片上；文件放到生图模型目录 imp-xxxx/，清单 filesDir/imagegen/imported.json（:imagegen 进程同样读取）。引擎库 libiris_sd.so 没下过会自动补下。导入的模型可改名、删除（只删自己的文件，复用的不动），智能体 generate_image 与本地 API 同样可用。仅限 diffusion + LLM 文本编码器 + VAE 三件套：现有 JNI 只传这三个路径，SD1.5/SDXL 单文件与 FLUX.1（clip_l+t5）需要改 JNI 并重新托管库，记入交接。
 - 修复智能体页（GUI 智能体一行）在无障碍未连接时每次重组都在主线程尝试重开无障碍并最多 sleep 2 秒；页面改为只读检查，「开始」时的检查移到 IO 线程。
 - 精简：删除未引用的 118 条文案（7 种语言，含 full/lite 源集检查）与死代码 rowIconSlot。审查报告 docs/audit/2.6.9-audit.md；新增 ARCHITECTURE.md、GLOSSARY.md。完整审查（拆大文件、重命名测试、统一组件与动画）放到 2.7.0。
 
@@ -65,7 +77,7 @@
 - 新增生图「扩写提示词」（生图页提示词下方，默认开；与智能体共用设置）：提示词较短时（少于约 40 个词、未含质量词）自动扩写。生图页先用已加载的文本模型改写（不思考、最多 256 token、45 秒超时，在卸载文本模型之前完成），失败/超时/没加载模型时用规则模板补质量词；用户没填负面词时补默认负面词（CFG>1 才生效）。结果下方显示实际用的提示词。标签风格模型（Anima、Anything V5）按 Danbooru 逗号标签扩写。调研结论见 docs/roadmap/imagegen-prompt.md。
 - 新增生图提示词标签库：主体 / 风格 / 光线 / 构图 / 画质 / 负面六类内置标签（中文名 + 英文 + Danbooru 写法），点一下追加到提示词（负面类追加到负面词）；「+」添加自定义标签，长按删除（内置的是隐藏，「恢复内置」找回）；存在 filesDir/imagegen/tags.json。智能体 generate_image 可用 list_tags=true 读取标签库挑词。
 - 新增生图「低内存模式」（生图页参数里，默认关；智能体与本地 API 生图同样生效）：长边限 768（等比缩、16 对齐）、sd.cpp 的 VAE 也放 CPU（权重留在 mmap，不复制进 Vulkan 缓冲）、每张生成完立即释放全部权重、生成前总是先卸载文本模型。借鉴 Local Dream 的思路，未使用其代码。更彻底的原生层做法（params_backend=disk 分阶段丢弃文本编码器、max_vram 预算）需要改 JNI 并重新托管 libiris_sd.so，记入交接。
-- 实验：新增 Anima Turbo v1.1（CircleStone Labs Anima 的 Turbo 版，2B 动漫 DiT）。用现有 libiris_sd.so（stable-diffusion.cpp 3e92bf9，已含 Anima 支持，无需重编）走「主模型 + 文本编码器 + VAE」三件套：vanes430/Anima-Turbo-V1.1-GGUF Q4_0（1.24 GB）+ mradermacher/Qwen3-0.6B-Base-GGUF Q8_0（0.64 GB）+ circlestone-labs/Anima qwen_image_vae（0.25 GB），全部从原仓库下载，不自建镜像。8 步、CFG 1。卡片注明「仅限非商用，生成的图片可商用」并可点开许可原文；首次下载前弹窗确认。vanes430/Anima-2.9B-GGUF 是坏转换，未采用。
+- 实验：新增 Anima 生图（2B 动漫 DiT）。用现有 libiris_sd.so（stable-diffusion.cpp 3e92bf9）走「主模型 + 文本编码器 + VAE」三件套，8 步、CFG 1。
 - Edge0-8B-A1B：评估后不接入（8B 是 Ling 3.0 / bailing_moe_v3 架构，与 35B 完全不同，上游 edge0-infer 尚未支持），结论见 docs/roadmap/edge0-eval.md。
 
 ## 2.6.7（未真机测试）

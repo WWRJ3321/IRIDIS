@@ -337,7 +337,7 @@ object KbPrompt {
         if (hits.isEmpty()) return ""
         val per = maxChars / hits.size
         return buildString {
-            append("<knowledge>\n参考资料（来自用户的知识库）。仅当资料直接回答用户的问题时才引用，并注明文件名或编号 [n]；与问题无关时不要提及这些资料，正常回答即可：\n")
+            append("<knowledge>\n参考资料（用户的知识库）：用得上就引用并标 [n]，用不上就不提。\n")
             hits.forEachIndexed { i, h -> append("[${i + 1}] ").append(h.file).append(": ").append(clip(h.text, per)).append('\n') }
             append("</knowledge>")
         }

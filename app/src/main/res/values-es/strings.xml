@@ -64,7 +64,6 @@
     <string name="ch232_f_system">Prompt de sistema</string>
     <string name="ch232_f_post">Instrucciones tras el historial</string>
     <string name="ch232_f_notes">Notas del creador</string>
-    <string name="ch232_lore">Lorebook integrado: %1$d entradas activas, se activan por palabra clave y se añaden tras el último mensaje (presupuesto ~10 %% del contexto)</string>
     <string name="ch232_user_default">Usuario</string>
     <string name="data232_bonsai">Ternary Bonsai 2 %1$s (prueba)</string>
     <string name="data232_bonsai_purpose">Modelo ternario de pocos bits, muy pequeño; solo CPU / GPU, aún sin probar en móvil</string>
@@ -2191,4 +2190,18 @@
     <string name="ig27c_none">No hay etiquetas que coincidan</string>
     <string name="ig27c_cat">Categoría</string>
     <string name="ig273_npu_chip_ld">Este paquete NPU requiere Snapdragon 8 Gen 3 o posterior</string>
+    <string name="mem27e_off">La memoria a largo plazo está desactivada; no se guardó nada</string>
+    <string name="mem27e_user">Sobre ti</string>
+    <string name="mem27e_memory">Recordado</string>
+    <string name="mem27e_saved">Recordado: %1$s (%2$s; se usará en los chats nuevos)</string>
+    <string name="mem27e_updated">Actualizado: %1$s (antes: %2$s)</string>
+    <string name="mem27e_dup">Ya estaba recordado: %1$s</string>
+    <string name="mem27e_full">La memoria está llena (máx. %1$d). Borra algunas en la lista primero</string>
+    <string name="mem27e_long">Demasiado largo (máx. %1$d caracteres). Acórtalo e inténtalo de nuevo</string>
+    <string name="mem27e_empty">No hay nada que recordar</string>
+    <string name="mem27e_notsaved">No se guardó: %1$s</string>
+    <string name="ig27e_zip_bad">El archivo está dañado o no se descargó por completo. Descárgalo de nuevo</string>
+    <string name="ig27e_shift">Desplazamiento del programa</string>
+    <string name="hd27e_chats">Chats</string>
+    <string name="mm27e_npu_note">En la NPU este modelo solo puede chatear. Para visión, cambia a GPU / CPU</string>
 </resources>

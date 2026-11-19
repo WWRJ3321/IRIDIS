@@ -2,6 +2,7 @@ package com.iris.localai.ui.imagegen
 
 import com.iris.localai.I18n
 import com.iris.localai.R
+import com.iris.localai.imagegen.AnimaMath
 import com.iris.localai.imagegen.Backend
 import com.iris.localai.imagegen.ImageCatalog
 import com.iris.localai.imagegen.ImageSeed
@@ -254,6 +255,11 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             subtitle = if (s.expand && !chatLoaded) I18n.s(R.string.ig27c_nomodel) else I18n.s(R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
                         SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
                         SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
+                        // Anima NPU：调度偏移，每个导入模型单独记
+                        if (s.model.animaQnn && s.model.imported) SliderRow(
+                            I18n.s(R.string.ig27e_shift), s.model.animaShift, AnimaMath.MIN_SHIFT..AnimaMath.MAX_SHIFT,
+                            "%.1f".format(s.model.animaShift), steps = 9,
+                        ) { v -> vm.setAnimaShift(s.model, v) }
                         // empty = a new random seed every time (hint in the field); 「随机」 clears a fixed seed.
                         Field(
                             s.seed, ImageGenText.SEED, number = true, placeholder = I18n.s(R.string.ig252_seed_hint),

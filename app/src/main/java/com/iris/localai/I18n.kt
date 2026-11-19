@@ -125,7 +125,7 @@ object I18nPure {
 
     /** One system-prompt line asking for replies in the UI language; null for a Chinese UI (简/繁). */
     fun replyLine(uiLang: String): String? = NAMES[uiLang]?.let {
-        "By default, reply in $it (the user's app language), unless the user writes in another language — then reply in the user's language."
+        "Reply in $it unless the user writes in another language."
     }
 
     fun withReplyLine(system: String, uiLang: String): String {

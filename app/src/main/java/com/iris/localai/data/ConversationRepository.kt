@@ -43,6 +43,12 @@ class ConversationRepository(
 
     @Volatile private var initialized = false
 
+    /** 侧栏长按拖动排出的顺序（order.json，id 列表；空 = 按最近更新）。不在列表里的（新对话）排在最上面。 */
+    @Volatile private var order: List<String> = emptyList()
+    private val _customOrder = MutableStateFlow(false)
+    val customOrder: StateFlow<Boolean> = _customOrder.asStateFlow()
+    private val orderFile get() = AtomicFile(File(dir, "order.json"))
+
     /** Idempotent: the app and the chat screen both call it at start-up; the index is read once. */
     suspend fun init() = withContext(io) {
         if (initialized) return@withContext
@@ -53,6 +59,8 @@ class ConversationRepository(
                 json.decodeFromString<List<ConversationSummary>>(indexFile.readFully().decodeToString())
             }.getOrNull()
             val list = fromIndex ?: rebuildIndexLocked()
+            order = runCatching { json.decodeFromString<List<String>>(orderFile.readFully().decodeToString()) }.getOrDefault(emptyList())
+            _customOrder.value = order.isNotEmpty()
             _summaries.value = sorted(list.filter { isSafeId(it.id) && fileOf(it.id).exists() })
             runCatching { loadTrashLocked() }.onFailure { Log.w(TAG, "trash index failed", it) }
             initialized = true
@@ -104,6 +112,17 @@ class ConversationRepository(
     suspend fun rename(id: String, title: String) = update(id) { it.copy(title = title.trim(), titled = true) }
 
     suspend fun setPinned(id: String, pinned: Boolean) = update(id) { it.copy(pinned = pinned) }
+
+    /** 侧栏拖动排序的结果（显示顺序的全部 id）；只记顺序，不改对话本身。 */
+    suspend fun reorder(ids: List<String>) = withContext(io) {
+        mutex.withLock {
+            val known = _summaries.value.map { it.id }.toSet()
+            order = ids.filter { it in known && isSafeId(it) }.distinct()
+            writeAtomic(File(dir, "order.json"), kotlinx.serialization.json.JsonArray(order.map { kotlinx.serialization.json.JsonPrimitive(it) }).toString())
+            _customOrder.value = order.isNotEmpty()
+            publishLocked(_summaries.value)
+        }
+    }
 
     // ---- 2.2.14: 回收站. Deleted chats move to a sibling folder and are purged after 30 days. ----
 
@@ -260,11 +279,31 @@ class ConversationRepository(
         }
     }
 
-    private fun sorted(list: List<ConversationSummary>) =
-        list.sortedWith(compareByDescending<ConversationSummary> { it.pinned }.thenByDescending { it.updatedAt })
+    private fun sorted(list: List<ConversationSummary>) = ConversationOrder.sort(list, order)
 
     private companion object {
         const val TAG = "ConversationRepo"
+    }
+}
+
+/** 侧栏排序（纯函数，单测）：置顶在前；组内新对话（不在自定义顺序里）在上、按更新时间，其余按拖出的顺序。 */
+object ConversationOrder {
+    fun sort(list: List<ConversationSummary>, order: List<String>): List<ConversationSummary> {
+        val pos = HashMap<String, Int>().also { m -> order.forEachIndexed { i, id -> m.putIfAbsent(id, i) } }
+        return list.sortedWith(
+            compareByDescending<ConversationSummary> { it.pinned }
+                .thenBy { if (it.id in pos) 1 else 0 }
+                .thenBy { pos[it.id] ?: 0 }
+                .thenByDescending { it.updatedAt },
+        )
+    }
+
+    /** 拖动：把 [fromId] 放到 [toId] 的位置；只在同一组（置顶 / 非置顶）里移动，跨组不动。 */
+    fun move(list: List<ConversationSummary>, fromId: String, toId: String): List<ConversationSummary> {
+        val from = list.indexOfFirst { it.id == fromId }
+        val to = list.indexOfFirst { it.id == toId }
+        if (from < 0 || to < 0 || from == to || list[from].pinned != list[to].pinned) return list
+        return list.toMutableList().apply { add(to, removeAt(from)) }
     }
 }
 

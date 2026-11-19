@@ -78,6 +78,13 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.iris.localai.data.ConversationSummary
+import com.iris.localai.data.ConversationOrder
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import com.iris.localai.data.Format
 import com.iris.localai.ui.components.ConfirmDialog
 import com.iris.localai.ui.components.EmptyState
@@ -133,6 +140,10 @@ fun HistoryDrawer(
     onOpenAt: (String, String) -> Unit = { id, _ -> onOpen(id) },
     /** share the selected conversations as one file. */
     onExport: (Set<String>, ChatExport.Format) -> Unit = { _, _ -> },
+    /** 用户拖动排过序：非置顶的对话不再按日期分组。 */
+    customOrder: Boolean = false,
+    /** 长按拖动松手：显示顺序的全部 id。 */
+    onReorder: (List<String>) -> Unit = {},
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
@@ -159,15 +170,28 @@ fun HistoryDrawer(
         hits = runCatching { onSearchMessages(q) }.getOrDefault(emptyList())
     }
     var exportMenu by remember { mutableStateOf(false) }
+    // 长按拖动排序：拖动中的对话、它的位移、拖动中的临时顺序（松手后交给 onReorder）。
+    var dragId by remember { mutableStateOf<String?>(null) }
+    var dragDy by remember { mutableFloatStateOf(0f) }
+    var live by remember { mutableStateOf<List<ConversationSummary>?>(null) }
+    LaunchedEffect(summaries) { if (dragId == null) live = null }
+    val latestSummaries by rememberUpdatedState(summaries)
+    val latestReorder by rememberUpdatedState(onReorder)
+    val dragHaptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
+    val shown = live ?: summaries
+    val flat = customOrder || live != null
     // Flattened once per data change; the list itself only diffs keys.
-    val entries = remember(summaries, query, hits) {
+    val entries = remember(shown, query, hits, flat) {
         val q = query.trim()
-        val filtered = if (q.isEmpty()) summaries else summaries.filter { it.title.contains(q, ignoreCase = true) }
+        val filtered = if (q.isEmpty()) shown else shown.filter { it.title.contains(q, ignoreCase = true) }
         val pinned = filtered.filter { it.pinned }
-        val rest = filtered.filterNot { it.pinned }.groupBy { Format.dateGroup(it.updatedAt) }
+        val others = filtered.filterNot { it.pinned }
         buildList {
             if (pinned.isNotEmpty()) { add(DrawerEntry.Header(I18n.s(R.string.chat_3d43ff))); pinned.forEach { add(DrawerEntry.Item(it)) } }
-            rest.forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
+            if (flat) {
+                if (pinned.isNotEmpty() && others.isNotEmpty()) add(DrawerEntry.Header(I18n.s(R.string.hd27e_chats)))
+                others.forEach { add(DrawerEntry.Item(it)) }
+            } else others.groupBy { Format.dateGroup(it.updatedAt) }.forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
             if (q.isNotEmpty() && hits.isNotEmpty()) {
                 add(DrawerEntry.Header(I18n.s(R.string.hs263_in_messages)))
                 hits.forEach { add(DrawerEntry.Hit(it)) }
@@ -245,9 +269,37 @@ fun HistoryDrawer(
                             is DrawerEntry.Hit -> if (!selecting) SearchHitRow(e.hit, anim) { onOpenAt(e.hit.conversationId, e.hit.messageId) }
                             is DrawerEntry.Item -> {
                                 val s = e.summary
+                                val dragging = dragId == s.id
+                                val canDrag = !selecting && query.isBlank()
                                 ConversationItem(
-                                    s, selected = s.id == currentId, modifier = anim, running = s.id == runningId,
+                                    s, selected = s.id == currentId || dragging, running = s.id == runningId,
+                                    modifier = if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragDy } else anim,
                                     selecting = selecting, checked = s.id in selected,
+                                    dragModifier = if (!canDrag) null else Modifier.pointerInput(s.id) {
+                                        var moved = false
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { moved = false; dragId = s.id; dragDy = 0f; live = latestSummaries; dragHaptic.perform(FeedbackEvent.LONG_PRESS) },
+                                            onDragEnd = {
+                                                val l = live
+                                                dragId = null; dragDy = 0f
+                                                // 长按不动 = 原来的多选；拖过 = 记下新顺序。
+                                                if (!moved) { live = null; selected = selected + s.id } else if (l != null) latestReorder(l.map { it.id })
+                                            },
+                                            onDragCancel = { dragId = null; dragDy = 0f; live = null },
+                                        ) { ch, d ->
+                                            ch.consume()
+                                            if (d.y != 0f) moved = true
+                                            dragDy += d.y
+                                            val info = listState.layoutInfo.visibleItemsInfo
+                                            val me = info.firstOrNull { it.key == s.id } ?: return@detectDragGesturesAfterLongPress
+                                            val mid = me.offset + dragDy + me.size / 2f
+                                            val target = info.firstOrNull { it.key != s.id && it.contentType == 1 && mid >= it.offset && mid <= it.offset + it.size }
+                                                ?: return@detectDragGesturesAfterLongPress
+                                            val cur = live ?: return@detectDragGesturesAfterLongPress
+                                            val next = ConversationOrder.move(cur, s.id, target.key as String)
+                                            if (next !== cur) { live = next; dragDy -= (target.offset - me.offset) }
+                                        }
+                                    },
                                     onToggle = { selected = if (s.id in selected) selected - s.id else selected + s.id },
                                     onClick = { onOpen(s.id) },
                                     onRename = { renaming = s },
@@ -461,6 +513,8 @@ private fun ConversationItem(
     running: Boolean = false,
     selecting: Boolean = false,
     checked: Boolean = false,
+    /** 长按拖动排序（有它时长按不动由它进多选）。 */
+    dragModifier: Modifier? = null,
     onToggle: () -> Unit = {},
     onClick: () -> Unit,
     onRename: () -> Unit,
@@ -482,10 +536,11 @@ private fun ConversationItem(
                 .heightIn(min = 44.dp)
                 .clip(IrisRadius.mediumShape)
                 .background(bg)
+                .then(dragModifier ?: Modifier)
                 .combinedClickable(
                     onClick = if (selecting) onToggle else onClick,
-                    // long press starts multi-select (rename / pin / delete live in its bar).
-                    onLongClick = { haptic.perform(FeedbackEvent.LONG_PRESS); onToggle() },
+                    // long press starts multi-select (rename / pin / delete live in its bar); with drag on, the drag detector does it.
+                    onLongClick = if (dragModifier != null) null else ({ haptic.perform(FeedbackEvent.LONG_PRESS); onToggle() }),
                     onLongClickLabel = I18n.s(R.string.chat_443f46),
                 )
                 .padding(horizontal = IrisDimens.space12),

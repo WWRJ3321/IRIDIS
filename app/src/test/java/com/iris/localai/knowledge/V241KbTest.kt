@@ -98,6 +98,6 @@ class V241KbTest {
         assertTrue(KbPrompt.cited("你好！有什么可以帮你？", src).isEmpty())
         assertTrue(KbPrompt.citesAny("答案见 [1]", 2)); assertFalse(KbPrompt.citesAny("没有引用", 2))
         val block = KbPrompt.inject(listOf(KbHit("a.md", "内容", 1.0)))
-        assertTrue(block.contains("仅当资料直接回答")); assertTrue(block.contains("不要提及"))
+        assertTrue(block.contains("用得上就引用")); assertTrue(block.contains("用不上就不提"))
     }
 }

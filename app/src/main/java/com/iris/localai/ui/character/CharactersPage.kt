@@ -52,7 +52,6 @@ import com.iris.localai.R
 import com.iris.localai.character.CardCodec
 import com.iris.localai.character.CharacterCard
 import com.iris.localai.character.CharacterStore
-import com.iris.localai.character.Lorebook
 import com.iris.localai.ui.components.ConfirmDialog
 import com.iris.localai.ui.components.GroupFootnote
 import com.iris.localai.ui.components.HairlineDivider
@@ -410,8 +409,6 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
                 Field(I18n.s(R.string.ch232_f_system), system, { system = it })
                 Field(I18n.s(R.string.ch232_f_post), post, { post = it })
                 Field(I18n.s(R.string.ch232_f_notes), notes, { notes = it })
-                val book = remember { Lorebook.of(base) }
-                if (book != null) GroupFootnote(I18n.s(R.string.ch232_lore, book.entries.count { it.enabled }))
             }
             Spacer(Modifier.height(IrisDimens.space16))
         }

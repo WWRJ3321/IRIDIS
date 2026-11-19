@@ -59,9 +59,17 @@ object AnimaMath {
     const val QWEN_ROWS = 151936; const val T5_ROWS = 32128; const val QWEN_PAD = 151643
     const val NEG = -30000f
 
-    /** 流匹配时间表：σ(t)=3t/(1+2t)，在 1000 级表上均匀取步，最后补 0。 */
-    fun sigmas(steps: Int): FloatArray {
-        val shift = 3.0
+    const val DEFAULT_SHIFT = 3f
+    const val MIN_SHIFT = 1f
+    const val MAX_SHIFT = 6f
+
+    /** 调度偏移：限制在 1.0–6.0，按 0.5 取整（非法值回到默认）。 */
+    fun clampShift(v: Float): Float =
+        if (v.isNaN() || v.isInfinite()) DEFAULT_SHIFT else Math.round(v.coerceIn(MIN_SHIFT, MAX_SHIFT) * 2f) / 2f
+
+    /** 流匹配时间表：σ(t)=s·t/(1+(s−1)t)（s = 调度偏移，默认 3），在 1000 级表上均匀取步，最后补 0。 */
+    fun sigmas(steps: Int, shiftF: Float = DEFAULT_SHIFT): FloatArray {
+        val shift = clampShift(shiftF).toDouble()
         val tab = FloatArray(1000) { i -> val t = (i + 1) / 1000.0; (shift * t / (1.0 + (shift - 1.0) * t)).toFloat() }
         val ss = 1000.0 / steps
         return FloatArray(steps + 1) { x -> if (x == steps) 0f else tab[999 - (x * ss).toInt()] }
@@ -144,7 +152,7 @@ class AnimaQnnEngine(
                     ldRunner.prepare(d)
                     runCatching { perf.burst() }
                     try {
-                        val (w, h, argb) = ldRunner.generate(req.prompt, req.steps.coerceIn(1, 50), req.seed, req.lowMem, onProgress)
+                        val (w, h, argb) = ldRunner.generate(req.prompt, req.steps.coerceIn(1, 50), req.seed, req.lowMem, onProgress, model.animaShift)
                         return@synchronized encodePng(argb, w, h)
                     } finally {
                         runCatching { perf.relax() }
@@ -161,7 +169,7 @@ class AnimaQnnEngine(
                     val ctx = runText(t, req.lowMem)
                     checkCancel()
                     loadDraw(w, h)
-                    val argb = draw(ctx, w, h, req.steps.coerceIn(1, 50), req.seed, onProgress)
+                    val argb = draw(ctx, w, h, req.steps.coerceIn(1, 50), req.seed, onProgress, model.animaShift)
                     if (req.lowMem) releaseLocked(keepTables = true)
                     encodePng(argb, w, h)
                 } finally {
@@ -271,10 +279,10 @@ class AnimaQnnEngine(
         dec = opened[0]; parts = opened.drop(1); loadedSize = w to h
     }
 
-    private fun draw(ctx: Pair<QnnTensorSpec, ByteBuffer>, w: Int, h: Int, steps: Int, seed: Long, onProgress: (Int, Int) -> Unit): IntArray {
+    private fun draw(ctx: Pair<QnnTensorSpec, ByteBuffer>, w: Int, h: Int, steps: Int, seed: Long, onProgress: (Int, Int) -> Unit, shift: Float = AnimaMath.DEFAULT_SHIFT): IntArray {
         val hp = h / 16; val wp = w / 16; val L = hp * wp
         val nl = 16 * (h / 8) * (w / 8)
-        val sig = AnimaMath.sigmas(steps)
+        val sig = AnimaMath.sigmas(steps, shift)
         val rng = Random(if (seed < 0) System.nanoTime() else seed)
         val lat = FloatArray(nl) { rng.nextGaussian().toFloat() * sig[0] }
         val x = FloatArray(L * 68); val emb = FloatArray(AnimaMath.D); val v = FloatArray(nl)

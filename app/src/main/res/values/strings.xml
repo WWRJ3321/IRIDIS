@@ -65,7 +65,6 @@
     <string name="ch232_f_system">系统提示词</string>
     <string name="ch232_f_post">历史后指令</string>
     <string name="ch232_f_notes">作者备注</string>
-    <string name="ch232_lore">内置世界书：%1$d 条已启用，按关键词触发，加在最新一条消息后（预算约为上下文的 10%%）</string>
     <string name="ch232_user_default">用户</string>
     <string name="data232_bonsai">Ternary Bonsai 2 %1$s（测试）</string>
     <string name="data232_bonsai_purpose">三值低比特模型，体积很小；只用 CPU / GPU，未在真机验证</string>
@@ -2192,4 +2191,18 @@
     <string name="ig27c_none">没有匹配的标签</string>
     <string name="ig27c_cat">分类</string>
     <string name="ig273_npu_chip_ld">这个 NPU 包需要骁龙 8 Gen 3 或更新的芯片</string>
+    <string name="mem27e_off">长期记忆已关闭，没有保存</string>
+    <string name="mem27e_user">关于你</string>
+    <string name="mem27e_memory">记住的事</string>
+    <string name="mem27e_saved">已记住：%1$s（「%2$s」，之后的新对话都会参考）</string>
+    <string name="mem27e_updated">已更新：%1$s（原：%2$s）</string>
+    <string name="mem27e_dup">这条已经记过了：%1$s</string>
+    <string name="mem27e_full">记忆已满（最多 %1$d 条），请先在记忆列表里删掉一些</string>
+    <string name="mem27e_long">这条太长了（每条最多 %1$d 字），请精简后再试</string>
+    <string name="mem27e_empty">没有可记住的内容</string>
+    <string name="mem27e_notsaved">没有保存：%1$s</string>
+    <string name="ig27e_zip_bad">压缩包损坏或没下载完整，请重新下载</string>
+    <string name="ig27e_shift">调度偏移</string>
+    <string name="hd27e_chats">对话</string>
+    <string name="mm27e_npu_note">这个模型在 NPU 上只能聊天，识图请切到 GPU / CPU</string>
 </resources>

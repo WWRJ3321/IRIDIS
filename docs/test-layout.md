@@ -174,3 +174,7 @@
 | v268/V268Test.kt | agent/V268Test.kt |
 | v269/V269Test.kt | data/V269Test.kt |
 | v270/GeneralImportTest.kt | imagegen/GeneralImportTest.kt |
+
+## 2.7.0-beta3 新增
+
+- agent/MemoryGateTest.kt · knowledge/MemoryEnglishOfferTest.kt · imagegen/AnimaShiftTest.kt · data/ConversationOrderTest.kt（脚本 runtests274.sh）
