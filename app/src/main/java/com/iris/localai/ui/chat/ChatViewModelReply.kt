@@ -13,6 +13,7 @@ import com.iris.localai.data.TurnRefs
 import com.iris.localai.engine.BackendCapabilities
 import com.iris.localai.engine.LengthRule
 import com.iris.localai.engine.ThinkLevel
+import com.iris.localai.engine.ThinkSwitch
 import com.iris.localai.engine.resources.CoolDown
 import com.iris.localai.knowledge.KbChat
 import com.iris.localai.service.GenerationMonitor
@@ -394,7 +395,8 @@ internal suspend fun ChatViewModel.runReply(requester: Requester, reply: ChatMes
         var lastPersist = System.currentTimeMillis()
 
         fun publish(done: Boolean) {
-            val text = prefix + raw.toString()
+            // 思考关：模型仍写出的推理（强制思考的模板）不显示、不存。
+            val text = (prefix + raw.toString()).let { if (disableThinking) ThinkSwitch.hideThinking(it) else it }
             if (!done) {
                 _stream.value = StreamingText(reply.id, text)
                 if (background) GenerationMonitor.progress(timer.chars)
@@ -416,7 +418,7 @@ internal suspend fun ChatViewModel.runReply(requester: Requester, reply: ChatMes
                     else it.copy(
                         // a spoken reply loses its boilerplate opener / closer in the bubble too.
                         content = if (requester == Requester.VOICE && !text.contains("<think")) VoiceStyle.polish(text) else text.trim(),
-                        thinkingMs = thinkMs,
+                        thinkingMs = if (disableThinking) 0L else thinkMs,
                         stats = result?.stats,
                         outputChars = timer.chars,
                         outputMs = if (done) timer.outputMs() else 0L,

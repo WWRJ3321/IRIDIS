@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">शेड्यूल शिफ्ट</string>
     <string name="hd27e_chats">चैट</string>
     <string name="mm27e_npu_note">NPU पर यह मॉडल केवल चैट कर सकता है। चित्र पहचान के लिए GPU / CPU पर स्विच करें</string>
+    <string name="sel27_copy">कॉपी</string>
+    <string name="sel27_all">सभी चुनें</string>
+    <string name="sel27_quote">उद्धृत करें</string>
+    <string name="sel27_speak">पढ़कर सुनाएं</string>
+    <string name="sel27_translate">अनुवाद</string>
+    <string name="sel27_share">साझा करें</string>
+    <string name="think27_always">यह मॉडल हमेशा पहले सोचता है; बंद करने पर केवल सोच छिपती है</string>
 </resources>

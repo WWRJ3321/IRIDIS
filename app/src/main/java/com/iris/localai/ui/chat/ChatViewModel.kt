@@ -600,6 +600,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         c.settings.update { it.copy(thinkLevel = level.coerceIn(1, 3)) }
         setDeepThinking(true)
     }
+    /**
+     * 输入框「思考」按钮。2.7.0：模板强制思考的模型关不掉推理，关闭后只隐藏思考过程，并提示一句。
+     */
+    fun toggleThinking(on: Boolean) {
+        setDeepThinking(on)
+        val d = (c.engine.state.value as? EngineState.Ready)?.details
+        if (!on && d?.thinkAlways == true) notice.value = I18n.s(R.string.think27_always)
+    }
     /** Writes to the loaded model's own thinking switch when it has one, otherwise the global one. */
     fun setDeepThinking(on: Boolean) {
         val id = c.engine.readyModel?.id
@@ -1375,13 +1383,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     // ------------------------------------------------------------------ read aloud
 
     fun speak(messageId: String) {
-        stopSpeaking()
         val msg = (viewing.value ?: conversation.value).messages.firstOrNull { it.id == messageId } ?: return
+        speakText(ThinkParser.parse(msg.content).answer, messageId)
+    }
+
+    /** 朗读任意文字（选择工具条「朗读」；[id] 只用于消息上的朗读中标记）。 */
+    fun speakText(text: String, id: String = SELECTION_SPEAK_ID) {
+        stopSpeaking()
+        val messageId = id
         if (!c.synthesizer.isAvailable) {
             notice.value = if (c.synthesizer.systemSelected()) I18n.s(R.string.chat_5b9c6c) else I18n.s(R.string.chat_120479)
             return
         }
-        val text = ThinkParser.parse(msg.content).answer
         _speakingMessageId.value = messageId
         val token = Any().also { speakToken = it }
         c.synthesizer.claim(token) { stopSpeaking() }
@@ -1434,6 +1447,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     internal companion object {
+        const val SELECTION_SPEAK_ID = "selection"
         const val FRAME_MS = 33L
         const val GEN_TAG = "IrisGen"
         /** shown in the reply bubble while the request waits for a tier reload. */

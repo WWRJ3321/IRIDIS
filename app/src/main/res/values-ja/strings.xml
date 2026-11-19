@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">スケジュールシフト</string>
     <string name="hd27e_chats">会話</string>
     <string name="mm27e_npu_note">このモデルは NPU ではチャットのみです。画像認識には GPU / CPU に切り替えてください</string>
+    <string name="sel27_copy">コピー</string>
+    <string name="sel27_all">すべて選択</string>
+    <string name="sel27_quote">引用</string>
+    <string name="sel27_speak">読み上げ</string>
+    <string name="sel27_translate">翻訳</string>
+    <string name="sel27_share">共有</string>
+    <string name="think27_always">このモデルは常に先に考えます。オフにすると思考過程が非表示になるだけです</string>
 </resources>

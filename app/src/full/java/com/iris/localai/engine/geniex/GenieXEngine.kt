@@ -165,6 +165,8 @@ class GenieXEngine(context: Context) : InferenceEngine {
                 trainContextLength = 0,
                 supportsThinking = thinks,
                 thinkingPrefilled = prefilled,
+                thinkAlways = com.iris.localai.engine.ThinkSwitch.alwaysThinks(
+                    runCatching { ThinkSupport.templateOf(File(model.path)) }.getOrNull(), thinks, prefilled, ""),
                 supportsVision = visionOk,
                 hasChatTemplate = true,
                 backend = backendLabel,

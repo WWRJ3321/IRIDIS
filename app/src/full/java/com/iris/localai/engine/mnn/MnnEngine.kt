@@ -211,6 +211,8 @@ class MnnEngine(private val context: Context) : InferenceEngine {
                 supportsVision = visionLoaded,
                 visionMaxSide = Attachments.MNN_VISION_MAX_SIDE,
                 thinkingPrefilled = m.thinkingPrefilled,
+                thinkAlways = com.iris.localai.engine.ThinkSwitch.alwaysThinks(
+                    runCatching { com.iris.localai.engine.ThinkSupport.templateOf(dir) }.getOrNull(), m.supportsThinking, m.thinkingPrefilled, ""),
                 hasChatTemplate = m.hasChatTemplate,
                 backend = backendLabel,
                 activeBackend = config.backend,

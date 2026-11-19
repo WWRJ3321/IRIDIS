@@ -333,7 +333,7 @@ internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: (
         timer.finish()
         val o = outcome
         // 生图结果只在工具卡片里显示一次（不再追加到回复正文，避免同一张图出现两次）。
-        val finalText = (o?.finalText ?: (_stream.value?.text ?: "")).trim()
+        val finalText = (o?.finalText ?: (_stream.value?.text ?: "")).let { if (disableThinking) com.iris.localai.engine.ThinkSwitch.hideThinking(it) else it }.trim()
         val finalSteps = steps.map { st ->
             if (st.status == StepStatus.RUNNING || st.status == StepStatus.ASKING)
                 st.copy(status = StepStatus.ERROR, result = if (cancelled) I18n.s(R.string.chat_829778) else I18n.s(R.string.chat_cf0a3e))

@@ -88,6 +88,8 @@ data class ModelDetails(
     val thinkingPrefilled: Boolean = false,
     /** "oss" / "spark" when the model has its own reasoning-effort levels, else "". */
     val thinkEffort: String = "",
+    /** the template forces reasoning (no switch): 思考关 can only hide it ([ThinkSwitch.alwaysThinks]). */
+    val thinkAlways: Boolean = false,
     val hasChatTemplate: Boolean,
     /** Human-readable backend line, e.g. "GPU · Adreno 830 · OpenCL". */
     val backend: String,

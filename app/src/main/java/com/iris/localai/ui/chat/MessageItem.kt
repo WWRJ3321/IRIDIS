@@ -272,7 +272,7 @@ private fun AnswerBody(text: () -> String, streaming: Boolean, sources: List<Cit
     // a finished reply is selectable — long-press, drag the handles, copy just a part.
     // (Not while streaming: the text changes under the selection.)
     if (streaming) Markdown(shown, streaming = true)
-    else androidx.compose.foundation.text.selection.SelectionContainer { Markdown(shown, streaming = false) }
+    else MessageSelection { Markdown(shown, streaming = false) }
 }
 
 /**

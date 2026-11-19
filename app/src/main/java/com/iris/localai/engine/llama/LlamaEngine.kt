@@ -21,6 +21,8 @@ import com.iris.localai.engine.ModelDetails
 import com.iris.localai.engine.PromptMessage
 import com.iris.localai.engine.SamplingConfig
 import com.iris.localai.engine.StopReason
+import com.iris.localai.engine.ThinkSupport
+import com.iris.localai.engine.ThinkSwitch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
@@ -53,6 +55,8 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
     @Volatile private var loaded = false
     /** a projector is loaded for the current model. */
     @Volatile private var visionLoaded = false
+    /** chat template read from the GGUF header (思考旗标 / 强制思考判断), null = none. */
+    @Volatile private var template: String? = null
     /** MTP speculative decoding is on for the loaded model (native status "active …"). */
     @Volatile private var mtpActive = false
     /** LES 状态（"off" / "on" / "skip: …"）；on 时原生层强制 CPU。 */
@@ -144,15 +148,17 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
                 else { visionNote = if (npu) I18n.s(R.string.mm27e_npu_note) else I18n.s(R.string.engine_17c8ba, e); android.util.Log.w(LOG_TAG, "mmproj ${java.io.File(mp).name}: $e") }
             }
             visionLoaded = vision
+            template = runCatching { ThinkSupport.templateOf(java.io.File(model.path)) }.getOrNull()
             val vm = if (vision) runCatching { json.decodeFromString(NativeMeta.serializer(), jni.meta(h)) }.getOrDefault(m) else m
             ModelDetails(
                 description = m.description,
                 parameterCount = m.nParams,
                 contextLength = m.nCtx,
                 trainContextLength = m.nCtxTrain,
-                supportsThinking = m.supportsThinking,
+                supportsThinking = ThinkSwitch.supports(m.supportsThinking, template),
                 thinkingPrefilled = m.thinkingPrefilled,
                 thinkEffort = m.thinkEffort,
+                thinkAlways = ThinkSwitch.alwaysThinks(template, m.supportsThinking, m.thinkingPrefilled, m.thinkEffort),
                 hasChatTemplate = m.hasChatTemplate,
                 supportsVision = vision && vm.vision,
                 fallbackNote = visionNote,
@@ -178,11 +184,12 @@ class LlamaEngine(private val context: android.content.Context? = null) : Infere
         // a long prefill that emits nothing), ask native code to stop this request.
         invokeOnClose { cause -> if (cause != null) cancelRequest(req) }
         // Encode on the caller's thread so the single native thread only runs native work.
-        val roles = Array(history.size) { history[it].role.toByteArray(Charsets.UTF_8) }
-        val contents = Array(history.size) { history[it].content.toByteArray(Charsets.UTF_8) }
+        val msgs = ThinkSwitch.applySoft(history, template, on = !params.disableThinking)
+        val roles = Array(msgs.size) { msgs[it].role.toByteArray(Charsets.UTF_8) }
+        val contents = Array(msgs.size) { msgs[it].content.toByteArray(Charsets.UTF_8) }
         // pictures of one message (the newest that has any) go through mtmd.
-        val imageMsg = if (visionLoaded) MmprojPairing.imageMessage(history.map { it.images }) else -1
-        val images = if (imageMsg >= 0) Array(history[imageMsg].images.size) { history[imageMsg].images[it].toByteArray(Charsets.UTF_8) } else null
+        val imageMsg = if (visionLoaded) MmprojPairing.imageMessage(msgs.map { it.images }) else -1
+        val images = if (imageMsg >= 0) Array(msgs[imageMsg].images.size) { msgs[imageMsg].images[it].toByteArray(Charsets.UTF_8) } else null
         val floats = floatArrayOf(
             params.temperature, params.topP, params.minP, params.repeatPenalty,
             params.frequencyPenalty, params.presencePenalty,

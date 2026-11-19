@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">Desplazamiento del programa</string>
     <string name="hd27e_chats">Chats</string>
     <string name="mm27e_npu_note">En la NPU este modelo solo puede chatear. Para visión, cambia a GPU / CPU</string>
+    <string name="sel27_copy">Copiar</string>
+    <string name="sel27_all">Todo</string>
+    <string name="sel27_quote">Citar</string>
+    <string name="sel27_speak">Leer</string>
+    <string name="sel27_translate">Traducir</string>
+    <string name="sel27_share">Compartir</string>
+    <string name="think27_always">Este modelo siempre piensa primero; al desactivarlo solo se oculta el razonamiento</string>
 </resources>

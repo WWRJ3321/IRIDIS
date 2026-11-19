@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">Schedule-Shift</string>
     <string name="hd27e_chats">Chats</string>
     <string name="mm27e_npu_note">Auf der NPU kann dieses Modell nur chatten. Für Bilderkennung auf GPU / CPU wechseln</string>
+    <string name="sel27_copy">Kopieren</string>
+    <string name="sel27_all">Alles</string>
+    <string name="sel27_quote">Zitieren</string>
+    <string name="sel27_speak">Vorlesen</string>
+    <string name="sel27_translate">Übersetzen</string>
+    <string name="sel27_share">Teilen</string>
+    <string name="think27_always">Dieses Modell denkt immer zuerst; Ausschalten blendet nur das Denken aus</string>
 </resources>

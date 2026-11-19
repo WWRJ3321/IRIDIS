@@ -219,6 +219,22 @@ fun ChatScreen(
     val haze = remember { dev.chrisbanes.haze.HazeState() }
 
     var input by rememberSaveable { mutableStateOf("") }
+    // 2.7.0 边说边出字：按住说话时输入框原有内容 + 识别中的文字（null = 不在听写）。
+    var dictBase by remember { mutableStateOf<String?>(null) }
+    val dictPartial by vm.dictation.partial.collectAsState()
+    LaunchedEffect(dictPartial) {
+        val b = dictBase; val p = dictPartial
+        if (b != null && p != null) input = com.iris.localai.voice.DictationText.join(b, p)
+    }
+    // 2.7.0 长按消息文本的选择工具条：引用进输入框 / 朗读 / 翻译（结果在对话框里）。
+    var selTranslate by remember { mutableStateOf<String?>(null) }
+    val selActions = remember(vm) {
+        SelectionActions(
+            onQuote = { t -> input = SelectionMenuText.quoteInto(input, t) },
+            onSpeak = { t -> vm.speakText(t) },
+            onTranslate = { t -> selTranslate = t },
+        )
+    }
     // 「翻译」 the draft: the text before it (撤销翻译) and the running job.
     var draftOriginal by remember { mutableStateOf<String?>(null) }
     var draftJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -497,7 +513,7 @@ fun ChatScreen(
                                     fadeOutSpec = IrisMotion.standard(),
                                 ),
                             ) {
-                                Column {
+                                Column { androidx.compose.runtime.CompositionLocalProvider(LocalSelectionActions provides selActions) {
                                 if (m.role == Role.USER) {
                                     UserMessage(
                                         m,
@@ -548,7 +564,7 @@ fun ChatScreen(
                                     Spacer(Modifier.height(IrisSpace.L))
                                     ContextBreakDivider(onClear = vm::clearContextBreak)
                                 }
-                                }
+                                } }
                             }
                         }
                         // messages sent while a reply runs (补充), answered / read next; tap = cancel.
@@ -710,7 +726,7 @@ fun ChatScreen(
                         if (TurnRefs.needsAgent(refs, agentSettings.agentMode)) { vm.setAgentMode(true); vm.showNotice(ComposerText.AGENT_FOR_REF) }
                     },
                     onRemoveRef = { r -> refs = refs - r },
-                    onHoldToTalkCancel = { if (listening) { listening = false; vm.dictation.cancel() } },
+                    onHoldToTalkCancel = { if (listening) { listening = false; vm.dictation.cancel(); dictBase?.let { input = it }; dictBase = null } },
                     onPickPhotos = { pickPhotos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                     onPickFiles = { pickFiles.launch(arrayOf("*/*")) },
                     onRemoveAttachment = { a -> pending = pending - a; vm.discardAttachments(listOf(a)) },
@@ -761,13 +777,15 @@ fun ChatScreen(
                         hideKeyboard(); input = ""; editingId = null
                     },
                     onCancelEdit = { editingId = null; input = "" },
-                    onToggleThinking = { vm.setDeepThinking(!ui.deepThinking) },
+                    onToggleThinking = { vm.toggleThinking(!ui.deepThinking) },
                     onThinkLevel = { vm.setThinkLevel(it) },
-                    onHoldToTalkStart = { /* keep the keyboard (user: 语音输入会中断键盘) */ withMic { listening = true; vm.dictation.warmLanguage = settings.asrLanguage; vm.dictation.start() } },
+                    onHoldToTalkStart = { /* keep the keyboard (user: 语音输入会中断键盘) */ withMic { listening = true; dictBase = input; vm.dictation.warmLanguage = settings.asrLanguage; vm.dictation.start() } },
                     onHoldToTalkEnd = {
                         if (listening) {
                             listening = false
                             transcribing = true
+                            val base = dictBase ?: input
+                            val shown = dictPartial
                             scope.launch {
                                 val text = try {
                                     vm.dictation.finish(settings.asrLanguage)
@@ -780,7 +798,9 @@ fun ChatScreen(
                                 } finally {
                                     transcribing = false
                                 }
-                                if (text.isNotBlank()) input = if (input.isBlank()) text else "$input $text"
+                                dictBase = null
+                                // 定稿：整段识别结果替换实时文字；整段没认出时保留实时文字。
+                                input = com.iris.localai.voice.DictationText.join(base, text.ifBlank { shown.orEmpty() })
                             }
                         }
                     },
@@ -894,6 +914,9 @@ fun ChatScreen(
                 }
             }
         }
+    }
+    selTranslate?.let { t ->
+        SelectionTranslateDialog(t, translator, onDismiss = { selTranslate = null }, onQuote = { tr -> input = SelectionMenuText.quoteInto(input, tr) })
     }
     // `screen` was blocked → the matching guide (无障碍 / 受限设置 / 识图模型).
     guiSetup?.let { b -> GuiSetupDialog(b, onDismiss = vm::dismissGuiSetup, onPickModel = { vm.dismissGuiSetup(); onOpenModels() }) }

@@ -53,6 +53,13 @@ class SpeechRecognizer(private val context: Context, private val store: VoiceMod
     val isAvailable: Boolean get() = activePack() != null
     fun activePack(): VoicePack? = store.active(VoiceKind.ASR, settings.current.asrPack)
 
+    /**
+     * 2.7.0：引擎能否给出边说边出的部分结果。都是离线模型，没有原生流式；解码快的
+     * （SenseVoice / Paraformer / Zipformer CTC）用 VAD 分句 + 反复解码当前句来实时出字；
+     * Qwen3-ASR 是大模型、一次解码太慢，保持松手后整段识别。
+     */
+    fun supportsPartial(): Boolean = AsrPartial.supports(activePack())
+
     /** Creates a fresh VAD (cheap; one per listening session). */
     fun newVad(minSilenceSec: Float = 0.6f): Vad {
         CrashReporter.breadcrumb("加载语音检测 VAD")
@@ -518,3 +525,8 @@ class TtsChunkCallback(private val onAudio: (FloatArray) -> Boolean) : (FloatArr
 /** AppSettings.ttsEngine values. */
 const val TTS_ENGINE_LOCAL = "local"
 const val TTS_ENGINE_SYSTEM = "system"
+
+/** 哪些 ASR 包支持边说边出字（纯函数，便于测试）。 */
+object AsrPartial {
+    fun supports(pack: VoicePack?): Boolean = pack != null && pack != VoicePack.ASR_QWEN3
+}

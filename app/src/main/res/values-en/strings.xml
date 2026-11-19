@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">Schedule shift</string>
     <string name="hd27e_chats">Chats</string>
     <string name="mm27e_npu_note">On the NPU this model can only chat. Switch to GPU / CPU for image understanding</string>
+    <string name="sel27_copy">Copy</string>
+    <string name="sel27_all">Select all</string>
+    <string name="sel27_quote">Quote</string>
+    <string name="sel27_speak">Read aloud</string>
+    <string name="sel27_translate">Translate</string>
+    <string name="sel27_share">Share</string>
+    <string name="think27_always">This model always thinks first; turning it off only hides the reasoning</string>
 </resources>

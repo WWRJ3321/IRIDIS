@@ -2204,4 +2204,11 @@
     <string name="ig27e_shift">調度偏移</string>
     <string name="hd27e_chats">對話</string>
     <string name="mm27e_npu_note">這個模型在 NPU 上只能聊天，識圖請切到 GPU / CPU</string>
+    <string name="sel27_copy">複製</string>
+    <string name="sel27_all">全選</string>
+    <string name="sel27_quote">引用</string>
+    <string name="sel27_speak">朗讀</string>
+    <string name="sel27_translate">翻譯</string>
+    <string name="sel27_share">分享</string>
+    <string name="think27_always">這個模型總會先思考，關閉後只隱藏思考過程</string>
 </resources>
