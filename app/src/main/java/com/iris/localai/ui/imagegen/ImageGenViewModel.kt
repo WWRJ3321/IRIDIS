@@ -42,6 +42,15 @@ import com.iris.localai.imagegen.ImageGenRepository
 import com.iris.localai.imagegen.ImageModel
 import com.iris.localai.imagegen.ImageRequest
 import com.iris.localai.imagegen.FileRole as FR
+import com.iris.localai.imagegen.LoraArch
+import com.iris.localai.imagegen.LoraCheck
+import com.iris.localai.imagegen.LoraEntry
+import com.iris.localai.imagegen.LoraInspect
+import com.iris.localai.imagegen.LoraRules
+import com.iris.localai.imagegen.LoraStore
+import com.iris.localai.imagegen.PreviewFrame
+import com.iris.localai.service.ImageGenJobService
+import com.iris.localai.service.ImageGenMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,7 +154,17 @@ data class ImageGenUi(
     val importFile: String = "",
     /** 模型清单版本（导入 / 改名 / 删除后 +1，让页面重读 catalog）。 */
     val catalogRev: Int = 0,
+    /** 2.7.1：导入的 LoRA、当前底模的结构（UNKNOWN = 不支持 LoRA）、导入结果一句话。 */
+    val loras: List<LoraEntry> = emptyList(),
+    val loraBase: LoraArch = LoraArch.UNKNOWN,
+    val loraMsg: String? = null,
+    val loraBusy: Boolean = false,
+    /** 2.7.1：实时预览（当前 x0 估计的低清图）。 */
+    val preview: PreviewFrame? = null,
 ) {
+    /** 当前模型走 sd.cpp（GPU/CPU）才能挂 LoRA；NPU 模型权重编在上下文里。 */
+    val loraSupported: Boolean get() = model.backend == Backend.SDCPP && !model.sdq
+    val lorasHere: List<LoraEntry> get() = loras.filter { it.archOrUnknown.fits(loraBase) }
     val model: ImageModel get() = ImageCatalog.byId(modelId) ?: ImageCatalog.SD15_QNN
     /** Reference image + 重绘强度 work everywhere except the fixed-size QNN context binary (txt2img only). */
     val img2imgSupported: Boolean get() = model.backend != Backend.QNN
@@ -175,10 +194,20 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     private val agentSettings = container.agent.settings
     private val prefs = app.getSharedPreferences("iris_imagegen", android.content.Context.MODE_PRIVATE)
 
+    private val loraStore = LoraStore(app.filesDir)
+    private val baseArchCache = HashMap<String, LoraArch>()
+    /** 本 ViewModel 发起的那张图的序号（其余的是别的页面实例发起的，接上显示）。 */
+    private var ownSerial = -1L
+
     init {
         refresh()
+        loadLoras()
         viewModelScope.launch {
-            agentSettings.settings.collect { a -> _ui.update { it.copy(lowMemMode = a.imageLowMem, expand = a.imagePromptExpand) } }
+            // 离开过生图页 / 页面重建：接上仍在跑的那张图，或显示它的结果
+            ImageGenMonitor.job.collect { j -> if (j != null && j.serial != ownSerial) adopt(j) }
+        }
+        viewModelScope.launch {
+            agentSettings.settings.collect { a -> _ui.update { it.copy(lowMemMode = a.imageLowMemOn, expand = a.imagePromptExpand) } }
         }
         viewModelScope.launch {
             val t = withContext(Dispatchers.IO) { TagLibrary.tags(app) }
@@ -230,6 +259,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             }
             val sd = engines.sdEngine()
             _ui.update { it.copy(downloaded = dl, history = hist.map { f -> f.path }, historyBytes = hist.sumOf { f -> f.length() }, sdGpuCrashed = sd.gpuCrashedBefore, sdOnCpu = sd.usesCpu, sdHtpCrashed = sd.htpCrashedBefore) }
+            updateLoraBase()
         }
     }
 
@@ -258,7 +288,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
         ImageCatalog.byId(id)?.let(::download)
     }
 
-    fun setLowMem(on: Boolean) = agentSettings.update { it.copy(imageLowMem = on) }
+    fun setLowMem(on: Boolean) = agentSettings.update { it.copy(imageLowMem = on, imageLowMemSet = true) }
     fun setExpand(on: Boolean) = agentSettings.update { it.copy(imagePromptExpand = on) }
 
     /** 标签库：点标签追加到提示词（负面类追加到负面词）。 */
@@ -322,6 +352,114 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 if (cur.isBlank() || (oldDefault.isNotEmpty() && cur == oldDefault)) newDefault else cur
             it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = m.fixedSize ?: it.width, height = m.fixedSize ?: it.height,
                 prompt = pick(it.prompt, old.defaultPrompt, m.defaultPrompt), negative = pick(it.negative, old.defaultNegative, m.defaultNegative))
+        }
+        updateLoraBase()
+    }
+
+    // ---- 2.7.1：LoRA ----
+
+    private fun loadLoras() {
+        viewModelScope.launch {
+            val l = withContext(Dispatchers.IO) { loraStore.list() }
+            _ui.update { it.copy(loras = l) }
+            updateLoraBase()
+        }
+    }
+
+    /** 当前模型（sd.cpp）主文件的结构，读文件头判断，按模型缓存。 */
+    private fun updateLoraBase() {
+        val m = _ui.value.model
+        if (m.backend != Backend.SDCPP || m.sdq) { _ui.update { it.copy(loraBase = LoraArch.UNKNOWN) }; return }
+        baseArchCache[m.id]?.let { a -> _ui.update { it.copy(loraBase = a) }; return }
+        viewModelScope.launch {
+            val a = withContext(Dispatchers.IO) {
+                runCatching {
+                    val f = m.sdFiles ?: return@runCatching LoraArch.UNKNOWN
+                    val root = repo.downloadedDir(m)?.parentFile ?: return@runCatching LoraArch.UNKNOWN
+                    val file = File(root, f.model.ifEmpty { f.diffusion })
+                    val head = file.inputStream().buffered().use { ImportDetect.readHead(file.name, it) } ?: return@runCatching LoraArch.UNKNOWN
+                    LoraInspect.baseArch(head.tensors, head.ggufArch)
+                }.getOrDefault(LoraArch.UNKNOWN)
+            }
+            if (a != LoraArch.UNKNOWN) baseArchCache[m.id] = a
+            _ui.update { if (it.modelId == m.id) it.copy(loraBase = a) else it }
+        }
+    }
+
+    /** 导入 LoRA：先读文件头校验，不合适直接说原因，合适再复制。 */
+    fun importLora(uri: Uri) {
+        if (_ui.value.loraBusy) return
+        _ui.update { it.copy(loraBusy = true, loraMsg = null) }
+        viewModelScope.launch {
+            val ctx = getApplication<Application>()
+            val name = withContext(Dispatchers.IO) { nameOf(uri) }
+            val check = withContext(Dispatchers.IO) {
+                runCatching { ctx.contentResolver.openInputStream(uri)?.buffered()?.use { LoraInspect.check(LoraInspect.readHeader(it)) } }
+                    .getOrNull() ?: LoraCheck(com.iris.localai.imagegen.LoraProblem.NOT_SAFETENSORS)
+            }
+            if (!check.ok) { _ui.update { it.copy(loraBusy = false, loraMsg = LoraText.problem(check)) }; return@launch }
+            val entry = withContext(Dispatchers.IO) {
+                runCatching {
+                    val dst = loraStore.target(name)
+                    val tmp = File(dst.path + ".part")
+                    ctx.contentResolver.openInputStream(uri)?.use { i -> tmp.outputStream().use { i.copyTo(it, 1 shl 20) } } ?: error("open")
+                    // 复制后的文件再验一次（防止读到一半的流）
+                    if (!LoraInspect.check(tmp).ok || !tmp.renameTo(dst)) { tmp.delete(); error("copy") }
+                    val turbo = LoraInspect.isTurbo(name)
+                    val e = LoraEntry(
+                        id = "lora-" + System.currentTimeMillis().toString(36), name = name.substringBeforeLast('.'), file = dst.name,
+                        arch = check.arch.name, format = check.format?.name.orEmpty(), rank = check.rank,
+                        on = false, scale = 1f, steps = if (turbo) LoraInspect.turboSteps(name) else null,
+                    )
+                    loraStore.save(loraStore.list() + e)
+                    e
+                }.getOrNull()
+            }
+            _ui.update {
+                if (entry == null) it.copy(loraBusy = false, loraMsg = I18n.s(R.string.ig271_lora_e_copy))
+                else it.copy(loraBusy = false, loras = it.loras + entry, loraMsg = LoraText.ok(check, entry.archOrUnknown.fits(it.loraBase) || !it.loraSupported))
+            }
+        }
+    }
+
+    private fun changeLora(id: String, f: (LoraEntry) -> LoraEntry) {
+        _ui.update { u -> u.copy(loras = u.loras.map { if (it.id == id) f(it) else it }) }
+        val list = _ui.value.loras
+        viewModelScope.launch(Dispatchers.IO) { runCatching { loraStore.save(list) } }
+    }
+
+    /** 开关一个 LoRA；开 Turbo 一类时把步数换成它的步数（之后可手改）。 */
+    fun setLoraOn(id: String, on: Boolean) {
+        changeLora(id) { it.copy(on = on) }
+        val e = _ui.value.loras.firstOrNull { it.id == id } ?: return
+        if (on) e.steps?.let { st -> _ui.update { it.copy(steps = st) } }
+    }
+
+    fun setLoraScale(id: String, v: Float) = changeLora(id) { it.copy(scale = LoraRules.clampScale(v)) }
+
+    /** Turbo LoRA 的手填步数。 */
+    fun setLoraSteps(id: String, text: String) {
+        val n = text.filter(Char::isDigit).take(2).toIntOrNull()?.coerceIn(1, 50) ?: return
+        changeLora(id) { it.copy(steps = n) }
+        if (_ui.value.loras.firstOrNull { it.id == id }?.on == true) _ui.update { it.copy(steps = n) }
+    }
+
+    fun deleteLora(id: String) {
+        _ui.update { u -> u.copy(loras = u.loras.filter { it.id != id }) }
+        viewModelScope.launch(Dispatchers.IO) { runCatching { loraStore.delete(id) } }
+    }
+
+    fun clearLoraMsg() = _ui.update { it.copy(loraMsg = null) }
+
+    /** 另一个页面实例发起的生图：接上进度 / 预览，结束时显示结果。 */
+    private fun adopt(j: ImageGenMonitor.Job) {
+        if (!j.finished) {
+            _ui.update { it.copy(running = true, step = j.step, total = j.total, startedAt = j.startedAt, preview = j.preview,
+                progress = SdProgress.next(it.progress, j.step, j.total, it.steps)) }
+        } else if (_ui.value.running || j.result != null && _ui.value.result != j.result) {
+            _ui.update { it.copy(running = false, preview = null, result = j.result ?: it.result, lastSeed = j.seed ?: it.lastSeed,
+                usedPrompt = j.usedPrompt, error = j.error, lowMem = j.lowMem) }
+            refresh()
         }
     }
 
@@ -556,15 +694,22 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun generate() {
         val s = _ui.value
-        if (!s.canGenerate) return
+        if (!s.canGenerate || ImageGenMonitor.running) return
         if (s.modelId !in s.downloaded) { _ui.update { it.copy(error = ImageGenText.NOT_DOWNLOADED_ERROR) }; return }
-        val req0 = s.request()
         val model = s.model
+        // LoRA：当前底模能用的、开着的；开了 Turbo 一类就用它的步数
+        val loras = if (s.loraSupported) LoraRules.active(s.loras, s.loraBase, loraStore.dir) else emptyList()
+        val turboSteps = if (s.loraSupported) s.lorasHere.firstOrNull { it.on && it.steps != null }?.steps else null
+        val req0 = s.request().let { r -> r.copy(loras = loras, steps = turboSteps ?: r.steps) }.normalize(model)
         // 关了风险提示弹窗 = 跳过内存预检，直接生成
         if (!container.settings.current.warnPopups) engines.sdEngine().forceOnce = true
         _ui.update { it.copy(running = true, step = 0, total = req0.steps, error = null, lowMem = false, lastSeed = null, usedPrompt = null,
-            progress = SdProgress.State(), startedAt = System.currentTimeMillis()) }
-        job = viewModelScope.launch {
+            progress = SdProgress.State(), startedAt = System.currentTimeMillis(), preview = null) }
+        ownSerial = ImageGenMonitor.begin(model.name, req0.steps) { cancel() }
+        // 前台服务：离开生图页、切到后台都继续生成，通知栏显示进度
+        ImageGenJobService.start(getApplication())
+        // 跑在应用级作用域：页面 / Activity 销毁也不打断
+        job = container.scope.launch {
             // 扩写在卸载文本模型之前（要用它）。
             val req = if (s.expand && req0.initImagePath == null) {
                 _ui.update { it.copy(expanding = true, expandNoModel = false) }
@@ -574,14 +719,29 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             } else req0
             // The NPU pipeline holds ≈1.1 GB: free the chat model first (it reloads on the next chat message).
             if (model.backend == Backend.QNN || model.backend == Backend.SDCPP) runCatching { container.engine.unload(I18n.s(R.string.chat_19a9bc)) }
-            val r = withContext(Dispatchers.Default) {
-                engine.generate(req, model) { step, total ->
-                    _ui.update { it.copy(step = step, total = total, progress = SdProgress.next(it.progress, step, total, req.steps)) }
+            val r = try {
+                withContext(Dispatchers.Default) {
+                    engines.generate(req, model, { step, total ->
+                        ImageGenMonitor.progress(step, total)
+                        _ui.update { it.copy(step = step, total = total, progress = SdProgress.next(it.progress, step, total, req.steps)) }
+                    }, { f ->
+                        ImageGenMonitor.preview(f)
+                        _ui.update { it.copy(preview = f) }
+                    })
                 }
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                ImageGenMonitor.finish(null, ImageGenText.CANCELLED, stopped = true)
+                throw c
             }
             val saved = r.mapCatching { png -> withContext(Dispatchers.IO) { repo.save(png, req, model) } }
-            saved.onSuccess { f -> _ui.update { it.copy(running = false, result = f.path, lastSeed = req.seed, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) } }
-                .onFailure { e -> _ui.update { it.copy(running = false, error = e.message ?: e.javaClass.simpleName, lowMem = e is SdRules.LowMemory) } }
+            saved.onSuccess { f ->
+                ImageGenMonitor.finish(f.path, null, stopped = false, seed = req.seed, usedPrompt = _ui.value.usedPrompt)
+                _ui.update { it.copy(running = false, preview = null, result = f.path, lastSeed = req.seed, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) }
+            }.onFailure { e ->
+                val msg = e.message ?: e.javaClass.simpleName
+                ImageGenMonitor.finish(null, msg, stopped = false, lowMem = e is SdRules.LowMemory)
+                _ui.update { it.copy(running = false, preview = null, error = msg, lowMem = e is SdRules.LowMemory) }
+            }
             if (model.backend == Backend.SDCPP) refresh()
         }
     }
@@ -594,9 +754,16 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     fun cancel() {
         engine.cancel()
-        job?.cancel()
-        job = null
-        _ui.update { it.copy(running = false, expanding = false, error = ImageGenText.CANCELLED) }
+        val own = job
+        if (own == null && ImageGenMonitor.running) {
+            // 别的页面实例发起的那张：交给它停
+            ImageGenMonitor.requestStop()
+        } else {
+            own?.cancel()
+            job = null
+            if (ImageGenMonitor.running) ImageGenMonitor.finish(null, ImageGenText.CANCELLED, stopped = true)
+        }
+        _ui.update { it.copy(running = false, expanding = false, preview = null, error = ImageGenText.CANCELLED) }
     }
 
     /** recent sd.cpp log lines for a bug report (copied by the page). */

@@ -219,6 +219,11 @@ class MainActivity : ComponentActivity() {
 
     /** A "回复已完成 / 正在生成" notification opens its conversation. */
     private fun handleIntent(intent: android.content.Intent?) {
+        if (intent?.getStringExtra(com.iris.localai.service.ImageGenJobService.EXTRA_OPEN) == com.iris.localai.service.ImageGenJobService.OPEN_IMAGEGEN) {
+            intent.removeExtra(com.iris.localai.service.ImageGenJobService.EXTRA_OPEN)
+            com.iris.localai.service.ImageGenMonitor.requestOpen()
+            return
+        }
         val id = intent?.getStringExtra(GenerationService.EXTRA_CONVERSATION) ?: return
         intent.removeExtra(GenerationService.EXTRA_CONVERSATION)
         chat.openFromNotification(id)
@@ -254,6 +259,9 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
     val saveable = rememberSaveableStateHolder()
     val showChat by chat.showChat.collectAsStateWithLifecycle()
     LaunchedEffect(showChat) { if (showChat > 0) stack = listOf(Route.CHAT.name) }
+    // 生图通知点开 → 生图页
+    val openImageGen by com.iris.localai.service.ImageGenMonitor.openRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(openImageGen) { if (openImageGen) { com.iris.localai.service.ImageGenMonitor.consumeOpen(); push(Route.IMAGEGEN) } }
     val reduce = LocalReduceMotion.current
 
     // Predictive back: the page shrinks toward the swipe edge while the gesture is in progress,

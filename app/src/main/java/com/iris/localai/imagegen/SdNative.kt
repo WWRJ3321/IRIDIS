@@ -24,6 +24,9 @@ object SdNative {
         if (loaded) return null
         CpuFeatures.missingForI8mm()?.let { return it }
         val noLib = I18n.s(R.string.imagegen_sd240_nolib)
+        // 2.7.1：旧版库（3e92bf9-b 等）换成新库后删掉，免得占空间
+        downloaded?.parentFile?.listFiles()?.filter { it.name.startsWith("libiris_sd-") && it.name.endsWith(".so") && it.name != downloaded.name }
+            ?.forEach { runCatching { it.delete() } }
         val src = downloaded?.takeIf { it.isFile && it.length() == ImageCatalog.SD_LIB.size } ?: return noLib
         return try {
             val dir = File(context.filesDir, "sdcpp").apply { mkdirs() }
@@ -49,6 +52,22 @@ object SdNative {
 
     @Keep
     fun interface Progress { fun onStep(step: Int, steps: Int) }
+
+    /** 2.7.1：步进 + 预览帧（sd.cpp PREVIEW_PROJ，每步一帧 RGB）。JNI 按名字找 onStep / onPreview。 */
+    @Keep
+    class Listener2(private val step: (Int, Int) -> Unit, private val preview: (Int, Int, ByteArray) -> Unit) : Progress {
+        @Keep override fun onStep(step: Int, steps: Int) = this.step(step, steps)
+        @Keep fun onPreview(width: Int, height: Int, rgb: ByteArray) = preview(width, height, rgb)
+    }
+
+    /** 库的能力级别：1 = 只有 nativeGenerate；2 = 有 nativeGenerate2（LoRA + 预览）。 */
+    val abi: Int by lazy { runCatching { nativeAbi() }.getOrDefault(1) }
+
+    @JvmStatic external fun nativeAbi(): Int
+    @JvmStatic external fun nativeGenerate2(
+        handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long,
+        loraPaths: Array<String>?, loraScales: FloatArray?, preview: Boolean, listener: Progress?,
+    ): ByteArray?
 
     @JvmStatic external fun nativeLastError(): String
     @JvmStatic external fun nativeLoad(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean): Long

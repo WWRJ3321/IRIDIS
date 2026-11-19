@@ -80,8 +80,19 @@ interface SdApi {
     fun free(handle: Long)
     fun cancel(handle: Long)
     fun generate(handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long, listener: SdNative.Progress?): ByteArray?
+    /** 2.7.1：LoRA + 预览（只有上游库 abi ≥ 2 有）。 */
+    val supportsLoraPreview: Boolean get() = false
+    fun generate2(handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long,
+                  loras: List<LoraUse>, preview: Boolean, listener: SdNative.Progress?): ByteArray? =
+        generate(handle, prompt, negative, width, height, steps, cfg, seed, listener)
 
     object Upstream : SdApi {
+        override val supportsLoraPreview: Boolean get() = SdNative.abi >= 2
+        override fun generate2(handle: Long, prompt: String, negative: String, width: Int, height: Int, steps: Int, cfg: Float, seed: Long,
+                               loras: List<LoraUse>, preview: Boolean, listener: SdNative.Progress?): ByteArray? =
+            if (!supportsLoraPreview) generate(handle, prompt, negative, width, height, steps, cfg, seed, listener)
+            else SdNative.nativeGenerate2(handle, prompt, negative, width, height, steps, cfg, seed,
+                loras.map { it.path }.toTypedArray(), FloatArray(loras.size) { loras[it].scale }, preview, listener)
         override fun lastError() = SdNative.nativeLastError()
         override fun load(diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean) = SdNative.nativeLoad(diffusion, llm, vae, backend, threads, flashAttn)
         override fun loadEx(model: String, clipL: String, clipG: String, t5: String, diffusion: String, llm: String, vae: String, backend: String, threads: Int, flashAttn: Boolean) =

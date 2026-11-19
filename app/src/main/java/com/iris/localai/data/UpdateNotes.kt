@@ -16,6 +16,12 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.7.1", listOf(
+            f("生图支持 LoRA：导入 .safetensors（常见 LoRA、LoKr、LoHa），导入时立刻检查并说明不合适的原因；强度 0–2 可调，少步数 LoRA 可手填步数。GPU / CPU 模型可用，NPU 模型不支持。"),
+            f("生图实时预览：生成过程中每一步显示一张低清预览，看着不对可以随时停止。"),
+            f("生图低内存模式：内存小于约 9.5 GB 的手机默认开启；NPU 模型改为分阶段加载，内存峰值更低。"),
+            f("生图可以挂后台：离开生图页或切到后台继续生成，通知栏显示实时进度（可停止、点开回到生图页），完成后通知带缩略图；支持小米超级岛与 Android 16 实时进度。"),
+        )),
         Release("2.7.0", listOf(
             f("生图「导入模型」改成通用导入：一次选好主模型、文本编码器、VAE，自动识别各自用途；新增支持 SD1.5、SDXL 单文件模型和需要 CLIP / T5 的模型。"),
             f("生图页精简：模型、提示词、尺寸、生成一屏看完，其余参数收进「高级」。"),

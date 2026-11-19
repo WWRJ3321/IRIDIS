@@ -204,7 +204,12 @@ class SdCppEngine(
                         } ?: continue
                         if (cancelled) throw CancellationException()
                         running = h
-                        val rgb = api.generate(h, req.prompt, req.effectiveNegative, req.width, req.height, req.steps, req.cfg, req.seed, SdNative.Progress { s, n ->
+                        val preview = PreviewHub.wanted && api.supportsLoraPreview
+                        val rgb = if (api.supportsLoraPreview && (preview || req.loras.isNotEmpty())) {
+                            api.generate2(h, req.prompt, req.effectiveNegative, req.width, req.height, req.steps, req.cfg, req.seed,
+                                req.loras.filter { File(it.path).isFile }, preview,
+                                SdNative.Listener2({ s, n -> onProgress(s, n) }, { w, hh, b -> PreviewHub.emit(LatentPreview.fromRgb(b, w, hh)) }))
+                        } else api.generate(h, req.prompt, req.effectiveNegative, req.width, req.height, req.steps, req.cfg, req.seed, SdNative.Progress { s, n ->
                             onProgress(s, n)
                         })
                         running = 0L

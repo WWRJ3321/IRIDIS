@@ -220,6 +220,12 @@ class SdPipeline(
             val t = sched.timesteps[i]
             val noise = if (uncond != null) cfgCombine(runUnet(xIn, t, uncond), runUnet(xIn, t, cond), cfg)
                         else runUnet(xIn, t, cond)
+            // 实时预览：x0 = x − σ·ε，4 通道线性映射成 64×64 低清图（不跑 VAE）
+            if (PreviewHub.wanted) runCatching {
+                val x0 = LatentPreview.x0Eps(x, noise, sched.sigmas[i])
+                val nchw = unetLatent.dims.size == 4 && unetLatent.dims[1] == 4
+                PreviewHub.emit(LatentRgbMap.SD1.render(if (nchw) x0 else LatentPreview.nhwcToChw(x0, 64, 64, 4), 64, 64))
+            }
             x = sched.step(noise, i, x)
             onStep(i + 1, steps)
         }

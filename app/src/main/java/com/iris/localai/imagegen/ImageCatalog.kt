@@ -205,10 +205,10 @@ object ImageCatalog {
      * libiris_sd.so (stable-diffusion.cpp 3e92bf9 + JNI; 2.7.0 adds nativeLoadEx, built by scripts/build-sd-native-arm64host.sh) is not in the APK; it is
      * downloaded with the first sd.cpp model and only loaded after its SHA-256 matches [SD_LIB_SHA256] (SdNative).
      */
-    const val SD_LIB_SHA256 = "eaabba922f7f15b4137f05dc2056026371e586159205096c2e994fe4787f7e9d"
+    const val SD_LIB_SHA256 = "31a97a5b81e9f4f62816ebaa5662a3df6a67b2344624e2b7600913f8b78e777a"
     val SD_LIB = RemoteFile(
-        "https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-3e92bf9-b/prebuilt-native/arm64-v8a/libiris_sd.so",
-        70_842_296L, "$SHARED_DIR/libiris_sd-3e92bf9-b.so",
+        "https://raw.githubusercontent.com/WWRJ3321/IRIDIS/sdlib-3e92bf9-c/prebuilt-native/arm64-v8a/libiris_sd.so",
+        70_848_104L, "$SHARED_DIR/libiris_sd-3e92bf9-c.so",
     )
 
     /**

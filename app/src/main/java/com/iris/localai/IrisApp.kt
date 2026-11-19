@@ -114,6 +114,11 @@ class IrisApp : Application() {
         I18n.init(this) // 2.3.1
         ModelAliases.init(this) // 模型自定义名，先于模型列表
         ImportedImages.init(filesDir) // 导入的生图模型（:imagegen 进程也要）
+        // 2.7.1：生图低内存模式的默认值按本机内存（低于约 9.5 GB 默认开）
+        runCatching {
+            val am = getSystemService(android.app.ActivityManager::class.java)
+            com.iris.localai.imagegen.ImageLowMem.autoOn = com.iris.localai.imagegen.ImageLowMem.defaultOn(android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem)
+        }
         // the tiny restart process (AppRestart) needs none of the app.
         if (android.os.Build.VERSION.SDK_INT >= 28 && android.app.Application.getProcessName().endsWith(":restart")) return
         CrashReporter.install(this)

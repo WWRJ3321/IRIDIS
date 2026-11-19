@@ -70,12 +70,16 @@ data class AgentSettings(
     val imageMakeRoom: Boolean = true,
     /** 先问清楚：任务/生图信息不足时先追问 1–2 句再动手。默认开。 */
     val askFirst: Boolean = true,
-    /** 生图低内存模式：先卸文本模型、长边 ≤768、VAE 放 CPU、用完即放。默认关。 */
+    /** 生图低内存模式：先卸文本模型、长边 ≤768、VAE 放 CPU、用完即放；NPU 分阶段加载。默认按内存（[imageLowMemOn]）。 */
     val imageLowMem: Boolean = false,
+    /** 2.7.1：用户动过低内存开关（没动过 = 按本机内存，低于约 9.5 GB 默认开）。 */
+    val imageLowMemSet: Boolean = false,
     /** 提示词扩写：短描述自动补全（生图页用已加载文本模型，没有就用规则模板）。默认开。 */
     val imagePromptExpand: Boolean = true,
 ) {
     val search: SearchProvider get() = SearchProvider.parse(searchProvider)
+    /** 生效的低内存模式（用户设过用用户的，否则按本机内存）。 */
+    val imageLowMemOn: Boolean get() = com.iris.localai.imagegen.ImageLowMem.effective(imageLowMemSet, imageLowMem)
     val workspaceLocation: WorkspaceLocation get() = WorkspaceLocation.parse(workspace)
 
     fun isEnabled(tool: AgentTool): Boolean = enabled[tool.name] ?: tool.defaultEnabled
@@ -443,7 +447,7 @@ class AgentContainer(context: Context) {
         imageGen = imageGen,
         imageModelId = settings.current.imageModel,
         imageMakeRoom = settings.current.imageMakeRoom,
-        imageLowMem = settings.current.imageLowMem,
+        imageLowMem = settings.current.imageLowMemOn,
         imageExpand = settings.current.imagePromptExpand,
         imageTags = { TagLibrary.tags(appContextForTools) },
         gui = gui,

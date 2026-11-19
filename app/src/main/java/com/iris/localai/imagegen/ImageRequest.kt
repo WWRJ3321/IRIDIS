@@ -14,6 +14,8 @@ data class ImageRequest(
     val strength: Float = 0.75f,
     /** 低内存模式：用完即释放、VAE 放 CPU（mmap）、尺寸上限 [ImageLowMem.MAX_DIM]。 */
     val lowMem: Boolean = false,
+    /** 2.7.1：用户 LoRA（只在 sd.cpp 路径生效；NPU 模型的权重编在上下文里，不支持）。 */
+    val loras: List<LoraUse> = emptyList(),
 ) {
     /** Negative prompt actually used: ignored without classifier-free guidance. */
     val effectiveNegative: String get() = if (cfg <= 1f) "" else negative
@@ -28,6 +30,7 @@ data class ImageRequest(
             cfg = if (cfg.isNaN()) model.defaultCfg else cfg.coerceIn(1f, 20f),
             strength = if (strength.isNaN()) 0.75f else strength.coerceIn(0f, 1f),
             seed = if (seed < 0) random.nextLong(0, Long.MAX_VALUE) else seed,
+            loras = if (model.backend == Backend.SDCPP && !model.sdq) loras.map { it.copy(scale = LoraRules.clampScale(it.scale)) }.filter { it.scale > 0f } else emptyList(),
         )
     }
 
@@ -76,4 +79,14 @@ object ImageLowMem {
 
     /** sd.cpp 后端：低内存时 GPU 方案换成 VAE 也在 CPU 的版本。 */
     fun backend(b: String, lowMem: Boolean): String = if (lowMem && b == SdRules.GPU) GPU else b
+
+    /** 2.7.1：低内存模式的默认值——总内存低于约 9.5 GB 时默认开（用户改过就以用户为准）。 */
+    const val AUTO_ON_BELOW_BYTES = 9_500L * 1024 * 1024 * 1024 / 1000
+
+    fun defaultOn(totalMemBytes: Long): Boolean = totalMemBytes in 1 until AUTO_ON_BELOW_BYTES
+
+    /** 本机的默认值（IrisApp 启动时按 ActivityManager.totalMem 设）。 */
+    @Volatile var autoOn: Boolean = false
+
+    fun effective(userSet: Boolean, userValue: Boolean): Boolean = if (userSet) userValue else autoOn
 }

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "stable-diffusion.h"
 
@@ -53,6 +54,7 @@ struct ProgressSink {
     JNIEnv *env = nullptr;
     jobject listener = nullptr;
     jmethodID on_step = nullptr;
+    jmethodID on_preview = nullptr;  // 2.7.1: onPreview(int w, int h, byte[] rgb)
 };
 thread_local ProgressSink t_sink;
 
@@ -61,6 +63,28 @@ void progress_cb(int step, int steps, float, void *) {
     if (!s.env || !s.listener || !s.on_step) return;
     s.env->CallVoidMethod(s.listener, s.on_step, (jint) step, (jint) steps);
     if (s.env->ExceptionCheck()) s.env->ExceptionClear();
+}
+
+// 2.7.1: PREVIEW_PROJ frames (latent -> RGB linear map inside sd.cpp, no VAE) to the listener of this thread.
+void preview_cb(int, int frame_count, sd_image_t *frames, bool, void *) {
+    ProgressSink &s = t_sink;
+    if (!s.env || !s.listener || !s.on_preview || frame_count < 1 || !frames || !frames[0].data) return;
+    const sd_image_t &im = frames[0];
+    const size_t px = (size_t) im.width * im.height;
+    if (px == 0 || px > 4096u * 4096u) return;
+    jbyteArray arr = s.env->NewByteArray((jsize) (px * 3));
+    if (!arr) { if (s.env->ExceptionCheck()) s.env->ExceptionClear(); return; }
+    if (im.channel == 3) {
+        s.env->SetByteArrayRegion(arr, 0, (jsize) (px * 3), (const jbyte *) im.data);
+    } else {
+        std::string rgb(px * 3, '\0');
+        for (size_t i = 0; i < px; i++)
+            for (int c = 0; c < 3; c++) rgb[i * 3 + c] = (char) im.data[i * im.channel + (c < (int) im.channel ? c : 0)];
+        s.env->SetByteArrayRegion(arr, 0, (jsize) rgb.size(), (const jbyte *) rgb.data());
+    }
+    s.env->CallVoidMethod(s.listener, s.on_preview, (jint) im.width, (jint) im.height, arr);
+    if (s.env->ExceptionCheck()) s.env->ExceptionClear();
+    s.env->DeleteLocalRef(arr);
 }
 
 std::once_flag g_init;
@@ -255,5 +279,112 @@ JNI_FN(nativeGenerate)(JNIEnv *env, jclass, jlong h, jstring prompt, jstring neg
 #endif
     return out;
 }
+
+#ifndef IRIS_SDQ
+/** 2.7.1: capability level of this library (1 = nativeGenerate only; 2 = nativeGenerate2 with LoRA + preview). */
+JNIEXPORT jint JNICALL
+JNI_FN(nativeAbi)(JNIEnv *, jclass) { return 2; }
+
+/**
+ * 2.7.1: nativeGenerate plus user LoRAs ([loraPaths] .safetensors, [loraScales] multipliers; sd.cpp reads kohya,
+ * diffusers/PEFT and LyCORIS LoKr/LoHa) and, when [preview], PREVIEW_PROJ frames of the denoised latent after
+ * every step to listener.onPreview(w, h, rgb). Same result contract as nativeGenerate.
+ */
+JNIEXPORT jbyteArray JNICALL
+JNI_FN(nativeGenerate2)(JNIEnv *env, jclass, jlong h, jstring prompt, jstring negative,
+                        jint width, jint height, jint steps, jfloat cfg, jlong seed,
+                        jobjectArray lora_paths, jfloatArray lora_scales, jboolean preview, jobject listener) {
+    if (!h) return nullptr;
+    auto *ctx = (sd_ctx_t *) (intptr_t) h;
+    set_error("");
+    sd_cancel_generation(ctx, SD_CANCEL_RESET);
+    JStr pr(env, prompt), ng(env, negative);
+
+    std::vector<std::string> paths;
+    std::vector<sd_lora_t> loras;
+    const jsize nl = lora_paths ? env->GetArrayLength(lora_paths) : 0;
+    const jsize ns = lora_scales ? env->GetArrayLength(lora_scales) : 0;
+    std::vector<float> scales((size_t) ns);
+    if (ns > 0) env->GetFloatArrayRegion(lora_scales, 0, ns, scales.data());
+    for (jsize i = 0; i < nl; i++) {
+        auto js = (jstring) env->GetObjectArrayElement(lora_paths, i);
+        if (!js) continue;
+        const char *c = env->GetStringUTFChars(js, nullptr);
+        if (c && c[0]) paths.emplace_back(c);
+        else paths.emplace_back();
+        if (c) env->ReleaseStringUTFChars(js, c);
+        env->DeleteLocalRef(js);
+    }
+    paths.resize((size_t) nl);
+    for (jsize i = 0; i < nl; i++) {
+        if (paths[(size_t) i].empty()) continue;
+        sd_lora_t l{};
+        l.is_high_noise = false;
+        l.multiplier = i < ns ? scales[(size_t) i] : 1.0f;
+        l.path = paths[(size_t) i].c_str();
+        loras.push_back(l);
+    }
+
+    sd_img_gen_params_t g;
+    sd_img_gen_params_init(&g);
+    g.prompt = pr.c ? pr.c : "";
+    g.negative_prompt = ng.c ? ng.c : "";
+    g.width = width;
+    g.height = height;
+    g.seed = seed;
+    g.batch_count = 1;
+    g.sample_params.sample_steps = steps;
+    g.sample_params.guidance.txt_cfg = cfg;
+    g.sample_params.sample_method = sd_get_default_sample_method(ctx);
+    g.sample_params.scheduler = sd_get_default_scheduler(ctx, g.sample_params.sample_method);
+    g.vae_tiling_params.enabled = (width * height > 512 * 512);
+    g.loras = loras.empty() ? nullptr : loras.data();
+    g.lora_count = (uint32_t) loras.size();
+
+    ProgressSink prev = t_sink;
+    t_sink.env = env;
+    t_sink.listener = listener;
+    t_sink.on_step = nullptr;
+    t_sink.on_preview = nullptr;
+    if (listener) {
+        jclass cls = env->GetObjectClass(listener);
+        t_sink.on_step = env->GetMethodID(cls, "onStep", "(II)V");
+        if (env->ExceptionCheck()) { env->ExceptionClear(); t_sink.on_step = nullptr; }
+        if (preview) {
+            t_sink.on_preview = env->GetMethodID(cls, "onPreview", "(II[B)V");
+            if (env->ExceptionCheck()) { env->ExceptionClear(); t_sink.on_preview = nullptr; }
+        }
+        env->DeleteLocalRef(cls);
+    }
+    if (t_sink.on_preview) sd_set_preview_callback(preview_cb, PREVIEW_PROJ, 1, true, false, nullptr);
+    sd_image_generation_result_t *res = nullptr;
+    bool ok = generate_image(ctx, &g, &res);
+    if (t_sink.on_preview) sd_set_preview_callback(nullptr, PREVIEW_NONE, 1, true, false, nullptr);
+    const sd_image_t *first = (ok && res && res->count > 0) ? &res->items[0].image : nullptr;
+    t_sink = prev;
+
+    jbyteArray out = nullptr;
+    if (first && first->data) {
+        const sd_image_t &im = *first;
+        const size_t px = (size_t) im.width * im.height;
+        out = env->NewByteArray((jsize) (px * 3));
+        if (out) {
+            if (im.channel == 3) {
+                env->SetByteArrayRegion(out, 0, (jsize) (px * 3), (const jbyte *) im.data);
+            } else {
+                std::string rgb(px * 3, '\0');
+                for (size_t i = 0; i < px; i++)
+                    for (int c = 0; c < 3; c++) rgb[i * 3 + c] = (char) im.data[i * im.channel + (c < (int) im.channel ? c : 0)];
+                env->SetByteArrayRegion(out, 0, (jsize) rgb.size(), (const jbyte *) rgb.data());
+            }
+        }
+    } else {
+        std::lock_guard<std::mutex> lk(g_err_mu);
+        if (g_last_error.empty()) g_last_error = "generate_image failed";
+    }
+    if (res) free_sd_image_generation_result(res);
+    return out;
+}
+#endif
 
 }  // extern "C"

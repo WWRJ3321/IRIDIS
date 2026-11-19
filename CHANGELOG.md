@@ -2,6 +2,16 @@
 
 发布版本记录见 [GitHub Releases](https://github.com/WWRJ3321/IRIDIS/releases)。本文件从开源首个版本开始记录。
 
+## 2.7.1（未真机测试）
+**本版未在真机测试。**
+
+- 生图 LoRA：导入 .safetensors LoRA（kohya、diffusers / PEFT、LyCORIS LoKr / LoHa），导入时只读文件头校验，不合适直接说原因（不是 LoRA、完整模型、只有文本编码器部分、认不出结构、视频模型、权重类型不支持），并按键名与交叉注意力宽度判断适用结构，只在结构匹配的底模上列出；强度 0–2（步长 0.05）；少步数（Turbo 一类）LoRA 开启时步数换成它的步数，可手填。GPU / CPU（sd.cpp）路径用 sd.cpp 自带 LoRA；NPU 模型权重编在 QNN 上下文里，显示「NPU 模型不支持 LoRA」。
+- 生图实时预览：每步把当前 x0 估计的潜变量线性映射成低清图（不跑 VAE），配合停止按钮。NPU 路径（两种 Anima 包、SD1.5）在 Kotlin 采样循环里算；GPU / CPU 路径用 sd.cpp 的 PREVIEW_PROJ。
+- libiris_sd.so 重编（只改 JNI：新增 nativeGenerate2 传 LoRA 与预览回调、nativeAbi），托管分支改为 sdlib-3e92bf9-c，首次用 GPU / CPU 模型时会重新下载一次（约 68 MB），旧库自动删除。
+- 生图低内存模式：未手动设置时按本机内存决定（低于约 9.5 GB 默认开）；NPU 路径分阶段：文本编码器用完即放（原有），去噪时不加载解码器，解码前先关掉扩散图再加载解码器。
+- 生图挂后台：生成跑在应用级作用域并由前台服务承载，离开生图页 / 切后台不中断，回到生图页接上进度；通知实时进度、停止按钮、点开回生图页，完成后（不在生图页时）带缩略图；HyperOS 附焦点通知参数（超级岛），Android 16 用 ProgressStyle 实时进度，系统不支持时为普通进度通知。
+- 第三方说明：预览系数与 LoRA 头检查思路参考 hexanima（MIT），见 third_party/NOTICE 与应用内开源许可。
+
 ## 2.7.0（未真机测试）
 **本版未在真机测试。** 正式版，汇总 2.7.0 Beta → Beta3，并新增下列三项。
 

@@ -43,6 +43,8 @@ object ImageGenIpc {
     const val RELEASE_WHEN_IDLE = 4
     const val PROGRESS = 10
     const val RESULT = 11
+    /** 2.7.1：预览帧（arg1 = 宽，arg2 = 高，data["px"] = ARGB）。 */
+    const val PREVIEW = 12
 
     const val ERR_GENERIC = 0
     const val ERR_LOW_MEMORY = 1
@@ -55,6 +57,8 @@ object ImageGenIpc {
         putInt("width", req.width); putInt("height", req.height); putInt("steps", req.steps)
         putFloat("cfg", req.cfg); putLong("seed", req.seed); putString("init", req.initImagePath)
         putFloat("strength", req.strength); putString("model", modelId); putBoolean("force", forceOnce); putBoolean("lowMem", req.lowMem)
+        putStringArray("loraPaths", req.loras.map { it.path }.toTypedArray())
+        putFloatArray("loraScales", FloatArray(req.loras.size) { req.loras[it].scale })
     }
 
     fun requestOf(b: Bundle) = ImageRequest(
@@ -62,6 +66,10 @@ object ImageGenIpc {
         width = b.getInt("width"), height = b.getInt("height"), steps = b.getInt("steps"),
         cfg = b.getFloat("cfg"), seed = b.getLong("seed"), initImagePath = b.getString("init"),
         strength = b.getFloat("strength"), lowMem = b.getBoolean("lowMem", false),
+        loras = run {
+            val p = b.getStringArray("loraPaths").orEmpty(); val sc = b.getFloatArray("loraScales") ?: FloatArray(0)
+            p.indices.map { LoraUse(p[it], sc.getOrElse(it) { 1f }) }
+        },
     )
 }
 
@@ -94,9 +102,15 @@ class ImageGenService : Service() {
         val model = ImageCatalog.all.firstOrNull { it.id == id } ?: ImageCatalog.byId(id)
         val result: Result<ByteArray> = if (model == null) Result.failure(IllegalStateException("unknown model $id")) else {
             if (b.getBoolean("force")) engines.sdEngine().forceOnce = true
-            engines.generateLocal(ImageGenIpc.requestOf(b), model) { step, total ->
-                runCatching { reply.send(Message.obtain(null, ImageGenIpc.PROGRESS, step, total)) }
+            // 实时预览：每步一帧发回主进程
+            PreviewHub.sink = { f ->
+                runCatching { reply.send(Message.obtain(null, ImageGenIpc.PREVIEW, f.width, f.height).apply { data = Bundle().apply { putIntArray("px", f.argb) } }) }
             }
+            try {
+                engines.generateLocal(ImageGenIpc.requestOf(b), model) { step, total ->
+                    runCatching { reply.send(Message.obtain(null, ImageGenIpc.PROGRESS, step, total)) }
+                }
+            } finally { PreviewHub.sink = null }
         }
         val out = Message.obtain(null, ImageGenIpc.RESULT)
         out.data = Bundle().apply {
@@ -159,7 +173,8 @@ class RemoteImageGen(private val context: Context) {
         }
     }
 
-    suspend fun generate(req: ImageRequest, model: ImageModel, forceOnce: Boolean, onProgress: (Int, Int) -> Unit): Result<ByteArray> = lock.withLock {
+    suspend fun generate(req: ImageRequest, model: ImageModel, forceOnce: Boolean, onProgress: (Int, Int) -> Unit,
+                         onPreview: (PreviewFrame) -> Unit = {}): Result<ByteArray> = lock.withLock {
         val svc = connect() ?: return@withLock Result.failure(ProcessDied(I18n.s(R.string.imagegen_proc_start_failed)))
         busy = true
         try {
@@ -167,6 +182,8 @@ class RemoteImageGen(private val context: Context) {
                 val handler = Handler(replies.looper) { msg ->
                     when (msg.what) {
                         ImageGenIpc.PROGRESS -> onProgress(msg.arg1, msg.arg2)
+                        ImageGenIpc.PREVIEW -> msg.data?.getIntArray("px")?.takeIf { it.size == msg.arg1 * msg.arg2 }
+                            ?.let { runCatching { onPreview(PreviewFrame(msg.arg1, msg.arg2, it)) } }
                         ImageGenIpc.RESULT -> {
                             val d = msg.data
                             val path = d.getString("path")

@@ -168,8 +168,8 @@ class AnimaQnnEngine(
                 try {
                     val ctx = runText(t, req.lowMem)
                     checkCancel()
-                    loadDraw(w, h)
-                    val argb = draw(ctx, w, h, req.steps.coerceIn(1, 50), req.seed, onProgress, model.animaShift)
+                    loadDraw(w, h, req.lowMem)
+                    val argb = draw(ctx, w, h, req.steps.coerceIn(1, 50), req.seed, onProgress, model.animaShift, req.lowMem)
                     if (req.lowMem) releaseLocked(keepTables = true)
                     encodePng(argb, w, h)
                 } finally {
@@ -259,8 +259,12 @@ class AnimaQnnEngine(
         }
     }
 
-    private fun loadDraw(w: Int, h: Int) {
-        if (loadedSize == (w to h) && parts.size == 4 && dec != null) return
+    /** 低内存模式：去噪时不开解码器（[draw] 结束前关掉四段扩散图再开），峰值少一个解码器上下文。 */
+    private fun loadDraw(w: Int, h: Int, lowMem: Boolean = false) {
+        if (loadedSize == (w to h) && parts.size == 4 && (dec != null || lowMem)) {
+            if (lowMem) { dec?.let { runCatching { it.close() } }; dec = null }
+            return
+        }
         closeGraphs()
         val f = AnimaQnnFiles(dir!!)
         val g = if (multi) "s${w}x$h" else ""
@@ -268,18 +272,30 @@ class AnimaQnnEngine(
         try {
             val decHas = multi && g in loader.graphNames(f.dec)
             if (multi && !decHas && (w to h) != (512 to 512)) throw IllegalStateException("dec.bin 和扩散文件不是同一套（多尺寸包要用同一套的 dec.bin）")
-            opened += loader.open(f.dec, if (decHas) g else "")
+            if (!lowMem) opened += loader.open(f.dec, if (decHas) g else "")
             for (p in f.parts) { checkCancel(); opened += loader.open(p, g) }
-            val x = spec(opened[1].inputs, "x")
+            val first = if (lowMem) 0 else 1
+            val x = spec(opened[first].inputs, "x")
             if (x.elements != (w / 16) * (h / 16) * 68) throw IllegalStateException("NPU 包尺寸不符（${x.dims}）")
         } catch (t: Throwable) {
             opened.forEach { runCatching { it.close() } }
             throw t
         }
-        dec = opened[0]; parts = opened.drop(1); loadedSize = w to h
+        if (lowMem) { dec = null; parts = opened } else { dec = opened[0]; parts = opened.drop(1) }
+        loadedSize = w to h
     }
 
-    private fun draw(ctx: Pair<QnnTensorSpec, ByteBuffer>, w: Int, h: Int, steps: Int, seed: Long, onProgress: (Int, Int) -> Unit, shift: Float = AnimaMath.DEFAULT_SHIFT): IntArray {
+    /** 低内存模式解码前：关掉扩散图，单独开解码器。 */
+    private fun openDecoderOnly(w: Int, h: Int) {
+        parts.forEach { runCatching { it.close() } }
+        parts = emptyList(); loadedSize = null
+        val f = AnimaQnnFiles(dir!!)
+        val g = if (multi) "s${w}x$h" else ""
+        val decHas = multi && g in loader.graphNames(f.dec)
+        dec = loader.open(f.dec, if (decHas) g else "")
+    }
+
+    private fun draw(ctx: Pair<QnnTensorSpec, ByteBuffer>, w: Int, h: Int, steps: Int, seed: Long, onProgress: (Int, Int) -> Unit, shift: Float = AnimaMath.DEFAULT_SHIFT, lowMem: Boolean = false): IntArray {
         val hp = h / 16; val wp = w / 16; val L = hp * wp
         val nl = 16 * (h / 8) * (w / 8)
         val sig = AnimaMath.sigmas(steps, shift)
@@ -334,10 +350,15 @@ class AnimaQnnEngine(
             val os = spec(parts[3].outputs, "out")
             val o = decf(os, outBufs[3].getValue("out").also { it.rewind() })
             AnimaMath.unpatchify(o, v, hp, wp)
+            // 实时预览：x0 = x − σ·v，线性映射成低清图（不跑 VAE）
+            if (PreviewHub.wanted) PreviewHub.anima?.takeIf { it.channels == 16 }?.let { m ->
+                runCatching { PreviewHub.emit(m.render(LatentPreview.x0Flow(lat, v, s), h / 8, w / 8)) }
+            }
             val dt = sn - s
             for (k in 0 until nl) lat[k] += dt * v[k]
             onProgress(i + 1, steps)
         }
+        if (lowMem) { checkCancel(); openDecoderOnly(w, h) }
         val dg = dec!!
         val li = spec(dg.inputs, "lat")
         val ro = dg.outputs.first()

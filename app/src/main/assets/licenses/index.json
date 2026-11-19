@@ -190,5 +190,11 @@
     "license": "MPL-2.0",
     "file": "translation-models-notice.txt",
     "url": "https://github.com/mozilla/firefox-translations-models"
+  },
+  {
+    "name": "hexanima (latent preview coefficients, LoRA header checks)",
+    "license": "MIT",
+    "file": "mit-hexanima.txt",
+    "url": "https://github.com/ayanoby/hexanima"
   }
 ]

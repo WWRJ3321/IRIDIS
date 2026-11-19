@@ -114,7 +114,10 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     val s by vm.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Leaving 生图 frees the NPU graphs (≈1.1 GB); generate_image keeps its own 60 s idle release.
-    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { vm.onLeave() } }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.iris.localai.service.ImageGenMonitor.pageVisible = true
+        onDispose { com.iris.localai.service.ImageGenMonitor.pageVisible = false; vm.onLeave() }
+    }
     fun toast(t: String) = Toast.makeText(context, t, Toast.LENGTH_SHORT).show()
     val logScope = androidx.compose.runtime.rememberCoroutineScope()
     // copy the recent sd.cpp log (for a frozen / failed image) to the clipboard.
@@ -267,7 +270,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             onTrailing = if (ImageSeed.isRandom(s.seed)) null else ({ vm.edit { it.copy(seed = "") } }),
                         ) { v -> vm.edit { it.copy(seed = ImageSeed.sanitize(v)) } }
                         if (fixed == null) SwitchRow(I18n.s(R.string.ig268_lowmem), s.lowMemMode,
-                            subtitle = I18n.s(R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
+                            subtitle = I18n.s(if (s.model.animaQnn) R.string.ig271_lowmem_npu_sub else R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
                         // 参考图（图生图）：只在模型支持时出现
                         if (s.img2imgSupported) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12), verticalAlignment = Alignment.CenterVertically) {
@@ -291,6 +294,10 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     }
                 }
             }
+
+            // 2.7.1：LoRA（sd.cpp 模型；NPU 模型一句说明）
+            full { SectionTitle(I18n.s(R.string.ig271_lora)) }
+            full { LoraSection(s, vm) }
 
             full {
                 Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space12)) {
@@ -328,6 +335,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         }
                     }
                     if (s.running) {
+                        // 实时预览：每步的低清图（不跑 VAE）
+                        s.preview?.let { f -> LivePreview(f); Spacer(Modifier.height(IrisDimens.space8)) }
                         val sd = s.model.backend == Backend.SDCPP
                         // tick the elapsed time every second; sd.cpp phases (weights / step / decode) told apart.
                         val elapsed by androidx.compose.runtime.produceState(0L, s.startedAt) {
@@ -425,7 +434,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
 private fun LazyGridScope.full(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
 @Composable
-private fun Field(
+internal fun Field(
     value: String, label: String, minLines: Int = 1, number: Boolean = false,
     placeholder: String? = null, trailingText: String = "", onTrailing: (() -> Unit)? = null, onChange: (String) -> Unit,
 ) {

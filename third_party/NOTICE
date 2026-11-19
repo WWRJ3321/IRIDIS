@@ -1,0 +1,19 @@
+IRIDIS third-party notices (code or data ported into the app)
+==============================================================
+
+hexanima — https://github.com/ayanoby/hexanima (commit HEAD as of 2026-11-20)
+License: MIT, Copyright (c) 2026 ayanoby (full text: app/src/main/assets/licenses/mit-hexanima.txt)
+
+Ported in IRIDIS 2.7.1:
+- app/src/main/assets/imagegen/preview_anima.bin: copied unchanged from app/assets/preview_anima.bin
+  (fitted 16-channel latent -> RGB 2x2-block linear map + blur passes for the live preview).
+- app/src/main/java/com/iris/localai/imagegen/LatentPreview.kt (LatentRgbMap): file format, render and
+  [1 2 1] blur ported from app/src/com/hexanima/npu/Preview.java.
+- app/src/main/java/com/iris/localai/imagegen/Lora.kt (LoraInspect): the Anima block-key patterns and the
+  header-only check approach follow app/src/com/hexanima/npu/AnimaLora.java.
+
+No hexanima model weights are bundled or downloaded by IRIDIS.
+
+stable-diffusion.cpp — https://github.com/leejet/stable-diffusion.cpp (3e92bf9), MIT
+- LatentRgbMap.SD1 uses sd_latent_rgb_proj / sd_latent_rgb_bias from src/runtime/latent-preview.h.
+- libiris_sd.so (built from app/src/main/cpp/sdcpp + this tree) uses its LoRA and PREVIEW_PROJ support.

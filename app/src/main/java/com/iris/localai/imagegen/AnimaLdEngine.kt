@@ -91,7 +91,7 @@ object AnimaLdMath {
 }
 
 /**
- * 跑 [AnimaLdFiles] 布局：文本编码器每次用完就关；两段扩散与解码器常驻（lowMem 时用完即放）。
+ * 跑 [AnimaLdFiles] 布局：文本编码器每次用完就关；两段扩散与解码器常驻（lowMem 时分阶段：去噪只开扩散图，解码前换成解码器，用完即放）。
  * 由 [AnimaQnnEngine] 调用，锁在外面。
  */
 internal class AnimaLdRunner(private val loader: QnnGraphLoader, private val cancelled: () -> Boolean) {
@@ -160,26 +160,33 @@ internal class AnimaLdRunner(private val loader: QnnGraphLoader, private val can
         }
     }
 
-    private fun loadDraw() {
-        if (u1 != null && u2 != null && dec != null) return
+    /**
+     * 低内存模式分阶段：去噪时只开两段扩散图，解码前关掉它们再开解码器，用完即关；
+     * 峰值从「两段扩散 + 解码器」降到两者中较大的一边（多一次解码器加载）。
+     */
+    private fun loadDraw(lowMem: Boolean) {
+        if (lowMem) {
+            dec?.let { runCatching { it.close() } }; dec = null
+            if (u1 != null && u2 != null) return
+        } else if (u1 != null && u2 != null && dec != null) return
         closeGraphs()
         val f = AnimaLdFiles(dir!!)
         val opened = ArrayList<QnnGraph>(3)
         try {
-            for (b in listOf(f.vaeDec, f.unet1, f.unet2)) { check(); opened += loader.open(b) }
+            for (b in if (lowMem) listOf(f.unet1, f.unet2) else listOf(f.vaeDec, f.unet1, f.unet2)) { check(); opened += loader.open(b) }
         } catch (t: Throwable) {
             opened.forEach { runCatching { it.close() } }
             throw t
         }
-        dec = opened[0]; u1 = opened[1]; u2 = opened[2]
+        if (lowMem) { u1 = opened[0]; u2 = opened[1] } else { dec = opened[0]; u1 = opened[1]; u2 = opened[2] }
     }
 
     /** 返回 (宽, 高, ARGB)。 */
     fun generate(prompt: String, steps: Int, seed: Long, lowMem: Boolean, onProgress: (Int, Int) -> Unit, shift: Float = AnimaMath.DEFAULT_SHIFT): Triple<Int, Int, IntArray> {
         val ctx = runText(prompt)
         check()
-        loadDraw()
-        val p1 = u1!!; val p2 = u2!!; val dg = dec!!
+        loadDraw(lowMem)
+        val p1 = u1!!; val p2 = u2!!
         val sampleSpec = spec(p1.inputs, "sample")
         val (lh, lw) = AnimaLdMath.latentHw(sampleSpec.dims)
         val nl = sampleSpec.elements
@@ -215,10 +222,21 @@ internal class AnimaLdRunner(private val loader: QnnGraphLoader, private val can
             }.toTypedArray()
             p2.execute(ins2, out2.onEach { it.clear() }.toTypedArray())
             val v = decf(vSpec, out2[p2.outputs.indexOf(vSpec)])
+            // 实时预览：x0 = x − σ·v，线性映射成低清图（不跑 VAE）
+            if (PreviewHub.wanted) PreviewHub.anima?.takeIf { it.channels == 16 }?.let { m ->
+                runCatching { PreviewHub.emit(m.render(LatentPreview.x0Flow(lat, v, s), lh, lw)) }
+            }
             val dt = sn - s
             for (k in 0 until nl) lat[k] += dt * v[k]
             onProgress(i + 1, steps)
         }
+        if (lowMem) {
+            check()
+            listOfNotNull(u1, u2).forEach { runCatching { it.close() } }
+            u1 = null; u2 = null
+            dec = loader.open(AnimaLdFiles(dir!!).vaeDec)
+        }
+        val dg = dec!!
         val li = dg.inputs.first()
         require(li.elements == nl) { "vae_decoder 输入形状不符（${li.dims}）" }
         val ro = dg.outputs.first()

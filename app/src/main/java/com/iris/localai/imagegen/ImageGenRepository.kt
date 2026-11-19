@@ -239,6 +239,13 @@ class UnavailableEngine(private val reason: String) : ImageGenEngine {
  */
 class ImageGenEngines private constructor(private val context: Context) : ImageGenEngine {
     private val repo by lazy { ImageGenRepository(context) }
+
+    init {
+        // Anima 预览映射（16 通道，hexanima 系数）；读不出就不出预览
+        if (PreviewHub.anima == null) PreviewHub.anima = runCatching {
+            LatentRgbMap.parse(context.assets.open("imagegen/preview_anima.bin").use { it.readBytes() })
+        }.getOrNull()
+    }
     private val stub = StubEngine()
     @Volatile private var qnn: QnnSdEngine? = null
     @Volatile private var anima: AnimaQnnEngine? = null
@@ -295,13 +302,20 @@ class ImageGenEngines private constructor(private val context: Context) : ImageG
     /** in the app process, generations go to the `:imagegen` process ([RemoteImageGen]). */
     private val remote: RemoteImageGen? by lazy { if (REMOTE && !ImageGenIpc.isImageGenProcess()) RemoteImageGen.get(context) else null }
 
-    override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> {
-        val r = remote ?: return generateLocal(req, model, onProgress)
+    override suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit): Result<ByteArray> =
+        generate(req, model, onProgress, null)
+
+    /** 2.7.1：带实时预览（[onPreview] 每步一帧低清图）。 */
+    suspend fun generate(req: ImageRequest, model: ImageModel, onProgress: (step: Int, total: Int) -> Unit, onPreview: ((PreviewFrame) -> Unit)?): Result<ByteArray> {
+        val r = remote ?: run {
+            PreviewHub.sink = onPreview
+            return try { generateLocal(req, model, onProgress) } finally { PreviewHub.sink = null }
+        }
         // 终止温度: refuse while still over the cutoff, otherwise arm again for this image (app process state).
         ThermalCutoff.startOrRefuse()?.let { return Result.failure(IllegalStateException(it)) }
         val force = sd?.forceOnce == true
         sd?.forceOnce = false
-        return r.generate(req, model, force, onProgress)
+        return r.generate(req, model, force, onProgress, onPreview ?: {})
     }
 
     /** Runs the native engine in this process (`:imagegen`, or the app process when [REMOTE] is off). */
