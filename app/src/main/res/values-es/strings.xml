@@ -251,7 +251,6 @@
     <string name="chat_7fa0f1">¿Eliminar %1$s chats?</string>
     <string name="chat_7eba23">Los chats seleccionados irán a la papelera y se eliminarán automáticamente a los 30 días.</string>
     <string name="chat_15ebef">Los que estén en curso se detendrán primero.</string>
-    <string name="chat_f8de76">¿Eliminar chat?</string>
     <string name="chat_19a9bc">Imágenes</string>
     <string name="chat_e366cc">Ajustes</string>
     <string name="chat_992c3b">Servicio API en marcha</string>
@@ -941,7 +940,6 @@
     <string name="chat_5eb967">Error al cargar el modelo</string>
     <string name="chat_24e46f">Sin salida durante mucho tiempo; se detuvo. Reintenta o cambia de modelo</string>
     <string name="chat_5e0b54">Este modelo no ve imágenes, solo recibe el nombre del archivo. Cambia a un modelo con visión (p. ej. Gemma 3n, Qwen-VL) para reconocerlas</string>
-    <string name="chat_3693f6">\"%1$s\" se moverá a la papelera y se eliminará en 30 días.</string>
     <string name="chat_664f6a">+ ¿Recordar? \"%1$s\"</string>
     <string name="chat_4485a1">Velocidad\u0020</string>
     <string name="chat_292451" formatted="false">%.1f caract./s</string>

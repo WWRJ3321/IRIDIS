@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** 2.7.5：侧栏对话统一手势（短按 / 长按菜单 / 长按后拖动排序）。 */
+/** 2.7.5：侧栏对话统一手势（短按 / 滚动 / 拖动位移）；2.7.6 起长按改进多选，见 V276Test。 */
 class V275Test {
     private val slop = 18f
 
@@ -21,22 +21,6 @@ class V275Test {
         assertEquals(Outcome.CANCEL, HistoryPress.beforeLongPress(true, true, 0f, 0f, slop))
     }
 
-    @Test fun stillLongPressOpensMenuNotDrag() {
-        // 手指不动 / 细微抖动：一直等，不进入拖动
-        assertNull(HistoryPress.afterLongPress(up = false, dx = 0f, dy = 0f, slop = slop))
-        assertNull(HistoryPress.afterLongPress(false, -4f, 7f, slop))
-        assertNull(HistoryPress.afterLongPress(false, 18f, -18f, slop))
-        // 松手 = 菜单
-        assertEquals(Outcome.MENU, HistoryPress.afterLongPress(true, 0f, 0f, slop))
-        assertEquals(Outcome.MENU, HistoryPress.afterLongPress(true, 10f, 10f, slop))
-    }
-
-    @Test fun moveAfterLongPressDrags() {
-        assertEquals(Outcome.DRAG, HistoryPress.afterLongPress(false, 0f, 19f, slop))
-        assertEquals(Outcome.DRAG, HistoryPress.afterLongPress(false, 0f, -40f, slop))
-        assertEquals(Outcome.DRAG, HistoryPress.afterLongPress(false, 25f, 0f, slop))
-    }
-
     @Test fun dragOffsetNoJump() {
         // 起拖瞬间为 0（不跳位）
         assertEquals(0f, HistoryPress.dragOffset(300, 0f, 300), 0f)
@@ -48,7 +32,7 @@ class V275Test {
     }
 
     @Test fun releaseNotes275() {
-        val r = UpdateNotes.RELEASES.first()
+        val r = UpdateNotes.RELEASES.first { it.version == "2.7.5" }
         assertEquals("2.7.5", r.version)
         assertEquals(1, r.of(UpdateNotes.Tag.FIX).size)
         assert(r.of(UpdateNotes.Tag.FIX).first().text.contains("长按"))

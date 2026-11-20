@@ -52,8 +52,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Api
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.CheckBox
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Forum
@@ -157,19 +155,16 @@ fun HistoryDrawer(
     customOrder: Boolean = false,
     /** 长按拖动松手：显示顺序的全部 id。 */
     onReorder: (List<String>) -> Unit = {},
-    /** 复制该对话全文（TXT）到剪贴板。 */
-    onCopy: (String) -> Unit = {},
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
     var query by rememberSaveable { mutableStateOf("") }
     var renaming by remember { mutableStateOf<ConversationSummary?>(null) }
-    var deleting by remember { mutableStateOf<ConversationSummary?>(null) }
     // long press → multi-select (user: 一个一个删除太麻烦了).
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deletingMany by remember { mutableStateOf(false) }
-    // 2.7.4：长按不动弹出的单条菜单（哪一条）。
-    var menuFor by remember { mutableStateOf<String?>(null) }
+    // 2.7.6：长按到时进入多选、手指还按着的那一条（按住期间保留它的手势检测，好接着判断松手 / 拖动）。
+    var holdId by remember { mutableStateOf<String?>(null) }
     var showTrash by remember { mutableStateOf(false) }
     val selecting = selected.isNotEmpty()
     // Selections of conversations that no longer exist drop out.
@@ -288,7 +283,7 @@ fun HistoryDrawer(
                             is DrawerEntry.Item -> {
                                 val s = e.summary
                                 val dragging = dragId == s.id
-                                val canDrag = !selecting && query.isBlank()
+                                val canDrag = query.isBlank() && (!selecting || holdId == s.id)
                                 val press = remember(s.id) { MutableInteractionSource() }
                                 val coordsHolder = remember(s.id) { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                                 ConversationItem(
@@ -296,12 +291,11 @@ fun HistoryDrawer(
                                     modifier = if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragDy } else anim,
                                     selecting = selecting, checked = s.id in selected,
                                     pressSource = press,
-                                    onLongPressMenu = { menuFor = s.id },
+                                    onLongPressSelect = { selected = HistoryPress.selection(HistoryPress.Outcome.SELECT, selected, s.id) },
                                     dragModifier = if (!canDrag) null else Modifier
                                         .onGloballyPositioned { coordsHolder[0] = it }
                                         .pointerInput(s.id) {
-                                        // 2.7.5：一个手势走完（之前 detectDragGesturesAfterLongPress 一到长按就进入拖动并吃掉事件，
-                                        // 和 combinedClickable 抢同一指针；菜单只能等拖动结束才判定，实际弹不出）。
+                                        // 一个手势走完：短按打开 / 长按到时直接进多选 / 之后移动 = 退出多选并拖动排序。
                                         val slop = viewConfiguration.touchSlop
                                         val lpt = viewConfiguration.longPressTimeoutMillis
                                         awaitEachGesture {
@@ -336,8 +330,10 @@ fun HistoryDrawer(
                                                     else press.tryEmit(PressInteraction.Cancel(p))
                                                     return@awaitEachGesture
                                                 }
-                                                // 2) 长按到了：只震动，条目不动；之后看位移
+                                                // 2) 长按到了（没动）：震动，按住时就进入多选并选中该条（2.7.6，不再弹菜单）
                                                 dragHaptic.perform(FeedbackEvent.LONG_PRESS)
+                                                holdId = s.id
+                                                selected = HistoryPress.selection(HistoryPress.onLongPress(), emptySet(), s.id)
                                                 var outcome: HistoryPress.Outcome? = null
                                                 var last = down
                                                 while (outcome == null) {
@@ -349,18 +345,18 @@ fun HistoryDrawer(
                                                     outcome = HistoryPress.afterLongPress(!ch.pressed, d.x, d.y, slop)
                                                     ch.consume()
                                                 }
-                                                when (outcome) {
-                                                    HistoryPress.Outcome.MENU -> { press.tryEmit(PressInteraction.Release(p)); menuFor = s.id; return@awaitEachGesture }
-                                                    HistoryPress.Outcome.DRAG -> Unit
-                                                    else -> { press.tryEmit(PressInteraction.Cancel(p)); return@awaitEachGesture }
+                                                if (outcome != HistoryPress.Outcome.DRAG) {
+                                                    // 原地松手（或指针被系统取消）：留在多选
+                                                    press.tryEmit(PressInteraction.Release(p)); return@awaitEachGesture
                                                 }
-                                                // 3) 拖动排序：起拖不跳位，手指位移按屏幕坐标算（条目自身的 translation 不反馈进来）
+                                                // 3) 移动超过 touchSlop：退出多选，拖动排序（起拖不跳位，手指位移按屏幕坐标算）
                                                 press.tryEmit(PressInteraction.Cancel(p))
+                                                selected = HistoryPress.selection(HistoryPress.Outcome.DRAG, selected, s.id)
+                                                holdId = null
                                                 val coords = coordsHolder[0]
                                                 val startOffset = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }?.offset
                                                 if (coords == null || !coords.isAttached || startOffset == null) return@awaitEachGesture
                                                 val startY = coords.localToRoot(last.position).y
-                                                menuFor = null
                                                 dragging = true
                                                 dragId = s.id; dragDy = 0f; live = latestSummaries
                                                 while (true) {
@@ -388,19 +384,13 @@ fun HistoryDrawer(
                                                 }
                                             } finally {
                                                 if (dragging) { dragId = null; dragDy = 0f; live = null }
+                                                if (holdId == s.id) holdId = null
                                             }
                                         }
                                     },
-                                    menuOpen = menuFor == s.id,
-                                    onMenuDismiss = { if (menuFor == s.id) menuFor = null },
                                     onSelect = { selected = selected + s.id },
-                                    onShare = { f -> onExport(setOf(s.id), f) },
-                                    onCopy = { onCopy(s.id) },
                                     onToggle = { selected = if (s.id in selected) selected - s.id else selected + s.id },
                                     onClick = { onOpen(s.id) },
-                                    onRename = { renaming = s },
-                                    onPin = { onPin(s.id, !s.pinned) },
-                                    onDelete = { deleting = s },
                                 )
                             }
                         }
@@ -483,15 +473,6 @@ fun HistoryDrawer(
             initial = s.title,
             onConfirm = { onRename(s.id, it.trim()) },
             onDismiss = { renaming = null },
-        )
-    }
-    deleting?.let { s ->
-        ConfirmDialog(
-            title = I18n.s(R.string.chat_f8de76),
-            message = I18n.s(R.string.chat_3693f6, s.title.ifBlank { I18n.s(R.string.chat_1ac07a) }),
-            confirmText = I18n.s(R.string.chat_2f4aad),
-            onConfirm = { onDelete(s.id) },
-            onDismiss = { deleting = null },
         )
     }
     if (showTrash) TrashSheet(trash, onRestore, onPurge, onEmptyTrash, onDismiss = { showTrash = false })
@@ -609,23 +590,15 @@ private fun ConversationItem(
     running: Boolean = false,
     selecting: Boolean = false,
     checked: Boolean = false,
-    /** 2.7.5：统一手势（短按 / 长按菜单 / 长按后拖动排序）；有它时不再挂 combinedClickable。 */
+    /** 统一手势（短按 / 长按进多选 / 之后拖动排序）；有它时不再挂 combinedClickable。 */
     dragModifier: Modifier? = null,
     pressSource: MutableInteractionSource? = null,
-    onLongPressMenu: () -> Unit = {},
+    onLongPressSelect: () -> Unit = {},
     onToggle: () -> Unit = {},
     onClick: () -> Unit,
-    onRename: () -> Unit,
-    onPin: () -> Unit,
-    onDelete: () -> Unit,
-    menuOpen: Boolean = false,
-    onMenuDismiss: () -> Unit = {},
     onSelect: () -> Unit = {},
-    onShare: (ChatExport.Format) -> Unit = {},
-    onCopy: () -> Unit = {},
 ) {
     val c = Iris.colors
-    var shareMenu by remember { mutableStateOf(false) }
     val bg by animateColorAsState(
         when { selecting && checked -> c.accentContainer; !selecting && selected -> c.surfaceVariant; else -> Color.Transparent },
         IrisMotion.standard(), label = "convBg",
@@ -644,7 +617,7 @@ private fun ConversationItem(
                         .semantics(mergeDescendants = true) {
                             val open = onClick
                             this.onClick(label = null, action = { open(); true })
-                            onLongClick(I18n.s(R.string.chat_443f46)) { onLongPressMenu(); true }
+                            onLongClick(I18n.s(R.string.chat_443f46)) { onLongPressSelect(); true }
                         }
                         .then(if (pressSource != null) Modifier.indication(pressSource, LocalIndication.current) else Modifier)
                         .then(dragModifier)
@@ -680,17 +653,6 @@ private fun ConversationItem(
                 Spacer(Modifier.width(IrisDimens.space6))
                 Text(I18n.s(R.string.chat_d679ae), style = IrisType.caption, color = c.accent, maxLines = 1)
             }
-        }
-        IrisMenu(menuOpen, onMenuDismiss) {
-            IrisMenuItem(if (s.pinned) I18n.s(R.string.chat_84e4fa) else I18n.s(R.string.chat_3d43ff), Icons.Outlined.PushPin) { onMenuDismiss(); onPin() }
-            IrisMenuItem(I18n.s(R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { onMenuDismiss(); onRename() }
-            IrisMenuItem(I18n.s(R.string.sel27_copy), Icons.Outlined.ContentCopy) { onMenuDismiss(); onCopy() }
-            IrisMenuItem(I18n.s(R.string.ex263_share), Icons.Outlined.Share) { onMenuDismiss(); shareMenu = true }
-            IrisMenuItem(I18n.s(R.string.chat_443f46), Icons.Outlined.CheckBox) { onMenuDismiss(); onSelect() }
-            IrisMenuItem(I18n.s(R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { onMenuDismiss(); onDelete() }
-        }
-        IrisMenu(shareMenu, { shareMenu = false }) {
-            for (f in ChatExport.Format.entries) IrisMenuItem(ExportText.label(f), null) { shareMenu = false; onShare(f) }
         }
     }
 }

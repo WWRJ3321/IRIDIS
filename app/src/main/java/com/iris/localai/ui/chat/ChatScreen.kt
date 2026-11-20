@@ -360,7 +360,6 @@ fun ChatScreen(
                 onSearchMessages = vm::searchMessages,
                 onOpenAt = { cid, mid -> vm.openAt(cid, mid); scope.launch { drawer.close() } },
                 onExport = vm::exportChats,
-                onCopy = vm::copyChat,
             )
         },
     ) {

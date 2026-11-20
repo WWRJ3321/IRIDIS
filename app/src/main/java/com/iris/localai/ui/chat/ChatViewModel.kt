@@ -464,24 +464,6 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     fun openAt(conversationId: String, messageId: String) { jumpTo.value = messageId; open(conversationId) }
     fun jumpDone() { jumpTo.value = null }
 
-    /** 2.7.4：侧栏长按菜单「复制」——该对话全文（TXT 格式）进剪贴板。 */
-    fun copyChat(id: String) {
-        viewModelScope.launch {
-            val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    val conv = c.conversations.load(id) ?: return@runCatching null
-                    ChatExport.txt(listOf(conv), I18n.s(R.string.ex263_user), I18n.s(R.string.ex263_assistant), I18n.s(R.string.chat_1ac07a))
-                }.getOrNull()
-            }
-            val ctx: android.content.Context = getApplication()
-            if (text == null) { android.widget.Toast.makeText(ctx, I18n.s(R.string.ex263_failed), android.widget.Toast.LENGTH_SHORT).show(); return@launch }
-            runCatching {
-                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
-                cm.setPrimaryClip(android.content.ClipData.newPlainText("IRIDIS", text))
-                android.widget.Toast.makeText(ctx, I18n.s(R.string.chat_52e6ab), android.widget.Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     /** Writes the chosen conversations as one file and opens the share sheet. */
     fun exportChats(ids: Collection<String>, format: ChatExport.Format) {

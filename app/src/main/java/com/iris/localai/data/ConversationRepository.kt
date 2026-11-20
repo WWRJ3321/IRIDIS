@@ -311,25 +311,40 @@ object ConversationOrder {
 }
 
 /**
- * 2.7.5：侧栏对话的统一手势判定（纯函数，单测）。一个 pointerInput 里走完：按下 → 等长按超时 → 之后看位移。
+ * 侧栏对话的统一手势判定（纯函数，单测；2.7.5 起，2.7.6 去掉长按菜单）。一个 pointerInput 里走完：按下 → 等长按超时 → 之后看位移。
  * 长按前：抬起 = 短按打开；移动超过 touchSlop 或事件被别人消费 = 放弃（交给列表滚动）。
- * 长按后：手指不动松手 = 弹菜单；移动超过 touchSlop = 进入拖动排序（不弹菜单）。
+ * 长按到时（没动）：震动并直接进入多选、选中该条（按住时就显示）。
+ * 之后：原地松手 = 留在多选；移动超过 touchSlop = 退出多选并拖动排序。
  */
 object HistoryPress {
-    enum class Outcome { TAP, CANCEL, MENU, DRAG }
+    /**
+     * 2.7.6：TAP 短按打开；CANCEL 放弃（交给列表滚动）；SELECT 长按到时（手指没动）直接进多选并选中该条；
+     * KEEP 进多选后原地松手（留在多选）；DRAG 进多选后移动超过 touchSlop（退出多选、拖动排序）。
+     */
+    enum class Outcome { TAP, CANCEL, SELECT, KEEP, DRAG }
 
-    /** 长按超时前的一次事件；null = 继续等。 */
+    /** 长按超时前的一次事件；null = 继续等。超时前移动 = 普通滚动（CANCEL）。 */
     fun beforeLongPress(up: Boolean, consumed: Boolean, dx: Float, dy: Float, slop: Float): Outcome? = when {
         up -> if (consumed) Outcome.CANCEL else Outcome.TAP
         consumed || ConversationOrder.isDrag(dx, dy, slop) -> Outcome.CANCEL
         else -> null
     }
 
-    /** 长按超时后的一次事件；null = 继续等（条目不动、不抬起）。 */
+    /** 长按超时到了（期间没移动超 slop）：按住时就进入多选。 */
+    fun onLongPress(): Outcome = Outcome.SELECT
+
+    /** 进入多选后、仍按住时的一次事件；null = 继续等。松手 = 留在多选；移动超 slop = 拖动。 */
     fun afterLongPress(up: Boolean, dx: Float, dy: Float, slop: Float): Outcome? = when {
-        up -> Outcome.MENU
+        up -> Outcome.KEEP
         ConversationOrder.isDrag(dx, dy, slop) -> Outcome.DRAG
         else -> null
+    }
+
+    /** 各结果对多选集合的作用：SELECT 选中该条；DRAG 退出多选（清空）；其余不变。 */
+    fun selection(outcome: Outcome, selected: Set<String>, id: String): Set<String> = when (outcome) {
+        Outcome.SELECT -> selected + id
+        Outcome.DRAG -> emptySet()
+        else -> selected
     }
 
     /**

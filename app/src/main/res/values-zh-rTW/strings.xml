@@ -251,7 +251,6 @@
     <string name="chat_7fa0f1">刪除 %1$s 個對話？</string>
     <string name="chat_7eba23">選中的對話將移到資源回收筒，30 天後自動刪除。</string>
     <string name="chat_15ebef">其中正在執行的對話會先停止。</string>
-    <string name="chat_f8de76">刪除對話？</string>
     <string name="chat_19a9bc">生圖</string>
     <string name="chat_e366cc">設定</string>
     <string name="chat_992c3b">API 服務執行中</string>
@@ -941,7 +940,6 @@
     <string name="chat_5eb967">模型載入失敗</string>
     <string name="chat_24e46f">長時間沒有輸出，已停止。可重試或換模型</string>
     <string name="chat_5e0b54">目前模型看不到圖片，只會收到圖片的檔名。換一個支援視覺的模型（如 Gemma 3n、Qwen-VL）後可識圖</string>
-    <string name="chat_3693f6">“%1$s”將移到資源回收筒，30 天後自動刪除。</string>
     <string name="chat_664f6a">＋ 記住？「%1$s」</string>
     <string name="chat_4485a1">速度\u0020</string>
     <string name="chat_292451" formatted="false">%.1f 字/秒</string>

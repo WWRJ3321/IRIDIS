@@ -251,7 +251,6 @@
     <string name="chat_7fa0f1">%1$s Chats löschen?</string>
     <string name="chat_7eba23">Die ausgewählten Chats kommen in den Papierkorb und werden nach 30 Tagen automatisch gelöscht.</string>
     <string name="chat_15ebef">Laufende Chats darunter werden zuerst gestoppt.</string>
-    <string name="chat_f8de76">Chat löschen?</string>
     <string name="chat_19a9bc">Bilder</string>
     <string name="chat_e366cc">Einstellungen</string>
     <string name="chat_992c3b">API-Dienst läuft</string>
@@ -941,7 +940,6 @@
     <string name="chat_5eb967">Modell konnte nicht geladen werden</string>
     <string name="chat_24e46f">Lange keine Ausgabe, gestoppt. Erneut versuchen oder Modell wechseln</string>
     <string name="chat_5e0b54">Dieses Modell sieht keine Bilder, nur den Dateinamen. Für Bilderkennung ein Vision-Modell nutzen (z. B. Gemma 3n, Qwen-VL)</string>
-    <string name="chat_3693f6">„%1$s\" wird in den Papierkorb verschoben und nach 30 Tagen gelöscht.</string>
     <string name="chat_664f6a">+ Merken? „%1$s\"</string>
     <string name="chat_4485a1">Tempo\u0020</string>
     <string name="chat_292451" formatted="false">%.1f Zeichen/s</string>

@@ -251,7 +251,6 @@
     <string name="chat_7fa0f1">Delete %1$s chats?</string>
     <string name="chat_7eba23">Selected chats will be moved to the trash and deleted after 30 days.</string>
     <string name="chat_15ebef">Any running chats among them will be stopped first.</string>
-    <string name="chat_f8de76">Delete chat?</string>
     <string name="chat_19a9bc">Images</string>
     <string name="chat_e366cc">Settings</string>
     <string name="chat_992c3b">API service running</string>
@@ -941,7 +940,6 @@
     <string name="chat_5eb967">Model failed to load</string>
     <string name="chat_24e46f">No output for a long time; stopped. Retry or switch models</string>
     <string name="chat_5e0b54">This model can\'t see images and only gets the file name. Switch to a vision model (e.g. Gemma 3n, Qwen-VL) to read images</string>
-    <string name="chat_3693f6">\"%1$s\" will be moved to the trash and deleted after 30 days.</string>
     <string name="chat_664f6a">+ Remember? \"%1$s\"</string>
     <string name="chat_4485a1">Speed\u0020</string>
     <string name="chat_292451" formatted="false">%.1f chars/s</string>

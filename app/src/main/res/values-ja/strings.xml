@@ -251,7 +251,6 @@
     <string name="chat_7fa0f1">%1$s 件の会話を削除しますか？</string>
     <string name="chat_7eba23">選択した会話はゴミ箱に移動し、30 日後に自動で削除されます。</string>
     <string name="chat_15ebef">実行中の会話は先に停止します。</string>
-    <string name="chat_f8de76">会話を削除しますか？</string>
     <string name="chat_19a9bc">画像生成</string>
     <string name="chat_e366cc">設定</string>
     <string name="chat_992c3b">API サービス実行中</string>
@@ -941,7 +940,6 @@
     <string name="chat_5eb967">モデルの読み込みに失敗しました</string>
     <string name="chat_24e46f">長時間出力がないため停止しました。再試行するかモデルを変えてください</string>
     <string name="chat_5e0b54">このモデルは画像を認識できず、ファイル名だけを受け取ります。画像を認識するにはビジョン対応モデル（Gemma 3n、Qwen-VL など）に切り替えてください</string>
-    <string name="chat_3693f6">「%1$s」はゴミ箱に移動し、30日後に自動で削除されます。</string>
     <string name="chat_664f6a">＋ 覚える？「%1$s」</string>
     <string name="chat_4485a1">速度\u0020</string>
     <string name="chat_292451" formatted="false">%.1f 文字/秒</string>
