@@ -7,13 +7,36 @@ import java.io.DataOutputStream
 import java.io.File
 
 /**
- * 向量检索 (pure, JVM-tested): one vector per chunk, keyed by a hash of the chunk text (a moved or renamed
- * file keeps its vectors), stored in a small binary file beside index.json that records the model id and the
- * dimension — another model (or dimension) means the vectors are rebuilt.
+ * 2.7.2：一份向量索引是用哪个嵌入模型建的——模型 id、模型文件指纹（大小 + 头尾各 1 MiB 的 SHA-256，见
+ * [KbEmbedModels.fingerprint]）、维度。知识库向量文件头里存这一份；以后记忆若加向量索引也用它。
+ * 加载时与当前模型 [EmbedStamp.compare] 不符 = 旧向量作废、需重建，不再在旧向量上检索。
  */
-class KbVecStore(val modelId: String, val dim: Int) {
+data class EmbedStamp(val modelId: String, val fingerprint: String = "", val dim: Int = 0) {
+    enum class Mismatch { MODEL, FILE, DIM }
+
+    companion object {
+        /**
+         * [stored]（索引里记的）与 [current]（现在要用的）是否不符；null = 可用。旧格式没有指纹（""）时只比 id 与维度；
+         * [current] 维度 0 = 还不知道（模型未加载）则不比维度。Pure.
+         */
+        fun compare(stored: EmbedStamp, current: EmbedStamp): Mismatch? = when {
+            stored.modelId != current.modelId -> Mismatch.MODEL
+            stored.fingerprint.isNotEmpty() && current.fingerprint.isNotEmpty() && stored.fingerprint != current.fingerprint -> Mismatch.FILE
+            current.dim > 0 && stored.dim != current.dim -> Mismatch.DIM
+            else -> null
+        }
+    }
+}
+
+/**
+ * 向量检索 (pure, JVM-tested): one vector per chunk, keyed by a hash of the chunk text (a moved or renamed
+ * file keeps its vectors), stored in a small binary file beside index.json whose header is the [EmbedStamp]
+ * (model id, model file fingerprint, dimension — 2.7.2 format 2; format 1 had no fingerprint and still loads).
+ */
+class KbVecStore(val modelId: String, val dim: Int, val fingerprint: String = "") {
     private val map = HashMap<Long, FloatArray>()
 
+    val stamp: EmbedStamp get() = EmbedStamp(modelId, fingerprint, dim)
     val size: Int get() = map.size
     operator fun get(key: Long): FloatArray? = map[key]
     fun put(key: Long, v: FloatArray) { if (v.size == dim) map[key] = v }
@@ -25,7 +48,7 @@ class KbVecStore(val modelId: String, val dim: Int) {
         file.parentFile?.mkdirs()
         val tmp = File(file.path + ".tmp")
         DataOutputStream(BufferedOutputStream(tmp.outputStream(), 1 shl 16)).use { o ->
-            o.writeInt(MAGIC); o.writeInt(VERSION); o.writeUTF(modelId); o.writeInt(dim); o.writeInt(map.size)
+            o.writeInt(MAGIC); o.writeInt(VERSION); o.writeUTF(modelId); o.writeUTF(fingerprint); o.writeInt(dim); o.writeInt(map.size)
             for ((k, v) in map) { o.writeLong(k); for (x in v) o.writeFloat(x) }
         }
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
@@ -33,18 +56,36 @@ class KbVecStore(val modelId: String, val dim: Int) {
 
     companion object {
         const val MAGIC = 0x49524B56 // "IRKV"
-        const val VERSION = 1
+        /** 2 = 2.7.2（头里加了模型文件指纹）；1 = 2.5.1–2.7.1。 */
+        const val VERSION = 2
         const val FILE = "kb_vectors.bin"
 
-        /** The stored vectors, or null when missing / unreadable / for another model or dimension. */
-        fun read(file: File, modelId: String, dim: Int = 0): KbVecStore? = runCatching {
+        private fun DataInputStream.header(): Triple<EmbedStamp, Int, Int>? {
+            if (readInt() != MAGIC) return null
+            val v = readInt()
+            if (v != 1 && v != VERSION) return null
+            val id = readUTF(); val fp = if (v >= 2) readUTF() else ""; val d = readInt(); val n = readInt()
+            if (d <= 0 || d > 8192 || n < 0) return null
+            return Triple(EmbedStamp(id, fp, d), n, v)
+        }
+
+        /** Only the header (no vectors): what the file was built with; null when missing / unreadable. */
+        fun stamp(file: File): EmbedStamp? = runCatching {
+            if (!file.isFile) return null
+            DataInputStream(BufferedInputStream(file.inputStream(), 4096)).use { it.header()?.first }
+        }.getOrNull()
+
+        /**
+         * The stored vectors, or null when missing / unreadable / for another model, dimension or (when both are
+         * known) another model file ([fingerprint]).
+         */
+        fun read(file: File, modelId: String, dim: Int = 0, fingerprint: String = ""): KbVecStore? = runCatching {
             if (!file.isFile) return null
             DataInputStream(BufferedInputStream(file.inputStream(), 1 shl 16)).use { i ->
-                if (i.readInt() != MAGIC || i.readInt() != VERSION) return null
-                val id = i.readUTF(); val d = i.readInt(); val n = i.readInt()
-                if (id != modelId || d <= 0 || d > 8192 || (dim > 0 && d != dim) || n < 0) return null
-                val s = KbVecStore(id, d)
-                repeat(n) { val k = i.readLong(); s.put(k, FloatArray(d) { i.readFloat() }) }
+                val (st, n, _) = i.header() ?: return null
+                if (EmbedStamp.compare(st, EmbedStamp(modelId, fingerprint, dim)) != null) return null
+                val s = KbVecStore(st.modelId, st.dim, st.fingerprint.ifEmpty { fingerprint })
+                repeat(n) { val k = i.readLong(); s.put(k, FloatArray(st.dim) { i.readFloat() }) }
                 s
             }
         }.getOrNull()
@@ -109,8 +150,24 @@ object KbVectors {
             byCos || bmHits[i]?.let { KbChat.relevant(it) } == true
         }
         val top = gated.values.maxOrNull() ?: return emptyList()
-        return gated.entries.filter { it.value >= top * KbChat.REL_SCORE }
-            .sortedByDescending { it.value }.take(limit)
-            .map { (i, s) -> val c = chunks[i]; KbHit(c.file, c.text, s, c.index, cover = bmHits[i]?.cover) }
+        // 2.7.2：关键词强命中（BM25 第一且原样含问题整词，或覆盖度高）不被向量分数压掉：不受相对门槛限制，必进候选。
+        val strong = bmList.take(STRONG_TOP).filter { i -> bmHits[i]?.let { strongKeyword(it) } == true }.toSet()
+        val ranked = gated.entries.filter { it.value >= top * KbChat.REL_SCORE || it.key in strong }
+            .sortedByDescending { it.value }
+            .map { (i, s) -> val c = chunks[i]; KbHit(c.file, c.text, if (i in strong) maxOf(s, top) else s, c.index, cover = bmHits[i]?.cover) }
+            .sortedByDescending { it.score }
+        // 按片段排序；多个文件都命中时先各取各自最好的一段
+        return KbRank.diversify(ranked, limit)
+    }
+
+    /** BM25 前几名里只看这么多个是否「关键词强命中」。 */
+    const val STRONG_TOP = 2
+    /** 覆盖度（BM25 / 上限）达到这个也算强命中。 */
+    const val STRONG_NORM = 0.6
+
+    /** 关键词强命中：通过覆盖度门槛，且原样含问题整词或覆盖度 ≥ [STRONG_NORM]。Pure. */
+    fun strongKeyword(h: KbHit): Boolean {
+        val c = h.cover ?: return false
+        return KbChat.relevant(h) && (c.phraseHit || c.norm >= STRONG_NORM)
     }
 }

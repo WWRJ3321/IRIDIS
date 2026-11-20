@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">画像を生成できませんでした</string>
     <string name="ig271_n_stopped">画像生成を停止しました</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">設定をエクスポート</string>
+    <string name="v272_cfg_export_sub">JSON：設定、エージェントと記憶のオプション、モデル別パラメータ、キャラクターカード（モデルファイルは含まない）</string>
+    <string name="v272_cfg_import">設定をインポート</string>
+    <string name="v272_cfg_import_sub">エクスポートした JSON から復元（古いファイルは自動移行）</string>
+    <string name="v272_cfg_import_go">インポート</string>
+    <string name="v272_cfg_exported">設定をエクスポートしました（キャラクターカード %1$d 枚）</string>
+    <string name="v272_cfg_imported">設定 %1$d 項目とキャラクターカード %2$d 枚をインポート、%3$d 項目をスキップ</string>
+    <string name="v272_cfg_failed">インポートに失敗しました：%1$s</string>
+    <string name="v272_cfg_bad">IRIDIS の設定ファイルではありません</string>
+    <string name="v272_cfg_confirm">IRIDIS %1$s（%2$s）から、キャラクターカード %3$d 枚。インポートすると現在の設定を上書きし、同名のカードは置き換えられます。</string>
+    <string name="v272_kb_truncated">先頭 %1$d 万字のみ · %2$d 段</string>
+    <string name="v272_kb_toolarge">%1$d 件のファイルがサイズ上限を超えたため未登録：%2$s</string>
+    <string name="v272_kb_skip_title">インポートされなかったファイルがあります</string>
+    <string name="v272_kb_skip_big">%1$s：上限 %2$d MB を超えています</string>
+    <string name="v272_kb_skip_read">%1$s：読み込みに失敗しました</string>
+    <string name="v272_embed_rebuild">%1$s · 埋め込みモデルが変わったためベクトルを再構築中 %2$d/%3$d</string>
+    <string name="v272_crash_popup">クラッシュ後にレポートを表示</string>
+    <string name="v272_crash_popup_sub">予期しない終了を次回起動時に表示。オフにするとログのみ</string>
+    <string name="v272_crash_never">今後表示しない</string>
+    <string name="v272_crash_never_sub">設定の「クラッシュ後にレポートを表示」で再びオンにできます</string>
 </resources>

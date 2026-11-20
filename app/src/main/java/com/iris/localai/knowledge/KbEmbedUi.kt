@@ -26,6 +26,7 @@ object KbEmbedText {
     fun line(model: KbEmbedModels.Model?, chosen: String?, anyInstalled: Boolean, p: KbSemantic.Progress): String = when {
         chosen == KbEmbedModels.OFF -> I18n.s(R.string.kb251_embed_off)
         model == null || !anyInstalled -> I18n.s(R.string.kb251_embed_none)
+        p.modelId == model.id && p.running && p.stale != null -> I18n.s(R.string.v272_embed_rebuild, model.name, p.done, p.total)
         p.modelId == model.id && p.running -> I18n.s(R.string.kb251_embed_progress, model.name, p.done, p.total)
         p.modelId == model.id && p.failed -> I18n.s(R.string.kb251_embed_failed, model.name)
         else -> I18n.s(R.string.kb251_embed_ready, model.name)

@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">Image not finished</string>
     <string name="ig271_n_stopped">Image generation stopped</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">Export settings</string>
+    <string name="v272_cfg_export_sub">JSON: settings, agent and memory options, per-model parameters, character cards; no model files</string>
+    <string name="v272_cfg_import">Import settings</string>
+    <string name="v272_cfg_import_sub">Restore from an exported JSON; older files are migrated</string>
+    <string name="v272_cfg_import_go">Import</string>
+    <string name="v272_cfg_exported">Settings exported (%1$d character cards)</string>
+    <string name="v272_cfg_imported">Imported %1$d settings and %2$d character cards, skipped %3$d</string>
+    <string name="v272_cfg_failed">Import failed: %1$s</string>
+    <string name="v272_cfg_bad">Not an IRIDIS settings file</string>
+    <string name="v272_cfg_confirm">From IRIDIS %1$s (%2$s), %3$d character cards. Importing overwrites current settings and replaces cards with the same name.</string>
+    <string name="v272_kb_truncated">First %1$d0k characters only · %2$d chunks</string>
+    <string name="v272_kb_toolarge">%1$d files exceed the size limit and were not indexed: %2$s</string>
+    <string name="v272_kb_skip_title">Some files were not imported</string>
+    <string name="v272_kb_skip_big">%1$s: over the %2$d MB limit</string>
+    <string name="v272_kb_skip_read">%1$s: could not be read</string>
+    <string name="v272_embed_rebuild">%1$s · embedding model changed, rebuilding vectors %2$d/%3$d</string>
+    <string name="v272_crash_popup">Show report after a crash</string>
+    <string name="v272_crash_popup_sub">Explain an unexpected exit on next launch; when off, it is only logged</string>
+    <string name="v272_crash_never">Don\'t show again</string>
+    <string name="v272_crash_never_sub">Turn \"Show report after a crash\" back on in Settings</string>
 </resources>

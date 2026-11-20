@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
         if (container.settings.current.apiEnabled && !ApiService.status.value.running) {
             ApiService.start(this)
         }
-        val crash = if (savedInstanceState == null) CrashReporter.takeReport(this) else null
+        val crash = if (savedInstanceState == null) CrashReporter.takeReport(this, container.settings.current.crashReportPopup) else null
         if (savedInstanceState == null) handleIntent(intent)
         setContent {
             val settings by container.settings.settings.collectAsStateWithLifecycle()
@@ -207,7 +207,7 @@ class MainActivity : ComponentActivity() {
                         onStart = { container.settings.update { it.copy(welcomeAccepted = true) } },
                     )
                 }
-                crashText?.let { report -> CrashDialog(report) { crashText = null } }
+                crashText?.let { report -> CrashDialog(report, onNeverAgain = { container.settings.update { it.copy(crashReportPopup = false) } }) { crashText = null } }
             }
         }
     }
@@ -231,20 +231,26 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CrashDialog(report: String, onClose: () -> Unit) {
+private fun CrashDialog(report: String, onNeverAgain: () -> Unit, onClose: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     val c = Iris.colors
+    // 2.7.2：「不再提示」= 关掉 设置 › 崩溃后显示报告（关闭弹窗时生效）
+    var never by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val close = { if (never) onNeverAgain(); onClose() }
     IrisDialog(
-        onDismiss = onClose,
+        onDismiss = close,
         title = I18n.s(R.string.ui_271348),
         confirmText = I18n.s(R.string.ui_79d3ab),
-        onConfirm = { clipboard.setText(AnnotatedString(report)); onClose() },
+        onConfirm = { clipboard.setText(AnnotatedString(report)); close() },
         dismissText = I18n.s(R.string.ui_b15d91),
     ) {
-        Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
-            Text(I18n.s(R.string.ui_406ea7), style = IrisType.secondary, color = c.textSecondary)
-            Spacer(Modifier.height(IrisDimens.space8))
-            Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text)
+        Column {
+            Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                Text(I18n.s(R.string.ui_406ea7), style = IrisType.secondary, color = c.textSecondary)
+                Spacer(Modifier.height(IrisDimens.space8))
+                Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text)
+            }
+            com.iris.localai.ui.components.SwitchRow(I18n.s(R.string.v272_crash_never), checked = never, subtitle = I18n.s(R.string.v272_crash_never_sub)) { never = it }
         }
     }
 }

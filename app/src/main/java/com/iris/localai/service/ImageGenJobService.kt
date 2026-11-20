@@ -25,15 +25,19 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import com.iris.localai.task.TaskProgress
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
- * 正在跑的那一张生图（主进程）。生图页的 ViewModel 写，[ImageGenJobService] 与重新打开的生图页读：
- * 离开页面、切到后台都不打断；回到生图页时接上进度、预览和结果。
+ * 正在跑的那一张生图（主进程）。2.7.2：状态存在公共的 [TaskProgress]（槽 [ID]），这里只是生图的读写外观：
+ * 生图页的 ViewModel 写，[ImageGenJobService]（通知 / 超级岛）与重新打开的生图页读；离开页面、切到后台都不打断。
  */
 object ImageGenMonitor {
+    const val ID = "imagegen"
+
     data class Job(
         val model: String,
         val step: Int = 0,
@@ -51,12 +55,21 @@ object ImageGenMonitor {
         val preview: PreviewFrame? = null,
         /** 每次 begin 加一，页面据此分辨是不是自己发起的那张。 */
         val serial: Long = 0,
-    )
+    ) {
+        companion object {
+            fun from(t: TaskProgress.Task): Job {
+                val x = t.payload as? Extra ?: Extra()
+                return Job(t.subtitle, t.step, t.total, t.startedAt, t.finished, t.stopped, t.result, t.error, x.lowMem, x.seed, x.usedPrompt, x.preview, t.serial)
+            }
+        }
+    }
 
-    private val _job = MutableStateFlow<Job?>(null)
-    val job: StateFlow<Job?> = _job.asStateFlow()
-    @Volatile private var stopHandler: (() -> Unit)? = null
-    @Volatile private var serial = 0L
+    /** 生图专属的任务数据（[TaskProgress.Task.payload]）。 */
+    data class Extra(val preview: PreviewFrame? = null, val seed: Long? = null, val usedPrompt: String? = null, val lowMem: Boolean = false)
+
+    /** 当前（或最后一张）生图；页面 adopt 用。 */
+    val job: Flow<Job?> get() = TaskProgress.slot(ID).map { t -> t?.let { Job.from(it) } }
+    val current: Job? get() = TaskProgress.current(ID)?.let { Job.from(it) }
 
     /** 生图页可见（完成时在页面上就不再弹通知）。 */
     @Volatile var pageVisible = false
@@ -67,23 +80,19 @@ object ImageGenMonitor {
     fun requestOpen() { _open.value = true }
     fun consumeOpen() { _open.value = false }
 
-    fun begin(model: String, total: Int, stop: () -> Unit): Long {
-        stopHandler = stop
-        val s = ++serial
-        _job.value = Job(model, total = total, serial = s)
-        return s
-    }
+    fun begin(model: String, total: Int, stop: () -> Unit): Long =
+        TaskProgress.begin(ID, TaskProgress.Kind.IMAGE_GEN, runCatching { I18n.s(R.string.ig271_n_title) }.getOrDefault("生图"), model, total, Extra(), stop)
 
-    fun progress(step: Int, total: Int) = _job.update { j -> if (j == null || j.finished) j else j.copy(step = step, total = total) }
-    fun preview(f: PreviewFrame) = _job.update { j -> if (j == null || j.finished) j else j.copy(preview = f) }
+    fun progress(step: Int, total: Int) = TaskProgress.progress(ID, step, total)
+    fun preview(f: PreviewFrame) = TaskProgress.payload(ID) { p -> ((p as? Extra) ?: Extra()).copy(preview = f) }
 
     fun finish(result: String?, error: String?, stopped: Boolean, lowMem: Boolean = false, seed: Long? = null, usedPrompt: String? = null) {
-        stopHandler = null
-        _job.update { j -> j?.copy(finished = true, result = result, error = error, stopped = stopped, lowMem = lowMem, seed = seed, usedPrompt = usedPrompt) }
+        val phase = when { stopped -> TaskProgress.Phase.STOPPED; result != null -> TaskProgress.Phase.DONE; else -> TaskProgress.Phase.FAILED }
+        TaskProgress.finish(ID, phase, result, error) { p -> ((p as? Extra) ?: Extra()).copy(lowMem = lowMem, seed = seed, usedPrompt = usedPrompt) }
     }
 
-    fun requestStop() { stopHandler?.invoke() }
-    val running: Boolean get() = _job.value?.let { !it.finished } == true
+    fun requestStop() = TaskProgress.requestStop(ID)
+    val running: Boolean get() = TaskProgress.running(ID)
 }
 
 /**
@@ -143,7 +152,7 @@ class ImageGenJobService : LifecycleService() {
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iris:imagegen")
             .apply { setReferenceCounted(false); acquire(MAX_WAKE_MS) }
-        lifecycleScope.launch { ImageGenMonitor.job.collect { onJob(it) } }
+        lifecycleScope.launch { TaskProgress.slot(ImageGenMonitor.ID).collect { onTask(it) } }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -152,7 +161,7 @@ class ImageGenJobService : LifecycleService() {
             ImageGenMonitor.requestStop()
             return START_NOT_STICKY
         }
-        val j = ImageGenMonitor.job.value
+        val j = TaskProgress.current(ImageGenMonitor.ID)
         try {
             ServiceCompat.startForeground(this, ID_PROGRESS, progress(j), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } catch (t: Throwable) {
@@ -160,11 +169,11 @@ class ImageGenJobService : LifecycleService() {
             Log.w(TAG, "startForeground failed", t)
             stopSelf()
         }
-        if (j == null || j.finished) onJob(j)
+        if (j == null || j.finished) onTask(j)
         return START_NOT_STICKY
     }
 
-    private fun onJob(j: ImageGenMonitor.Job?) {
+    private fun onTask(j: TaskProgress.Task?) {
         if (j == null) { stopSelf(); return }
         val nm = getSystemService(NotificationManager::class.java)
         if (j.finished) {
@@ -191,10 +200,10 @@ class ImageGenJobService : LifecycleService() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun progress(j: ImageGenMonitor.Job?): Notification {
+    private fun progress(j: TaskProgress.Task?): Notification {
         val step = j?.step ?: 0; val total = j?.total ?: 0
-        val title = I18n.s(R.string.ig271_n_title)
-        val text = (j?.model?.take(32)?.let { "$it · " } ?: "") +
+        val title = j?.title ?: I18n.s(R.string.ig271_n_title)
+        val text = (j?.subtitle?.takeIf { it.isNotEmpty() }?.take(32)?.let { "$it · " } ?: "") +
             (if (step <= 0) I18n.s(R.string.ig271_n_loading) else I18n.s(R.string.ig271_n_step, step, total))
         val chip = if (total > 0) I18n.s(R.string.ig271_n_chip, step, total) else "…"
         val stop = PendingIntent.getService(this, 21, Intent(this, ImageGenJobService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
@@ -245,12 +254,12 @@ class ImageGenJobService : LifecycleService() {
             .build()
     }
 
-    private fun done(j: ImageGenMonitor.Job): Notification {
+    private fun done(j: TaskProgress.Task): Notification {
         val ok = j.result != null
         val b = NotificationCompat.Builder(this, CHANNEL_DONE)
             .setSmallIcon(R.drawable.ic_stat_iris)
             .setContentTitle(I18n.s(when { ok -> R.string.ig271_n_done; j.stopped -> R.string.ig271_n_stopped; else -> R.string.ig271_n_failed }))
-            .setContentText(if (ok) j.model else (j.error ?: j.model))
+            .setContentText(if (ok) j.subtitle else (j.error ?: j.subtitle))
             .setAutoCancel(true)
             .setContentIntent(openIntent())
         j.result?.let { path -> thumb(path)?.let { bmp -> b.setLargeIcon(bmp).setStyle(NotificationCompat.BigPictureStyle().bigPicture(bmp).bigLargeIcon(null as Bitmap?)) } }

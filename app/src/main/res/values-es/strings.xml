@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">La imagen no se completó</string>
     <string name="ig271_n_stopped">Generación detenida</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">Exportar ajustes</string>
+    <string name="v272_cfg_export_sub">JSON: ajustes, opciones de agente y memoria, parámetros por modelo, tarjetas de personaje; sin archivos de modelo</string>
+    <string name="v272_cfg_import">Importar ajustes</string>
+    <string name="v272_cfg_import_sub">Restaurar desde un JSON exportado; los archivos antiguos se migran</string>
+    <string name="v272_cfg_import_go">Importar</string>
+    <string name="v272_cfg_exported">Ajustes exportados (%1$d tarjetas de personaje)</string>
+    <string name="v272_cfg_imported">Importados %1$d ajustes y %2$d tarjetas, %3$d omitidos</string>
+    <string name="v272_cfg_failed">Error al importar: %1$s</string>
+    <string name="v272_cfg_bad">No es un archivo de ajustes de IRIDIS</string>
+    <string name="v272_cfg_confirm">De IRIDIS %1$s (%2$s), %3$d tarjetas. Importar sobrescribe los ajustes actuales y reemplaza las tarjetas con el mismo nombre.</string>
+    <string name="v272_kb_truncated">Solo los primeros %1$d0k caracteres · %2$d fragmentos</string>
+    <string name="v272_kb_toolarge">%1$d archivos superan el límite de tamaño y no se indexaron: %2$s</string>
+    <string name="v272_kb_skip_title">Algunos archivos no se importaron</string>
+    <string name="v272_kb_skip_big">%1$s: supera el límite de %2$d MB</string>
+    <string name="v272_kb_skip_read">%1$s: no se pudo leer</string>
+    <string name="v272_embed_rebuild">%1$s · cambió el modelo de embeddings, reconstruyendo vectores %2$d/%3$d</string>
+    <string name="v272_crash_popup">Mostrar informe tras un cierre inesperado</string>
+    <string name="v272_crash_popup_sub">Explicar un cierre inesperado al abrir; desactivado = solo se registra</string>
+    <string name="v272_crash_never">No volver a mostrar</string>
+    <string name="v272_crash_never_sub">Puedes reactivarlo en Ajustes: «Mostrar informe tras un cierre inesperado»</string>
 </resources>

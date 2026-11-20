@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">生圖未完成</string>
     <string name="ig271_n_stopped">已停止生圖</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">匯出設定</string>
+    <string name="v272_cfg_export_sub">JSON：設定、智慧體與記憶選項、各模型參數、角色卡；不含模型檔案</string>
+    <string name="v272_cfg_import">匯入設定</string>
+    <string name="v272_cfg_import_sub">從匯出的 JSON 還原，舊版本檔案自動遷移</string>
+    <string name="v272_cfg_import_go">匯入</string>
+    <string name="v272_cfg_exported">已匯出設定（含 %1$d 張角色卡）</string>
+    <string name="v272_cfg_imported">已匯入 %1$d 項設定、%2$d 張角色卡，略過 %3$d 項</string>
+    <string name="v272_cfg_failed">匯入失敗：%1$s</string>
+    <string name="v272_cfg_bad">不是 IRIDIS 設定檔</string>
+    <string name="v272_cfg_confirm">來自 IRIDIS %1$s（%2$s），含 %3$d 張角色卡。匯入會覆蓋目前設定，同名角色卡會被取代。</string>
+    <string name="v272_kb_truncated">只收錄前 %1$d 萬字 · %2$d 段</string>
+    <string name="v272_kb_toolarge">%1$d 個檔案超過大小上限，未收錄：%2$s</string>
+    <string name="v272_kb_skip_title">有檔案沒有匯入</string>
+    <string name="v272_kb_skip_big">%1$s：超過 %2$d MB 上限</string>
+    <string name="v272_kb_skip_read">%1$s：讀取失敗</string>
+    <string name="v272_embed_rebuild">%1$s · 嵌入模型已變，重建向量 %2$d/%3$d</string>
+    <string name="v272_crash_popup">當機後顯示報告</string>
+    <string name="v272_crash_popup_sub">上次意外退出時下次開啟彈出說明；關閉後只記錄日誌</string>
+    <string name="v272_crash_never">不再提示</string>
+    <string name="v272_crash_never_sub">可在設定中重新開啟「當機後顯示報告」</string>
 </resources>

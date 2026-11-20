@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">इमेज पूरी नहीं हुई</string>
     <string name="ig271_n_stopped">इमेज बनना रोका गया</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">सेटिंग्स एक्सपोर्ट करें</string>
+    <string name="v272_cfg_export_sub">JSON: सेटिंग्स, एजेंट और मेमोरी विकल्प, प्रति-मॉडल पैरामीटर, कैरेक्टर कार्ड; मॉडल फ़ाइलें नहीं</string>
+    <string name="v272_cfg_import">सेटिंग्स इम्पोर्ट करें</string>
+    <string name="v272_cfg_import_sub">एक्सपोर्ट किए गए JSON से बहाल करें; पुरानी फ़ाइलें माइग्रेट होती हैं</string>
+    <string name="v272_cfg_import_go">इम्पोर्ट</string>
+    <string name="v272_cfg_exported">सेटिंग्स एक्सपोर्ट हुईं (%1$d कैरेक्टर कार्ड)</string>
+    <string name="v272_cfg_imported">%1$d सेटिंग्स और %2$d कैरेक्टर कार्ड इम्पोर्ट हुए, %3$d छोड़े गए</string>
+    <string name="v272_cfg_failed">इम्पोर्ट विफल: %1$s</string>
+    <string name="v272_cfg_bad">यह IRIDIS सेटिंग्स फ़ाइल नहीं है</string>
+    <string name="v272_cfg_confirm">IRIDIS %1$s (%2$s) से, %3$d कैरेक्टर कार्ड। इम्पोर्ट करने से वर्तमान सेटिंग्स बदल जाएँगी और समान नाम वाले कार्ड बदल दिए जाएँगे।</string>
+    <string name="v272_kb_truncated">केवल पहले %1$d0k अक्षर · %2$d खंड</string>
+    <string name="v272_kb_toolarge">%1$d फ़ाइलें आकार सीमा से बड़ी हैं, इंडेक्स नहीं हुईं: %2$s</string>
+    <string name="v272_kb_skip_title">कुछ फ़ाइलें इम्पोर्ट नहीं हुईं</string>
+    <string name="v272_kb_skip_big">%1$s: %2$d MB सीमा से अधिक</string>
+    <string name="v272_kb_skip_read">%1$s: पढ़ा नहीं जा सका</string>
+    <string name="v272_embed_rebuild">%1$s · एम्बेडिंग मॉडल बदला, वेक्टर फिर से बन रहे हैं %2$d/%3$d</string>
+    <string name="v272_crash_popup">क्रैश के बाद रिपोर्ट दिखाएँ</string>
+    <string name="v272_crash_popup_sub">अगली बार खोलने पर अप्रत्याशित बंद होने की जानकारी दिखाएँ; बंद होने पर केवल लॉग</string>
+    <string name="v272_crash_never">फिर न दिखाएँ</string>
+    <string name="v272_crash_never_sub">सेटिंग्स में \"क्रैश के बाद रिपोर्ट दिखाएँ\" फिर से चालू करें</string>
 </resources>

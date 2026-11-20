@@ -148,7 +148,7 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
             historyDb = listOf("", "-wal", "-shm", "-journal").map { File(db.path + it) },
             cacheDir = ctx.cacheDir,
             externalCache = extCache,
-            logFiles = listOfNotNull(File(files, CrashReporter.FILE), ext?.let { File(it, "iris_mnn_load.log") }) +
+            logFiles = listOfNotNull(File(files, CrashReporter.FILE), File(files, CrashReporter.EXIT_LOG), ext?.let { File(it, "iris_mnn_load.log") }) +
                 ext?.listFiles()?.filter { it.isFile && it.name.endsWith(".irislocalai.app.copy") }.orEmpty(),
             restoreStage = File(files, ".restore"),                 // Backup.restore staging
         )

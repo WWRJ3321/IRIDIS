@@ -6,7 +6,7 @@ import java.io.File
 import kotlinx.serialization.Serializable
 
 /** a file of the 知识库 page. [indexed] = the index holds its current version. */
-data class KbFileInfo(val path: String, val size: Long, val chunks: Int, val indexed: Boolean, val cites: Int)
+data class KbFileInfo(val path: String, val size: Long, val chunks: Int, val indexed: Boolean, val cites: Int, val truncated: Boolean = false)
 
 @Serializable
 data class KbStat(
@@ -57,7 +57,12 @@ class KnowledgeBase(
     private val indexFile: File,
     private val external: () -> ExternalFiles? = { null },
 ) {
-    data class Status(val files: Int, val chunks: Int, val unsupported: Int)
+    /** 2.7.2：[tooLarge] = 超过上限没收录的文件（不再静默跳过），[truncated] = 只收录了前一部分的文件数。 */
+    data class Status(val files: Int, val chunks: Int, val unsupported: Int, val tooLarge: List<String> = emptyList(), val truncated: Int = 0)
+
+    /** 最近一次扫描时超过大小上限的文件（相对路径）。 */
+    @Volatile var tooLarge: List<String> = emptyList()
+        private set
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
     private val lock = Any()
@@ -99,11 +104,13 @@ class KnowledgeBase(
     fun scan(): Pair<List<KbSourceFile>, Int> {
         val out = LinkedHashMap<String, KbSourceFile>()
         var unsupported = 0
+        val big = ArrayList<String>()
         val d = dir()
         // hidden folders (the .trash recycle bin) are never indexed.
         d.walkTopDown().maxDepth(4).onEnter { it == d || !it.name.startsWith(".") }.filter { it.isFile }.forEach { f ->
             val rel = f.relativeTo(d).path.replace(File.separatorChar, '/')
             if (KbFormats.supported(f.name) && f.length() <= KbFormats.maxBytes(f.name, MAX_BYTES)) out[rel] = KbSourceFile(rel, f.length(), f.lastModified())
+            else if (KbFormats.supported(f.name)) big += rel
             else if (!f.name.startsWith(".")) unsupported++
         }
         external()?.let { ext ->
@@ -114,6 +121,7 @@ class KnowledgeBase(
                     if (e.isDir) { if (depth < 4 && !e.name.startsWith(".")) walk(p, depth + 1) }
                     else if (p !in out) {
                         if (KbFormats.supported(e.name) && e.size <= KbFormats.maxBytes(e.name, MAX_BYTES)) out[p] = KbSourceFile(p, e.size, 0L)
+                        else if (KbFormats.supported(e.name)) big += p
                         else if (!e.name.startsWith(".")) unsupported++
                     }
                 }
@@ -122,6 +130,7 @@ class KnowledgeBase(
         }
         // references the user removed (file left untouched) stay out of the index.
         val hidden = refs.hidden()
+        tooLarge = big.filter { it !in hidden }.sortedBy { it.lowercase() }
         return out.values.filter { it.path !in hidden }.sortedBy { it.path.lowercase() } to unsupported
     }
 
@@ -138,10 +147,7 @@ class KnowledgeBase(
         val old = load()
         val plan = KbChanges.plan(old.files, files, force)
         if (plan.changed || force) {
-            val fresh = plan.reindex.map { f ->
-                val text = read(f.path)?.let { KbFormats.text(f.path, it) }.orEmpty()
-                KbFileEntry(f.path, f.size, f.mtime, KbChunker.chunk(text))
-            }
+            val fresh = plan.reindex.map { f -> index(f) }
             val next = KbIndexData(files = (plan.keep + fresh).sortedBy { it.path.lowercase() })
             data = next
             ranker = null
@@ -156,7 +162,25 @@ class KnowledgeBase(
         if (plan.changed || force) semantic?.indexChanged() // fill the new chunks' vectors in the background
         val d = load()
         nonEmpty = d.files.any { it.chunks.isNotEmpty() }
-        Status(d.files.size, d.files.sumOf { it.chunks.size }, unsupported)
+        Status(d.files.size, d.files.sumOf { it.chunks.size }, unsupported, tooLarge, d.files.count { it.truncated })
+    }
+
+    /**
+     * 2.7.2：读一个文件并切片。本地的纯文本走流式（编码识别 + 按段切片，不整本读进一个字符串）；
+     * 其它（网页 / EPUB / 只能经 SAF 读的）整块读。
+     */
+    private fun index(f: KbSourceFile): KbFileEntry {
+        val local = File(dir(), f.path)
+        if (KbFormats.streamable(f.path) && local.isFile && local.canRead()) {
+            val c = runCatching { KbText.chunkFile(local) }.getOrNull()
+            return KbFileEntry(f.path, f.size, f.mtime, c?.chunks.orEmpty(), truncated = c?.truncated == true)
+        }
+        if (KbFormats.streamable(f.path)) {
+            val c = runCatching { external()?.read("$FOLDER/${f.path}", KbFormats.maxBytes(f.path, MAX_BYTES))?.let { KbText.chunkStream(it.inputStream()) } }.getOrNull()
+            return KbFileEntry(f.path, f.size, f.mtime, c?.chunks.orEmpty(), truncated = c?.truncated == true)
+        }
+        val text = read(f.path)?.let { KbFormats.text(f.path, it) }.orEmpty()
+        return KbFileEntry(f.path, f.size, f.mtime, KbChunker.chunk(text))
     }
 
     /** Whether the folder holds at least one indexable file (lists the folder; no reading). */
@@ -233,7 +257,7 @@ class KnowledgeBase(
         val st = loadStats()
         scan().first.map { f ->
             val e = idx[f.path]
-            KbFileInfo(f.path, f.size, e?.chunks?.size ?: 0, e != null && e.size == f.size && (f.mtime == 0L || e.mtime == f.mtime), st[f.path]?.count ?: 0)
+            KbFileInfo(f.path, f.size, e?.chunks?.size ?: 0, e != null && e.size == f.size && (f.mtime == 0L || e.mtime == f.mtime), st[f.path]?.count ?: 0, e?.truncated == true)
         }
     }
 
@@ -280,12 +304,56 @@ class KnowledgeBase(
         rel
     }
 
+    /** 2.7.2：导入结果。[path] = 存进来的相对路径；失败时 [tooLarge] 或读写出错。 */
+    data class AddResult(val path: String?, val tooLarge: Boolean = false, val limit: Long = 0)
+
+    /**
+     * 2.7.2：边读边写（大文件不整个读进内存），超过该类文件上限 [KbFormats.maxBytes] 就停下、删掉半截并报告。
+     * File 写不了（只有 SAF 授权）时退回 [add]（整块，上限内）。
+     */
+    fun addStream(name: String, input: java.io.InputStream, folder: String = ""): AddResult {
+        val limit = KbFormats.maxBytes(name, MAX_BYTES)
+        val clean = name.replace(Regex("[/\\\\:*?\"<>|\\u0000]"), "_").trim().ifEmpty { "file.txt" }
+        val tmp = File(indexFile.parentFile ?: File("."), "kb-import.tmp")
+        try {
+            tmp.parentFile?.mkdirs()
+            var total = 0L
+            tmp.outputStream().buffered(1 shl 16).use { out ->
+                val buf = ByteArray(1 shl 16)
+                while (true) {
+                    val k = input.read(buf); if (k < 0) break
+                    total += k
+                    if (total > limit) return AddResult(null, tooLarge = true, limit = limit)
+                    out.write(buf, 0, k)
+                }
+            }
+            val moved = synchronized(lock) {
+                val sub = KbPaths.folder(folder) ?: return AddResult(null)
+                val d = (if (sub.isEmpty()) dir() else File(dir(), sub)).apply { mkdirs() }
+                var target = File(d, clean); var i = 2
+                while (target.exists()) {
+                    val base = clean.substringBeforeLast('.', clean); val ext = clean.substringAfterLast('.', "")
+                    target = File(d, if (ext.isEmpty()) "$base ($i)" else "$base ($i).$ext"); i++
+                }
+                val ok = runCatching { tmp.renameTo(target) || (tmp.copyTo(target, overwrite = false).exists().also { tmp.delete() }) }.getOrDefault(false)
+                if (ok) KbPaths.join(sub, target.name).also { refs.unhide(it); lastScan = 0 } else null
+            }
+            if (moved != null) return AddResult(moved)
+            // only the SAF grant can write there: whole bytes (within the cap)
+            return AddResult(add(name, tmp.readBytes(), folder))
+        } finally {
+            tmp.delete()
+        }
+    }
+
     // ---- 2.3.2: edit text files, folders ----
 
     /** Text of [path] for the editor; null when it is not an editable text file or cannot be read. */
     fun readText(path: String): String? = synchronized(lock) {
         val p = KbPaths.file(path) ?: return@synchronized null
         if (!KbPaths.editable(p)) return@synchronized null
+        // 2.7.2：大文件（> 4 MB）不进编辑器（整本读进输入框会卡死）
+        if (File(dir(), p).length() > MAX_BYTES) return@synchronized null
         read(p)?.let { KbFormats.text(p, it) }
     }
 

@@ -78,7 +78,11 @@ data class KbChunk(val file: String, val text: String, val index: Int = 0)
 
 /** One indexed file: its path in knowledge/, and size + mtime to notice changes. */
 @Serializable
-data class KbFileEntry(val path: String, val size: Long, val mtime: Long, val chunks: List<String> = emptyList())
+data class KbFileEntry(
+    val path: String, val size: Long, val mtime: Long, val chunks: List<String> = emptyList(),
+    /** 2.7.2：文字超过 [KbText.MAX_CHARS]，只收录了前面一部分。 */
+    val truncated: Boolean = false,
+)
 
 @Serializable
 data class KbIndexData(val version: Int = 1, val files: List<KbFileEntry> = emptyList())
@@ -92,7 +96,11 @@ data class KbSourceFile(val path: String, val size: Long, val mtime: Long)
  * matched terms / idf of all [terms], [norm] = BM25 score / the query's upper bound Σ idf·(k1+1),
  * [nameHit] = a query term is in the file name, [longSingle] = the only term has ≥ 3 characters.
  */
-data class KbCover(val matched: Int, val terms: Int, val share: Double, val norm: Double, val nameHit: Boolean, val longSingle: Boolean)
+data class KbCover(
+    val matched: Int, val terms: Int, val share: Double, val norm: Double, val nameHit: Boolean, val longSingle: Boolean,
+    /** 2.7.2：片段里原样出现了问题中的整个词（如「分院帽」，不只是其中的二字组）。 */
+    val phraseHit: Boolean = false,
+)
 
 /** [chunkIndex] = position of the chunk in its file (-1 unknown); 「第 chunkIndex+1 段」. 2.4.1: [cover] from [KbRanker.search]. */
 data class KbHit(
@@ -122,23 +130,57 @@ object KbChanges {
     }
 }
 
-/** BM25 over the chunks of an index. Build once per index version; [search] is pure. */
+/**
+ * BM25 over the chunks of an index. Build once per index version; [search] is pure.
+ * 2.7.2：①词表 + 每片段排好序的 (词 id, 次数) 数组，大文件（几万片段）也不再是几万个 HashMap；
+ * ②问题先去掉「知识库里 / 关于 / 怎么描述」这类说法再取词（[KbQuery.focus]），跨词的无意义二字组不再计分；
+ * ③片段里原样出现问题中的整词（「分院帽」）加分 [PHRASE_BONUS]；④按片段排序，多个文件命中时先各取各自最好的一段（[KbRank.diversify]）。
+ */
 class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val b: Double = 0.75) {
     private val docs = chunks
     /** the chunks this ranker was built over (for the vector side, [KbSemantic]). */
     val chunks: List<KbChunk> get() = docs
-    private val tf: List<Map<String, Int>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/') + " " + c.text).groupingBy { it }.eachCount() }
-    /** tokens of each chunk's file name (a term found there makes a one-word query count). */
-    private val nameTokens: List<Set<String>> = chunks.map { c -> KbTokenizer.tokens(c.file.substringAfterLast('/').substringBeforeLast('.')).toSet() }
-    private val len = tf.map { m -> m.values.sum() }
+    private val vocab = HashMap<String, Int>()
+    private var dfArr = IntArray(1024)
+    private val ids = arrayOfNulls<IntArray>(chunks.size)
+    private val counts = arrayOfNulls<IntArray>(chunks.size)
+    private val len = IntArray(chunks.size)
+    /** tokens of each file name (a term found there makes a one-word query count), per distinct file. */
+    private val nameTokens = HashMap<String, Set<String>>()
+
+    init {
+        val local = HashMap<Int, Int>()
+        for ((i, c) in chunks.withIndex()) {
+            local.clear()
+            var n = 0
+            for (t in KbTokenizer.tokens(c.file.substringAfterLast('/') + " " + c.text)) {
+                val id = vocab.getOrPut(t) { vocab.size }
+                local[id] = (local[id] ?: 0) + 1; n++
+            }
+            val keys = local.keys.toIntArray().also { it.sort() }
+            ids[i] = keys
+            counts[i] = IntArray(keys.size) { local.getValue(keys[it]) }
+            len[i] = n
+            if (vocab.size > dfArr.size) dfArr = dfArr.copyOf(maxOf(vocab.size, dfArr.size * 2))
+            for (k in keys) dfArr[k]++
+            nameTokens.getOrPut(c.file) { KbTokenizer.tokens(c.file.substringAfterLast('/').substringBeforeLast('.')).toSet() }
+        }
+    }
     private val avg = if (len.isEmpty()) 1.0 else len.average().coerceAtLeast(1.0)
-    private val df: Map<String, Int> = HashMap<String, Int>().also { d -> tf.forEach { m -> m.keys.forEach { d[it] = (d[it] ?: 0) + 1 } } }
 
     val size: Int get() = docs.size
 
+    private fun df(token: String): Int = vocab[token]?.let { dfArr[it] } ?: 0
+
+    private fun tf(i: Int, id: Int): Int {
+        val k = java.util.Arrays.binarySearch(ids[i]!!, id)
+        return if (k >= 0) counts[i]!![k] else 0
+    }
+
     /** inverse document frequency of [token] over the chunks (0 when unseen). */
     fun idf(token: String): Double {
-        val d = df[token] ?: return 0.0
+        val d = df(token)
+        if (d == 0) return 0.0
         val n = docs.size.toDouble()
         return ln(1 + (n - d + 0.5) / (d + 0.5))
     }
@@ -147,12 +189,16 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
      * the query terms that count: no stop words ([KbQuery.STOP]), present in the index, and — with at least
      * [COMMON_MIN_CHUNKS] chunks — in no more than [COMMON_SHARE] of them (a word in most chunks says nothing),
      * unless every term is that common (then they still rank; the coverage gate judges them).
+     * 2.7.2: taken from [KbQuery.focus] (meta phrasing removed); the whole query when that leaves nothing.
      */
     fun terms(query: String): List<String> {
         val n = docs.size
-        val seen = KbQuery.meaningful(query).distinct().filter { it in df }
-        val rare = seen.filter { t -> n < COMMON_MIN_CHUNKS || df.getValue(t) <= n * COMMON_SHARE }
-        return rare.ifEmpty { seen }
+        fun pick(q: String): List<String> {
+            val seen = KbQuery.meaningful(q).distinct().filter { df(it) > 0 }
+            val rare = seen.filter { t -> n < COMMON_MIN_CHUNKS || df(t) <= n * COMMON_SHARE }
+            return rare.ifEmpty { seen }
+        }
+        return pick(KbQuery.focus(query)).ifEmpty { pick(query) }
     }
 
     /** [boostFiles] = files the previous turn hit (a follow-up likely continues there): score ×[BOOST]. */
@@ -160,42 +206,57 @@ class KbRanker(chunks: List<KbChunk>, private val k1: Double = 1.2, private val 
         val q = terms(query)
         if (q.isEmpty() || docs.isEmpty()) return emptyList()
         val n = docs.size.toDouble()
-        val idfs = q.associateWith { t -> ln(1 + (n - df.getValue(t) + 0.5) / (df.getValue(t) + 0.5)) }
-        val idfSum = idfs.values.sum().coerceAtLeast(1e-9)
+        val qIds = q.map { vocab.getValue(it) }
+        val idfs = q.map { t -> ln(1 + (n - df(t) + 0.5) / (df(t) + 0.5)) }
+        val idfSum = idfs.sum().coerceAtLeast(1e-9)
         val upper = idfSum * (k1 + 1)
+        val phrases = KbQuery.phrases(query).filter { p -> KbTokenizer.tokens(p).any { it in q } }
         val scored = ArrayList<KbHit>()
         for (i in docs.indices) {
             var s = 0.0
             var matched = 0
             var matchedIdf = 0.0
-            val m = tf[i]
-            for (t in q) {
-                val f = m[t] ?: continue
-                val idf = idfs.getValue(t)
+            for (j in q.indices) {
+                val f = tf(i, qIds[j])
+                if (f == 0) continue
+                val idf = idfs[j]
                 s += idf * f * (k1 + 1) / (f + k1 * (1 - b + b * len[i] / avg))
                 matched++; matchedIdf += idf
             }
             if (s > 0) {
+                val text = docs[i].text
+                val phraseHit = phrases.isNotEmpty() && phrases.any { text.contains(it, ignoreCase = true) }
+                if (phraseHit) s *= 1 + PHRASE_BONUS
                 val cover = KbCover(
-                    matched = matched, terms = q.size, share = matchedIdf / idfSum, norm = s / upper,
-                    nameHit = q.any { it in nameTokens[i] }, longSingle = q.size == 1 && q[0].length >= 3,
+                    matched = matched, terms = q.size, share = matchedIdf / idfSum, norm = minOf(s / upper, 1.0 + PHRASE_BONUS),
+                    nameHit = q.any { it in nameTokens.getValue(docs[i].file) }, longSingle = q.size == 1 && q[0].length >= 3,
+                    phraseHit = phraseHit,
                 )
-                scored += KbHit(docs[i].file, docs[i].text, if (docs[i].file in boostFiles) s * BOOST else s, docs[i].index, cover = cover)
+                scored += KbHit(docs[i].file, text, if (docs[i].file in boostFiles) s * BOOST else s, docs[i].index, cover = cover)
             }
         }
-        // One file may fill the list only when nothing else matches.
-        val sorted = scored.sortedByDescending { it.score }
+        return KbRank.diversify(scored.sortedByDescending { it.score }, limit)
+    }
+}
+
+/** 2.7.2：片段排序后的取法。Pure. */
+object KbRank {
+    /**
+     * [sorted] 已按分数从高到低：先每个文件各取它最好的一段（按分数先后），再按分数补满 [limit]。
+     * 多本书都命中时每本都有机会出现；只有一个文件命中时就是普通的前 [limit] 段。
+     */
+    fun diversify(sorted: List<KbHit>, limit: Int): List<KbHit> {
+        if (limit <= 0) return emptyList()
         val out = ArrayList<KbHit>()
-        val perFile = HashMap<String, Int>()
-        for (h in sorted) {
-            if ((perFile[h.file] ?: 0) >= 2) continue
-            out += h; perFile[h.file] = (perFile[h.file] ?: 0) + 1
-            if (out.size >= limit) return out
-        }
-        for (h in sorted) { if (out.size >= limit) break; if (h !in out) out += h }
+        val seen = HashSet<String>()
+        for (h in sorted) { if (out.size >= limit) break; if (seen.add(h.file)) out += h }
+        for (h in sorted) { if (out.size >= limit) break; if (out.none { it === h }) out += h }
         return out
     }
 }
+
+/** 2.7.2：片段里原样出现整个问题词时的加分（×(1+这个数)）。 */
+const val PHRASE_BONUS = 0.5
 
 /** score factor for files the previous turn cited. */
 const val BOOST = 1.3
@@ -238,6 +299,26 @@ object KbQuery {
     }
 
     fun meaningful(text: String): List<String> = KbTokenizer.tokens(text).filter { it !in STOP }
+
+    /**
+     * 2.7.2：去掉只说「去哪找 / 怎么问」的部分（知识库里、书中、关于、怎么描述、是什么样的…），换成空格，
+     * 这样「知识库里关于分院帽怎么描述」只剩「分院帽」，不再产生「库里」「于分」「帽怎」这类跨词二字组。Pure.
+     */
+    fun focus(text: String): String = META.replace(text, " ")
+
+    private val META = Regex(
+        "(?:在|从)?(?:我的)?(?:知识库|资料库)(?:里面|里|中|内|上)?的?|(?:书|文档|资料|文件|小说|原文)(?:里面|里|中|内)的?|" +
+            "关于|有关|(?:是)?(?:怎么|如何|怎样)(?:描述|形容|写|讲|说|介绍|评价)的?|(?:描述|形容|介绍)一下|是什么样(?:子)?的?|什么样的?"
+    )
+
+    /** 问题里的整词：去掉说法后连续的汉字（3–12 字，不全是停用词）与 ≥ 3 个字母的英文词。Pure. */
+    fun phrases(text: String): List<String> {
+        val f = focus(text)
+        val out = LinkedHashSet<String>()
+        Regex("[\\u4e00-\\u9fff]{3,12}").findAll(f).forEach { m -> if (meaningful(m.value).isNotEmpty()) out += m.value }
+        Regex("[A-Za-z][A-Za-z0-9]{2,}").findAll(f).forEach { m -> if (m.value.lowercase() !in STOP) out += m.value }
+        return out.toList()
+    }
 
     /** Terms that say what [current] is about; empty only for a pure acknowledgement ([isPureAck]). */
     fun effective(current: String): List<String> {
@@ -314,6 +395,13 @@ object KbSource {
     /** file + 0-based chunk index (-1 when the label has none). */
     fun parse(label: String): Pair<String, Int> = RE.find(label)?.let { it.groupValues[1] to it.groupValues[2].toInt() - 1 } ?: (label to -1)
     fun chip(label: String): String = "出处：$label"
+
+    /** 2.7.2：注入给模型的出处：「《书名》（文件 哈利波特1.txt · 第 3 段）」，多本书同时出现时模型分得清。Pure. */
+    fun title(h: KbHit): String {
+        val name = h.file.substringAfterLast('/')
+        val base = name.substringBeforeLast('.').ifEmpty { name }
+        return "《$base》（$name" + (if (h.chunkIndex >= 0) " · 第 ${h.chunkIndex + 1} 段" else "") + "）"
+    }
     fun files(labels: List<String>): List<String> = labels.map { parse(it).first }.distinct()
 }
 
@@ -338,14 +426,14 @@ object KbPrompt {
         val per = maxChars / hits.size
         return buildString {
             append("<knowledge>\n参考资料（用户的知识库）：用得上就引用并标 [n]，用不上就不提。\n")
-            hits.forEachIndexed { i, h -> append("[${i + 1}] ").append(h.file).append(": ").append(clip(h.text, per)).append('\n') }
+            hits.forEachIndexed { i, h -> append("[${i + 1}] ").append(KbSource.title(h)).append("：").append(clip(h.text, per)).append('\n') }
             append("</knowledge>")
         }
     }
 
     fun toolOutput(query: String, hits: List<KbHit>, perChars: Int = 400): String =
         if (hits.isEmpty()) "No knowledge snippets match \"$query\"."
-        else hits.mapIndexed { i, h -> "${i + 1}. [${h.file}] ${clip(h.text, perChars)}" }.joinToString("\n")
+        else hits.mapIndexed { i, h -> "${i + 1}. [${KbSource.title(h)}] ${clip(h.text, perChars)}" }.joinToString("\n")
 
     /** Label under a reply that was given knowledge snippets (2.4.1: only shown when the reply cites them, [cited]). */
     fun chip(n: Int): String = "引用 $n 段知识库"
@@ -383,13 +471,19 @@ object KbFormats {
     fun ext(name: String) = name.substringAfterLast('.', "").lowercase()
     fun supported(name: String) = !name.startsWith(".") && ext(name).let { it in TEXT || it in HTML || it in EPUB }
     /** Size cap per file: an .epub carries images and zip overhead, so it may be larger than a text file. */
-    fun maxBytes(name: String, textMax: Long): Long = if (ext(name) in EPUB) EpubText.MAX_FILE_BYTES else textMax
+    fun maxBytes(name: String, textMax: Long): Long = when (ext(name)) {
+        in EPUB -> EpubText.MAX_FILE_BYTES
+        in TEXT -> maxOf(textMax, KbText.MAX_FILE_BYTES) // 2.7.2：txt 等 32 MB（流式切片）
+        else -> textMax
+    }
 
+    /** 2.7.2：纯文本（txt / md …）走流式编码识别 + 切片（[KbText.chunkFile]）。 */
+    fun streamable(name: String): Boolean = ext(name) in TEXT
+
+    /** 2.7.2：编码自动识别（BOM / UTF-8 / GB18030 / Big5，[KbText.decode]）。 */
     fun text(name: String, bytes: ByteArray): String? {
         if (ext(name) in EPUB) return EpubText.toText(bytes)
-        if (bytes.take(4096).any { it == 0.toByte() }) return null
-        val s = bytes.toString(Charsets.UTF_8).removePrefix("\uFEFF")
-        if (s.isNotEmpty() && s.count { it == '\uFFFD' } > s.length / 20) return null
+        val s = KbText.decode(bytes) ?: return null
         return if (ext(name) in HTML) HtmlText.toText(s) else s
     }
 }

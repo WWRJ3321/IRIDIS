@@ -151,6 +151,11 @@ fun BackupSection() {
     // 「导出完整日志」 asks whether to take every chat or only the latest one.
     var askFullLog by remember { mutableStateOf(false) }
     var fullLogAll by remember { mutableStateOf(true) }
+    // 2.7.2：设置导出 / 导入（JSON）
+    var askCfgExport by remember { mutableStateOf(false) }
+    var cfgWithKey by remember { mutableStateOf(false) }
+    var confirmCfg by remember { mutableStateOf<com.iris.localai.util.io.ConfigTransfer.Parsed?>(null) }
+    val container = remember { (context.applicationContext as IrisApp).container }
     val c = Iris.colors
     // ---- 备份与日志 ----
     SectionTitle(I18n.s(R.string.agent_b56fbe))
@@ -209,10 +214,36 @@ fun BackupSection() {
             }
         }
     }
+    val exportCfg = rememberLauncherForActivityResult(CreateDocumentInConfig("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val withKey = cfgWithKey
+        scope.launch {
+            message = withContext(Dispatchers.IO) {
+                runCatching {
+                    (context.contentResolver.openOutputStream(uri) ?: throw java.io.IOException("无法打开所选文件")).use {
+                        com.iris.localai.util.io.ConfigIo.export(container, it, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, withKey)
+                    }
+                }.fold({ I18n.s(R.string.v272_cfg_exported, it) }, { I18n.s(R.string.agent_dc5948, it.message) })
+            }
+        }
+    }
+    val pickCfg = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { runCatching { (context.contentResolver.openInputStream(uri) ?: throw java.io.IOException("无法打开所选文件")).use { com.iris.localai.util.io.ConfigIo.inspect(it) } } }
+            r.onSuccess { confirmCfg = it }.onFailure { e ->
+                message = if (e is com.iris.localai.util.io.ConfigTransfer.BadFile) I18n.s(R.string.v272_cfg_bad) else I18n.s(R.string.v272_cfg_failed, e.message)
+            }
+        }
+    }
     SettingsGroup {
         SettingsRow(I18n.s(R.string.agent_9344b8), subtitle = I18n.s(R.string.agent_3febe2), onClick = { includeApiKey = false; askExport = true })
         Divider()
         SettingsRow(I18n.s(R.string.agent_90c045), subtitle = I18n.s(R.string.agent_9023e9), onClick = { pickRestore.launch(arrayOf("application/zip", "application/octet-stream")) })
+        Divider()
+        SettingsRow(I18n.s(R.string.v272_cfg_export), subtitle = I18n.s(R.string.v272_cfg_export_sub), onClick = { cfgWithKey = false; askCfgExport = true })
+        Divider()
+        SettingsRow(I18n.s(R.string.v272_cfg_import), subtitle = I18n.s(R.string.v272_cfg_import_sub), onClick = { pickCfg.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
         Divider()
         SettingsRow(I18n.s(R.string.agent_609e15), subtitle = I18n.s(R.string.agent_ad19c0), onClick = {
             exportLogs.launch("IRIS-log-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".txt")
@@ -238,6 +269,40 @@ fun BackupSection() {
         }
     }
 
+    if (askCfgExport) {
+        IrisDialog(
+            onDismiss = { askCfgExport = false }, title = I18n.s(R.string.v272_cfg_export),
+            confirmText = I18n.s(R.string.agent_b08bb8),
+            onConfirm = {
+                askCfgExport = false
+                exportCfg.launch("IRIDIS-settings-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) + ".json")
+            },
+        ) {
+            Column {
+                Text(I18n.s(R.string.v272_cfg_export_sub), style = IrisType.secondary, color = c.textSecondary)
+                SwitchRow(I18n.s(R.string.agent_436b96), checked = cfgWithKey, subtitle = I18n.s(R.string.agent_ee037a)) { cfgWithKey = it }
+            }
+        }
+    }
+    confirmCfg?.let { p ->
+        val date = if (p.createdAt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT).format(java.util.Date(p.createdAt)) else I18n.s(R.string.agent_1622dc)
+        IrisDialog(
+            onDismiss = { confirmCfg = null }, title = I18n.s(R.string.v272_cfg_import),
+            confirmText = I18n.s(R.string.v272_cfg_import_go),
+            onConfirm = {
+                confirmCfg = null
+                scope.launch {
+                    message = withContext(Dispatchers.IO) {
+                        runCatching { com.iris.localai.util.io.ConfigIo.apply(container, p) }
+                            .fold({ I18n.s(R.string.v272_cfg_imported, it.settings, it.cards, it.skipped) }, { I18n.s(R.string.v272_cfg_failed, it.message) })
+                    }
+                }
+            },
+        ) {
+            Text(I18n.s(R.string.v272_cfg_confirm, p.appVersion.ifBlank { I18n.s(R.string.agent_1622dc) }, date, p.cards.size),
+                style = IrisType.secondary, color = c.textSecondary)
+        }
+    }
     if (askExport) {
         IrisDialog(
             onDismiss = { askExport = false }, title = I18n.s(R.string.agent_9344b8),

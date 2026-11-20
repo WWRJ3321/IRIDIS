@@ -112,7 +112,15 @@ object KnowledgeText {
     fun folder(appRoot: String): String = I18n.s(R.string.agent_36bea8, appRoot, KnowledgeBase.FOLDER)
 
     /** 「42 段 · 引用 6 次」 / 「正在读取…」. */
-    fun fileLine(f: KbFileInfo): String = if (!f.indexed) I18n.s(R.string.chat_62a33a) else if (f.chunks == 0) I18n.s(R.string.agent_d554e5) else I18n.s(R.string.agent_882d2c, f.chunks, f.cites)
+    fun fileLine(f: KbFileInfo): String = if (!f.indexed) I18n.s(R.string.chat_62a33a) else if (f.chunks == 0) I18n.s(R.string.agent_d554e5)
+        else if (f.truncated) I18n.s(R.string.v272_kb_truncated, com.iris.localai.knowledge.KbText.MAX_CHARS / 10_000, f.chunks)
+        else I18n.s(R.string.agent_882d2c, f.chunks, f.cites)
+
+    /** 2.7.2：超过上限没收录的文件（不再静默）。 */
+    fun tooLarge(paths: List<String>): String = I18n.s(R.string.v272_kb_toolarge, paths.size, paths.take(3).joinToString("、") { it.substringAfterLast('/') } + if (paths.size > 3) "…" else "")
+
+    /** 2.7.2：导入时被跳过的文件与原因。 */
+    fun skippedLine(name: String, limitBytes: Long): String = if (limitBytes > 0) I18n.s(R.string.v272_kb_skip_big, name, limitBytes / 1_000_000) else I18n.s(R.string.v272_kb_skip_read, name)
 
     /** Badge in the file tile: the extension, upper case, at most 4 letters. */
     fun badge(path: String): String = KbFormats.ext(path).uppercase().take(4).ifEmpty { "TXT" }
@@ -160,6 +168,8 @@ fun KnowledgePage(
     val scope = rememberCoroutineScope()
     var tick by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
+    // 2.7.2：导入时跳过的文件（名字 + 原因），弹窗说明
+    var skipped by remember { mutableStateOf<List<String>>(emptyList()) }
     var deleting by remember { mutableStateOf<KbFileInfo?>(null) }
     // current folder ("" = knowledge/), the editor (null = closed; path "" = new text), folder dialogs.
     // saveable, so the folder survives a trip to the editor route (the page leaves composition).
@@ -191,18 +201,25 @@ fun KnowledgePage(
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         busy = true
         scope.launch {
+            val skip = ArrayList<String>()
             val added = withContext(Dispatchers.IO) {
                 uris.count { uri ->
-                    runCatching {
-                        val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                            ?.use { cur -> if (cur.moveToFirst()) cur.getString(0) else null } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "file.txt"
-                        val bytes = context.contentResolver.openInputStream(uri)?.use { s -> s.readBytes().takeIf { it.size <= KbFormats.maxBytes(name, KnowledgeBase.MAX_BYTES) } }
-                        bytes != null && agent.knowledge.add(name, bytes, folder) != null
-                    }.getOrDefault(false)
+                    val name = runCatching {
+                        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                            ?.use { cur -> if (cur.moveToFirst()) cur.getString(0) else null }
+                    }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/') ?: "file.txt"
+                    // 2.7.2：边读边写，超过上限明确告诉用户（以前整个读进内存、超限静默丢掉）
+                    val r = runCatching { context.contentResolver.openInputStream(uri)?.use { s -> agent.knowledge.addStream(name, s, folder) } }.getOrNull()
+                    when {
+                        r?.path != null -> true
+                        r?.tooLarge == true -> { skip += KnowledgeText.skippedLine(name, r?.limit ?: 0L); false }
+                        else -> { skip += KnowledgeText.skippedLine(name, 0); false }
+                    }
                 }
             }
             busy = false
             tick++
+            skipped = skip
             Toast.makeText(context, if (added == uris.size) I18n.s(R.string.agent_0cf789, added) else I18n.s(R.string.agent_321562, added, uris.size), Toast.LENGTH_SHORT).show()
         }
     }
@@ -276,6 +293,17 @@ fun KnowledgePage(
                 }
             }
 
+            // 2.7.2：超过大小上限、没进索引的文件（以前静默跳过）
+            val big = remember(files) { agent.knowledge.tooLarge.filter { KbPaths.parent(it) == folder } }
+            if (big.isNotEmpty()) GroupFootnote(KnowledgeText.tooLarge(big))
+            if (skipped.isNotEmpty()) {
+                IrisDialog(
+                    onDismiss = { skipped = emptyList() }, title = I18n.s(R.string.v272_kb_skip_title),
+                    confirmText = I18n.s(R.string.settings_ac2c8f), onConfirm = { skipped = emptyList() }, dismissText = null,
+                ) {
+                    Text(skipped.joinToString("\n"), style = IrisType.secondary, color = c.textSecondary)
+                }
+            }
             SectionTitle(I18n.s(R.string.agent_b271e4))
             SettingsGroup {
                 SettingsRow(

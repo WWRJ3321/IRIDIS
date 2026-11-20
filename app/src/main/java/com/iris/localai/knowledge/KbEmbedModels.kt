@@ -90,6 +90,33 @@ object KbEmbedModels {
     fun installed(): List<Model> = ALL.filter { locate(it) != null }
 
     /**
+     * 2.7.2：模型文件指纹「大小-头尾 SHA-256 前 16 位」（读头尾各 [FP_SPAN] 字节，不读整个文件）。同一个 id 换了文件
+     * （例如以后换成别的量化或 EmbeddingGemma 270M）指纹就变，向量据此重建。按路径 + 大小 + 修改时间缓存。空串 = 读不了。
+     */
+    fun fingerprint(f: File): String {
+        val key = f.absolutePath + "|" + f.length() + "|" + f.lastModified()
+        synchronized(fpCache) { fpCache[key]?.let { return it } }
+        val fp = runCatching {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val len = f.length()
+            java.io.RandomAccessFile(f, "r").use { r ->
+                val buf = ByteArray(64 * 1024)
+                fun span(from: Long, n: Long) {
+                    r.seek(from); var left = n
+                    while (left > 0) { val k = r.read(buf, 0, minOf(buf.size.toLong(), left).toInt()); if (k <= 0) break; md.update(buf, 0, k); left -= k }
+                }
+                span(0, minOf(len, FP_SPAN))
+                if (len > FP_SPAN) span(maxOf(FP_SPAN, len - FP_SPAN), len - maxOf(FP_SPAN, len - FP_SPAN))
+            }
+            len.toString() + "-" + md.digest().take(8).joinToString("") { "%02x".format(it) }
+        }.getOrDefault("")
+        if (fp.isNotEmpty()) synchronized(fpCache) { fpCache[key] = fp }
+        return fp
+    }
+    const val FP_SPAN = 1L shl 20
+    private val fpCache = HashMap<String, String>()
+
+    /**
      * The model to use: the user's [chosen] id when downloaded; [OFF] = none; otherwise the first downloaded in
      * [ALL] order (Qwen3 by default). Pure on [installedIds].
      */

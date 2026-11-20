@@ -2242,4 +2242,24 @@
     <string name="ig271_n_failed">Bild nicht fertig</string>
     <string name="ig271_n_stopped">Bildgenerierung gestoppt</string>
     <string name="ig271_n_chip">%1$d/%2$d</string>
+    <string name="v272_cfg_export">Einstellungen exportieren</string>
+    <string name="v272_cfg_export_sub">JSON: Einstellungen, Agent- und Gedächtnisoptionen, Modellparameter, Charakterkarten; keine Modelldateien</string>
+    <string name="v272_cfg_import">Einstellungen importieren</string>
+    <string name="v272_cfg_import_sub">Aus exportiertem JSON wiederherstellen; ältere Dateien werden migriert</string>
+    <string name="v272_cfg_import_go">Importieren</string>
+    <string name="v272_cfg_exported">Einstellungen exportiert (%1$d Charakterkarten)</string>
+    <string name="v272_cfg_imported">%1$d Einstellungen und %2$d Charakterkarten importiert, %3$d übersprungen</string>
+    <string name="v272_cfg_failed">Import fehlgeschlagen: %1$s</string>
+    <string name="v272_cfg_bad">Keine IRIDIS-Einstellungsdatei</string>
+    <string name="v272_cfg_confirm">Aus IRIDIS %1$s (%2$s), %3$d Charakterkarten. Der Import überschreibt die aktuellen Einstellungen und ersetzt gleichnamige Karten.</string>
+    <string name="v272_kb_truncated">Nur die ersten %1$d0k Zeichen · %2$d Abschnitte</string>
+    <string name="v272_kb_toolarge">%1$d Dateien überschreiten das Größenlimit und wurden nicht indiziert: %2$s</string>
+    <string name="v272_kb_skip_title">Einige Dateien wurden nicht importiert</string>
+    <string name="v272_kb_skip_big">%1$s: über dem Limit von %2$d MB</string>
+    <string name="v272_kb_skip_read">%1$s: konnte nicht gelesen werden</string>
+    <string name="v272_embed_rebuild">%1$s · Embedding-Modell geändert, Vektoren werden neu erstellt %2$d/%3$d</string>
+    <string name="v272_crash_popup">Bericht nach Absturz anzeigen</string>
+    <string name="v272_crash_popup_sub">Unerwartetes Beenden beim nächsten Start erklären; aus = nur protokollieren</string>
+    <string name="v272_crash_never">Nicht mehr anzeigen</string>
+    <string name="v272_crash_never_sub">In den Einstellungen unter „Bericht nach Absturz anzeigen“ wieder einschaltbar</string>
 </resources>

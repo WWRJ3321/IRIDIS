@@ -96,7 +96,7 @@ class V250Test {
         val k = com.iris.localai.knowledge.KbFormats
         assertTrue(k.supported("书.epub"))
         assertTrue(k.maxBytes("a.epub", 4_000_000L) > 4_000_000L)
-        assertEquals(4_000_000L, k.maxBytes("a.txt", 4_000_000L))
+        assertEquals(32_000_000L, k.maxBytes("a.txt", 4_000_000L)) // 2.7.2：txt 上限 32 MB（流式切片）
         val book = epub(listOf(
             "mimetype" to "application/epub+zip",
             "META-INF/container.xml" to "<container><rootfiles><rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/></rootfiles></container>",

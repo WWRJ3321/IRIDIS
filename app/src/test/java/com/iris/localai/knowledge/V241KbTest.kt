@@ -86,7 +86,7 @@ class V241KbTest {
         val sb = WorkspaceSandbox(Files.createTempDirectory("kb241s").toFile())
         val env = ToolEnv(sb, UndoStore(Files.createTempDirectory("kb241u").toFile()), knowledge = KnowledgeSearch { q, n -> kb.search(q, n) })
         assertTrue(KbSearchTool.run(buildJsonObject { put("query", "讲个笑话") }, env).output.startsWith("No knowledge snippets match"))
-        assertTrue(KbSearchTool.run(buildJsonObject { put("query", "押金退还") }, env).output.contains("[租房合同.md]"))
+        assertTrue(KbSearchTool.run(buildJsonObject { put("query", "押金退还") }, env).output.contains("《租房合同》（租房合同.md")) // 2.7.2：出处带书名
         root.deleteRecursively()
     }
 

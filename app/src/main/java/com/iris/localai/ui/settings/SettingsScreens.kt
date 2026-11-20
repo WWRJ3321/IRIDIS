@@ -1152,6 +1152,9 @@ fun DeveloperPage(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPa
                 // 风险提示弹窗开关
                 SwitchRow(I18n.s(R.string.v256_warn_popups), s.warnPopups, subtitle = I18n.s(R.string.v256_warn_popups_sub)) { on -> vm.update { it.copy(warnPopups = on) } }
                 Divider()
+                // 2.7.2：崩溃后显示报告（与意外退出弹窗里的「不再提示」是同一个设置）
+                SwitchRow(I18n.s(R.string.v272_crash_popup), s.crashReportPopup, subtitle = I18n.s(R.string.v272_crash_popup_sub)) { on -> vm.update { it.copy(crashReportPopup = on) } }
+                Divider()
                 SwitchRow(I18n.s(R.string.settings_2c1040), s.topBarCapsules, subtitle = I18n.s(R.string.settings_65d1b5)) { on -> vm.update { it.copy(topBarCapsules = on) } }
             }
             // 运行状态 rack (2.1.3: moved here from the settings home).
