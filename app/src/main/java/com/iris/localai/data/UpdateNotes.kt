@@ -16,6 +16,11 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.7.3", listOf(
+            b("修复：语音输入边说边出字时文字被遮住看不到。"),
+            b("修复：部分模型（如 35B-A3B）在聊天界面无法打开深度思考。"),
+            b("修复：语音模型文件无读取权限时闪退。"),
+        )),
         Release("2.7.2", listOf(
             f("设置可以单独导出 / 导入（JSON）：设置、智能体与记忆选项、各模型参数、角色卡；不含模型文件，API 密钥默认不导出；旧版本文件导入时自动迁移。"),
             b("修复：知识库导入 GBK / GB18030、UTF-16、Big5 编码的 txt 显示「没有可读的文字」。"),

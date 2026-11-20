@@ -132,6 +132,17 @@ data class ComposerState(
 enum class ComposerAction { STOP, SEND, VOICE }
 
 /** which round action shows (pure, unit-tested). */
+/** 2.7.3：按住说话时输入框与「正在听」提示的关系（纯函数，单测覆盖）。 */
+object DictationOverlay {
+    /** NONE = 没在录；FULL = 输入框为空，提示盖住输入框（原样）；COMPACT = 有文字，输入框可见，提示缩成上方一行。 */
+    enum class Mode { NONE, FULL, COMPACT }
+    fun of(recording: Boolean, text: String): Mode = when {
+        !recording -> Mode.NONE
+        text.isEmpty() -> Mode.FULL
+        else -> Mode.COMPACT
+    }
+}
+
 object ComposerActions {
     fun of(generating: Boolean, hasText: Boolean, hasAttachments: Boolean = false): ComposerAction = when {
         // typing while a reply runs sends (a 补充, or 「停/等等…」 interrupts); empty = 停止.
@@ -329,7 +340,17 @@ fun Composer(
         // finger ended up outside the mic button — which cancelled the hold and cut the dictation off.
         val recording = state.listening || state.transcribing
         var cancelArmed by remember { mutableStateOf(false) }
-        val fieldAlpha by animateFloatAsState(if (recording) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
+        // 2.7.3: with dictated (or existing) text the field stays visible while recording; the indicator
+        // shrinks to one small line above it so the live words are not covered.
+        val dictMode = DictationOverlay.of(recording, state.text)
+        val fieldAlpha by animateFloatAsState(if (dictMode == DictationOverlay.Mode.FULL) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
+        androidx.compose.animation.AnimatedVisibility(
+            visible = dictMode == DictationOverlay.Mode.COMPACT,
+            enter = fadeIn(IrisMotion.enter()),
+            exit = fadeOut(IrisMotion.exit()),
+        ) {
+            ListeningIndicator(state.micLevel, state.transcribing, cancelArmed, compact = true)
+        }
         Box(Modifier.tourTarget(TourId.INPUT)) {
                 BasicTextField(
                     value = state.text,
@@ -354,7 +375,7 @@ fun Composer(
                     },
                 )
             androidx.compose.animation.AnimatedVisibility(
-                visible = recording,
+                visible = dictMode == DictationOverlay.Mode.FULL,
                 enter = fadeIn(IrisMotion.enter()),
                 exit = fadeOut(IrisMotion.exit()),
                 modifier = Modifier.matchParentSize(),
@@ -413,17 +434,17 @@ fun Composer(
 }
 
 @Composable
-private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed: Boolean = false) {
+private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed: Boolean = false, compact: Boolean = false) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = IrisSpace.M),
+        Modifier.fillMaxWidth().height(if (compact) 24.dp else 44.dp).padding(horizontal = IrisSpace.M),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisSpace.S),
     ) {
         LevelBars(if (transcribing) 0f else level)
         Text(
             if (transcribing) ComposerText.TRANSCRIBING else if (cancelArmed) ComposerText.RELEASE_TO_CANCEL else ComposerText.LISTENING,
-            style = IrisType.body, color = if (cancelArmed) c.danger else c.textSecondary,
+            style = if (compact) IrisType.caption else IrisType.body, color = if (cancelArmed) c.danger else c.textSecondary,
             modifier = Modifier.pulse(transcribing),
         )
     }

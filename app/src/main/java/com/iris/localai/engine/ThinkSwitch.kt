@@ -32,9 +32,13 @@ object ThinkSwitch {
         else -> null
     }
 
-    /** 用系统旗标切换思考的模板，也算支持思考（之前没有 `<think>` 字面量时按钮是灰的）。 */
+    /**
+     * 用系统旗标切换思考的模板，也算支持思考（之前没有 `<think>` 字面量时按钮是灰的）。
+     * 2.7.3：只带 enable_thinking 等 jinja 开关的模板（如 Qwen3.5/3.6-35B-A3B）同样算支持，
+     * 与设置页（[ThinkSupport.templateThinks]）一致；开/关仍经 disableThinking 传给引擎，关时 [hideThinking] 兜底。
+     */
     fun supports(nativeSupports: Boolean, template: String?): Boolean =
-        nativeSupports || softSwitch(template, true) != null
+        nativeSupports || softSwitch(template, true) != null || hasSwitch(template)
 
     /** 把旗标放到系统消息开头（没有系统消息就加一条）；已有同一旗标不重复。 */
     fun applySoft(history: List<PromptMessage>, template: String?, on: Boolean): List<PromptMessage> {

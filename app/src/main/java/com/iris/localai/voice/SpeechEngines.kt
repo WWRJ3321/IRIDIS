@@ -37,6 +37,27 @@ internal fun requireFiles(vararg paths: String) {
     check(missing.isEmpty()) {
         "语音模型文件不完整（缺少 ${missing.joinToString { File(it).name }}），请到 设置 › 语音 删除后重新下载"
     }
+    // 2.7.3：公共目录里的模型（重装后属主变了等）读不了时，onnxruntime 在原生构造里抛 EACCES，
+    // C++ 未捕获直接 SIGABRT 闪退。原生构造之前先在 Kotlin 层试读，读不了就走普通错误提示。
+    val unreadable = VoiceFileCheck.unreadable(paths.toList(), VoiceFileCheck::canReadReal)
+    check(unreadable.isEmpty()) { VoiceFileCheck.message(unreadable) }
+}
+
+/** 2.7.3：sherpa 对象构造前检查模型文件可读（纯函数部分单测覆盖）。 */
+internal object VoiceFileCheck {
+    /** [paths] 中读不了的（空串跳过）；[canRead] 注入便于测试。 */
+    fun unreadable(paths: List<String>, canRead: (String) -> Boolean): List<String> =
+        paths.filter { it.isNotEmpty() && !canRead(it) }
+
+    fun message(unreadable: List<String>): String =
+        "语音模型文件无权限读取（${unreadable.joinToString { File(it).name }}），请在设置里重新导入或授予文件访问权限"
+
+    /** 文件：canRead 且能 RandomAccessFile 打开读 1 字节；目录：canRead 且能列出。 */
+    fun canReadReal(path: String): Boolean = runCatching {
+        val f = File(path)
+        if (f.isDirectory) f.canRead() && f.list() != null
+        else f.canRead() && java.io.RandomAccessFile(f, "r").use { it.read(); true }
+    }.getOrDefault(false)
 }
 
 /**
