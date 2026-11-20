@@ -16,6 +16,9 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("2.7.5", listOf(
+            b("修复侧栏长按对话无法弹出菜单。长按不动松手弹出菜单（置顶 / 重命名 / 复制 / 分享 / 多选 / 删除），长按后移动手指才拖动排序。"),
+        )),
         Release("2.7.4", listOf(
             b("修复：侧栏历史对话长按打不开菜单。长按不动松手弹出菜单（置顶 / 重命名 / 复制 / 分享 / 多选 / 删除），长按后拖动才排序。"),
             b("修复：按住说话时识别文字一出现，按钮就变成「发送」。现在松手定稿后才切换。"),

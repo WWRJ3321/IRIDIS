@@ -84,7 +84,18 @@ import com.iris.localai.data.ConversationOrder
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
+import com.iris.localai.data.HistoryPress
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import com.iris.localai.data.Format
@@ -183,6 +194,7 @@ fun HistoryDrawer(
     LaunchedEffect(summaries) { if (dragId == null) live = null }
     val latestSummaries by rememberUpdatedState(summaries)
     val latestReorder by rememberUpdatedState(onReorder)
+    val latestOpen by rememberUpdatedState(onOpen)
     val dragHaptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val shown = live ?: summaries
     val flat = customOrder || live != null
@@ -277,38 +289,106 @@ fun HistoryDrawer(
                                 val s = e.summary
                                 val dragging = dragId == s.id
                                 val canDrag = !selecting && query.isBlank()
+                                val press = remember(s.id) { MutableInteractionSource() }
+                                val coordsHolder = remember(s.id) { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                                 ConversationItem(
                                     s, selected = s.id == currentId || dragging, running = s.id == runningId,
                                     modifier = if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragDy } else anim,
                                     selecting = selecting, checked = s.id in selected,
-                                    dragModifier = if (!canDrag) null else Modifier.pointerInput(s.id) {
-                                        // 2.7.4：长按不动松手 = 弹菜单；长按后移动超过 touchSlop 才进入拖动排序（之前任何抖动都算拖动，菜单打不开）。
+                                    pressSource = press,
+                                    onLongPressMenu = { menuFor = s.id },
+                                    dragModifier = if (!canDrag) null else Modifier
+                                        .onGloballyPositioned { coordsHolder[0] = it }
+                                        .pointerInput(s.id) {
+                                        // 2.7.5：一个手势走完（之前 detectDragGesturesAfterLongPress 一到长按就进入拖动并吃掉事件，
+                                        // 和 combinedClickable 抢同一指针；菜单只能等拖动结束才判定，实际弹不出）。
                                         val slop = viewConfiguration.touchSlop
-                                        var moved = false
-                                        var tx = 0f; var ty = 0f
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = { moved = false; tx = 0f; ty = 0f; dragHaptic.perform(FeedbackEvent.LONG_PRESS) },
-                                            onDragEnd = {
-                                                val l = live
-                                                dragId = null; dragDy = 0f; live = null
-                                                if (!moved) menuFor = s.id else if (l != null) latestReorder(l.map { it.id })
-                                            },
-                                            onDragCancel = { dragId = null; dragDy = 0f; live = null },
-                                        ) { ch, d ->
-                                            ch.consume()
-                                            if (!moved) {
-                                                tx += d.x; ty += d.y
-                                                if (!ConversationOrder.isDrag(tx, ty, slop)) return@detectDragGesturesAfterLongPress
-                                                moved = true; dragId = s.id; dragDy = ty; live = latestSummaries
-                                            } else dragDy += d.y
-                                            val info = listState.layoutInfo.visibleItemsInfo
-                                            val me = info.firstOrNull { it.key == s.id } ?: return@detectDragGesturesAfterLongPress
-                                            val mid = me.offset + dragDy + me.size / 2f
-                                            val target = info.firstOrNull { it.key != s.id && it.contentType == 1 && mid >= it.offset && mid <= it.offset + it.size }
-                                                ?: return@detectDragGesturesAfterLongPress
-                                            val cur = live ?: return@detectDragGesturesAfterLongPress
-                                            val next = ConversationOrder.move(cur, s.id, target.key as String)
-                                            if (next !== cur) { live = next; dragDy -= (target.offset - me.offset) }
+                                        val lpt = viewConfiguration.longPressTimeoutMillis
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            val pid = down.id
+                                            // 位移按屏幕坐标算：按住期间列表重排 / 条目被挤动时本地坐标会变，不能算手指移动。
+                                            fun root(o: androidx.compose.ui.geometry.Offset) =
+                                                coordsHolder[0]?.takeIf { it.isAttached }?.localToRoot(o) ?: o
+                                            val downRoot = root(down.position)
+                                            val p = PressInteraction.Press(down.position)
+                                            press.tryEmit(p)
+                                            var dragging = false
+                                            try {
+                                                // 1) 长按超时前：短按 / 放弃
+                                                val early = withTimeoutOrNull(lpt) {
+                                                    var o: HistoryPress.Outcome? = null
+                                                    while (o == null) {
+                                                        val ev = awaitPointerEvent()
+                                                        val ch = ev.changes.firstOrNull { it.id == pid }
+                                                        o = if (ch == null) HistoryPress.Outcome.CANCEL else {
+                                                            val d = root(ch.position) - downRoot
+                                                            val up = ch.changedToUpIgnoreConsumed()
+                                                            HistoryPress.beforeLongPress(up, ch.isConsumed, d.x, d.y, slop).also {
+                                                                if (it == HistoryPress.Outcome.TAP) ch.consume()
+                                                            }
+                                                        }
+                                                    }
+                                                    o
+                                                }
+                                                if (early != null) {
+                                                    if (early == HistoryPress.Outcome.TAP) { press.tryEmit(PressInteraction.Release(p)); latestOpen(s.id) }
+                                                    else press.tryEmit(PressInteraction.Cancel(p))
+                                                    return@awaitEachGesture
+                                                }
+                                                // 2) 长按到了：只震动，条目不动；之后看位移
+                                                dragHaptic.perform(FeedbackEvent.LONG_PRESS)
+                                                var outcome: HistoryPress.Outcome? = null
+                                                var last = down
+                                                while (outcome == null) {
+                                                    val ev = awaitPointerEvent()
+                                                    val ch = ev.changes.firstOrNull { it.id == pid }
+                                                    if (ch == null) { outcome = HistoryPress.Outcome.CANCEL; break }
+                                                    last = ch
+                                                    val d = root(ch.position) - downRoot
+                                                    outcome = HistoryPress.afterLongPress(!ch.pressed, d.x, d.y, slop)
+                                                    ch.consume()
+                                                }
+                                                when (outcome) {
+                                                    HistoryPress.Outcome.MENU -> { press.tryEmit(PressInteraction.Release(p)); menuFor = s.id; return@awaitEachGesture }
+                                                    HistoryPress.Outcome.DRAG -> Unit
+                                                    else -> { press.tryEmit(PressInteraction.Cancel(p)); return@awaitEachGesture }
+                                                }
+                                                // 3) 拖动排序：起拖不跳位，手指位移按屏幕坐标算（条目自身的 translation 不反馈进来）
+                                                press.tryEmit(PressInteraction.Cancel(p))
+                                                val coords = coordsHolder[0]
+                                                val startOffset = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }?.offset
+                                                if (coords == null || !coords.isAttached || startOffset == null) return@awaitEachGesture
+                                                val startY = coords.localToRoot(last.position).y
+                                                menuFor = null
+                                                dragging = true
+                                                dragId = s.id; dragDy = 0f; live = latestSummaries
+                                                while (true) {
+                                                    val ev = awaitPointerEvent()
+                                                    val ch = ev.changes.firstOrNull { it.id == pid } ?: break
+                                                    ch.consume()
+                                                    if (!ch.pressed) {
+                                                        val l = live
+                                                        dragging = false
+                                                        dragId = null; dragDy = 0f; live = null
+                                                        if (l != null) latestReorder(l.map { it.id })
+                                                        break
+                                                    }
+                                                    if (!coords.isAttached) break
+                                                    val fingerDy = coords.localToRoot(ch.position).y - startY
+                                                    val info = listState.layoutInfo.visibleItemsInfo
+                                                    val me = info.firstOrNull { it.key == s.id } ?: continue
+                                                    dragDy = HistoryPress.dragOffset(startOffset, fingerDy, me.offset)
+                                                    val mid = me.offset + dragDy + me.size / 2f
+                                                    val target = info.firstOrNull { it.key != s.id && it.contentType == 1 && mid >= it.offset && mid <= it.offset + it.size }
+                                                        ?: continue
+                                                    val cur = live ?: continue
+                                                    val next = ConversationOrder.move(cur, s.id, target.key as String)
+                                                    if (next !== cur) { live = next; dragDy -= (target.offset - me.offset) }
+                                                }
+                                            } finally {
+                                                if (dragging) { dragId = null; dragDy = 0f; live = null }
+                                            }
                                         }
                                     },
                                     menuOpen = menuFor == s.id,
@@ -529,8 +609,10 @@ private fun ConversationItem(
     running: Boolean = false,
     selecting: Boolean = false,
     checked: Boolean = false,
-    /** 长按拖动排序（有它时长按不动由它进多选）。 */
+    /** 2.7.5：统一手势（短按 / 长按菜单 / 长按后拖动排序）；有它时不再挂 combinedClickable。 */
     dragModifier: Modifier? = null,
+    pressSource: MutableInteractionSource? = null,
+    onLongPressMenu: () -> Unit = {},
     onToggle: () -> Unit = {},
     onClick: () -> Unit,
     onRename: () -> Unit,
@@ -557,12 +639,20 @@ private fun ConversationItem(
                 .heightIn(min = 44.dp)
                 .clip(IrisRadius.mediumShape)
                 .background(bg)
-                .then(dragModifier ?: Modifier)
-                .combinedClickable(
-                    onClick = if (selecting) onToggle else onClick,
-                    // 2.7.4：长按 = 菜单（置顶/重命名/复制/分享/多选/删除）；有拖动排序时由拖动检测器判定（不动才弹菜单）。
-                    onLongClick = if (dragModifier != null) null else ({ haptic.perform(FeedbackEvent.LONG_PRESS); if (selecting) onToggle() else onSelect() }),
-                    onLongClickLabel = I18n.s(R.string.chat_443f46),
+                .then(
+                    if (dragModifier != null) Modifier
+                        .semantics(mergeDescendants = true) {
+                            val open = onClick
+                            this.onClick(label = null, action = { open(); true })
+                            onLongClick(I18n.s(R.string.chat_443f46)) { onLongPressMenu(); true }
+                        }
+                        .then(if (pressSource != null) Modifier.indication(pressSource, LocalIndication.current) else Modifier)
+                        .then(dragModifier)
+                    else Modifier.combinedClickable(
+                        onClick = if (selecting) onToggle else onClick,
+                        onLongClick = { haptic.perform(FeedbackEvent.LONG_PRESS); if (selecting) onToggle() else onSelect() },
+                        onLongClickLabel = I18n.s(R.string.chat_443f46),
+                    ),
                 )
                 .padding(horizontal = IrisDimens.space12),
             verticalAlignment = Alignment.CenterVertically,

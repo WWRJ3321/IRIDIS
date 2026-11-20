@@ -60,7 +60,7 @@ class V274Test {
     }
 
     @Test fun releaseNotes274() {
-        val r = UpdateNotes.RELEASES.first()
+        val r = UpdateNotes.RELEASES.first { it.version == "2.7.4" }
         assertEquals("2.7.4", r.version)
         assertEquals(4, r.of(UpdateNotes.Tag.FIX).size)
     }

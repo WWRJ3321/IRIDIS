@@ -310,6 +310,35 @@ object ConversationOrder {
     }
 }
 
+/**
+ * 2.7.5：侧栏对话的统一手势判定（纯函数，单测）。一个 pointerInput 里走完：按下 → 等长按超时 → 之后看位移。
+ * 长按前：抬起 = 短按打开；移动超过 touchSlop 或事件被别人消费 = 放弃（交给列表滚动）。
+ * 长按后：手指不动松手 = 弹菜单；移动超过 touchSlop = 进入拖动排序（不弹菜单）。
+ */
+object HistoryPress {
+    enum class Outcome { TAP, CANCEL, MENU, DRAG }
+
+    /** 长按超时前的一次事件；null = 继续等。 */
+    fun beforeLongPress(up: Boolean, consumed: Boolean, dx: Float, dy: Float, slop: Float): Outcome? = when {
+        up -> if (consumed) Outcome.CANCEL else Outcome.TAP
+        consumed || ConversationOrder.isDrag(dx, dy, slop) -> Outcome.CANCEL
+        else -> null
+    }
+
+    /** 长按超时后的一次事件；null = 继续等（条目不动、不抬起）。 */
+    fun afterLongPress(up: Boolean, dx: Float, dy: Float, slop: Float): Outcome? = when {
+        up -> Outcome.MENU
+        ConversationOrder.isDrag(dx, dy, slop) -> Outcome.DRAG
+        else -> null
+    }
+
+    /**
+     * 拖动中条目的 translationY：起拖时的布局位置 + 手指（屏幕坐标）位移 − 当前布局位置。
+     * 起拖那一刻为 0（不跳位）；重排 / 分组变平铺导致布局位置变化时自动抵消。
+     */
+    fun dragOffset(startOffset: Int, fingerDy: Float, currentOffset: Int): Float = startOffset + fingerDy - currentOffset
+}
+
 /** one chat in 回收站. */
 @kotlinx.serialization.Serializable
 data class TrashEntry(val id: String, val title: String, val deletedAt: Long)
