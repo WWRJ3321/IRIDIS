@@ -170,7 +170,7 @@ object ReloadRules {
 }
 
 /** background preload of the last-used model at app start. */
-enum class PreloadDecision { LOAD, DISABLED, NO_LAST_MODEL, MODEL_MISSING, ALREADY_LOADING_OR_LOADED, SKIP_AFTER_NATIVE_CRASH }
+enum class PreloadDecision { LOAD, DISABLED, NO_LAST_MODEL, MODEL_MISSING, ALREADY_LOADING_OR_LOADED, SKIP_AFTER_NATIVE_CRASH, SKIP_LOW_MEMORY }
 
 object PreloadPolicy {
     fun decide(
@@ -188,4 +188,14 @@ object PreloadPolicy {
         blockedAfterNativeCrash -> PreloadDecision.SKIP_AFTER_NATIVE_CRASH
         else -> PreloadDecision.LOAD
     }
+
+    /**
+     * 2.7.6 r2：低内存机型启动预加载被系统（lmkd）杀掉后，下次启动又自动加载、又被杀（不是原生崩溃，
+     * [LoadCrashGate] 不拦）。系统已报低内存、预检明显不够（SHORT），或上次进程死在加载模型途中且这次仍不宽裕 → 跳过预加载。
+     */
+    fun lowMemorySkip(systemLowMemory: Boolean, level: MemoryPreflight.Level, diedLoadingLastRun: Boolean): Boolean =
+        systemLowMemory || level == MemoryPreflight.Level.SHORT || (diedLoadingLastRun && level != MemoryPreflight.Level.OK)
+
+    fun lowMemoryNotice(availGb: String, needGb: String?): String =
+        "内存紧张，已跳过启动时预加载（可用 $availGb" + (needGb?.let { "，约需 $it" } ?: "") + "）。需要时请手动加载模型。"
 }

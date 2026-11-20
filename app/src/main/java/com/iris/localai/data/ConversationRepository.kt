@@ -395,6 +395,20 @@ object HistoryPress {
     fun settleOffset(p: Float, dropTop: Float, layoutTop: Int): Float = p * (dropTop - layoutTop)
 }
 
+/** 侧栏分组（纯函数，单测；2.7.6 r2）。 */
+object DrawerGroups {
+    /** 按日期分组：组内保持传入顺序（自定义顺序），组按组内最新时间从新到旧（自定义顺序打乱也不会出现重复 / 乱序标题）。 */
+    fun <T> byDate(list: List<T>, key: (T) -> String, updatedAt: (T) -> Long): List<Pair<String, List<T>>> =
+        list.groupBy(key).entries.sortedByDescending { e -> e.value.maxOf(updatedAt) }.map { it.key to it.value }
+
+    /** [index] 所在分组 = 它前面最近的标题下标（没有标题 = -1）。 */
+    fun sectionOf(index: Int, isHeader: (Int) -> Boolean): Int {
+        var j = index
+        while (j >= 0 && !isHeader(j)) j--
+        return j
+    }
+}
+
 /** one chat in 回收站. */
 @kotlinx.serialization.Serializable
 data class TrashEntry(val id: String, val title: String, val deletedAt: Long)

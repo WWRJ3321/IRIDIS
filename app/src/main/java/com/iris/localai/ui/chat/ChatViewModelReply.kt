@@ -116,8 +116,10 @@ internal suspend fun ChatViewModel.onReplyStalled(job: Job, verdict: ReplyWatchd
     android.util.Log.w(GEN_TAG, "watchdog: ${verdict.phase} silent ${verdict.idleMs}ms → stopping the reply (${verdict.message})")
     if (replyId != null) {
         stalledIds.add(replyId)
+        // 2.7.6 r2：已流出的正文只在 _stream 里（下面会清掉），先写回消息，免得卡住被停后正文消失（与 2.7.4 智能体 carry 同理）。
+        val shown = _stream.value?.takeIf { it.id == replyId }?.text
         conversation.update { conv ->
-            conv.copy(messages = conv.messages.map { if (it.id == replyId) it.copy(error = STALL_ERROR) else it })
+            conv.copy(messages = conv.messages.map { if (it.id == replyId) it.copy(content = StallKeep.content(it.content, shown), error = STALL_ERROR) else it })
         }
         persist()
     } else notice.value = STALL_ERROR

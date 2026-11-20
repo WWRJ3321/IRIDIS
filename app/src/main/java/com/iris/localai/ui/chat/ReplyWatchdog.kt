@@ -95,3 +95,9 @@ class ReplyWatchdog(private val now: () -> Long = System::currentTimeMillis) {
 object ReplyBusy {
     fun of(streamingId: String?, jobActive: Boolean): Boolean = streamingId != null || jobActive
 }
+
+/** 卡住被停时保留已显示的正文（纯函数，单测；2.7.6 r2）：流式文本比消息里已存的长就用流式文本。 */
+object StallKeep {
+    fun content(saved: String, streamed: String?): String =
+        if (streamed.isNullOrBlank() || streamed.length <= saved.length) saved else streamed
+}

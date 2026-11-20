@@ -106,6 +106,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import com.iris.localai.data.HistoryPress
+import com.iris.localai.data.DrawerGroups
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import com.iris.localai.data.Format
@@ -215,19 +216,18 @@ fun HistoryDrawer(
     val dragHaptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
     val latestEntriesHolder = remember { arrayOfNulls<List<DrawerEntry>>(1) }
     val shown = live ?: summaries
-    val flat = customOrder || live != null
+    // 2.7.6 r2：自定义顺序（拖动排序后）也保留日期分组标题，组内按自定义顺序（[DrawerGroups.byDate]）；
+    // 以前首次拖动松手后切成平铺，「今天 / 昨天…」标题全部消失。
     // Flattened once per data change; the list itself only diffs keys.
-    val entries = remember(shown, query, hits, flat) {
+    val entries = remember(shown, query, hits) {
         val q = query.trim()
         val filtered = if (q.isEmpty()) shown else shown.filter { it.title.contains(q, ignoreCase = true) }
         val pinned = filtered.filter { it.pinned }
         val others = filtered.filterNot { it.pinned }
         buildList {
             if (pinned.isNotEmpty()) { add(DrawerEntry.Header(I18n.s(R.string.chat_3d43ff))); pinned.forEach { add(DrawerEntry.Item(it)) } }
-            if (flat) {
-                if (pinned.isNotEmpty() && others.isNotEmpty()) add(DrawerEntry.Header(I18n.s(R.string.hd27e_chats)))
-                others.forEach { add(DrawerEntry.Item(it)) }
-            } else others.groupBy { Format.dateGroup(it.updatedAt) }.forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
+            DrawerGroups.byDate(others, { Format.dateGroup(it.updatedAt) }, { it.updatedAt })
+                .forEach { (k, v) -> add(DrawerEntry.Header(k)); v.forEach { add(DrawerEntry.Item(it)) } }
             if (q.isNotEmpty() && hits.isNotEmpty()) {
                 add(DrawerEntry.Header(I18n.s(R.string.hs263_in_messages)))
                 hits.forEach { add(DrawerEntry.Hit(it)) }
@@ -308,8 +308,10 @@ fun HistoryDrawer(
                     val es = latestEntriesHolder[0] ?: return
                     val info = listState.layoutInfo.visibleItemsInfo
                     info.firstOrNull { it.key == id }?.let { dragOwnTop = it.offset.toFloat() }
-                    val pinned = (es.getOrNull(dragFrom) as? DrawerEntry.Item)?.summary?.pinned ?: return
-                    val slots = info.filter { it.key != id && (es.getOrNull(it.index) as? DrawerEntry.Item)?.summary?.pinned == pinned }
+                    if (es.getOrNull(dragFrom) !is DrawerEntry.Item) return
+                    // 只在同一组（置顶 / 同一日期分组，标题之间）里放置：分组标题一直显示，跨组落点没有意义。
+                    val sec = DrawerGroups.sectionOf(dragFrom) { es.getOrNull(it) is DrawerEntry.Header }
+                    val slots = info.filter { it.key != id && es.getOrNull(it.index) is DrawerEntry.Item && DrawerGroups.sectionOf(it.index) { j -> es.getOrNull(j) is DrawerEntry.Header } == sec }
                         .map { HistoryPress.Slot(it.index, it.offset, it.size) }
                     dragTo = HistoryPress.dropIndex(dragFrom, slots, dragTop, dragSize)
                 }

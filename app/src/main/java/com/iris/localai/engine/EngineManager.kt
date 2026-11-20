@@ -406,8 +406,27 @@ class EngineManager(
         val d = PreloadPolicy.decide(s.autoLoadLastModel, s.lastModelFile, m != null, state.value is EngineState.Idle, blocked)
         Log.i(LoadTelemetry.TAG, "preload at start: $d${s.lastModelFile?.let { " ($it)" } ?: ""}")
         if (d == PreloadDecision.SKIP_AFTER_NATIVE_CRASH) _preloadSkipNotice.value = startupGuard.skipNotice()
-        if (d == PreloadDecision.LOAD && m != null) load(m, reason = I18n.s(R.string.engine_2feffd))
+        if (d == PreloadDecision.LOAD && m != null) {
+            val low = runCatching { withContext(kotlinx.coroutines.Dispatchers.IO) { lowMemoryAtStart(m) } }.getOrNull()
+            if (low != null) {
+                Log.i(LoadTelemetry.TAG, "preload at start: skipped (low memory)")
+                _preloadSkipNotice.value = low
+                return PreloadDecision.SKIP_LOW_MEMORY
+            }
+            load(m, reason = I18n.s(R.string.engine_2feffd))
+        }
         return d
+    }
+
+    /** 启动预加载前的内存检查（阻塞，IO）：该跳过时返回提示文字，否则 null。 */
+    private fun lowMemoryAtStart(m: LocalModel): String? {
+        val mi = android.app.ActivityManager.MemoryInfo()
+        appContext.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(mi)
+        val cfg = effective(m)
+        val v = memoryPlan(m, cfg, preferredBackend(m, cfg) == Backend.GPU).first
+        val died = NativeLoadCrash.breadcrumbShowsLoad(CrashReporter.lastBreadcrumb)
+        if (!PreloadPolicy.lowMemorySkip(mi.lowMemory, v.level, died)) return null
+        return PreloadPolicy.lowMemoryNotice(MemoryPreflight.gb(mi.availMem), v.needBytes.takeIf { it > 0 }?.let { MemoryPreflight.gb(it) })
     }
 
     /** Must hold [lifecycle]. Waits for a running reply (never cancels it: [load] cancels first). */
