@@ -391,6 +391,26 @@ object HistoryPress {
         }
     }
 
+    // ---- 2.7.7（代码先行）拖动行跟手：手指在「列表视口」坐标里跟踪，和列表滚动无关 ----
+    /** 起拖时手指相对行顶的抓取偏移（视口坐标）。 */
+    fun grabOffset(fingerViewportY: Float, itemTopViewport: Float): Float = fingerViewportY - itemTopViewport
+
+    /** 拖动行（浮层）视口 top = 手指 − 抓取偏移，夹在视口内；与滚动量无关（自动滚动不会把它带走）。 */
+    fun overlayTop(fingerViewportY: Float, grab: Float, dragSize: Int, viewportSize: Int): Float =
+        (fingerViewportY - grab).coerceIn(0f, maxOf(0f, (viewportSize - dragSize).toFloat()))
+
+    /** 视口 ↔ 内容坐标：[scrolled] = 起拖以来列表累计滚动量（scrollBy 实际消耗之和）。 */
+    fun viewportToContent(y: Float, scrolled: Float): Float = y + scrolled
+    fun contentToViewport(y: Float, scrolled: Float): Float = y - scrolled
+
+    /** 内容坐标下的落点：浮层视口 top 换到内容坐标，与同帧可见行（视口 top 也换到内容坐标）比较；滚动量只加一次。 */
+    fun dropIndexContent(from: Int, slotsViewport: List<Slot>, overlayTopViewport: Float, dragSize: Int, scrolled: Float): Int =
+        dropIndex(
+            from,
+            slotsViewport.map { Slot(it.index, Math.round(viewportToContent(it.top.toFloat(), scrolled)), it.size) },
+            viewportToContent(overlayTopViewport, scrolled), dragSize,
+        )
+
     /** 松手归位：settle 进度 p 从 1 到 0；p=1 时就在松手时的视觉位置，p=0 时在新布局位置。 */
     fun settleOffset(p: Float, dropTop: Float, layoutTop: Int): Float = p * (dropTop - layoutTop)
 }

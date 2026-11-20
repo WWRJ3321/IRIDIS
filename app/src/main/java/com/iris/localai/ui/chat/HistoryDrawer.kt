@@ -198,8 +198,11 @@ fun HistoryDrawer(
     // 长按拖动排序：拖动中的对话、它的位移、拖动中的临时顺序（松手后交给 onReorder）。
     // 2.7.7（代码先行）：拖动中不改列表顺序，拖动行按手指画（视口坐标的 top），其它行用位移让位；松手才重排 + 归位动画。
     var dragId by remember { mutableStateOf<String?>(null) }
-    var dragTop by remember { mutableFloatStateOf(0f) }      // 拖动行视觉 top（视口坐标）= 起拖布局 top + 手指位移
-    var dragOwnTop by remember { mutableFloatStateOf(0f) }   // 拖动行自己的布局 top（随自动滚动变；滚出视口时自己累计）
+    // 2.7.7：拖动行画在列表上方的浮层里（视口坐标 top = 手指 − 抓取偏移），列表里原行留空位（透明、钉住收手势）；
+    // 自动滚动只动列表内容，浮层不动 = 一直在手指下。
+    var dragTop by remember { mutableFloatStateOf(0f) }      // 浮层 top（列表视口坐标）
+    var dragScrolled by remember { mutableFloatStateOf(0f) } // 起拖以来自动滚动累计（内容坐标换算用，只加一次）
+    val fingerHolder = remember { floatArrayOf(Float.NaN) }  // 手指在列表视口里的 y（视口 Box 的 Initial 阶段写入）
     var dragFrom by remember { mutableIntStateOf(-1) }
     var dragTo by remember { mutableIntStateOf(-1) }
     var dragSize by remember { mutableIntStateOf(0) }
@@ -288,9 +291,22 @@ fun HistoryDrawer(
         }
 
         val listState = rememberLazyListState()
+        val overlayLift by animateFloatAsState(if (dragId != null) 1f else 0f, if (reduce) snap() else IrisMotion.standard(), label = "overlayLift")
         // Opening a different conversation or searching starts from the top.
         LaunchedEffect(query) { if (listState.firstVisibleItemIndex > 0) listState.scrollToItem(0) }
-        Box(Modifier.weight(1f)) {
+        Box(
+            Modifier
+                .weight(1f)
+                // 手指位置记在列表视口坐标里（这个 Box 不随列表滚动 / 行位移而动）；只看不消费，先于行的手势读到。
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            ev.changes.firstOrNull { it.pressed }?.let { fingerHolder[0] = it.position.y }
+                        }
+                    }
+                },
+        ) {
             if (entries.isEmpty()) {
                 EmptyState(
                     title = if (query.isBlank()) I18n.s(R.string.chat_48abff) else I18n.s(R.string.chat_192363),
@@ -307,13 +323,12 @@ fun HistoryDrawer(
                 fun retarget(id: String) {
                     val es = latestEntriesHolder[0] ?: return
                     val info = listState.layoutInfo.visibleItemsInfo
-                    info.firstOrNull { it.key == id }?.let { dragOwnTop = it.offset.toFloat() }
                     if (es.getOrNull(dragFrom) !is DrawerEntry.Item) return
                     // 只在同一组（置顶 / 同一日期分组，标题之间）里放置：分组标题一直显示，跨组落点没有意义。
                     val sec = DrawerGroups.sectionOf(dragFrom) { es.getOrNull(it) is DrawerEntry.Header }
                     val slots = info.filter { it.key != id && es.getOrNull(it.index) is DrawerEntry.Item && DrawerGroups.sectionOf(it.index) { j -> es.getOrNull(j) is DrawerEntry.Header } == sec }
                         .map { HistoryPress.Slot(it.index, it.offset, it.size) }
-                    dragTo = HistoryPress.dropIndex(dragFrom, slots, dragTop, dragSize)
+                    dragTo = HistoryPress.dropIndexContent(dragFrom, slots, dragTop, dragSize, dragScrolled)
                 }
                 fun autoScroll(id: String) = dragScope.launch {
                     var last = 0L
@@ -327,8 +342,8 @@ fun HistoryDrawer(
                         if (step == 0f) continue
                         val used = listState.scrollBy(step)   // 到列表两端 used = 0，自然停住
                         if (used == 0f || dragId != id) continue
-                        // 拖动行按手指画（dragTop 不变 = 钉在手指下）；它自己的布局位置随滚动移动，滚出视口时自己累计
-                        if (listState.layoutInfo.visibleItemsInfo.none { it.key == id }) dragOwnTop -= used
+                        // 浮层 dragTop 不变（仍在手指下）；只记滚动量，落点按同帧布局重算，不再自己累计行位置
+                        dragScrolled += used
                         retarget(id)
                     }
                 }
@@ -370,12 +385,14 @@ fun HistoryDrawer(
                                 val lift by animateFloatAsState(if (dragging) 1f else 0f, if (reduce) snap() else IrisMotion.standard(), label = "dragLift")
                                 ConversationItem(
                                     s, selected = s.id == currentId || dragging, running = s.id == runningId,
-                                    lift = lift,
+                                    lift = if (dragging) 0f else lift,
                                     modifier = anim
-                                        .zIndex(if (dragging || settling) 1f else 0f)
+                                        .zIndex(if (settling) 1f else 0f)
                                         .graphicsLayer {
+                                            // 拖动中原行只留空位（画在浮层里），保持布局与手势
+                                            alpha = if (dragging) 0f else 1f
                                             translationY = when {
-                                                dragging -> dragTop - dragOwnTop
+                                                dragging -> 0f
                                                 settling -> {
                                                     val top = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }?.offset
                                                     if (top == null) 0f else HistoryPress.settleOffset(settleP, dropTop, top)
@@ -470,10 +487,11 @@ fun HistoryDrawer(
                                                 selected = HistoryPress.selection(HistoryPress.Outcome.DRAG, selected, s.id)
                                                 holdId = null
                                                 if (coords == null || !coords.isAttached || me == null) return@awaitEachGesture
-                                                val startY = coords.localToRoot(last.position).y
                                                 val startTop = me.offset.toFloat()
+                                                val f0 = fingerHolder[0].takeUnless { it.isNaN() } ?: (startTop + last.position.y)
+                                                val grab = HistoryPress.grabOffset(f0, startTop)
                                                 settleJob?.cancel(); settleId = null
-                                                dragTop = startTop; dragOwnTop = startTop
+                                                dragTop = startTop; dragScrolled = 0f
                                                 dragFrom = me.index; dragTo = me.index; dragSize = me.size
                                                 dragging = true
                                                 dragId = s.id
@@ -486,7 +504,8 @@ fun HistoryDrawer(
                                                     ch.consume()
                                                     if (!ch.pressed) { finish(commit = true); break }
                                                     if (!coords.isAttached) break
-                                                    dragTop = startTop + (coords.localToRoot(ch.position).y - startY)
+                                                    val f = fingerHolder[0].takeUnless { it.isNaN() } ?: continue
+                                                    dragTop = HistoryPress.overlayTop(f, grab, dragSize, listState.layoutInfo.viewportSize.height)
                                                     retarget(s.id)
                                                 }
                                             } finally {
@@ -503,6 +522,16 @@ fun HistoryDrawer(
                             }
                         }
                     }
+                }
+                // 拖动浮层：画在列表上面，top = dragTop（视口坐标），不随列表滚动。
+                val dragItem = dragId?.let { id -> entries.firstNotNullOfOrNull { (it as? DrawerEntry.Item)?.summary?.takeIf { s -> s.id == id } } }
+                if (dragItem != null) {
+                    ConversationItem(
+                        dragItem, selected = true, running = dragItem.id == runningId,
+                        lift = overlayLift,
+                        modifier = Modifier.zIndex(2f).graphicsLayer { translationY = dragTop },
+                        onClick = {},
+                    )
                 }
             }
         }

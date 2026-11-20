@@ -75,4 +75,47 @@ class SidebarDragTest {
         // 起拖那一刻不跳（沿用）
         assertEquals(0f, HistoryPress.dragOffset(300, 0f, 300), 0f)
     }
+
+    // ---- 2.7.7 拖动行跟手（浮层，视口坐标） ----
+
+    @Test fun overlayStaysUnderFingerWhileListScrolls() {
+        // 手指在视口 y=330 抓住 top=300 的行：抓取偏移 30
+        val grab = HistoryPress.grabOffset(330f, 300f)
+        assertEquals(30f, grab, 0f)
+        // 自动滚动 0 / 200 / -150：手指没动 → 浮层 top 不变（不跟着列表走，不被重复叠加滚动量）
+        // （overlayTop 不接受滚动量：浮层位置只由手指决定）
+        assertEquals(300f, HistoryPress.overlayTop(330f, grab, 100, 1000), 0f)
+        // 手指往下 50：浮层也只往下 50
+        assertEquals(350f, HistoryPress.overlayTop(380f, grab, 100, 1000), 0f)
+    }
+
+    @Test fun overlayClampedInsideViewport() {
+        assertEquals(0f, HistoryPress.overlayTop(-200f, 30f, 100, 1000), 0f)
+        assertEquals(900f, HistoryPress.overlayTop(5000f, 30f, 100, 1000), 0f)
+        // 视口比行还矮：贴顶
+        assertEquals(0f, HistoryPress.overlayTop(50f, 30f, 100, 60), 0f)
+    }
+
+    @Test fun viewportContentRoundTrip() {
+        for (sc in listOf(0f, 123f, -40f)) {
+            assertEquals(77f, HistoryPress.contentToViewport(HistoryPress.viewportToContent(77f, sc), sc), 0.001f)
+        }
+        assertEquals(350f, HistoryPress.viewportToContent(150f, 200f), 0f)
+    }
+
+    @Test fun dropIndexDuringScrollCountsScrollOnce() {
+        // 内容里行 i 在 content top = (i-1)*100。拖 3（content 200）。
+        val content = (1..10).map { Slot(it, (it - 1) * 100, 100) }
+        fun visible(scrolled: Int) = content.map { Slot(it.index, it.top - scrolled, it.size) }   // 同帧视口 top
+        // 手指不动、浮层停在视口 top=200；列表滚 0 → 原位
+        assertEquals(3, HistoryPress.dropIndexContent(3, visible(0), 200f, 100, 0f))
+        // 列表自动滚 250：浮层视口仍 200 = 内容 450 → 中心 500 越过 5 的中心（450）、没过 6（550）→ 落到 5
+        assertEquals(5, HistoryPress.dropIndexContent(3, visible(250), 200f, 100, 250f))
+        // 与纯视口同帧比较一致（平移不变）
+        assertEquals(HistoryPress.dropIndex(3, visible(250), 200f, 100), HistoryPress.dropIndexContent(3, visible(250), 200f, 100, 250f))
+        // 若把滚动量重复加到浮层（旧 bug）：会算成内容 700 → 落到 8，明显不同
+        assertTrue(HistoryPress.dropIndex(3, content, 200f + 250f + 250f, 100) != 5)
+        // 往上滚 -150（先滚到 300 后回到 150）：同理
+        assertEquals(HistoryPress.dropIndex(3, visible(150), 200f, 100), HistoryPress.dropIndexContent(3, visible(150), 200f, 100, 150f))
+    }
 }
