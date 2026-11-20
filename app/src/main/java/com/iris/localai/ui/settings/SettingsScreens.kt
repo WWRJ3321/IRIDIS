@@ -129,6 +129,7 @@ import com.iris.localai.ui.components.TypingDots
 import com.iris.localai.ui.components.VersionFooter
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
+import com.iris.localai.ui.theme.chatScaled
 import com.iris.localai.ui.theme.IrisType
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -1055,6 +1056,27 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                         2 -> I18n.s(R.string.settings_94b767)
                         else -> I18n.s(R.string.settings_41d7e0)
                     },
+                )
+            }
+            // 对话文字大小（vc283）：只缩放对话正文，下方预览即时跟着变。
+            SectionTitle(I18n.s(R.string.v277_chat_text))
+            SettingsGroup {
+                val pct = com.iris.localai.data.ChatTextScale.sanitize(s.chatTextScale)
+                SliderRow(
+                    I18n.s(R.string.v277_chat_text), pct.toFloat(),
+                    com.iris.localai.data.ChatTextScale.MIN.toFloat()..com.iris.localai.data.ChatTextScale.MAX.toFloat(),
+                    display = com.iris.localai.data.ChatTextScale.label(pct),
+                    subtitle = I18n.s(R.string.v277_chat_text_sub),
+                    steps = com.iris.localai.data.ChatTextScale.sliderSteps,
+                ) { v ->
+                    val next = com.iris.localai.data.ChatTextScale.fromSlider(v)
+                    if (next != s.chatTextScale) vm.update { it.copy(chatTextScale = next) }
+                }
+                Text(
+                    I18n.s(R.string.v277_chat_text_preview),
+                    style = com.iris.localai.ui.theme.IrisType.message.copy(color = Iris.colors.text)
+                        .chatScaled(com.iris.localai.data.ChatTextScale.factor(pct)),
+                    modifier = Modifier.fillMaxWidth().padding(start = IrisDimens.rowPadding, end = IrisDimens.rowPadding, bottom = IrisDimens.rowVerticalPadding),
                 )
             }
             SectionTitle(I18n.s(R.string.settings_8e1b94))

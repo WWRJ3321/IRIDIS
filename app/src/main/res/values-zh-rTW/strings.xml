@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">上次意外退出時下次開啟彈出說明；關閉後只記錄日誌</string>
     <string name="v272_crash_never">不再提示</string>
     <string name="v272_crash_never_sub">可在設定中重新開啟「當機後顯示報告」</string>
+    <string name="v277_chat_text">對話文字大小</string>
+    <string name="v277_chat_text_sub">只改對話正文：訊息、思考和輸入框，其餘介面不變</string>
+    <string name="v277_chat_text_preview">預覽：這是一段對話正文，拖動滑桿即時生效。</string>
 </resources>

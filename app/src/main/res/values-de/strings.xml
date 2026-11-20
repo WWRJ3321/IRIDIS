@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">Unerwartetes Beenden beim nächsten Start erklären; aus = nur protokollieren</string>
     <string name="v272_crash_never">Nicht mehr anzeigen</string>
     <string name="v272_crash_never_sub">In den Einstellungen unter „Bericht nach Absturz anzeigen“ wieder einschaltbar</string>
+    <string name="v277_chat_text">Chat-Textgröße</string>
+    <string name="v277_chat_text_sub">Nur der Chattext: Nachrichten, Denken und Eingabefeld. Der Rest der App bleibt gleich</string>
+    <string name="v277_chat_text_preview">Vorschau: Das ist Chattext. Zieh den Regler, die Änderung gilt sofort.</string>
 </resources>

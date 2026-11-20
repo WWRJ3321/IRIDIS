@@ -45,6 +45,7 @@ import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.Iris
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.chatScaled
 import kotlinx.coroutines.delay
 
 /** 本地翻译: texts (unit-tested). */
@@ -104,7 +105,7 @@ internal fun TranslationBlock(id: String, modifier: Modifier = Modifier) {
             if (!t.folded) when {
                 t.error != null -> Text(t.error, style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(end = IrisDimens.space8))
                 t.text.isEmpty() -> Text(TranslateText.TRANSLATING, style = IrisType.secondary, color = c.textTertiary)
-                else -> Text(t.text, style = IrisType.message, color = c.text, modifier = Modifier.padding(end = IrisDimens.space8))
+                else -> Text(t.text, style = IrisType.message.chatScaled(), color = c.text, modifier = Modifier.padding(end = IrisDimens.space8))
             }
         }
     }

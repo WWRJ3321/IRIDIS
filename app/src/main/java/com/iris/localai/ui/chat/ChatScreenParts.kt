@@ -129,6 +129,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.chatScaled
 import com.iris.localai.ui.theme.LocalReduceMotion
 import com.iris.localai.ui.motion.motion
 import kotlinx.coroutines.delay
@@ -237,7 +238,7 @@ internal fun QueuedBubble(q: QueuedMessage, modifier: Modifier = Modifier, onCan
                     .clickable(onClickLabel = I18n.s(R.string.chat_9ad32d)) { onCancel() }
                     .padding(horizontal = IrisSpace.M, vertical = IrisSpace.S),
             ) {
-                Text(q.text, style = IrisType.message, color = c.textSecondary)
+                Text(q.text, style = IrisType.message.chatScaled(), color = c.textSecondary)
             }
             Row(Modifier.padding(top = IrisSpace.XS, end = IrisSpace.XS), verticalAlignment = Alignment.CenterVertically) {
                 Icon(IrisIcons.Clock, null, tint = c.textTertiary, modifier = Modifier.size(12.dp))

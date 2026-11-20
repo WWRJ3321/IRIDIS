@@ -95,6 +95,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.chatScaled
 import com.iris.localai.ui.theme.LocalReduceMotion
 import com.iris.localai.util.streaming.ParagraphSplitter
 import com.iris.localai.util.streaming.ThinkParseCache
@@ -144,7 +145,7 @@ fun UserMessage(
                 })
                 .padding(horizontal = IrisDimens.space16, vertical = IrisSpace.S),
         ) {
-            Text(message.content, style = IrisType.message, color = c.text)
+            Text(message.content, style = IrisType.message.chatScaled(), color = c.text)
         }
         TranslationBlock(message.id)
         VersionSwitcher(message, onSwitchVersion)
@@ -519,7 +520,7 @@ private fun ThinkingParagraphs(text: () -> String, animate: Boolean, modifier: M
     val shown by rememberRevealedText(text, animate)
     val splitter = remember { ParagraphSplitter() }
     val paragraphs = remember(shown) { splitter.split(shown) }
-    val style = IrisType.secondary.copy(lineHeight = IrisType.message.lineHeight.times(0.88f))
+    val style = IrisType.secondary.copy(lineHeight = IrisType.message.lineHeight.times(0.88f)).chatScaled()
     val lineMin = with(androidx.compose.ui.platform.LocalDensity.current) { style.lineHeight.toDp() }
     Column(modifier.heightIn(min = if (animate) lineMin else 0.dp), verticalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
         paragraphs.forEachIndexed { i, p ->

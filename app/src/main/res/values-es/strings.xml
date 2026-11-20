@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">Explicar un cierre inesperado al abrir; desactivado = solo se registra</string>
     <string name="v272_crash_never">No volver a mostrar</string>
     <string name="v272_crash_never_sub">Puedes reactivarlo en Ajustes: «Mostrar informe tras un cierre inesperado»</string>
+    <string name="v277_chat_text">Tamaño del texto del chat</string>
+    <string name="v277_chat_text_sub">Solo el texto del chat: mensajes, razonamiento y cuadro de entrada. El resto de la app no cambia</string>
+    <string name="v277_chat_text_preview">Vista previa: este es el texto del chat. Mueve el control y cambia al instante.</string>
 </resources>

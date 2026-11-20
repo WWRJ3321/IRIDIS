@@ -62,6 +62,8 @@ import com.iris.localai.ui.theme.IrisColors
 import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.LocalChatTextScale
+import com.iris.localai.ui.theme.chatScaled
 import kotlinx.coroutines.delay
 
 /**
@@ -90,17 +92,21 @@ fun Markdown(
 
 /** Builds (and remembers) the styled inline text of a block; keyed by content so equal text is never rebuilt. */
 @Composable
-private fun rememberInline(text: String, c: IrisColors): AnnotatedString = remember(text, c) { inline(text, c) }
+private fun rememberInline(text: String, c: IrisColors): AnnotatedString {
+    val f = LocalChatTextScale.current
+    return remember(text, c, f) { inline(text, c, f) }
+}
 
 @Composable
 private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.graphics.Color) {
-    val body = remember(color) { IrisType.message.copy(color = color) }
+    val f = LocalChatTextScale.current // 对话文字大小（只在对话页 ≠ 1）
+    val body = remember(color, f) { IrisType.message.copy(color = color).chatScaled(f) }
     when (block) {
         is MdBlock.Heading -> {
             val head = when (block.level) { 1 -> IrisType.mdH1; 2 -> IrisType.mdH2; 3 -> IrisType.mdH3; else -> IrisType.message.copy(fontWeight = FontWeight.SemiBold) }
             Text(
                 rememberInline(block.text, c),
-                style = head.copy(color = color),
+                style = head.copy(color = color).chatScaled(f),
                 modifier = Modifier.padding(top = if (block.level <= 2) IrisDimens.space6 else IrisDimens.space2),
             )
         }
@@ -135,7 +141,7 @@ private fun Block(block: MdBlock, c: IrisColors, color: androidx.compose.ui.grap
     }
 }
 
-private fun inline(text: String, c: IrisColors): AnnotatedString = buildAnnotatedString {
+private fun inline(text: String, c: IrisColors, f: Float = 1f): AnnotatedString = buildAnnotatedString {
     fun emit(nodes: List<MdInline>) {
         nodes.forEach { n ->
             when (n) {
@@ -144,7 +150,7 @@ private fun inline(text: String, c: IrisColors): AnnotatedString = buildAnnotate
                 is MdInline.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { emit(n.children) }
                 is MdInline.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { emit(n.children) }
                 is MdInline.Code -> withStyle(
-                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = IrisFontSize.S, background = c.surfaceVariant),
+                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = IrisFontSize.S.chatScaled(f), background = c.surfaceVariant),
                 ) { append("\u2009" + n.text + "\u2009") }
                 is MdInline.Math -> withStyle(SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)) { append(TexText.render(n.tex)) }
                 is MdInline.Link -> withLink(
@@ -162,6 +168,7 @@ private fun inline(text: String, c: IrisColors): AnnotatedString = buildAnnotate
 @Composable
 private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
     val clipboard = LocalClipboardManager.current
+    val cf = LocalChatTextScale.current
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(copied) { if (copied) { delay(1500); copied = false } }
     val shape = IrisRadius.mediumShape
@@ -191,7 +198,7 @@ private fun CodeBlock(block: MdBlock.Code, c: IrisColors) {
         }
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = IrisSpace.M, end = IrisSpace.M, bottom = if (foldable) IrisDimens.space4 else IrisDimens.space12)) {
             Text(
-                shown, fontFamily = FontFamily.Monospace, fontSize = IrisFontSize.XS, lineHeight = 20.sp, color = c.text,
+                shown, fontFamily = FontFamily.Monospace, fontSize = IrisFontSize.XS.chatScaled(cf), lineHeight = 20.sp.chatScaled(cf), color = c.text,
                 softWrap = false,
             )
         }
@@ -217,7 +224,7 @@ private fun MathBlock(block: MdBlock.Math, c: IrisColors, color: androidx.compos
     Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = IrisDimens.space4), contentAlignment = Alignment.Center) {
         Text(
             text, color = color, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
-            fontSize = IrisFontSize.M, lineHeight = 26.sp, textAlign = TextAlign.Center, softWrap = false,
+            fontSize = IrisFontSize.M.chatScaled(LocalChatTextScale.current), lineHeight = 26.sp.chatScaled(LocalChatTextScale.current), textAlign = TextAlign.Center, softWrap = false,
         )
     }
 }
@@ -241,7 +248,7 @@ private fun TableBlock(block: MdBlock.Table, c: IrisColors) {
                         style = TextStyle(
                             fontSize = IrisFontSize.S, lineHeight = 20.sp, color = c.text, textAlign = align,
                             fontWeight = if (r == 0) FontWeight.SemiBold else FontWeight.Normal,
-                        ),
+                        ).chatScaled(),
                         modifier = Modifier.widthIn(max = 260.dp).padding(horizontal = IrisDimens.space12, vertical = IrisSpace.S),
                     )
                 }

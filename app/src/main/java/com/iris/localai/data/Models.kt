@@ -291,6 +291,8 @@ data class AppSettings(
     val askedBatteryExemption: Boolean = false,
     /** Voice chat: how easily talking over the reply interrupts it. 0 = 低, 1 = 中, 2 = 高. */
     val bargeInSensitivity: Int = 1,
+    /** 对话文字大小（百分比，只缩放对话正文：消息、思考块、输入框），见 [ChatTextScale]。 */
+    val chatTextScale: Int = ChatTextScale.DEFAULT,
     /** Voice chat: play replies as a call (USAGE_VOICE_COMMUNICATION) so the system AEC removes them from the mic. */
     val bargeInVoiceComm: Boolean = false,
 

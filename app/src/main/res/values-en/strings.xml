@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">Explain an unexpected exit on next launch; when off, it is only logged</string>
     <string name="v272_crash_never">Don\'t show again</string>
     <string name="v272_crash_never_sub">Turn \"Show report after a crash\" back on in Settings</string>
+    <string name="v277_chat_text">Chat text size</string>
+    <string name="v277_chat_text_sub">Only chat text: messages, thinking and the input box. The rest of the app stays the same</string>
+    <string name="v277_chat_text_preview">Preview: this is chat text. Drag the slider and it changes right away.</string>
 </resources>

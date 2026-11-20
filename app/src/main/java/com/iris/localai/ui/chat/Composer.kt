@@ -99,6 +99,7 @@ import com.iris.localai.ui.theme.IrisDimens
 import com.iris.localai.ui.motion.IrisMotion
 import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
+import com.iris.localai.ui.theme.chatScaled
 import com.iris.localai.ui.theme.LocalReduceMotion
 import com.iris.localai.ui.motion.motion
 
@@ -356,7 +357,7 @@ fun Composer(
                 BasicTextField(
                     value = state.text,
                     onValueChange = onTextChange,
-                    textStyle = IrisType.message.copy(color = c.text, lineHeight = IrisType.row.lineHeight),
+                    textStyle = IrisType.message.copy(color = c.text, lineHeight = IrisType.row.lineHeight).chatScaled(),
                     cursorBrush = SolidColor(c.text),
                     maxLines = 8,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -369,7 +370,7 @@ fun Composer(
                     decorationBox = { inner ->
                         Box(Modifier.padding(horizontal = IrisSpace.S, vertical = IrisSpace.M)) {
                             if (state.text.isEmpty()) {
-                                Text(if (state.agentMode) ComposerText.AGENT_PLACEHOLDER else ComposerText.PLACEHOLDER, style = IrisType.message.copy(lineHeight = IrisType.row.lineHeight), color = c.textTertiary)
+                                Text(if (state.agentMode) ComposerText.AGENT_PLACEHOLDER else ComposerText.PLACEHOLDER, style = IrisType.message.copy(lineHeight = IrisType.row.lineHeight).chatScaled(), color = c.textTertiary)
                             }
                             inner()
                         }

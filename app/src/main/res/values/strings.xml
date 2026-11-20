@@ -2261,4 +2261,7 @@
     <string name="v272_crash_popup_sub">上次意外退出时下次打开弹出说明；关掉后只记日志</string>
     <string name="v272_crash_never">不再提示</string>
     <string name="v272_crash_never_sub">可在设置里重新打开「崩溃后显示报告」</string>
+    <string name="v277_chat_text">对话文字大小</string>
+    <string name="v277_chat_text_sub">只改对话正文：消息、思考和输入框，其余界面不变</string>
+    <string name="v277_chat_text_preview">预览：这是一段对话正文，拖动滑块即时生效。</string>
 </resources>

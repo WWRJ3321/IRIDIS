@@ -128,6 +128,7 @@ fun AppSettings.sanitized(): AppSettings {
         lastModelFile = lastModelFile?.takeIf { it.isNotBlank() },
         cloneFidelity = cloneFidelity.coerceIn(0, 1),
         bargeInSensitivity = bargeInSensitivity.coerceIn(0, 2),
+        chatTextScale = ChatTextScale.sanitize(chatTextScale),
         cloneStepsFast = cloneStepsFast.coerceIn(2, 8),
         cloneStepsFine = cloneStepsFine.coerceIn(6, 32),
         // three tiers (「全部」 removed); a stale 3 lands on HIGH (= 2), see migrated().

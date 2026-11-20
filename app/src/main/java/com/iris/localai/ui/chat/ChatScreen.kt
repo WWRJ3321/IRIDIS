@@ -178,6 +178,26 @@ fun ChatScreen(
     onOpenVoiceSettings: () -> Unit,
     onOpenApi: () -> Unit,
 ) {
+    // 对话文字大小：只给对话页提供倍数（消息、思考块、输入框读它），其余页面保持 1f。
+    val textScale by vm.settings.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.iris.localai.ui.theme.LocalChatTextScale provides com.iris.localai.data.ChatTextScale.factor(textScale.chatTextScale),
+    ) {
+        ChatScreenContent(vm, onOpenModels, onOpenSettings, onOpenFiles, onOpenImageGen, onOpenCharacters, onOpenVoiceSettings, onOpenApi)
+    }
+}
+
+@Composable
+private fun ChatScreenContent(
+    vm: ChatViewModel,
+    onOpenModels: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenFiles: () -> Unit,
+    onOpenImageGen: () -> Unit,
+    onOpenCharacters: () -> Unit,
+    onOpenVoiceSettings: () -> Unit,
+    onOpenApi: () -> Unit,
+) {
     val c = Iris.colors
     val ui by vm.state.collectAsStateWithLifecycle()
     val character by vm.character.collectAsStateWithLifecycle() // 角色卡

@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">予期しない終了を次回起動時に表示。オフにするとログのみ</string>
     <string name="v272_crash_never">今後表示しない</string>
     <string name="v272_crash_never_sub">設定の「クラッシュ後にレポートを表示」で再びオンにできます</string>
+    <string name="v277_chat_text">チャットの文字サイズ</string>
+    <string name="v277_chat_text_sub">チャット本文（メッセージ・思考・入力欄）だけを変更し、ほかの画面はそのまま</string>
+    <string name="v277_chat_text_preview">プレビュー：これはチャット本文です。スライダーを動かすとすぐに反映されます。</string>
 </resources>

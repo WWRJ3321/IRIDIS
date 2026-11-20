@@ -2260,4 +2260,7 @@
     <string name="v272_crash_popup_sub">अगली बार खोलने पर अप्रत्याशित बंद होने की जानकारी दिखाएँ; बंद होने पर केवल लॉग</string>
     <string name="v272_crash_never">फिर न दिखाएँ</string>
     <string name="v272_crash_never_sub">सेटिंग्स में \"क्रैश के बाद रिपोर्ट दिखाएँ\" फिर से चालू करें</string>
+    <string name="v277_chat_text">चैट टेक्स्ट का आकार</string>
+    <string name="v277_chat_text_sub">केवल चैट टेक्स्ट: संदेश, सोच और इनपुट बॉक्स। ऐप का बाकी हिस्सा वैसा ही रहता है</string>
+    <string name="v277_chat_text_preview">पूर्वावलोकन: यह चैट टेक्स्ट है। स्लाइडर खींचें, बदलाव तुरंत दिखेगा।</string>
 </resources>
