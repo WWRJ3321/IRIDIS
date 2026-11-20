@@ -288,6 +288,9 @@ class ConversationRepository(
 
 /** 侧栏排序（纯函数，单测）：置顶在前；组内新对话（不在自定义顺序里）在上、按更新时间，其余按拖出的顺序。 */
 object ConversationOrder {
+    /** 2.7.4：长按后手指累计位移超过 touchSlop 才算拖动排序；没超过松手 = 弹菜单。 */
+    fun isDrag(totalDx: Float, totalDy: Float, slop: Float): Boolean =
+        kotlin.math.abs(totalDy) > slop || kotlin.math.abs(totalDx) > slop
     fun sort(list: List<ConversationSummary>, order: List<String>): List<ConversationSummary> {
         val pos = HashMap<String, Int>().also { m -> order.forEachIndexed { i, id -> m.putIfAbsent(id, i) } }
         return list.sortedWith(

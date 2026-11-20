@@ -28,6 +28,17 @@ object FoldMotion {
     /** Jump straight to the end state: reduced motion, or the list is moving (a growing item under a fling drew garbled text). */
     fun snap(reduceMotion: Boolean, listScrolling: Boolean): Boolean = reduceMotion || listScrolling
 
+    /**
+     * 2.7.4：只有用户拖动/甩动列表才算「在滚动」。之前用 isScrollInProgress，生成时贴底自动滚动、
+     * 展开思考块引起的跟随滚动也算，折叠/展开动画因此总是直接跳到终点（看起来动画没了）。
+     * [prev] 上一状态；[dragged] 手指正拖着列表；[inProgress] 列表在滚（含甩动余势）。
+     */
+    fun userScrolling(prev: Boolean, dragged: Boolean, inProgress: Boolean): Boolean = when {
+        dragged -> true
+        !inProgress -> false
+        else -> prev
+    }
+
     /** Height shown for [fraction] of a [full]-pixel tall body (springs may overshoot; clamped). */
     fun height(full: Int, fraction: Float): Int = (full * fraction.coerceIn(0f, 1f)).roundToInt().coerceIn(0, full)
 

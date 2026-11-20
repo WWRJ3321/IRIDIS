@@ -276,6 +276,12 @@ class AgentLoop(
     private val userTask: String = "",
 ) {
     private val steps = ArrayList<AgentStep>()
+    /**
+     * 2.7.4：静默重试（未知工具 / 必选工具被拒）前已经流出的正文。之前下一回合一开始流式就把它
+     * 整段替换掉（用户看到「先出一大段又被撤回」）；现在它留在显示文本最前，直到挂到下一张工具卡片
+     * 的 lead 上或并入最终回答。
+     */
+    private var carry = ""
 
     suspend fun run(base: List<PromptMessage>): AgentOutcome {
         val msgs = base.toMutableList()
@@ -296,7 +302,7 @@ class AgentLoop(
             pendingNotes()?.takeIf { it.isNotBlank() }?.let { injectNote(msgs, it) }
             fixed = fit(msgs, fixed)
             val tLlm0 = System.currentTimeMillis()
-            val turn = model.complete(msgs.toList()) { callbacks.onText(ToolCallParser.visibleText(it)) }
+            val turn = model.complete(msgs.toList()) { callbacks.onText(AgentCarry.join(carry, ToolCallParser.visibleText(it))) }
             android.util.Log.i(AGENT_TAG, "step $calls: llm=${System.currentTimeMillis() - tLlm0}ms msgs=${msgs.size} prompt~${msgs.sumOf { it.content.length / 4 }}tok raw=\"${turn.text.take(500).replace('\n', ' ')}\"")
             if (turn.error != null) return AgentOutcome(turn.text, steps.toList(), AgentStop.ERROR, turn.error)
             // a call written inside unfinished thinking (the stream is cut right after it, so
@@ -312,6 +318,7 @@ class AgentLoop(
                 if (!toolPushed) {
                     toolPushed = true
                     android.util.Log.w(AGENT_TAG, "picked tool $missing not called (push once)")
+                    carry = AgentCarry.join(carry, ToolRollup.stripEcho(answer.trim())).trim()
                     msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim().ifEmpty { "…" })
                     msgs += PromptMessage(PromptMessage.USER, AgentPrompt.mustCall(missing))
                     continue
@@ -326,7 +333,8 @@ class AgentLoop(
             when (val p = parsed) {
                 is ParsedReply.Final -> {
                     // the model wrote a fake tool log (copied from history) instead of calling.
-                    if (ToolRollup.hasEcho(answer) && !echoRetried) {
+                    // 2.7.4：去掉抄写的工具日志后还有正文就直接用（以前整段已显示的回答被静默重试清掉）。
+                    if (ToolRollup.hasEcho(answer) && !echoRetried && ToolRollup.stripEcho(answer).isBlank()) {
                         echoRetried = true
                         android.util.Log.w(AGENT_TAG, "fake tool log in answer (silent retry)")
                         msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim())
@@ -349,8 +357,9 @@ class AgentLoop(
                                 transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, answerOf(text).trim()))
                         }
                     }
-                    return AgentOutcome(ToolCallParser.stripCalls(ToolRollup.stripEcho(turn.text)), steps.toList(), AgentStop.DONE,
-                        transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, clean))
+                    val kept = carry.trim(); carry = ""
+                    return AgentOutcome(AgentCarry.join(kept, ToolCallParser.stripCalls(ToolRollup.stripEcho(turn.text))), steps.toList(), AgentStop.DONE,
+                        transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, AgentCarry.join(kept, clean)))
                 }
                 is ParsedReply.Malformed -> {
                     failedRaw += turn.text
@@ -363,13 +372,16 @@ class AgentLoop(
                         steps += AgentStep(tool = FORMAT_ERROR, title = "查看原始输出", result = p.error, status = StepStatus.ERROR,
                             detail = failedRaw.mapIndexed { i, r -> "── 第 ${i + 1} 次输出 ──\n${r.trim()}" }.joinToString("\n\n"))
                         callbacks.onSteps(steps.toList())
-                        return AgentOutcome(ToolCallParser.stripCalls(p.before), steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
+                        val kept = carry; carry = ""
+                        return AgentOutcome(AgentCarry.join(kept, ToolCallParser.stripCalls(p.before)), steps.toList(), AgentStop.ERROR, "模型的工具调用格式两次都无法识别：${p.error}")
                     }
                     retried = true
                     // attempt 1 is kept (folded) instead of being replaced by attempt 2's stream.
                     android.util.Log.w(AGENT_TAG, "malformed call (retry): ${p.error}")
+                    // 2.7.4：调用标记前的正文留在卡片上方（lead），不再随重试消失。
                     AgentStep(tool = FORMAT_ERROR, title = "第 1 次输出（格式无法识别）", result = "工具格式不对，正在重试…",
-                        status = StepStatus.ERROR, detail = turn.text.trim()).let { retryStep = it; publish(it) }
+                        status = StepStatus.ERROR, detail = turn.text.trim(), lead = AgentCarry.join(carry, ToolCallParser.stripCalls(p.before)).trim())
+                        .let { carry = ""; retryStep = it; publish(it) }
                     msgs += PromptMessage(PromptMessage.ASSISTANT, answer.trim())
                     msgs += PromptMessage(PromptMessage.USER, AgentPrompt.retryHint(p.error))
                 }
@@ -394,13 +406,14 @@ class AgentLoop(
                     // optional input files that do not exist (generate_image image="notes/x.png"
                     // invented by a small model) are dropped, so the call runs without them.
                     if (tool != null) call = call.copy(args = dropMissingInputs(tool.name, call.args, env))
-                    var step = AgentStep(tool = call.name, args = Args.summary(call.args), lead = ToolCallParser.visibleText(turn.text).trim(),
+                    var step = AgentStep(tool = call.name, args = Args.summary(call.args), lead = AgentCarry.join(carry, ToolCallParser.visibleText(turn.text)).trim(),
                         title = StepTitle.of(call.name, call.args))
                     val stepStart = System.currentTimeMillis()
                     if (tool == null && !unknownRetried) {
                         // first unknown tool — silent retry with a hint, no red card.
                         unknownRetried = true
                         android.util.Log.w(AGENT_TAG, "unknown tool \"${call.name}\" (silent retry); raw=${call.args.toString().take(200)}")
+                        carry = AgentCarry.join(carry, ToolCallParser.visibleText(answer)).trim()
                         msgs += PromptMessage(PromptMessage.ASSISTANT, rawCall(answer, call))
                         msgs += PromptMessage(PromptMessage.USER, AgentPrompt.unknownToolHint(call.name, avail))
                         continue
@@ -509,7 +522,7 @@ class AgentLoop(
         msgs += PromptMessage(PromptMessage.ASSISTANT, p.call.canonical())
         msgs += PromptMessage(PromptMessage.USER, AgentPrompt.STEP_LIMIT)
         fit(msgs, fixed)
-        val turn = model.complete(msgs.toList()) { callbacks.onText(ToolCallParser.visibleText(it)) }
+        val turn = model.complete(msgs.toList()) { callbacks.onText(AgentCarry.join(carry, ToolCallParser.visibleText(it))) }
         val r = ToolCallParser.parse(answerOf(turn.text))
         var text = when (r) {
             is ParsedReply.Final -> turn.text
@@ -519,6 +532,7 @@ class AgentLoop(
         // nothing said at the limit → the newest tool results instead of an empty bubble.
         val said = if (r is ParsedReply.Final) r.text else text
         if (turn.error == null && said.isBlank()) text = closeThink(turn.text.takeIf { r is ParsedReply.Final }.orEmpty()) + fallbackAnswer(steps)
+        if (carry.isNotBlank()) { text = AgentCarry.join(carry, text); carry = "" }
         return AgentOutcome(text, steps.toList(), AgentStop.MAX_STEPS, turn.error,
             transcript = msgs + PromptMessage(PromptMessage.ASSISTANT, answerOf(text).trim()))
     }
@@ -543,6 +557,7 @@ class AgentLoop(
     }
 
     private fun publish(s: AgentStep) {
+        carry = ""
         steps += s; callbacks.onSteps(steps.toList())
         // the turn's text now lives on the step (above its card); the live text starts over.
         callbacks.onText("")
@@ -647,5 +662,25 @@ class AgentLoop(
             val capped = if (body.length > FALLBACK_MAX) body.take(FALLBACK_MAX).trimEnd() + "…" else body
             return FALLBACK_HEAD + "\n\n" + capped
         }
+    }
+}
+
+/** 2.7.4：静默重试时已显示正文的拼接（纯函数，单测）。 */
+object AgentCarry {
+    /**
+     * [carry]（之前回合已流出的正文）放到 [shown] 的正文最前。[shown] 有「无开标签的 …</think>」时放在
+     * 闭标签之后，免得被当成思考；其余情况放在最前（ThinkParser 把 <think> 前的文字算正文）。
+     */
+    fun join(carry: String, shown: String): String {
+        val k = carry.trim()
+        if (k.isEmpty()) return shown
+        if (shown.isBlank()) return k
+        val open = shown.indexOf("<think>", ignoreCase = true)
+        val close = shown.indexOf("</think>", ignoreCase = true)
+        if (close >= 0 && (open < 0 || open > close)) {
+            val at = close + "</think>".length
+            return shown.substring(0, at) + "\n\n" + k + "\n\n" + shown.substring(at).trimStart()
+        }
+        return k + "\n\n" + shown
     }
 }

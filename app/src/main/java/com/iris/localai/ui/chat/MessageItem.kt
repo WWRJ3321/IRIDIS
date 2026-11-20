@@ -18,6 +18,7 @@ import com.iris.localai.ui.icons.IrisIcons
 import com.iris.localai.ui.theme.IrisSpace
 import com.iris.localai.util.streaming.ReplySpeed
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -72,6 +73,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -436,16 +439,22 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),
         ) {
             Icon(IrisIcons.Think, null, tint = c.textSecondary, modifier = Modifier.size(IrisDimens.iconSmall + IrisDimens.space2))
-            Text(
-                when {
-                    thinking -> I18n.s(R.string.chat_234bae)
-                    elapsedMs > 0 -> I18n.s(R.string.chat_78b04b, Format.seconds(elapsedMs))
-                    else -> I18n.s(R.string.chat_6df621)
-                },
-                style = IrisType.label, color = c.textSecondary,
-                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false).pulse(thinking),
-            )
+            val title = when {
+                thinking -> I18n.s(R.string.chat_234bae)
+                elapsedMs > 0 -> I18n.s(R.string.chat_78b04b, Format.seconds(elapsedMs))
+                else -> I18n.s(R.string.chat_6df621)
+            }
+            // 2.7.4：「正在思考」轻微呼吸 + 流光；结束时标题淡入淡出切换，不闪。
+            androidx.compose.animation.Crossfade(
+                targetState = title, animationSpec = if (reduce) snap() else IrisMotion.standard(), label = "thinkTitle",
+                modifier = Modifier.weight(1f, fill = false),
+            ) { t ->
+                Text(
+                    t, style = IrisType.label, color = c.textSecondary,
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.pulse(thinking, min = ThinkMotion.PULSE_MIN, periodMs = ThinkMotion.PULSE_MS).thinkShimmer(thinking && !reduce),
+                )
+            }
             Icon(
                 Icons.Outlined.KeyboardArrowDown, if (expanded) I18n.s(R.string.chat_83cb1e) else I18n.s(R.string.chat_fedcac),
                 tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = arrow },
@@ -461,6 +470,43 @@ private fun ThinkingBlock(text: () -> String, inProgress: () -> Boolean, streami
             }
         }
     }
+}
+
+/** 2.7.4：思考标题动效参数（纯常量，单测）。 */
+object ThinkMotion {
+    /** 呼吸最暗透明度（原 0.4 偏重，改轻）。 */
+    const val PULSE_MIN = 0.6f
+    const val PULSE_MS = 1100
+    /** 流光扫过一次的时长。 */
+    const val SHIMMER_MS = 1600
+    /** 流光位置 [t]∈[0,1) → 高光中心在宽度上的比例（从左外到右外）。 */
+    fun shimmerX(t: Float): Float = -0.3f + 1.6f * t.coerceIn(0f, 1f)
+}
+
+/** 生成中的思考标题：一道淡淡的高光从左扫到右（只画在文字上，不改布局）。 */
+@Composable
+private fun Modifier.thinkShimmer(enabled: Boolean): Modifier {
+    if (!enabled || !com.iris.localai.ui.motion.LocalDecorativeMotion.current) return this
+    val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "thinkShimmer")
+    val t by tr.animateFloat(
+        0f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween<Float>(ThinkMotion.SHIMMER_MS, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "thinkShimmerT",
+    )
+    val hi = Iris.colors.text
+    return this
+        .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val cx = size.width * ThinkMotion.shimmerX(t)
+            val half = size.width * 0.25f
+            drawRect(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    listOf(Color.Transparent, hi.copy(alpha = 0.55f), Color.Transparent), startX = cx - half, endX = cx + half,
+                ),
+                blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop,
+            )
+        }
 }
 
 /**

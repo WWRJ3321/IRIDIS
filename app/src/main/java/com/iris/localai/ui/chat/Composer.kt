@@ -66,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
@@ -132,19 +133,26 @@ data class ComposerState(
 enum class ComposerAction { STOP, SEND, VOICE }
 
 /** which round action shows (pure, unit-tested). */
-/** 2.7.3：按住说话时输入框与「正在听」提示的关系（纯函数，单测覆盖）。 */
+/** 2.7.3/2.7.4：按住说话时输入框与「正在听」提示的关系（纯函数，单测覆盖）。 */
 object DictationOverlay {
-    /** NONE = 没在录；FULL = 输入框为空，提示盖住输入框（原样）；COMPACT = 有文字，输入框可见，提示缩成上方一行。 */
-    enum class Mode { NONE, FULL, COMPACT }
+    /**
+     * NONE = 没在录；FULL = 输入框为空，提示盖住输入框（原样）；
+     * TEXT = 有文字：提示原地淡出（不位移、不占高度），输入框可见且不跳。
+     */
+    enum class Mode { NONE, FULL, TEXT }
     fun of(recording: Boolean, text: String): Mode = when {
         !recording -> Mode.NONE
         text.isEmpty() -> Mode.FULL
-        else -> Mode.COMPACT
+        else -> Mode.TEXT
     }
+    /** 有文字时上滑到取消区：「松开取消」以叠层盖在输入框上（不改布局）。 */
+    fun cancelOverlay(mode: Mode, cancelArmed: Boolean): Boolean = mode == Mode.TEXT && cancelArmed
 }
 
 object ComposerActions {
-    fun of(generating: Boolean, hasText: Boolean, hasAttachments: Boolean = false): ComposerAction = when {
+    /** 2.7.4：[recording]（按住说话 / 识别中）时保持语音样式，识别文字写进输入框也不变成「发送」，松手定稿后才按文字切换。 */
+    fun of(generating: Boolean, hasText: Boolean, hasAttachments: Boolean = false, recording: Boolean = false): ComposerAction = when {
+        recording && !generating -> ComposerAction.VOICE
         // typing while a reply runs sends (a 补充, or 「停/等等…」 interrupts); empty = 停止.
         hasText || hasAttachments -> ComposerAction.SEND
         generating -> ComposerAction.STOP
@@ -340,17 +348,10 @@ fun Composer(
         // finger ended up outside the mic button — which cancelled the hold and cut the dictation off.
         val recording = state.listening || state.transcribing
         var cancelArmed by remember { mutableStateOf(false) }
-        // 2.7.3: with dictated (or existing) text the field stays visible while recording; the indicator
-        // shrinks to one small line above it so the live words are not covered.
+        // 2.7.4: with dictated (or existing) text the field stays visible while recording and the
+        // indicator just fades out in place (an overlay, no height of its own), so the field never jumps.
         val dictMode = DictationOverlay.of(recording, state.text)
         val fieldAlpha by animateFloatAsState(if (dictMode == DictationOverlay.Mode.FULL) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
-        androidx.compose.animation.AnimatedVisibility(
-            visible = dictMode == DictationOverlay.Mode.COMPACT,
-            enter = fadeIn(IrisMotion.enter()),
-            exit = fadeOut(IrisMotion.exit()),
-        ) {
-            ListeningIndicator(state.micLevel, state.transcribing, cancelArmed, compact = true)
-        }
         Box(Modifier.tourTarget(TourId.INPUT)) {
                 BasicTextField(
                     value = state.text,
@@ -384,6 +385,20 @@ fun Composer(
                     ListeningIndicator(state.micLevel, state.transcribing, cancelArmed)
                 }
             }
+            // 有文字时上滑取消：「松开取消」叠在输入框上（不占高度）。
+            androidx.compose.animation.AnimatedVisibility(
+                visible = DictationOverlay.cancelOverlay(dictMode, cancelArmed),
+                enter = fadeIn(IrisMotion.enter()),
+                exit = fadeOut(IrisMotion.exit()),
+                modifier = Modifier.matchParentSize(),
+            ) {
+                Box(
+                    Modifier.fillMaxSize().clip(IrisRadius.mediumShape).background(c.surface.copy(alpha = 0.92f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(ComposerText.RELEASE_TO_CANCEL, style = IrisType.body, color = c.danger)
+                }
+            }
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -412,7 +427,7 @@ fun Composer(
             }
             // one long accent capsule (users: the voice button was too small). Tap = 语音通话,
             // long-press = 语音输入 (slide up to cancel); with text / attachments 发送, while generating 停止.
-            val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty())
+            val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty(), recording = recording)
             Box(Modifier.tourTarget(TourId.VOICE)) { VoiceCapsuleButton(
                 action = action,
                 holding = state.listening,
@@ -434,17 +449,17 @@ fun Composer(
 }
 
 @Composable
-private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed: Boolean = false, compact: Boolean = false) {
+private fun ListeningIndicator(level: Float, transcribing: Boolean, cancelArmed: Boolean = false) {
     val c = Iris.colors
     Row(
-        Modifier.fillMaxWidth().height(if (compact) 24.dp else 44.dp).padding(horizontal = IrisSpace.M),
+        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = IrisSpace.M),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(IrisSpace.S),
     ) {
         LevelBars(if (transcribing) 0f else level)
         Text(
             if (transcribing) ComposerText.TRANSCRIBING else if (cancelArmed) ComposerText.RELEASE_TO_CANCEL else ComposerText.LISTENING,
-            style = if (compact) IrisType.caption else IrisType.body, color = if (cancelArmed) c.danger else c.textSecondary,
+            style = IrisType.body, color = if (cancelArmed) c.danger else c.textSecondary,
             modifier = Modifier.pulse(transcribing),
         )
     }

@@ -14,8 +14,8 @@ class V273Test {
         assertEquals(DictationOverlay.Mode.NONE, DictationOverlay.of(false, "你好"))
         assertEquals(DictationOverlay.Mode.NONE, DictationOverlay.of(false, ""))
         assertEquals(DictationOverlay.Mode.FULL, DictationOverlay.of(true, ""))
-        assertEquals(DictationOverlay.Mode.COMPACT, DictationOverlay.of(true, "今天天气"))
-        assertEquals(DictationOverlay.Mode.COMPACT, DictationOverlay.of(true, " "))
+        assertEquals(DictationOverlay.Mode.TEXT, DictationOverlay.of(true, "今天天气"))
+        assertEquals(DictationOverlay.Mode.TEXT, DictationOverlay.of(true, " "))
     }
 
     private val qwen35moe = "{%- if enable_thinking is defined and enable_thinking is false %}{{- '<' + 'think>\\n\\n</' + 'think>\\n\\n' }}{%- endif %}"
@@ -34,7 +34,7 @@ class V273Test {
     }
 
     @Test fun releaseNotes273() {
-        val r = UpdateNotes.RELEASES.first()
+        val r = UpdateNotes.RELEASES.first { it.version == "2.7.3" }
         assertEquals("2.7.3", r.version)
         assertEquals(3, r.of(UpdateNotes.Tag.FIX).size)
     }

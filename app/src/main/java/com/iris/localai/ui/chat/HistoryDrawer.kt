@@ -52,6 +52,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Api
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.CheckBox
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Forum
@@ -144,6 +146,8 @@ fun HistoryDrawer(
     customOrder: Boolean = false,
     /** 长按拖动松手：显示顺序的全部 id。 */
     onReorder: (List<String>) -> Unit = {},
+    /** 复制该对话全文（TXT）到剪贴板。 */
+    onCopy: (String) -> Unit = {},
 ) {
     val c = Iris.colors
     val reduce = LocalReduceMotion.current
@@ -153,6 +157,8 @@ fun HistoryDrawer(
     // long press → multi-select (user: 一个一个删除太麻烦了).
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deletingMany by remember { mutableStateOf(false) }
+    // 2.7.4：长按不动弹出的单条菜单（哪一条）。
+    var menuFor by remember { mutableStateOf<String?>(null) }
     var showTrash by remember { mutableStateOf(false) }
     val selecting = selected.isNotEmpty()
     // Selections of conversations that no longer exist drop out.
@@ -276,20 +282,25 @@ fun HistoryDrawer(
                                     modifier = if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragDy } else anim,
                                     selecting = selecting, checked = s.id in selected,
                                     dragModifier = if (!canDrag) null else Modifier.pointerInput(s.id) {
+                                        // 2.7.4：长按不动松手 = 弹菜单；长按后移动超过 touchSlop 才进入拖动排序（之前任何抖动都算拖动，菜单打不开）。
+                                        val slop = viewConfiguration.touchSlop
                                         var moved = false
+                                        var tx = 0f; var ty = 0f
                                         detectDragGesturesAfterLongPress(
-                                            onDragStart = { moved = false; dragId = s.id; dragDy = 0f; live = latestSummaries; dragHaptic.perform(FeedbackEvent.LONG_PRESS) },
+                                            onDragStart = { moved = false; tx = 0f; ty = 0f; dragHaptic.perform(FeedbackEvent.LONG_PRESS) },
                                             onDragEnd = {
                                                 val l = live
-                                                dragId = null; dragDy = 0f
-                                                // 长按不动 = 原来的多选；拖过 = 记下新顺序。
-                                                if (!moved) { live = null; selected = selected + s.id } else if (l != null) latestReorder(l.map { it.id })
+                                                dragId = null; dragDy = 0f; live = null
+                                                if (!moved) menuFor = s.id else if (l != null) latestReorder(l.map { it.id })
                                             },
                                             onDragCancel = { dragId = null; dragDy = 0f; live = null },
                                         ) { ch, d ->
                                             ch.consume()
-                                            if (d.y != 0f) moved = true
-                                            dragDy += d.y
+                                            if (!moved) {
+                                                tx += d.x; ty += d.y
+                                                if (!ConversationOrder.isDrag(tx, ty, slop)) return@detectDragGesturesAfterLongPress
+                                                moved = true; dragId = s.id; dragDy = ty; live = latestSummaries
+                                            } else dragDy += d.y
                                             val info = listState.layoutInfo.visibleItemsInfo
                                             val me = info.firstOrNull { it.key == s.id } ?: return@detectDragGesturesAfterLongPress
                                             val mid = me.offset + dragDy + me.size / 2f
@@ -300,6 +311,11 @@ fun HistoryDrawer(
                                             if (next !== cur) { live = next; dragDy -= (target.offset - me.offset) }
                                         }
                                     },
+                                    menuOpen = menuFor == s.id,
+                                    onMenuDismiss = { if (menuFor == s.id) menuFor = null },
+                                    onSelect = { selected = selected + s.id },
+                                    onShare = { f -> onExport(setOf(s.id), f) },
+                                    onCopy = { onCopy(s.id) },
                                     onToggle = { selected = if (s.id in selected) selected - s.id else selected + s.id },
                                     onClick = { onOpen(s.id) },
                                     onRename = { renaming = s },
@@ -520,9 +536,14 @@ private fun ConversationItem(
     onRename: () -> Unit,
     onPin: () -> Unit,
     onDelete: () -> Unit,
+    menuOpen: Boolean = false,
+    onMenuDismiss: () -> Unit = {},
+    onSelect: () -> Unit = {},
+    onShare: (ChatExport.Format) -> Unit = {},
+    onCopy: () -> Unit = {},
 ) {
     val c = Iris.colors
-    var menu by remember { mutableStateOf(false) }
+    var shareMenu by remember { mutableStateOf(false) }
     val bg by animateColorAsState(
         when { selecting && checked -> c.accentContainer; !selecting && selected -> c.surfaceVariant; else -> Color.Transparent },
         IrisMotion.standard(), label = "convBg",
@@ -539,8 +560,8 @@ private fun ConversationItem(
                 .then(dragModifier ?: Modifier)
                 .combinedClickable(
                     onClick = if (selecting) onToggle else onClick,
-                    // long press starts multi-select (rename / pin / delete live in its bar); with drag on, the drag detector does it.
-                    onLongClick = if (dragModifier != null) null else ({ haptic.perform(FeedbackEvent.LONG_PRESS); onToggle() }),
+                    // 2.7.4：长按 = 菜单（置顶/重命名/复制/分享/多选/删除）；有拖动排序时由拖动检测器判定（不动才弹菜单）。
+                    onLongClick = if (dragModifier != null) null else ({ haptic.perform(FeedbackEvent.LONG_PRESS); if (selecting) onToggle() else onSelect() }),
                     onLongClickLabel = I18n.s(R.string.chat_443f46),
                 )
                 .padding(horizontal = IrisDimens.space12),
@@ -570,10 +591,16 @@ private fun ConversationItem(
                 Text(I18n.s(R.string.chat_d679ae), style = IrisType.caption, color = c.accent, maxLines = 1)
             }
         }
-        IrisMenu(menu, { menu = false }) {
-            IrisMenuItem(I18n.s(R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { menu = false; onRename() }
-            IrisMenuItem(if (s.pinned) I18n.s(R.string.chat_84e4fa) else I18n.s(R.string.chat_3d43ff), Icons.Outlined.PushPin) { menu = false; onPin() }
-            IrisMenuItem(I18n.s(R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { menu = false; onDelete() }
+        IrisMenu(menuOpen, onMenuDismiss) {
+            IrisMenuItem(if (s.pinned) I18n.s(R.string.chat_84e4fa) else I18n.s(R.string.chat_3d43ff), Icons.Outlined.PushPin) { onMenuDismiss(); onPin() }
+            IrisMenuItem(I18n.s(R.string.chat_c8ce4b), Icons.Outlined.DriveFileRenameOutline) { onMenuDismiss(); onRename() }
+            IrisMenuItem(I18n.s(R.string.sel27_copy), Icons.Outlined.ContentCopy) { onMenuDismiss(); onCopy() }
+            IrisMenuItem(I18n.s(R.string.ex263_share), Icons.Outlined.Share) { onMenuDismiss(); shareMenu = true }
+            IrisMenuItem(I18n.s(R.string.chat_443f46), Icons.Outlined.CheckBox) { onMenuDismiss(); onSelect() }
+            IrisMenuItem(I18n.s(R.string.chat_2f4aad), Icons.Outlined.DeleteOutline, destructive = true) { onMenuDismiss(); onDelete() }
+        }
+        IrisMenu(shareMenu, { shareMenu = false }) {
+            for (f in ChatExport.Format.entries) IrisMenuItem(ExportText.label(f), null) { shareMenu = false; onShare(f) }
         }
     }
 }

@@ -117,6 +117,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -359,6 +360,7 @@ fun ChatScreen(
                 onSearchMessages = vm::searchMessages,
                 onOpenAt = { cid, mid -> vm.openAt(cid, mid); scope.launch { drawer.close() } },
                 onExport = vm::exportChats,
+                onCopy = vm::copyChat,
             )
         },
     ) {
@@ -489,7 +491,14 @@ fun ChatScreen(
                 } else {
                     val lastAssistantId = messages.lastOrNull { it.role == Role.ASSISTANT }?.id
                     // expand / collapse inside the list snaps to its end while the list moves.
-                    val listScrolling = remember(listState) { derivedStateOf { listState.isScrollInProgress } }
+                    // 2.7.4：只算用户拖动/甩动（贴底自动滚动不再让思考块折叠动画直接跳到终点）。
+                    val listScrolling = remember(listState) { androidx.compose.runtime.mutableStateOf(false) }
+                    val listDragged by listState.interactionSource.collectIsDraggedAsState()
+                    LaunchedEffect(listState) {
+                        androidx.compose.runtime.snapshotFlow { listDragged to listState.isScrollInProgress }.collect { (d, p) ->
+                            listScrolling.value = com.iris.localai.ui.components.FoldMotion.userScrolling(listScrolling.value, d, p)
+                        }
+                    }
                     androidx.compose.runtime.CompositionLocalProvider(LocalListScrolling provides listScrolling) {
                     LazyColumn(
                         state = listState,
