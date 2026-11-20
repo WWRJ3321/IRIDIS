@@ -352,6 +352,47 @@ object HistoryPress {
      * 起拖那一刻为 0（不跳位）；重排 / 分组变平铺导致布局位置变化时自动抵消。
      */
     fun dragOffset(startOffset: Int, fingerDy: Float, currentOffset: Int): Float = startOffset + fingerDy - currentOffset
+
+    /** 可放置的一行（列表里的下标、布局 top、高度，视口坐标；拖动中顺序不变，布局位置只随滚动变）。 */
+    data class Slot(val index: Int, val top: Int, val size: Int)
+
+    /**
+     * 拖动落点：拖动行的视觉中心越过哪些同组行的中心，就排到哪里。[slots] 为同组可见行（含或不含自己均可）。
+     * 返回目标下标；没越过任何行 = [from]（回原位）。
+     */
+    fun dropIndex(from: Int, slots: List<Slot>, dragTop: Float, dragSize: Int): Int {
+        val c = dragTop + dragSize / 2f
+        var to = from
+        for (s in slots) {
+            val mid = s.top + s.size / 2f
+            if (s.index > from && mid < c) to = maxOf(to, s.index)
+            if (s.index < from && mid > c) to = minOf(to, s.index)
+        }
+        return to
+    }
+
+    /** 拖动中其它行的让位位移：往下拖时 (from, to] 上移一个拖动行高；往上拖时 [to, from) 下移；其余 0。 */
+    fun neighborShift(index: Int, from: Int, to: Int, dragSize: Int): Int = when {
+        from < 0 || to < 0 || index == from -> 0
+        to > from && index in (from + 1)..to -> -dragSize
+        to < from && index in to until from -> dragSize
+        else -> 0
+    }
+
+    /** 贴边自动滚动：拖动行进入视口上 / 下边缘 [edge] 内时，按深入程度线性给出本帧滚动量（负 = 向上），最大 [maxStep]；到列表两端由 scrollBy 自然停住。 */
+    fun autoScrollStep(dragTop: Float, dragSize: Int, viewportStart: Int, viewportEnd: Int, edge: Float, maxStep: Float): Float {
+        if (edge <= 0f || viewportEnd <= viewportStart) return 0f
+        val topGap = dragTop - viewportStart
+        val bottomGap = viewportEnd - (dragTop + dragSize)
+        return when {
+            topGap < edge -> -maxStep * ((edge - topGap) / edge).coerceIn(0f, 1f)
+            bottomGap < edge -> maxStep * ((edge - bottomGap) / edge).coerceIn(0f, 1f)
+            else -> 0f
+        }
+    }
+
+    /** 松手归位：settle 进度 p 从 1 到 0；p=1 时就在松手时的视觉位置，p=0 时在新布局位置。 */
+    fun settleOffset(p: Float, dropTop: Float, layoutTop: Int): Float = p * (dropTop - layoutTop)
 }
 
 /** one chat in 回收站. */

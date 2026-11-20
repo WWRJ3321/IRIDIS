@@ -44,7 +44,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.layout.LocalPinnableContainer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -183,14 +195,25 @@ fun HistoryDrawer(
     }
     var exportMenu by remember { mutableStateOf(false) }
     // 长按拖动排序：拖动中的对话、它的位移、拖动中的临时顺序（松手后交给 onReorder）。
+    // 2.7.7（代码先行）：拖动中不改列表顺序，拖动行按手指画（视口坐标的 top），其它行用位移让位；松手才重排 + 归位动画。
     var dragId by remember { mutableStateOf<String?>(null) }
-    var dragDy by remember { mutableFloatStateOf(0f) }
+    var dragTop by remember { mutableFloatStateOf(0f) }      // 拖动行视觉 top（视口坐标）= 起拖布局 top + 手指位移
+    var dragOwnTop by remember { mutableFloatStateOf(0f) }   // 拖动行自己的布局 top（随自动滚动变；滚出视口时自己累计）
+    var dragFrom by remember { mutableIntStateOf(-1) }
+    var dragTo by remember { mutableIntStateOf(-1) }
+    var dragSize by remember { mutableIntStateOf(0) }
+    var settleId by remember { mutableStateOf<String?>(null) }
+    var settleP by remember { mutableFloatStateOf(0f) }
+    var dropTop by remember { mutableFloatStateOf(0f) }
+    val dragScope = rememberCoroutineScope()
+    var settleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var live by remember { mutableStateOf<List<ConversationSummary>?>(null) }
     LaunchedEffect(summaries) { if (dragId == null) live = null }
     val latestSummaries by rememberUpdatedState(summaries)
     val latestReorder by rememberUpdatedState(onReorder)
     val latestOpen by rememberUpdatedState(onOpen)
     val dragHaptic = com.iris.localai.ui.feedback.rememberIrisFeedback()
+    val latestEntriesHolder = remember { arrayOfNulls<List<DrawerEntry>>(1) }
     val shown = live ?: summaries
     val flat = customOrder || live != null
     // Flattened once per data change; the list itself only diffs keys.
@@ -222,31 +245,44 @@ fun HistoryDrawer(
             .navigationBarsPadding()
             .imePadding(),
     ) {
-        androidx.compose.animation.AnimatedContent(
-            targetState = selecting,
-            transitionSpec = { fadeIn(IrisMotion.enter()) togetherWith fadeOut(IrisMotion.standard()) },
+        // 顶栏高度固定（搜索栏一直参与测量），多选栏只是叠在上面淡入淡出：进 / 出多选列表不上下跳；
+        // 因拖动退出多选时多选栏立即消失（不留「已选 0 项」残影）。
+        val selAlpha by animateFloatAsState(
+            if (selecting) 1f else 0f,
+            if (dragId != null) snap() else IrisMotion.standard(),
             label = "drawerTop",
-        ) { sel ->
-            if (sel) {
+        )
+        var shownCount by remember { mutableIntStateOf(0) }
+        if (selecting) shownCount = selected.size
+        Box {
+            Column(
+                Modifier
+                    .graphicsLayer { alpha = 1f - selAlpha }
+                    .then(if (selecting) Modifier.clearAndSetSemantics {} else Modifier),
+            ) {
+                SearchField(query, onChange = { query = it }, placeholder = I18n.s(R.string.chat_92a62b))
+                Spacer(Modifier.height(IrisDimens.space4))
+                NavRow(Icons.Outlined.EditNote, I18n.s(R.string.chat_1ac07a), emphasized = true, onClick = onNewChat)
+            }
+            if (selecting || selAlpha > 0f) {
                 val visibleIds = entries.mapNotNull { (it as? DrawerEntry.Item)?.summary?.id }
                 val all = visibleIds.isNotEmpty() && selected.containsAll(visibleIds)
                 Row(
-                    Modifier.fillMaxWidth().padding(start = IrisDimens.space8, end = IrisDimens.space8, top = IrisDimens.space12).heightIn(min = 44.dp + IrisDimens.space4 + 44.dp),
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = selAlpha }
+                        // 挡住下面的搜索栏（叠层期间点不到它）
+                        .pointerInput(Unit) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false) } }
+                        .padding(horizontal = IrisDimens.space8),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     PressableIcon(Icons.Outlined.Close, I18n.s(R.string.chat_6be271), size = 40.dp, iconSize = IrisDimens.iconMedium, tint = c.text) { selected = emptySet() }
-                    Text(I18n.s(R.string.chat_1e06ae, selected.size), style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
+                    Text(I18n.s(R.string.chat_1e06ae, shownCount), style = IrisType.rowStrong, color = c.text, modifier = Modifier.weight(1f).padding(start = IrisDimens.space4))
                     IrisButton(
                         if (all) I18n.s(R.string.chat_101195) else I18n.s(R.string.chat_66eeac),
                         { selected = if (all) selected - visibleIds.toSet() else selected + visibleIds },
                         style = IrisButtonStyle.Text, compact = true,
                     )
-                }
-            } else {
-                Column {
-                    SearchField(query, onChange = { query = it }, placeholder = I18n.s(R.string.chat_92a62b))
-                    Spacer(Modifier.height(IrisDimens.space4))
-                    NavRow(Icons.Outlined.EditNote, I18n.s(R.string.chat_1ac07a), emphasized = true, onClick = onNewChat)
                 }
             }
         }
@@ -263,32 +299,88 @@ fun HistoryDrawer(
                     modifier = Modifier.padding(top = IrisDimens.space32),
                 )
             } else {
+                latestEntriesHolder[0] = entries
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val edgePx = with(density) { 56.dp.toPx() }
+                val maxSpeedPx = with(density) { 900.dp.toPx() }   // 每秒，贴到最边时
+                // 重算落点（手指移动 / 自动滚动后）：同组可见行的布局中心 vs 拖动行视觉中心。
+                fun retarget(id: String) {
+                    val es = latestEntriesHolder[0] ?: return
+                    val info = listState.layoutInfo.visibleItemsInfo
+                    info.firstOrNull { it.key == id }?.let { dragOwnTop = it.offset.toFloat() }
+                    val pinned = (es.getOrNull(dragFrom) as? DrawerEntry.Item)?.summary?.pinned ?: return
+                    val slots = info.filter { it.key != id && (es.getOrNull(it.index) as? DrawerEntry.Item)?.summary?.pinned == pinned }
+                        .map { HistoryPress.Slot(it.index, it.offset, it.size) }
+                    dragTo = HistoryPress.dropIndex(dragFrom, slots, dragTop, dragSize)
+                }
+                fun autoScroll(id: String) = dragScope.launch {
+                    var last = 0L
+                    while (dragId == id) {
+                        val now = withFrameNanos { it }
+                        val dt = if (last == 0L) 0f else ((now - last) / 1e9f).coerceAtMost(0.05f)
+                        last = now
+                        if (dt <= 0f) continue
+                        val li = listState.layoutInfo
+                        val step = HistoryPress.autoScrollStep(dragTop, dragSize, 0, li.viewportSize.height, edgePx, maxSpeedPx * dt)
+                        if (step == 0f) continue
+                        val used = listState.scrollBy(step)   // 到列表两端 used = 0，自然停住
+                        if (used == 0f || dragId != id) continue
+                        // 拖动行按手指画（dragTop 不变 = 钉在手指下）；它自己的布局位置随滚动移动，滚出视口时自己累计
+                        if (listState.layoutInfo.visibleItemsInfo.none { it.key == id }) dragOwnTop -= used
+                        retarget(id)
+                    }
+                }
                 LazyColumn(state = listState, contentPadding = PaddingValues(bottom = IrisDimens.space8)) {
-                    items(
+                    itemsIndexed(
                         entries,
-                        key = { it.key },
-                        contentType = { when (it) { is DrawerEntry.Header -> 0; is DrawerEntry.Item -> 1; is DrawerEntry.Hit -> 2 } },
-                    ) { e ->
-                        val anim = if (reduce) Modifier else Modifier.animateItem(
+                        key = { _, it -> it.key },
+                        contentType = { _, it -> when (it) { is DrawerEntry.Header -> 0; is DrawerEntry.Item -> 1; is DrawerEntry.Hit -> 2 } },
+                    ) { index, e ->
+                        // 拖动 / 归位期间不做 placement 动画（位移由下面的 shift 和归位动画负责，否则松手时会从旧位置再滑一次）
+                        val anim = if (reduce || dragId != null || settleId != null) Modifier else Modifier.animateItem(
                             fadeInSpec = IrisMotion.standard(),
                             placementSpec = IrisMotion.Gentle.offset(),
                             fadeOutSpec = IrisMotion.standard(),
                         )
+                        // 其它行给拖动行让位：拖动中平滑移动；松手（列表同一帧重排）时直接归零，不跳。
+                        val itemKey = (e as? DrawerEntry.Item)?.summary?.id
+                        val shiftTarget = if (dragId != null && itemKey != dragId) HistoryPress.neighborShift(index, dragFrom, dragTo, dragSize).toFloat() else 0f
+                        val shift by animateFloatAsState(
+                            shiftTarget,
+                            if (dragId == null || reduce) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+                            label = "dragShift",
+                        )
+                        val shiftMod = Modifier.graphicsLayer { translationY = shift }
                         when (e) {
                             is DrawerEntry.Header -> Text(
                                 e.label, style = IrisType.caption.copy(fontWeight = IrisType.labelSmall.fontWeight), color = c.textTertiary,
-                                modifier = anim.padding(start = IrisDimens.pageGutter, top = IrisDimens.space16, bottom = IrisDimens.space4),
+                                modifier = anim.then(shiftMod).padding(start = IrisDimens.pageGutter, top = IrisDimens.space16, bottom = IrisDimens.space4),
                             )
                             is DrawerEntry.Hit -> if (!selecting) SearchHitRow(e.hit, anim) { onOpenAt(e.hit.conversationId, e.hit.messageId) }
                             is DrawerEntry.Item -> {
                                 val s = e.summary
                                 val dragging = dragId == s.id
+                                val settling = !dragging && settleId == s.id
                                 val canDrag = query.isBlank() && (!selecting || holdId == s.id)
                                 val press = remember(s.id) { MutableInteractionSource() }
                                 val coordsHolder = remember(s.id) { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
+                                val pinnable = LocalPinnableContainer.current
+                                val lift by animateFloatAsState(if (dragging) 1f else 0f, if (reduce) snap() else IrisMotion.standard(), label = "dragLift")
                                 ConversationItem(
                                     s, selected = s.id == currentId || dragging, running = s.id == runningId,
-                                    modifier = if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragDy } else anim,
+                                    lift = lift,
+                                    modifier = anim
+                                        .zIndex(if (dragging || settling) 1f else 0f)
+                                        .graphicsLayer {
+                                            translationY = when {
+                                                dragging -> dragTop - dragOwnTop
+                                                settling -> {
+                                                    val top = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }?.offset
+                                                    if (top == null) 0f else HistoryPress.settleOffset(settleP, dropTop, top)
+                                                }
+                                                else -> shift
+                                            }
+                                        },
                                     selecting = selecting, checked = s.id in selected,
                                     pressSource = press,
                                     onLongPressSelect = { selected = HistoryPress.selection(HistoryPress.Outcome.SELECT, selected, s.id) },
@@ -301,13 +393,33 @@ fun HistoryDrawer(
                                         awaitEachGesture {
                                             val down = awaitFirstDown(requireUnconsumed = false)
                                             val pid = down.id
-                                            // 位移按屏幕坐标算：按住期间列表重排 / 条目被挤动时本地坐标会变，不能算手指移动。
+                                            // 手指位置换算到屏幕坐标：本行在动（被挤 / 被画在别处）时本地坐标会变，不能算手指移动。
                                             fun root(o: androidx.compose.ui.geometry.Offset) =
                                                 coordsHolder[0]?.takeIf { it.isAttached }?.localToRoot(o) ?: o
                                             val downRoot = root(down.position)
                                             val p = PressInteraction.Press(down.position)
                                             press.tryEmit(p)
                                             var dragging = false
+                                            var pin: androidx.compose.ui.layout.PinnableContainer.PinnedHandle? = null
+                                            // 松手 / 取消：commit=true 才重排。拖动行从松手时的视觉位置归位到新布局位置。
+                                            fun finish(commit: Boolean) {
+                                                if (!dragging) return
+                                                dragging = false
+                                                val es = latestEntriesHolder[0].orEmpty()
+                                                val base = latestSummaries
+                                                val targetId = (es.getOrNull(dragTo) as? DrawerEntry.Item)?.summary?.id
+                                                val next = if (commit && dragTo != dragFrom && targetId != null) ConversationOrder.move(base, s.id, targetId) else base
+                                                dropTop = dragTop
+                                                settleP = if (reduce) 0f else 1f
+                                                settleId = s.id
+                                                dragId = null; dragFrom = -1; dragTo = -1
+                                                if (next !== base) { live = next; latestReorder(next.map { it.id }) }
+                                                settleJob?.cancel()
+                                                if (!reduce) settleJob = dragScope.launch {
+                                                    animate(1f, 0f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)) { v, _ -> settleP = v }
+                                                    if (settleId == s.id) settleId = null
+                                                } else settleId = null
+                                            }
                                             try {
                                                 // 1) 长按超时前：短按 / 放弃
                                                 val early = withTimeoutOrNull(lpt) {
@@ -330,7 +442,7 @@ fun HistoryDrawer(
                                                     else press.tryEmit(PressInteraction.Cancel(p))
                                                     return@awaitEachGesture
                                                 }
-                                                // 2) 长按到了（没动）：震动，按住时就进入多选并选中该条（2.7.6，不再弹菜单）
+                                                // 2) 长按到了（没动）：震动，按住时就进入多选并选中该条
                                                 dragHaptic.perform(FeedbackEvent.LONG_PRESS)
                                                 holdId = s.id
                                                 selected = HistoryPress.selection(HistoryPress.onLongPress(), emptySet(), s.id)
@@ -349,41 +461,35 @@ fun HistoryDrawer(
                                                     // 原地松手（或指针被系统取消）：留在多选
                                                     press.tryEmit(PressInteraction.Release(p)); return@awaitEachGesture
                                                 }
-                                                // 3) 移动超过 touchSlop：退出多选，拖动排序（起拖不跳位，手指位移按屏幕坐标算）
+                                                // 3) 移动超过 touchSlop：退出多选（顶栏 / 底栏 / 单选圈同一帧切换，行高不变），拖动排序
                                                 press.tryEmit(PressInteraction.Cancel(p))
+                                                val me = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }
+                                                val coords = coordsHolder[0]
                                                 selected = HistoryPress.selection(HistoryPress.Outcome.DRAG, selected, s.id)
                                                 holdId = null
-                                                val coords = coordsHolder[0]
-                                                val startOffset = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == s.id }?.offset
-                                                if (coords == null || !coords.isAttached || startOffset == null) return@awaitEachGesture
+                                                if (coords == null || !coords.isAttached || me == null) return@awaitEachGesture
                                                 val startY = coords.localToRoot(last.position).y
+                                                val startTop = me.offset.toFloat()
+                                                settleJob?.cancel(); settleId = null
+                                                dragTop = startTop; dragOwnTop = startTop
+                                                dragFrom = me.index; dragTo = me.index; dragSize = me.size
                                                 dragging = true
-                                                dragId = s.id; dragDy = 0f; live = latestSummaries
+                                                dragId = s.id
+                                                // 自动滚动会把本行的布局位置滚出视口：钉住，别让 LazyColumn 回收它（回收 = 手势中断）
+                                                pin = pinnable?.pin()
+                                                autoScroll(s.id)
                                                 while (true) {
                                                     val ev = awaitPointerEvent()
                                                     val ch = ev.changes.firstOrNull { it.id == pid } ?: break
                                                     ch.consume()
-                                                    if (!ch.pressed) {
-                                                        val l = live
-                                                        dragging = false
-                                                        dragId = null; dragDy = 0f; live = null
-                                                        if (l != null) latestReorder(l.map { it.id })
-                                                        break
-                                                    }
+                                                    if (!ch.pressed) { finish(commit = true); break }
                                                     if (!coords.isAttached) break
-                                                    val fingerDy = coords.localToRoot(ch.position).y - startY
-                                                    val info = listState.layoutInfo.visibleItemsInfo
-                                                    val me = info.firstOrNull { it.key == s.id } ?: continue
-                                                    dragDy = HistoryPress.dragOffset(startOffset, fingerDy, me.offset)
-                                                    val mid = me.offset + dragDy + me.size / 2f
-                                                    val target = info.firstOrNull { it.key != s.id && it.contentType == 1 && mid >= it.offset && mid <= it.offset + it.size }
-                                                        ?: continue
-                                                    val cur = live ?: continue
-                                                    val next = ConversationOrder.move(cur, s.id, target.key as String)
-                                                    if (next !== cur) { live = next; dragDy -= (target.offset - me.offset) }
+                                                    dragTop = startTop + (coords.localToRoot(ch.position).y - startY)
+                                                    retarget(s.id)
                                                 }
                                             } finally {
-                                                if (dragging) { dragId = null; dragDy = 0f; live = null }
+                                                finish(commit = false)
+                                                pin?.release()
                                                 if (holdId == s.id) holdId = null
                                             }
                                         }
@@ -588,6 +694,8 @@ private fun ConversationItem(
     selected: Boolean,
     modifier: Modifier = Modifier,
     running: Boolean = false,
+    /** 拖动中 0→1：浮起（阴影 + 微放大 + 不透明底，盖住邻行文字）。 */
+    lift: Float = 0f,
     selecting: Boolean = false,
     checked: Boolean = false,
     /** 统一手势（短按 / 长按进多选 / 之后拖动排序）；有它时不再挂 combinedClickable。 */
@@ -610,6 +718,18 @@ private fun ConversationItem(
                 .fillMaxWidth()
                 .padding(horizontal = IrisDimens.space8, vertical = IrisSpace.XS)
                 .heightIn(min = 44.dp)
+                .then(
+                    if (lift > 0f) Modifier
+                        .graphicsLayer {
+                            shadowElevation = 8.dp.toPx() * lift
+                            shape = IrisRadius.mediumShape
+                            clip = false
+                            val sc = 1f + 0.02f * lift
+                            scaleX = sc; scaleY = sc
+                        }
+                        .background(c.surface, IrisRadius.mediumShape)
+                    else Modifier,
+                )
                 .clip(IrisRadius.mediumShape)
                 .background(bg)
                 .then(
