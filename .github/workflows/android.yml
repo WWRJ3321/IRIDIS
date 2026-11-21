@@ -20,5 +20,5 @@ jobs:
           curl -fL --retry 3 --retry-delay 10 -o /tmp/smol.gguf https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf
           sh scripts/host-test.sh /tmp/smol.gguf
       - run: ./gradlew --no-daemon testFullDebugUnitTest lintFullDebug assembleFullDebug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: apk, path: app/build/outputs/apk/full/debug/*.apk }
