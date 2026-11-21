@@ -23,7 +23,7 @@ jobs:
           apt-get update
           apt-get install -y build-essential git python3 ninja-build cmake
           git config --global --add safe.directory '*'
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: |
           echo "NDK=$ANDROID_NDK_ROOT"; echo "HEXAGON_SDK_ROOT=$HEXAGON_SDK_ROOT"; echo "HEXAGON_TOOLS_ROOT=${HEXAGON_TOOLS_ROOT:-}"
