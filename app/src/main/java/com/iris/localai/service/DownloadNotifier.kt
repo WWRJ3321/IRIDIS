@@ -74,6 +74,20 @@ object DownloadNotifier {
     @Volatile var running: List<DlItem> = emptyList(); private set
     @Volatile private var appCtx: Context? = null
 
+    private const val TASK_ID = "download"
+
+    private fun syncTask(active: List<DlItem>) {
+        val t = com.iris.localai.task.TaskProgress
+        if (active.isEmpty()) {
+            if (t.running(TASK_ID)) t.finish(TASK_ID, com.iris.localai.task.TaskProgress.Phase.DONE)
+            return
+        }
+        val title = DownloadText.title(active)
+        val pct = DownloadText.overall(active)
+        if (!t.running(TASK_ID)) t.begin(TASK_ID, com.iris.localai.task.TaskProgress.Kind.DOWNLOAD, title, total = 100)
+        t.progress(TASK_ID, pct ?: 0, if (pct == null) 0 else 100)
+    }
+
     fun start(app: Context, c: AppContainer) {
         appCtx = app
         app.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -110,6 +124,8 @@ object DownloadNotifier {
                     }
                 }
                 prev = now
+                // 3.0：下载也挂到统一任务进度（应用内灵动岛读它）。
+                runCatching { syncTask(active) }
                 if (active.isNotEmpty()) {
                     if (!serviceOn) serviceOn = DownloadService.start(app)
                     app.getSystemService(NotificationManager::class.java).notify(ID_PROGRESS, progress(app, active))

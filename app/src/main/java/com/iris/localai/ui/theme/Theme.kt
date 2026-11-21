@@ -138,7 +138,9 @@ val LocalIrisColors = staticCompositionLocalOf { IrisLightColors }
 
 /** 界面风格: 柔光 (default; Beta2: solid neutral, one accent) or 经典 (≤ 2.4.6 look). */
 enum class IrisStyle(val id: String) {
-    SOFT("soft"), CLASSIC("classic");
+    SOFT("soft"), CLASSIC("classic"),
+    /** 3.0 液态玻璃：经典的毛玻璃 + 液态边缘高光与折射光带（只画在面板自身轮廓内，不采样外部像素）。 */
+    LIQUID("liquid");
     companion object {
         fun of(id: String?): IrisStyle = entries.firstOrNull { it.id == id } ?: SOFT
         fun isValid(id: String?): Boolean = entries.any { it.id == id }

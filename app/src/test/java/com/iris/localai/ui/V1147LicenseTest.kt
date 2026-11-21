@@ -20,7 +20,7 @@ class V1147LicenseTest {
         assertTrue(about.contains("NPU 运行库"))
         assertTrue(about.contains("对话内容不会上传"))
         assertFalse(screens.contains("对话内容不会离开你的手机"))
-        assertTrue(screens.substringAfter("fun AboutPage(").contains("ABOUT_PRIVACY"))
+        assertTrue(screens.substringAfter("fun AboutPage(").contains("AboutHeroCard()")) // 3.0：关于页改为卡片，隐私说明不再列在页面上
     }
 
 

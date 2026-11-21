@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/w30_widget_bg" android:orientation="horizontal" android:padding="6dp">
+    <LinearLayout android:id="@+id/w30_b1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_margin="4dp" android:background="@drawable/w30_widget_btn" android:gravity="center" android:orientation="vertical">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/w30_ic_chat" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:text="@string/v30_w_chat" android:textColor="#FF121318" android:textSize="12sp" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w30_b2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_margin="4dp" android:background="@drawable/w30_widget_btn" android:gravity="center" android:orientation="vertical">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/w30_ic_mic" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:text="@string/v30_w_voice" android:textColor="#FF121318" android:textSize="12sp" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w30_b3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_margin="4dp" android:background="@drawable/w30_widget_btn" android:gravity="center" android:orientation="vertical">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/w30_ic_image" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:text="@string/v30_w_image" android:textColor="#FF121318" android:textSize="12sp" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w30_b4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:layout_margin="4dp" android:background="@drawable/w30_widget_btn" android:gravity="center" android:orientation="vertical">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/w30_ic_tool" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:text="@string/v30_toolbox" android:textColor="#FF121318" android:textSize="12sp" android:maxLines="1" />
+    </LinearLayout>
+</LinearLayout>

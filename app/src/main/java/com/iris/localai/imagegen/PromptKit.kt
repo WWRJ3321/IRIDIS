@@ -163,16 +163,9 @@ object PromptExpand {
     /** 标签风格（Danbooru）模型。 */
     fun tagStyle(m: ImageModel): Boolean = m.tagStyle
 
-    fun system(tagStyle: Boolean): String = if (tagStyle)
-        "You turn a short image idea into ONE prompt of comma-separated Danbooru-style tags for an anime image model. " +
-            "Order: quality (masterpiece, best quality), count (1girl/1boy/no humans), character, appearance, clothing, pose, " +
-            "background, lighting, composition. 15-35 tags, English, lowercase, spaces not underscores. " +
-            "Keep everything the user asked for. Output only the tags, no explanation."
-    else
-        "You turn a short image idea into ONE detailed English prompt for a text-to-image model. " +
-            "Write 1-3 sentences: subject and action, appearance, setting, lighting, camera/composition, style, mood. " +
-            "Keep everything the user asked for, add only fitting details, no text in the image unless asked. " +
-            "Output only the prompt, no explanation."
+    fun system(tagStyle: Boolean): String = com.iris.localai.prompts.Prompts.get(
+        if (tagStyle) com.iris.localai.prompts.PromptKey.IMAGE_EXPAND_TAGS else com.iris.localai.prompts.PromptKey.IMAGE_EXPAND,
+    )
 
     /** 模型输出 → 干净的提示词；不可用（空、太短、像拒答）返回 null。 */
     fun clean(raw: String, original: String): String? {

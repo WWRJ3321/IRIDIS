@@ -417,6 +417,20 @@ data class AppSettings(
     // ---- 2.2 文件 ----
     /** 「文件」 page view: "LIST" (default) or "CARDS" (「卡片」; a stored "ARCHIVE" reads as LIST) — [com.iris.localai.files.FileViewStyle]. */
     val fileViewStyle: String = "LIST",
+
+    // ---- 3.0 ----
+    /** 语音聊天「按住说话」：true = 按住才收音；false = 免提（自动断句，默认）。 */
+    val voicePushToTalk: Boolean = false,
+    /** 应用内灵动岛：长任务（生图、下载…）在顶部显示进度胶囊。 */
+    val dynamicIsland: Boolean = true,
+    /** 液态玻璃：底栏、浮层等玻璃面加折射高光（Android 13+，跟随视觉效果档位）。 */
+    val liquidGlass: Boolean = true,
+    /** 生成界面闲言碎语：等待时轮换的小句子。 */
+    val idleQuips: Boolean = true,
+    /** 自定义提示词：键 = [com.iris.localai.prompts.PromptKey.id]，值 = 用户改写的文本（空 = 用默认）。 */
+    val promptOverrides: Map<String, String> = emptyMap(),
+    /** 彩蛋：已发现的彩蛋 id。 */
+    val eggsFound: Set<String> = emptySet(),
 )
 
 /** How a conversation's history is fitted into the model's context window. */

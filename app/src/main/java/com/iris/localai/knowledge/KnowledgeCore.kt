@@ -425,7 +425,7 @@ object KbPrompt {
         if (hits.isEmpty()) return ""
         val per = maxChars / hits.size
         return buildString {
-            append("<knowledge>\n参考资料（用户的知识库）：用得上就引用并标 [n]，用不上就不提。\n")
+            append("<knowledge>\n").append(com.iris.localai.prompts.Prompts.get(com.iris.localai.prompts.PromptKey.KB_INJECT)).append('\n')
             hits.forEachIndexed { i, h -> append("[${i + 1}] ").append(KbSource.title(h)).append("：").append(clip(h.text, per)).append('\n') }
             append("</knowledge>")
         }

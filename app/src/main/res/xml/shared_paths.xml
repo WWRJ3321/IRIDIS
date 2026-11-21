@@ -4,4 +4,6 @@
 <paths>
     <cache-path name="shared" path="shared/" />
     <external-path name="iridis" path="Download/IRIDIS/" />
+    <!-- 3.0 工具箱 · 找文件：打开用户点选的那一个文件（只读授权）。 -->
+    <external-path name="found" path="." />
 </paths>

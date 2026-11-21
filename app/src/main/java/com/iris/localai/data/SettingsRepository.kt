@@ -30,6 +30,8 @@ class SettingsRepository(context: Context) {
 
     val current: AppSettings get() = _settings.value
 
+    init { com.iris.localai.prompts.Prompts.overrides = _settings.value.promptOverrides }
+
     /**
      * Atomic read-modify-write. The engine (background threads) and the UI both update settings;
      * without the lock two concurrent updates could drop one another's change, and the older
@@ -40,6 +42,7 @@ class SettingsRepository(context: Context) {
             val next = block(_settings.value).sanitized()
             if (next == _settings.value) return
             _settings.value = next
+            com.iris.localai.prompts.Prompts.overrides = next.promptOverrides
             prefs.edit().putString(KEY, json.encodeToString(AppSettings.serializer(), next)).apply()
         }
     }
@@ -129,6 +132,7 @@ fun AppSettings.sanitized(): AppSettings {
         cloneFidelity = cloneFidelity.coerceIn(0, 1),
         bargeInSensitivity = bargeInSensitivity.coerceIn(0, 2),
         chatTextScale = ChatTextScale.sanitize(chatTextScale),
+        promptOverrides = promptOverrides.filter { (k, v) -> k.isNotBlank() && v.isNotBlank() }.mapValues { it.value.take(8000) },
         cloneStepsFast = cloneStepsFast.coerceIn(2, 8),
         cloneStepsFine = cloneStepsFine.coerceIn(6, 32),
         // three tiers (「全部」 removed); a stale 3 lands on HIGH (= 2), see migrated().

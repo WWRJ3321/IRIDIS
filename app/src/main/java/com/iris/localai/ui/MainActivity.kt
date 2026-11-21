@@ -122,7 +122,9 @@ private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERAT
     /** 模型与加载 › 看懂模型。 */
     MODEL_GUIDE,
     /** 关于 › 许可证 and 单个许可证全文 as real routes (the file rides in LicenseNav). */
-    LICENSES, LICENSE_TEXT }
+    LICENSES, LICENSE_TEXT,
+    /** 3.0：AI 工具箱、自定义提示词。 */
+    TOOLBOX, PROMPTS }
 
 class MainActivity : ComponentActivity() {
 
@@ -156,6 +158,7 @@ class MainActivity : ComponentActivity() {
         }
         val crash = if (savedInstanceState == null) CrashReporter.takeReport(this, container.settings.current.crashReportPopup) else null
         if (savedInstanceState == null) handleIntent(intent)
+        if (savedInstanceState == null) com.iris.localai.widget.QuickLaunch.publishShortcuts(this) // 3.0
         setContent {
             val settings by container.settings.settings.collectAsStateWithLifecycle()
             var crashText by rememberSaveable { mutableStateOf(crash) }
@@ -219,6 +222,8 @@ class MainActivity : ComponentActivity() {
 
     /** A "回复已完成 / 正在生成" notification opens its conversation. */
     private fun handleIntent(intent: android.content.Intent?) {
+        // 3.0：桌面快捷方式 / 小组件 / 悬浮窗
+        intent?.getStringExtra(QuickNav.EXTRA)?.let { a -> intent.removeExtra(QuickNav.EXTRA); QuickNav.open(a); return }
         if (intent?.getStringExtra(com.iris.localai.service.ImageGenJobService.EXTRA_OPEN) == com.iris.localai.service.ImageGenJobService.OPEN_IMAGEGEN) {
             intent.removeExtra(com.iris.localai.service.ImageGenJobService.EXTRA_OPEN)
             com.iris.localai.service.ImageGenMonitor.requestOpen()
@@ -269,6 +274,21 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
     val openImageGen by com.iris.localai.service.ImageGenMonitor.openRequests.collectAsStateWithLifecycle()
     LaunchedEffect(openImageGen) { if (openImageGen) { com.iris.localai.service.ImageGenMonitor.consumeOpen(); push(Route.IMAGEGEN) } }
     val reduce = LocalReduceMotion.current
+    // 3.0：快捷方式 / 小组件 / 悬浮窗 / 灵动岛 的打开请求
+    val quick by QuickNav.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(quick) {
+        val q = quick ?: return@LaunchedEffect
+        QuickNav.consume()
+        when (q) {
+            QuickNav.NEW_CHAT -> { chat.newChat(); stack = listOf(Route.CHAT.name) }
+            QuickNav.VOICE -> stack = listOf(Route.CHAT.name)
+            QuickNav.IMAGEGEN -> push(Route.IMAGEGEN)
+            QuickNav.TOOLBOX, QuickNav.FLOATING -> push(Route.TOOLBOX)
+            QuickNav.GUIDE -> push(Route.MODEL_GUIDE)
+            QuickNav.DOWNLOADS -> push(Route.DOWNLOAD_MODELS)
+        }
+    }
+    val appSettings by chat.settings.collectAsStateWithLifecycle()
 
     // Predictive back: the page shrinks toward the swipe edge while the gesture is in progress,
     // then the regular backward transition finishes the job. Only graphicsLayer work.
@@ -333,6 +353,22 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
             }
         }
     }
+    // 3.0 应用内灵动岛：所在页面自己显示进度的任务种类不上岛
+    val top = stack.last()
+    com.iris.localai.ui.island.DynamicIsland(
+        enabled = appSettings.dynamicIsland && !tour.active,
+        hidden = buildSet {
+            if (top == Route.IMAGEGEN.name) add(com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN)
+            if (top == Route.DOWNLOAD_MODELS.name) add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD)
+        },
+        onOpen = { t ->
+            when (t.kind) {
+                com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN -> push(Route.IMAGEGEN)
+                com.iris.localai.task.TaskProgress.Kind.DOWNLOAD -> push(Route.DOWNLOAD_MODELS)
+                else -> {}
+            }
+        },
+    )
     if (tour.active) TourOverlay(tour, navigate = ::tourNavigate)
     }
     }
@@ -364,6 +400,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onOpenFiles = { push(Route.APP_FILES) }, // sidebar 文件 = the whole Download/IRIDIS
             onOpenImageGen = { push(Route.IMAGEGEN) },
             onOpenCharacters = { push(Route.CHARACTERS) },
+            onOpenToolbox = { push(Route.TOOLBOX) },
         )
         // 角色卡: tap a card = new chat with it, back on the chat screen
         Route.CHARACTERS -> CharactersPage(onBack = pop, onStartChat = { id -> chat.startCharacterChat(id); home() })
@@ -408,6 +445,8 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
             onBack = pop, onOpenBrowser = { push(Route.BROWSER) }, onOpenFiles = { push(Route.FILES) }, onOpenMcp = { push(Route.MCP) },
         )
         Route.MCP -> McpPage(onBack = pop)
+        Route.TOOLBOX -> com.iris.localai.ui.toolbox.ToolboxPage(chat, onBack = pop, onOpenImageGen = { push(Route.IMAGEGEN) })
+        Route.PROMPTS -> com.iris.localai.ui.prompts.PromptsPage(settingsVm, onBack = pop)
         Route.FILES -> FilesPage(onBack = pop)
         Route.BROWSER -> BrowserPage(onBack = pop)
         Route.APP_FILES -> AppFilesPage(onBack = pop)
@@ -440,6 +479,7 @@ private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.DEVELOPER -> Route.DEVELOPER
     SettingsPage.DEV_CONTEXT -> Route.DEV_CONTEXT
     SettingsPage.DOWNLOAD_SOURCE -> Route.DOWNLOAD_SOURCE
+    SettingsPage.PROMPTS -> Route.PROMPTS
 }
 
 /** System "remove animations" switch, re-read whenever the app comes back to the foreground. */

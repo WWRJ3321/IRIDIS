@@ -100,8 +100,8 @@ fun WelcomeScreen(onStart: () -> Unit) {
                 Spacer(Modifier.height(IrisDimens.space20))
                 // D9 wordmark: letters follow the theme ink, the three I's keep the brand gradient.
                 Box(Modifier.height(IrisDimens.space32).entrance(enter[1]), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(IrisDimens.space32).width(165.dp))
-                    Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(IrisDimens.space32).width(165.dp))
+                    Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(IrisDimens.space32).width(184.dp))
+                    Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(IrisDimens.space32).width(184.dp))
                 }
                 Spacer(Modifier.height(IrisDimens.space12))
                 Text(

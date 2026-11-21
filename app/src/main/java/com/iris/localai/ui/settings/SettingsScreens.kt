@@ -1,5 +1,10 @@
 package com.iris.localai.ui.settings
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.aspectRatio
 import com.iris.localai.I18n
 import com.iris.localai.IrisApp
 import com.iris.localai.agent.tools.ScreenTool
@@ -87,6 +92,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
@@ -141,7 +147,7 @@ import kotlin.math.roundToInt
  * with rarely used items folded under 「高级」. No storage key or default value changed.
  */
 /** DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
-enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT, DOWNLOAD_SOURCE }
+enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT, DOWNLOAD_SOURCE, PROMPTS }
 
 private val THEME_OPTIONS get() = listOf(ThemeMode.SYSTEM to I18n.s(R.string.settings_71bbc7), ThemeMode.LIGHT to I18n.s(R.string.settings_48d0a0), ThemeMode.DARK to I18n.s(R.string.settings_41e8e8))
 
@@ -243,6 +249,9 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
                 Divider()
                 // 「上下文与记忆」 + 「记忆」 → one entry 「记忆与上下文」 (one page, context sections first).
                 NavItem(ContextMemoryText.NAV, ContextMemoryText.NAV_SUB, IrisIcons.Memory) { onOpen(SettingsPage.MEMORY) }
+                Divider()
+                // 3.0 可自定全部提示词
+                NavItem(I18n.s(R.string.v30_prompts), I18n.s(R.string.v30_prompts_nav), IrisIcons.Prompt) { onOpen(SettingsPage.PROMPTS) }
             }
 
             SectionTitle(I18n.s(R.string.settings_6f492c))
@@ -672,29 +681,8 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}, onOpenLicenses: 
     }
     SubpageScaffold(I18n.s(R.string.settings_81d9f5), onBack) {
         ScrollBody {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space16),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    Modifier.size(72.dp).background(c.surfaceElevated, IrisRadius.appIconShape),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(painterResource(R.drawable.ic_iris_mark), null, tint = c.text, modifier = Modifier.size(34.dp)) }
-                Spacer(Modifier.height(IrisDimens.space16))
-                // D9 wordmark — letters follow the theme ink, the three I's keep the brand gradient.
-                Box(Modifier.height(26.dp), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(26.dp).width(134.dp))
-                    androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(26.dp).width(134.dp))
-                }
-                Spacer(Modifier.height(IrisDimens.space6))
-                // version a size up (was caption, too small under the wordmark).
-                Text(I18n.s(R.string.settings_45020f, BuildConfig.VERSION_NAME), style = IrisType.secondary, color = c.textSecondary)
-                Spacer(Modifier.height(IrisDimens.space16))
-                Text(
-                    ABOUT_PRIVACY,
-                    style = IrisType.secondary, color = c.textSecondary, textAlign = TextAlign.Center,
-                )
-            }
+            // 3.0：关于卡片——背景是放大并模糊的标志，上层居中字标、下面版本号（参考 ColorOS / HyperOS 关于本机）。
+            AboutHeroCard()
             SectionTitle(I18n.s(R.string.models_20a284))
             SettingsGroup {
                 SettingsRow(I18n.s(R.string.settings_50322d), subtitle = I18n.s(R.string.settings_521717))
@@ -722,6 +710,82 @@ fun AboutPage(onBack: () -> Unit, onDeveloper: () -> Unit = {}, onOpenLicenses: 
 
 // one short paragraph (what stays on the phone, the three cases that go online).
 internal val ABOUT_PRIVACY: String get() = I18n.s(R.string.about262_privacy)
+
+@Composable
+private fun AboutHeroCard() {
+    val c = Iris.colors
+    val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val shape = com.iris.localai.ui.theme.smoothShape(28.dp)
+    // 3.0 彩蛋：连点卡片 7 下，标志转一圈、光斑变色，并记下「找到的彩蛋」
+    var taps by remember { mutableStateOf(0) }
+    var lastTap by remember { mutableStateOf(0L) }
+    val spin = remember { androidx.compose.animation.core.Animatable(0f) }
+    val hue = remember { androidx.compose.animation.core.Animatable(0f) }
+    var egg by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val feedback = com.iris.localai.ui.feedback.rememberIrisFeedback()
+    Box(
+        Modifier
+            .padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)
+            .fillMaxWidth()
+            .aspectRatio(1.18f)
+            .clip(shape)
+            .background(c.surface)
+            .then(Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {
+                val now = System.currentTimeMillis()
+                taps = if (now - lastTap < 600) taps + 1 else 1
+                lastTap = now
+                feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.TICK)
+                if (taps >= 7) {
+                    taps = 0; egg = true
+                    feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.REPLY_DONE)
+                    runCatching { (appCtx as com.iris.localai.IrisApp).container.settings }.getOrNull()?.update { st -> if ("about-spin" in st.eggsFound) st else st.copy(eggsFound = st.eggsFound + "about-spin") }
+                    scope.launch { spin.snapTo(0f); spin.animateTo(360f, androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 60f)) }
+                    scope.launch { hue.animateTo(hue.value + 180f, androidx.compose.animation.core.tween(1600)) }
+                }
+            }),
+        contentAlignment = Alignment.Center,
+    ) {
+        val tintShift = if (hue.value == 0f) null else androidx.compose.ui.graphics.ColorFilter.colorMatrix(hueMatrix(hue.value))
+        // 模糊的标志：两份不同大小 / 角度叠出光斑，外加一层顶部提亮
+        androidx.compose.foundation.Image(
+            painterResource(R.drawable.ic_launcher_foreground), null, colorFilter = tintShift,
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 2.6f; scaleY = 2.6f; translationY = size.height * 0.10f; rotationZ = spin.value / 3f; alpha = if (c.isDark) 0.85f else 0.75f }
+                .blur(42.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded),
+        )
+        androidx.compose.foundation.Image(
+            painterResource(R.drawable.ic_launcher_foreground), null, colorFilter = tintShift,
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.7f; scaleY = 1.7f; rotationZ = 180f - spin.value / 2f; translationX = size.width * 0.28f; translationY = -size.height * 0.30f; alpha = 0.55f }
+                .blur(56.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded),
+        )
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+            0f to c.surface.copy(alpha = if (c.isDark) 0.10f else 0.25f), 0.6f to Color.Transparent, 1f to c.surface.copy(alpha = if (c.isDark) 0.35f else 0.45f),
+        )))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.height(36.dp).graphicsLayer { rotationY = spin.value; cameraDistance = 24f * density }, contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.iridis_wordmark_ink), "IRIDIS", tint = c.text, modifier = Modifier.height(36.dp).width(207.dp))
+                androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(36.dp).width(207.dp))
+            }
+            Spacer(Modifier.height(IrisDimens.space12))
+            Text(
+                if (egg) I18n.s(R.string.v30_egg_about) else I18n.s(R.string.settings_45020f, BuildConfig.VERSION_NAME),
+                style = IrisType.secondary, color = c.textSecondary,
+            )
+        }
+    }
+}
+
+/** 色相旋转矩阵（[deg] 度），给彩蛋的光斑变色。 */
+private fun hueMatrix(deg: Float): androidx.compose.ui.graphics.ColorMatrix {
+    val r = Math.toRadians(deg.toDouble()); val cos = Math.cos(r).toFloat(); val sin = Math.sin(r).toFloat()
+    val lr = 0.213f; val lg = 0.715f; val lb = 0.072f
+    return androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(
+        lr + cos * (1 - lr) + sin * (-lr), lg + cos * (-lg) + sin * (-lg), lb + cos * (-lb) + sin * (1 - lb), 0f, 0f,
+        lr + cos * (-lr) + sin * 0.143f, lg + cos * (1 - lg) + sin * 0.140f, lb + cos * (-lb) + sin * (-0.283f), 0f, 0f,
+        lr + cos * (-lr) + sin * (-(1 - lr)), lg + cos * (-lg) + sin * lg, lb + cos * (1 - lb) + sin * lb, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f,
+    ))
+}
 
 /** every bundled / downloadable third-party component with its license. */
 internal val OPEN_SOURCE = listOf(
@@ -1026,10 +1090,11 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
             SectionTitle(I18n.s(R.string.settings_9970ad))
             SettingsGroup {
                 // 界面风格: 柔光 (default) / 经典 (the ≤ 2.4.6 look). Beta4: single-choice rows (2.4.6 CheckRow), no segmented control.
-                val classicStyle = IrisStyle.of(s.uiStyle) == IrisStyle.CLASSIC
+                val curStyle = IrisStyle.of(s.uiStyle)
+                val classicStyle = curStyle == IrisStyle.CLASSIC
                 CheckRow(
                     I18n.s(R.string.v250_style) + " · " + I18n.s(R.string.v250_style_soft),
-                    selected = !classicStyle,
+                    selected = curStyle == IrisStyle.SOFT,
                     subtitle = I18n.s(R.string.v250_style_sub),
                 ) { vm.update { it.copy(uiStyle = IrisStyle.SOFT.id) } }
                 Divider()
@@ -1037,6 +1102,17 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                     I18n.s(R.string.v250_style) + " · " + I18n.s(R.string.v250_style_classic),
                     selected = classicStyle,
                 ) { vm.update { it.copy(uiStyle = IrisStyle.CLASSIC.id) } }
+                Divider()
+                // 3.0 液态玻璃
+                CheckRow(
+                    I18n.s(R.string.v250_style) + " · " + I18n.s(R.string.v30_style_liquid),
+                    selected = curStyle == IrisStyle.LIQUID,
+                    subtitle = I18n.s(R.string.v30_style_liquid_sub),
+                ) { vm.update { it.copy(uiStyle = IrisStyle.LIQUID.id, liquidGlass = true) } }
+                Divider()
+                SwitchRow(I18n.s(R.string.v30_island), s.dynamicIsland, subtitle = I18n.s(R.string.v30_island_sub), icon = IrisIcons.Download) { on -> vm.update { it.copy(dynamicIsland = on) } }
+                Divider()
+                SwitchRow(I18n.s(R.string.v30_quips), s.idleQuips, subtitle = I18n.s(R.string.v30_quips_sub), icon = IrisIcons.Spark) { on -> vm.update { it.copy(idleQuips = on) } }
                 Divider()
                 SegmentedRow(
                     I18n.s(R.string.settings_9970ad), icon = IrisIcons.Contrast,

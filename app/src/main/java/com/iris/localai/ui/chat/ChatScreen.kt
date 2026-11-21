@@ -175,6 +175,7 @@ fun ChatScreen(
     onOpenFiles: () -> Unit = {},
     onOpenImageGen: () -> Unit = {},
     onOpenCharacters: () -> Unit = {},
+    onOpenToolbox: () -> Unit = {},
     onOpenVoiceSettings: () -> Unit,
     onOpenApi: () -> Unit,
 ) {
@@ -183,7 +184,7 @@ fun ChatScreen(
     androidx.compose.runtime.CompositionLocalProvider(
         com.iris.localai.ui.theme.LocalChatTextScale provides com.iris.localai.data.ChatTextScale.factor(textScale.chatTextScale),
     ) {
-        ChatScreenContent(vm, onOpenModels, onOpenSettings, onOpenFiles, onOpenImageGen, onOpenCharacters, onOpenVoiceSettings, onOpenApi)
+        ChatScreenContent(vm, onOpenModels, onOpenSettings, onOpenFiles, onOpenImageGen, onOpenCharacters, onOpenVoiceSettings, onOpenApi, onOpenToolbox)
     }
 }
 
@@ -197,6 +198,7 @@ private fun ChatScreenContent(
     onOpenCharacters: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
     onOpenApi: () -> Unit,
+    onOpenToolbox: () -> Unit = {},
 ) {
     val c = Iris.colors
     val ui by vm.state.collectAsStateWithLifecycle()
@@ -306,6 +308,8 @@ private fun ChatScreenContent(
     /** One place that drops the keyboard, so overlays and gestures never fight the IME animation. */
     fun hideKeyboard() = focusManager.clearFocus(force = true)
     var voiceMode by rememberSaveable { mutableStateOf(false) }
+    // 3.0：桌面快捷方式 / 小组件「语音聊天」
+    val quickVoice by com.iris.localai.ui.QuickNav.voice.collectAsStateWithLifecycle()
     var listening by remember { mutableStateOf(false) }
     var transcribing by remember { mutableStateOf(false) }
     var topBarHeight by remember { mutableIntStateOf(0) }
@@ -347,6 +351,7 @@ private fun ChatScreenContent(
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) action()
         else { pendingVoiceAction = action; micPermission.launch(Manifest.permission.RECORD_AUDIO) }
     }
+    LaunchedEffect(quickVoice) { if (quickVoice) { com.iris.localai.ui.QuickNav.consumeVoice(); withMic { voiceMode = true } } }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalGlassHaze provides haze) {
     val trash by vm.trash.collectAsStateWithLifecycle()
@@ -370,6 +375,7 @@ private fun ChatScreenContent(
                 onApi = { scope.launch { drawer.close() }; onOpenApi() },
                 onFiles = { scope.launch { drawer.close() }; onOpenFiles() },
                 onImageGen = { scope.launch { drawer.close() }; onOpenImageGen() },
+                onToolbox = { scope.launch { drawer.close() }; onOpenToolbox() },
                 onCharacters = { scope.launch { drawer.close() }; onOpenCharacters() },
                 runningId = backgroundRunId,
                 open = drawer.targetValue == DrawerValue.Open,
@@ -715,6 +721,8 @@ private fun ChatScreenContent(
                 // composer (no extra height, so nothing above it moves when it appears).
                 val showMeter = messages.isNotEmpty() && ui.context.limit > 0
                 val act = if (ui.isGenerating) activity else warming
+                // 3.0 闲言碎语：加载模型时
+                if (ui.engine is EngineState.Loading) com.iris.localai.ui.quips.IdleQuip(com.iris.localai.ui.quips.IdleQuips.Scene.LOAD, active = true, modifier = Modifier.fillMaxWidth().padding(bottom = IrisSpace.XS))
                 if (showMeter || ui.engine is EngineState.Loading || act != null) {
                     Row(
                         // the 1.11.1 fade band behind this row is gone (user: too abrupt); only

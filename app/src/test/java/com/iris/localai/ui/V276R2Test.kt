@@ -48,7 +48,7 @@ class V276R2Test {
     }
 
     @Test fun releaseNotes276r2() {
-        val r = UpdateNotes.RELEASES.first()
+        val r = UpdateNotes.RELEASES.first { it.version == "2.7.6" }
         assertEquals("2.7.6", r.version)
         assertTrue(r.items.any { it.text.contains("预加载") })
         assertTrue(r.items.any { it.text.contains("正文") })

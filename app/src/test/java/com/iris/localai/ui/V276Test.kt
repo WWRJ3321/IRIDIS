@@ -47,7 +47,7 @@ class V276Test {
     }
 
     @Test fun releaseNotes276() {
-        val r = UpdateNotes.RELEASES.first()
+        val r = UpdateNotes.RELEASES.first { it.version == "2.7.6" }
         assertEquals("2.7.6", r.version)
         assertTrue(r.items.any { it.text.contains("多选") && it.text.contains("拖动") })
         assertTrue(r.items.none { it.text.contains("菜单（") })

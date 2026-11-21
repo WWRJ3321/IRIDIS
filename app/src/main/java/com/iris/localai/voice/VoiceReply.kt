@@ -20,6 +20,7 @@ object VoiceStyle {
 
     /** [messages] with [NOTE] at the end of the system prompt (one is added when there is none). */
     fun withVoiceSystem(messages: List<PromptMessage>): List<PromptMessage> {
+        val NOTE = com.iris.localai.prompts.Prompts.get(com.iris.localai.prompts.PromptKey.VOICE_NOTE)
         val i = messages.indexOfFirst { it.role == PromptMessage.SYSTEM }
         if (i < 0) return listOf(PromptMessage(PromptMessage.SYSTEM, NOTE)) + messages
         return messages.mapIndexed { idx, m -> if (idx == i) m.copy(content = m.content.trimEnd().let { c -> if (c.isEmpty()) NOTE else c + "\n\n" + NOTE }) else m }

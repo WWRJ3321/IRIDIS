@@ -168,6 +168,32 @@ fun Modifier.glassSurface(
             }
         }
         .border(GlassTokens.rim, rim, shape)
+        .then(if (com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.LIQUID) Modifier.liquidEdge(shape, dark) else Modifier)
+}
+
+/**
+ * 3.0 液态玻璃的边缘：沿面板轮廓内侧的一圈折射光带（左上与右下亮、中段暗，像厚玻璃边缘把光弯过来），
+ * 左上一团柔和的镜面高光，底部一道很淡的内阴影。全部画在面板自己的轮廓里（不采样屏幕外像素，1.7 的黑边问题不会出现）。
+ */
+fun Modifier.liquidEdge(shape: Shape, dark: Boolean): Modifier = this.drawWithContent {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val band = 3.dp.toPx()
+    val bright = Color.White.copy(alpha = if (dark) 0.30f else 0.75f)
+    val mid = Color.White.copy(alpha = if (dark) 0.04f else 0.10f)
+    drawOutline(
+        outline,
+        Brush.linearGradient(0f to bright, 0.45f to mid, 0.55f to mid, 1f to bright.copy(alpha = bright.alpha * 0.6f), start = Offset.Zero, end = Offset(size.width, size.height)),
+        style = Stroke(width = band * 2f),
+    )
+    // 镜面高光
+    val r = minOf(size.width, size.height) * 0.9f
+    drawCircle(
+        Brush.radialGradient(0f to Color.White.copy(alpha = if (dark) 0.10f else 0.22f), 1f to Color.Transparent, center = Offset(size.width * 0.18f, 0f), radius = r),
+        radius = r, center = Offset(size.width * 0.18f, 0f),
+    )
+    // 底部内阴影
+    drawRect(Brush.verticalGradient(0.82f to Color.Transparent, 1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.06f)))
+    drawContent()
 }
 
 /**

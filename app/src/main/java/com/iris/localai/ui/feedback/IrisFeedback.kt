@@ -103,7 +103,7 @@ class IrisFeedback internal constructor(private val view: View) {
         val plan = IrisFeedbackPolicy.plan(e, env())
         if (plan.isEmpty) return
         if (plan.sound != null) lastAt[e] = now
-        plan.haptic?.let { view.performHapticFeedback(hapticConstant(it)) }
+        plan.haptic?.let { if (!Haptics.compose(app, it)) view.performHapticFeedback(hapticConstant(it)) }
         plan.sound?.let { Sounds.play(app, it) }
     }
 
@@ -181,4 +181,51 @@ class IrisFeedback internal constructor(private val view: View) {
 fun rememberIrisFeedback(): IrisFeedback {
     val view = LocalView.current
     return remember(view) { IrisFeedback(view) }
+}
+
+/**
+ * 3.0 振动重做：机器支持合成原语（Android 11+ 的线性马达，VibrationEffect.Composition）时用原语拼出更细腻的手感，
+ * 不支持时退回系统的 HapticFeedbackConstants。只读不改「触感反馈」开关（由 [IrisFeedbackPolicy.plan] 把关）。
+ */
+object HapticRecipe {
+    /** (原语, 强度 0..1, 前延迟 ms)。纯数据（单测）。 */
+    data class Step(val primitive: Int, val scale: Float, val delayMs: Int = 0)
+
+    fun of(k: HapticKind): List<Step> = when (k) {
+        HapticKind.LIGHT -> listOf(Step(android.os.VibrationEffect.Composition.PRIMITIVE_TICK, 0.55f))
+        HapticKind.TICK -> listOf(Step(android.os.VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.6f))
+        HapticKind.CONFIRM -> listOf(
+            Step(android.os.VibrationEffect.Composition.PRIMITIVE_CLICK, 0.5f),
+            Step(android.os.VibrationEffect.Composition.PRIMITIVE_TICK, 0.8f, 70),
+        )
+        HapticKind.REJECT -> listOf(
+            Step(android.os.VibrationEffect.Composition.PRIMITIVE_THUD, 0.6f),
+            Step(android.os.VibrationEffect.Composition.PRIMITIVE_THUD, 0.4f, 90),
+        )
+        HapticKind.LONG_PRESS -> listOf(Step(android.os.VibrationEffect.Composition.PRIMITIVE_CLICK, 0.9f))
+        HapticKind.GESTURE_START -> listOf(Step(android.os.VibrationEffect.Composition.PRIMITIVE_QUICK_RISE, 0.5f))
+        HapticKind.GESTURE_END -> listOf(Step(android.os.VibrationEffect.Composition.PRIMITIVE_QUICK_FALL, 0.5f))
+    }
+}
+
+internal object Haptics {
+    @Volatile private var supported: Map<Int, Boolean>? = null
+
+    /** true = played with composition primitives. */
+    fun compose(ctx: Context, k: HapticKind): Boolean = runCatching {
+        val vm = ctx.getSystemService(android.os.VibratorManager::class.java) ?: return false
+        val v = vm.defaultVibrator
+        if (!v.hasVibrator()) return false
+        val steps = HapticRecipe.of(k)
+        val sup = supported ?: run {
+            val all = HapticKind.entries.flatMap { HapticRecipe.of(it) }.map { it.primitive }.distinct().toIntArray()
+            val r = v.arePrimitivesSupported(*all)
+            all.indices.associate { all[it] to r[it] }.also { supported = it }
+        }
+        if (steps.any { sup[it.primitive] != true }) return false
+        val c = android.os.VibrationEffect.startComposition()
+        steps.forEach { c.addPrimitive(it.primitive, it.scale, it.delayMs) }
+        v.vibrate(c.compose(), android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_TOUCH))
+        true
+    }.getOrDefault(false)
 }

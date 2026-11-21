@@ -90,12 +90,11 @@ object AgentPrompt {
         append("You are IRIS, an AI agent on the user's Android phone.\n\n")
 
         append("# Rules\n")
-        append("- Reply in Chinese. Answer directly and completely; no disclaimers, self-checks or hedging. Never claim actions you didn't take.\n")
-        append("- Chat/simple questions: plain text with NO tool block (\"system\" is not a tool).\n")
+        // 3.0：规则三行可在 设置 › 提示词 改写（默认逐字不变）
+        append(com.iris.localai.prompts.Prompts.get(com.iris.localai.prompts.PromptKey.AGENT_RULES).trimEnd()).append('\n')
         // "then report their findings" was lost in the 2.1.6 trim ("When done, answer briefly
         // with what you did"): small models ended a news search with "已搜索" or nothing at all.
-        append("- Use tools only if needed, then report their findings; fix a failed one once or say so.\n")
-        if (askFirst) append(ASK_FIRST).append('\n')
+        if (askFirst) append(com.iris.localai.prompts.Prompts.get(com.iris.localai.prompts.PromptKey.AGENT_ASK_FIRST)).append('\n')
         append('\n')
 
         append("# Tool calls\n")

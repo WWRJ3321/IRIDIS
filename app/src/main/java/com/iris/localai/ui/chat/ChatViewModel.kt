@@ -731,6 +731,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
     fun onUserActivity() = c.engine.touch()
     fun markNotificationAsked() = c.settings.update { it.copy(askedNotificationPermission = true) }
+    /** 3.0 语音聊天模式（免提 / 按住说话），记住上次的选择。 */
+    fun setVoicePushToTalk(on: Boolean) { if (c.settings.current.voicePushToTalk != on) c.settings.update { it.copy(voicePushToTalk = on) } }
     fun markBatteryAsked() = c.settings.update { it.copy(askedBatteryExemption = true) }
 
     // ------------------------------------------------------------------ messaging

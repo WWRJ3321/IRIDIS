@@ -74,6 +74,11 @@ import androidx.compose.ui.text.font.FontWeight
 import com.iris.localai.voice.VoicePhase
 import kotlin.math.PI
 import kotlin.math.cos
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 /** Full-screen hands-free voice conversation, ChatGPT-voice style. */
 @Composable
@@ -82,6 +87,13 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
     val reduce = LocalReduceMotion.current
     val state by vm.voice.state.collectAsStateWithLifecycle()
     var muted by rememberSaveable { mutableStateOf(false) }
+    // 3.0 双模式：免提（自动断句）/ 按住说话；记在设置里，下次进来沿用。
+    var ptt by rememberSaveable { mutableStateOf(vm.settings.value.voicePushToTalk) }
+    var holding by remember { mutableStateOf(false) }
+    LaunchedEffect(ptt) { vm.voice.setPushToTalk(ptt); vm.setVoicePushToTalk(ptt) }
+    // 3.0 进入动画：圆从小到大弹出、一圈波纹散开，文字和按钮随后升起。
+    val appear = remember { Animatable(if (reduce) 1f else 0f) }
+    LaunchedEffect(Unit) { if (!reduce) appear.animateTo(1f, IrisMotion.Gentle.float()) }
 
     // The microphone only runs while this overlay is visible and the app is in the foreground.
     val owner = LocalLifecycleOwner.current
@@ -199,7 +211,10 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
 
             Spacer(Modifier.weight(1f))
             VoiceOrb(
-                modifier = Modifier.size(220.dp).clickable(
+                modifier = Modifier.size(220.dp).graphicsLayer {
+                    val a = appear.value
+                    scaleX = 0.35f + 0.65f * a; scaleY = scaleX; alpha = a.coerceIn(0f, 1f)
+                }.clickable(
                     remember { MutableInteractionSource() }, indication = null,
                     enabled = state.phase == VoicePhase.ERROR || state.phase == VoicePhase.SPEAKING,
                 ) {
@@ -210,6 +225,7 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 waiting = state.waiting,
                 color = if (state.phase == VoicePhase.ERROR) c.danger else if (muted && state.phase == VoicePhase.LISTENING) c.textTertiary else accent,
                 level = if (state.phase == VoicePhase.SPEAKING) state.outputLevel else if (muted) 0f else state.micLevel,
+                ripple = { appear.value },
             )
             Spacer(Modifier.weight(1f))
 
@@ -249,9 +265,32 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 }
             }
 
+            // 3.0：模式切换（免提 / 按住说话）
+            VoiceModeSwitch(ptt, Modifier.graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 40f }) { ptt = it; holding = false }
+            if (ptt) {
+                Spacer(Modifier.height(IrisDimens.space16))
+                val holdColor by animateColorAsState(if (holding) accent else c.surfaceVariant, IrisMotion.standard(), label = "ptt")
+                Box(
+                    Modifier.size(width = 220.dp, height = 56.dp)
+                        .background(holdColor, IrisRadius.pillShape)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onPress = {
+                                holding = true; haptic.perform(FeedbackEvent.LISTEN_START); vm.voice.pttPress()
+                                tryAwaitRelease()
+                                holding = false; haptic.perform(FeedbackEvent.LISTEN_STOP); vm.voice.pttRelease()
+                            })
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (holding) I18n.s(R.string.v30_ptt_release) else I18n.s(R.string.v30_ptt_hold),
+                        style = IrisType.label, color = if (holding) Color.White else c.text,
+                    )
+                }
+            }
             // Controls
             Row(
-                Modifier.fillMaxWidth().padding(top = IrisDimens.space20, bottom = IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),
+                Modifier.graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 60f }.fillMaxWidth().padding(top = IrisDimens.space20, bottom = IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Top,
             ) {
@@ -296,7 +335,7 @@ private fun VoiceControl(label: String, content: @Composable () -> Unit) {
  * With reduce-motion the disc stays still and only the halo widens to show the waiting state.
  */
 @Composable
-private fun VoiceOrb(phase: VoicePhase, waiting: Boolean, level: Float, color: Color, modifier: Modifier = Modifier) {
+private fun VoiceOrb(phase: VoicePhase, waiting: Boolean, level: Float, color: Color, modifier: Modifier = Modifier, ripple: () -> Float = { 1f }) {
     val reduce = LocalReduceMotion.current
     val t = rememberInfiniteTransition(label = "orb")
     val busy = phase == VoicePhase.RECOGNIZING || phase == VoicePhase.PREPARING
@@ -335,5 +374,28 @@ private fun VoiceOrb(phase: VoicePhase, waiting: Boolean, level: Float, color: C
         val center = Offset(size.width / 2f, size.height / 2f + m.dy * size.minDimension)
         drawCircle(tint.copy(alpha = 0.10f + 0.10f * en + 0.06f * waitHalo), radius = r * (1.18f + 0.10f * en + 0.10f * waitHalo), center = center)
         drawCircle(tint, radius = r, center = center)
+        // 3.0 进入波纹：一圈细环从圆边散开淡出（只在进入时，ripple 到 1 后不画）。
+        val rp = ripple()
+        if (rp < 1f) drawCircle(
+            tint.copy(alpha = 0.45f * (1f - rp)), radius = r * (1f + 0.9f * rp), center = center,
+            style = Stroke(width = 3.dp.toPx() * (1f - rp) + 0.5f),
+        )
+    }
+}
+
+/** 3.0 免提 / 按住说话 两段切换（Pill 样式）。 */
+@Composable
+private fun VoiceModeSwitch(ptt: Boolean, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+    val c = Iris.colors
+    Row(modifier.background(c.surfaceVariant.copy(alpha = 0.7f), IrisRadius.pillShape).padding(IrisDimens.space4)) {
+        for ((on, label) in listOf(false to I18n.s(R.string.v30_mode_free), true to I18n.s(R.string.v30_mode_ptt))) {
+            val sel = on == ptt
+            val bg by animateColorAsState(if (sel) c.surface else Color.Transparent, IrisMotion.standard(), label = "modeBg")
+            Box(
+                Modifier.background(bg, IrisRadius.pillShape)
+                    .clickable(remember { MutableInteractionSource() }, indication = null) { if (!sel) onChange(on) }
+                    .padding(horizontal = IrisSpace.M, vertical = IrisDimens.space8),
+            ) { Text(label, style = IrisType.labelSmall, color = if (sel) c.text else c.textSecondary) }
+        }
     }
 }

@@ -151,6 +151,8 @@ fun HistoryDrawer(
     onApi: () -> Unit,
     onFiles: () -> Unit = {},
     onImageGen: () -> Unit = {},
+    /** 3.0 AI 工具箱 */
+    onToolbox: () -> Unit = {},
     /** 角色卡 */
     onCharacters: () -> Unit = {},
     runningId: String? = null,
@@ -585,6 +587,7 @@ fun HistoryDrawer(
             DrawerNavButton(IrisIcons.Cube, DrawerNavText.MODELS, onClick = onModels)
             // 角色 moved to the top-bar 角色 pill (its 「管理角色…」 opens the page).
             DrawerNavButton(IrisIcons.Image, DrawerNavText.IMAGEGEN, onClick = onImageGen)
+            DrawerNavButton(IrisIcons.Tool, DrawerNavText.TOOLBOX, onClick = onToolbox)
             DrawerNavButton(IrisIcons.Folder, DrawerNavText.FILES, onClick = onFiles)
             DrawerNavButton(IrisIcons.Plug, DrawerNavText.API, badge = apiRunning, onClick = onApi)
             DrawerNavButton(IrisIcons.Settings, DrawerNavText.SETTINGS, onClick = onSettings)
@@ -659,6 +662,7 @@ internal object DrawerNavText {
     val IMAGEGEN: String get() = I18n.s(R.string.chat_19a9bc)
     val CHARACTERS: String get() = I18n.s(R.string.ch232_nav)
     val FILES: String get() = I18n.s(R.string.chat_2a0c47)
+    val TOOLBOX: String get() = I18n.s(R.string.v30_toolbox)
     const val API = "API"
     val SETTINGS: String get() = I18n.s(R.string.chat_e366cc)
     val API_RUNNING: String get() = I18n.s(R.string.chat_992c3b)

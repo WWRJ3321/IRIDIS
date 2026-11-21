@@ -1,6 +1,7 @@
 package com.iris.localai.ui.glass
 
 import com.iris.localai.ui.components.MatteGlass
+import com.iris.localai.ui.components.liquidEdge
 import com.iris.localai.ui.theme.IrisStyle
 import com.iris.localai.ui.theme.LocalIrisStyle
 import com.iris.localai.ui.theme.LocalSolidBackground
@@ -117,6 +118,7 @@ fun Modifier.glass(
     val quality = LocalGlassQuality.current
     // 柔光: solid — no blur at all, an opaque surface-colour fill and a 0.5 dp hairline.
     val matte = LocalIrisStyle.current == IrisStyle.SOFT
+    val liquid = LocalIrisStyle.current == IrisStyle.LIQUID
     val source = if (quality.blurs && !matte) backdrop else null
     val colors = Iris.colors
     val style = if (matte) style.copy(vibrancy = 1f, rimAlpha = 0f, sheen = false) else style
@@ -179,6 +181,7 @@ fun Modifier.glass(
                 if (matte) drawOutline(outline, MatteGlass.hairline(colors.isDark), style = Stroke(width = MatteGlass.HAIRLINE_DP.dp.toPx()))
             }
         }
+        .then(if (liquid) Modifier.liquidEdge(shape, colors.isDark) else Modifier)
 }
 
 @Stable

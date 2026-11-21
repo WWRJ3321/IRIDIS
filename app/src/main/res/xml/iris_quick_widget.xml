@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp" android:minHeight="70dp"
+    android:targetCellWidth="4" android:targetCellHeight="1"
+    android:resizeMode="horizontal"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/w30_quick_widget"
+    android:previewLayout="@layout/w30_quick_widget"
+    android:description="@string/v30_widget_label"
+    android:updatePeriodMillis="0" />

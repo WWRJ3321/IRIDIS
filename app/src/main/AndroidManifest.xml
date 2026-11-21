@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- 3.0 振动重做（合成原语） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- 3.0 悬浮窗（同声传译用麦克风） -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 2.5.0: Android 16 Live Updates (promoted ongoing 「生成中」 notification). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
@@ -148,6 +153,27 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/iris_accessibility_service" />
         </service>
+        <!-- 3.0 悬浮窗：AI 翻译、同声传译、识屏、漫画翻译、搜索；用户在 工具箱 里打开才运行。 -->
+        <service
+            android:name=".floating.FloatingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse|microphone">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating assistant bubble the user turned on (translate, live interpretation, screen reading); runs until the user closes it." />
+        </service>
+        <!-- 3.0 桌面小组件：快速开始新对话 / 语音 / 生图 / 工具箱。 -->
+        <receiver
+            android:name=".widget.QuickWidget"
+            android:exported="false"
+            android:label="@string/v30_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/iris_quick_widget" />
+        </receiver>
         <!-- 2.2: shares a chat image (a copy in cache/shared) and files of Download/IRIDIS picked on the 文件 page. -->
         <provider
             android:name="androidx.core.content.FileProvider"

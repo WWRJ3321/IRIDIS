@@ -347,13 +347,15 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             Spacer(Modifier.height(IrisDimens.space6))
                             Text(SdProgress.label(s.progress, s.steps, elapsed, !s.model.sdq && !s.sdOnCpu), style = IrisType.caption, color = Iris.colors.textSecondary)
                             if (elapsed >= SdProgress.LOG_HINT_SEC) {
-                                IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                                IrisButton(I18n.s(R.string.v30_copy_sd_log), onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
                             }
                         } else {
                             IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
                             Spacer(Modifier.height(IrisDimens.space6))
                             Text(I18n.s(R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption, color = Iris.colors.textSecondary)
                         }
+                        // 3.0 闲言碎语
+                        com.iris.localai.ui.quips.IdleQuip(com.iris.localai.ui.quips.IdleQuips.Scene.IMAGE, active = true, modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space6))
                         Spacer(Modifier.height(IrisDimens.space8))
                         IrisButton(ImageGenText.CANCEL, onClick = vm::cancel, modifier = Modifier.fillMaxWidth(), style = IrisButtonStyle.Tonal, icon = IrisIcons.Stop)
                     } else {
@@ -365,7 +367,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         if (s.model.backend == Backend.SDCPP && it != ImageGenText.CANCELLED) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (s.lowMem) IrisButton(I18n.s(R.string.sd243_force), onClick = vm::generateAnyway, style = IrisButtonStyle.Text, compact = true)
-                                IrisButton("复制生图日志", onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
+                                IrisButton(I18n.s(R.string.v30_copy_sd_log), onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
                             }
                         }
                     }

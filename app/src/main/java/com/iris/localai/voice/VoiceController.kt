@@ -77,6 +77,12 @@ class VoiceController(
     @Volatile private var replyJob: Job? = null
     @Volatile private var player: PcmPlayer? = null
     @Volatile private var muted = false
+    /** 3.0：按住说话模式（[pushToTalk]）——只在按住时收音，松手即整段送识别；关掉 = 免提（VAD 自动断句）。 */
+    @Volatile var pushToTalk = false
+        private set
+    @Volatile private var holding = false
+    private val held = java.util.ArrayList<FloatArray>()
+    @Volatile private var sink: Channel<FloatArray>? = null
     /** recent TTS text, to drop recognised echo of it. Touched from mic, ASR and TTS coroutines. */
     private val echoText = SyncEchoTextGuard()
 
@@ -120,6 +126,30 @@ class VoiceController(
         muted = value
     }
 
+    /** 切换免提 / 按住说话。 */
+    fun setPushToTalk(on: Boolean) {
+        pushToTalk = on
+        holding = false
+        synchronized(held) { held.clear() }
+    }
+
+    /** 按住说话：按下——打断正在说的回复，开始收这一段。 */
+    fun pttPress() {
+        if (!pushToTalk) return
+        interruptReply()
+        synchronized(held) { held.clear() }
+        holding = true
+        _state.update { it.copy(phase = VoicePhase.LISTENING, awaitingAudio = false) }
+    }
+
+    /** 按住说话：松手——整段送去识别（太短当作误触）。 */
+    fun pttRelease() {
+        if (!holding) return
+        holding = false
+        val audio = synchronized(held) { PttAudio.join(held).also { held.clear() } }
+        if (audio.isNotEmpty()) sink?.trySend(audio)
+    }
+
     private suspend fun runSession() = coroutineScope {
         val s = settings.current
         // ASR and TTS live on separate worker threads: load them side by side.
@@ -139,6 +169,7 @@ class VoiceController(
             throw t
         }
         val utterances = Channel<FloatArray>(capacity = 4)
+        sink = utterances
         _state.update { it.copy(phase = VoicePhase.LISTENING) }
 
         // Microphone → VAD. Runs for the whole session; costs one small ONNX call per 32 ms — off the main thread.
@@ -154,6 +185,13 @@ class VoiceController(
                 Microphone.frames().collect { frame ->
                     if (muted) {
                         _state.update { it.copy(micLevel = 0f) }
+                        return@collect
+                    }
+                    if (pushToTalk) {
+                        // 按住说话：不走 VAD / 打断检测，按住期间的帧原样收下（上限 [PttAudio.MAX_FRAMES]）。
+                        if (holding) synchronized(held) { if (held.size < PttAudio.MAX_FRAMES) held.add(frame.copyOf()) }
+                        _state.update { it.copy(micLevel = if (holding) Microphone.rms(frame) else 0f, outputLevel = out.level) }
+                        vad.clear()
                         return@collect
                     }
                     val phase = _state.value.phase
@@ -216,6 +254,7 @@ class VoiceController(
                     }
                 }
             } finally {
+                sink = null
                 vad.release()
                 probe?.release()
                 utterances.close()
@@ -354,4 +393,20 @@ internal class SyncEchoTextGuard(private val g: EchoTextGuard = EchoTextGuard())
     @Synchronized fun touch(nowMs: Long) = g.touch(nowMs)
     @Synchronized fun isEcho(heard: String, nowMs: Long): Boolean = g.isEcho(heard, nowMs)
     @Synchronized fun clear() = g.clear()
+}
+
+
+/** 3.0 按住说话的录音拼接（纯 JVM，单测）。帧 = 16 kHz 单声道 float。 */
+object PttAudio {
+    /** 最长约 60 秒（32 ms 一帧）。 */
+    const val MAX_FRAMES = 1875
+
+    fun join(frames: List<FloatArray>): FloatArray {
+        var n = 0
+        for (f in frames) n += f.size
+        val out = FloatArray(n)
+        var o = 0
+        for (f in frames) { System.arraycopy(f, 0, out, o, f.size); o += f.size }
+        return out
+    }
 }
