@@ -15,7 +15,6 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- 3.0 悬浮窗（同声传译用麦克风） -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 2.5.0: Android 16 Live Updates (promoted ongoing 「生成中」 notification). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
@@ -157,7 +156,7 @@
         <service
             android:name=".floating.FloatingService"
             android:exported="false"
-            android:foregroundServiceType="specialUse|microphone">
+            android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Floating assistant bubble the user turned on (translate, live interpretation, screen reading); runs until the user closes it." />

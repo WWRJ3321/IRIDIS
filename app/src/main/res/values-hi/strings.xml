@@ -2344,4 +2344,9 @@
     <string name="v30_quips">छोटी बातें</string>
     <string name="v30_quips_sub">इंतज़ार में एक छोटी बात</string>
     <string name="v30_copy_sd_log">चित्र लॉग कॉपी करें</string>
+    <string name="v30_tb_float_sub2">अनुवाद, स्क्रीन पढ़ें, AI से पूछें</string>
+    <string name="v30_fl_notif2">अनुवाद, स्क्रीन पढ़ने या AI से पूछने के लिए बबल पर टैप करें</string>
+    <string name="v30_tb_tts_sub">टेक्स्ट लिखें और सुनें</string>
+    <string name="v30_tb_stt_sub">दबाकर बोलें, टेक्स्ट पाएं</string>
+    <string name="v30_tb_find_sub">नाम या अर्थ से फ़ाइलें खोजें</string>
 </resources>

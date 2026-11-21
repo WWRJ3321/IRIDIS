@@ -2344,4 +2344,9 @@
     <string name="v30_quips">Plaudereien</string>
     <string name="v30_quips_sub">Ein kurzer Satz beim Warten</string>
     <string name="v30_copy_sd_log">Bildprotokoll kopieren</string>
+    <string name="v30_tb_float_sub2">Übersetzen, Bildschirm lesen, KI fragen</string>
+    <string name="v30_fl_notif2">Tippe auf die Blase: Übersetzen, Bildschirm lesen, KI fragen</string>
+    <string name="v30_tb_tts_sub">Text eingeben und anhören</string>
+    <string name="v30_tb_stt_sub">Gedrückt halten und sprechen</string>
+    <string name="v30_tb_find_sub">Dateien nach Name oder Sinn finden</string>
 </resources>

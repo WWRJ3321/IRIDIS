@@ -2344,4 +2344,9 @@
     <string name="v30_quips">Idle chatter</string>
     <string name="v30_quips_sub">A short line while you wait</string>
     <string name="v30_copy_sd_log">Copy image log</string>
+    <string name="v30_tb_float_sub2">Translate, read screen, ask AI</string>
+    <string name="v30_fl_notif2">Tap the bubble to translate, read the screen or ask AI</string>
+    <string name="v30_tb_tts_sub">Type text and hear it</string>
+    <string name="v30_tb_stt_sub">Hold to talk, get text</string>
+    <string name="v30_tb_find_sub">Find files by name or meaning</string>
 </resources>

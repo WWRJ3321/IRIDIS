@@ -37,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -67,29 +69,48 @@ import com.iris.localai.ui.theme.IrisType
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** 3.0 AI 工具箱：生图、文本转语音、语音转文本、悬浮窗、找文件、冬天暖手宝，一页放齐。 */
+/** 3.0 AI 工具箱：功能方块网格（每两格一行）。加新功能 = 在 tools 列表里加一项，需要独立页的再在 when(open) 里接上。 */
+private data class Tool(val id: String, val icon: ImageVector, val title: String, val sub: String)
+
 @Composable
 fun ToolboxPage(chat: ChatViewModel, onBack: () -> Unit, onOpenImageGen: () -> Unit) {
-    val c = Iris.colors
     val ctx = LocalContext.current
-    SubpageScaffold(I18n.s(R.string.v30_toolbox), onBack) {
-        ScrollBody {
-            // 顶部快捷格：生图 / 悬浮窗
-            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space12)) {
-                ToolTile(IrisIcons.Image, I18n.s(R.string.v30_w_image), I18n.s(R.string.v30_tb_image_sub), Modifier.weight(1f), onOpenImageGen)
-                val floating by FloatingService.running.collectAsStateWithLifecycle()
-                ToolTile(IrisIcons.Layers, I18n.s(R.string.v30_floating), if (floating) I18n.s(R.string.v30_tb_on) else I18n.s(R.string.v30_tb_float_sub), Modifier.weight(1f)) {
-                    when {
-                        floating -> FloatingService.stop(ctx)
-                        !FloatingService.canDraw(ctx) -> runCatching { ctx.startActivity(FloatingService.permissionIntent(ctx)) }
-                        else -> FloatingService.start(ctx)
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    androidx.activity.compose.BackHandler(open != null) { open = null }
+    val floating by FloatingService.running.collectAsStateWithLifecycle()
+    when (open) {
+        "tts" -> SubpageScaffold(I18n.s(R.string.v30_tb_tts), { open = null }) { ScrollBody { TtsSection(chat) } }
+        "stt" -> SubpageScaffold(I18n.s(R.string.v30_tb_stt), { open = null }) { ScrollBody { SttSection(chat) } }
+        "find" -> SubpageScaffold(I18n.s(R.string.v30_tb_find), { open = null }) { ScrollBody { FindSection() } }
+        else -> {
+            val tools = listOf(
+                Tool("image", IrisIcons.Image, I18n.s(R.string.v30_w_image), I18n.s(R.string.v30_tb_image_sub)),
+                Tool("float", IrisIcons.Layers, I18n.s(R.string.v30_floating), if (floating) I18n.s(R.string.v30_tb_on) else I18n.s(R.string.v30_tb_float_sub2)),
+                Tool("tts", IrisIcons.Sound, I18n.s(R.string.v30_tb_tts), I18n.s(R.string.v30_tb_tts_sub)),
+                Tool("stt", IrisIcons.Chat, I18n.s(R.string.v30_tb_stt), I18n.s(R.string.v30_tb_stt_sub)),
+                Tool("find", IrisIcons.Search, I18n.s(R.string.v30_tb_find), I18n.s(R.string.v30_tb_find_sub)),
+            )
+            fun tap(id: String) = when (id) {
+                "image" -> onOpenImageGen()
+                "float" -> when {
+                    floating -> FloatingService.stop(ctx)
+                    !FloatingService.canDraw(ctx) -> { runCatching { ctx.startActivity(FloatingService.permissionIntent(ctx)) }; Unit }
+                    else -> FloatingService.start(ctx)
+                }
+                else -> { open = id }
+            }
+            SubpageScaffold(I18n.s(R.string.v30_toolbox), onBack) {
+                ScrollBody {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter), verticalArrangement = Arrangement.spacedBy(IrisDimens.space12)) {
+                        tools.chunked(2).forEach { row ->
+                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space12)) {
+                                row.forEach { t -> ToolTile(t.icon, t.title, t.sub, Modifier.weight(1f).fillMaxHeight()) { tap(t.id) } }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
             }
-            TtsSection(chat)
-            SttSection(chat)
-            FindSection()
-            WarmerSection()
         }
     }
 }
@@ -98,7 +119,7 @@ fun ToolboxPage(chat: ChatViewModel, onBack: () -> Unit, onOpenImageGen: () -> U
 private fun ToolTile(icon: ImageVector, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
     val c = Iris.colors
     IrisCard(modifier.clickable(onClick = onClick)) {
-        Column(Modifier.padding(IrisDimens.space16)) {
+        Column(Modifier.fillMaxWidth().padding(IrisDimens.space16)) {
             Box(Modifier.size(40.dp).background(c.accent.copy(alpha = 0.12f), IrisRadius.mediumShape), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = c.accent, modifier = Modifier.size(22.dp))
             }
@@ -236,32 +257,5 @@ private fun openFile(ctx: android.content.Context, f: File) {
         val uri: Uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
         val type = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: "*/*"
         ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).setDataAndType(uri, type).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
-}
-
-@Composable
-private fun WarmerSection() {
-    val c = Iris.colors
-    val ctx = LocalContext.current
-    val st by HandWarmer.state.collectAsStateWithLifecycle()
-    var minutes by rememberSaveable { mutableFloatStateOf(10f) }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(st.running) { while (st.running) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) } }
-    SectionTitle(I18n.s(R.string.v30_warmer))
-    SettingsGroup {
-        if (!st.running) SliderRow(
-            I18n.s(R.string.v30_warmer_time), minutes, 5f..WarmerPolicy.MAX_MINUTES.toFloat(),
-            I18n.s(R.string.v30_warmer_min, minutes.toInt()), steps = 4,
-        ) { minutes = it }
-        SwitchRow(
-            I18n.s(R.string.v30_warmer),
-            st.running,
-            subtitle = when {
-                st.running -> I18n.s(R.string.v30_warmer_running, ((st.endsAt - now).coerceAtLeast(0) / 60_000 + 1).toInt(), if (st.batteryC.isFinite()) "%.1f".format(st.batteryC) else "—")
-                st.stoppedBy != null -> st.stoppedBy
-                else -> I18n.s(R.string.v30_warmer_sub)
-            },
-            icon = IrisIcons.Bolt,
-        ) { on -> if (on) HandWarmer.start(ctx, minutes.toInt()) else HandWarmer.stop(null) }
     }
 }

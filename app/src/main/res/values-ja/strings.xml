@@ -2344,4 +2344,9 @@
     <string name="v30_quips">ひとこと</string>
     <string name="v30_quips_sub">待ち時間にひとこと</string>
     <string name="v30_copy_sd_log">画像生成ログをコピー</string>
+    <string name="v30_tb_float_sub2">翻訳・画面読み取り・AIに質問</string>
+    <string name="v30_fl_notif2">バブルをタップして翻訳・画面読み取り・AIに質問</string>
+    <string name="v30_tb_tts_sub">文字を入力して読み上げ</string>
+    <string name="v30_tb_stt_sub">押して話すと文字に</string>
+    <string name="v30_tb_find_sub">名前や意味でファイル検索</string>
 </resources>

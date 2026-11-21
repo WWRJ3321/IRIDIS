@@ -12,7 +12,6 @@ import com.iris.localai.ui.feedback.HapticKind
 import com.iris.localai.ui.feedback.HapticRecipe
 import com.iris.localai.ui.quips.IdleQuips
 import com.iris.localai.ui.toolbox.FindScore
-import com.iris.localai.ui.toolbox.WarmerPolicy
 import com.iris.localai.voice.VoiceStyle
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -46,17 +45,6 @@ class V300Test {
         assertEquals("x", Prompts.normalize(PromptKey.VOICE_NOTE, " x "))
     }
 
-    @Test fun warmerStopsWhenHot() {
-        assertEquals(WarmerPolicy.Verdict.RUN, WarmerPolicy.verdict(30f, 0, false))
-        assertEquals(WarmerPolicy.Verdict.EASE, WarmerPolicy.verdict(40f, 0, false))
-        assertEquals(WarmerPolicy.Verdict.STOP, WarmerPolicy.verdict(42f, 0, false))
-        assertEquals(WarmerPolicy.Verdict.STOP, WarmerPolicy.verdict(40.5f, 0, true))
-        assertEquals(WarmerPolicy.Verdict.STOP, WarmerPolicy.verdict(Float.NaN, 3, false))
-        assertEquals(WarmerPolicy.Verdict.EASE, WarmerPolicy.verdict(Float.NaN, 2, false))
-        assertEquals(0, WarmerPolicy.threads(8, WarmerPolicy.Verdict.STOP))
-        assertEquals(7, WarmerPolicy.threads(8, WarmerPolicy.Verdict.RUN))
-        assertEquals(1, WarmerPolicy.threads(1, WarmerPolicy.Verdict.EASE))
-    }
 
     @Test fun findScore() {
         val t = FindScore.terms("猫的照片")
@@ -84,13 +72,6 @@ class V300Test {
             UiNode(text = "上面", bounds = PxRect(0, 600, 10, 620)),
         ))
         assertEquals("上面\n下面", FloatingLogic.screenText(tree))
-        val b = FloatingLogic.bubbles(listOf(
-            OcrLine("こんに", PxRect(100, 100, 200, 120)), OcrLine("ちは", PxRect(100, 125, 180, 145)),
-            OcrLine("far away", PxRect(500, 900, 700, 930)),
-        ))
-        assertEquals(2, b.size)
-        assertEquals("こんにちは", b[0].text)
-        assertTrue(FloatingLogic.searchUrl("a b").startsWith("https://www.bing.com/search?q="))
     }
 
     @Test fun hapticRecipesNonEmpty() {
@@ -107,5 +88,13 @@ class V300Test {
         assertTrue(main.contains("publishShortcuts"))
         assertTrue(src("java/com/iris/localai/data/SettingsRepository.kt").contains("Prompts.overrides = next.promptOverrides"))
         assertTrue(src("java/com/iris/localai/agent/core/AgentLoop.kt").contains("PromptKey.AGENT_RULES"))
+    }
+
+    /** aapt2 字符串池单串上限 32767：超长 pathData 会被截坏，运行时 PathParser 抛 Unknown command（3.0 Beta1 关于页闪退）。 */
+    @org.junit.Test fun vectorPathDataUnderAaptLimit() {
+        val re = Regex("pathData=\"([^\"]*)\"")
+        java.io.File("app/src/main/res").walkTopDown().filter { it.isFile && it.extension == "xml" && it.parentFile.name.startsWith("drawable") }.forEach { f ->
+            re.findAll(f.readText()).forEach { m -> org.junit.Assert.assertTrue("${f.path} pathData ${m.groupValues[1].length}", m.groupValues[1].length < 30000) }
+        }
     }
 }

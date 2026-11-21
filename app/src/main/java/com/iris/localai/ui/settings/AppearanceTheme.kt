@@ -53,7 +53,7 @@ object AppearanceText {
 fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
     val c = Iris.colors
     Column(Modifier.fillMaxWidth().padding(bottom = IrisSpace.M)) {
-        SettingsRow(I18n.s(R.string.settings_9ad79a), subtitle = AppearanceText.PALETTE, icon = IrisIcons.Contrast)
+        SettingsRow(I18n.s(R.string.settings_9ad79a), icon = IrisIcons.Contrast)
         Row(
             Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = IrisDimens.rowPadding).selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6),

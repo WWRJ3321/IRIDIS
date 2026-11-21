@@ -1095,7 +1095,6 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 CheckRow(
                     I18n.s(R.string.v250_style) + " · " + I18n.s(R.string.v250_style_soft),
                     selected = curStyle == IrisStyle.SOFT,
-                    subtitle = I18n.s(R.string.v250_style_sub),
                 ) { vm.update { it.copy(uiStyle = IrisStyle.SOFT.id) } }
                 Divider()
                 CheckRow(
@@ -1107,12 +1106,11 @@ fun AppearancePage(vm: SettingsViewModel, onBack: () -> Unit) {
                 CheckRow(
                     I18n.s(R.string.v250_style) + " · " + I18n.s(R.string.v30_style_liquid),
                     selected = curStyle == IrisStyle.LIQUID,
-                    subtitle = I18n.s(R.string.v30_style_liquid_sub),
                 ) { vm.update { it.copy(uiStyle = IrisStyle.LIQUID.id, liquidGlass = true) } }
                 Divider()
-                SwitchRow(I18n.s(R.string.v30_island), s.dynamicIsland, subtitle = I18n.s(R.string.v30_island_sub), icon = IrisIcons.Download) { on -> vm.update { it.copy(dynamicIsland = on) } }
+                SwitchRow(I18n.s(R.string.v30_island), s.dynamicIsland, icon = IrisIcons.Download) { on -> vm.update { it.copy(dynamicIsland = on) } }
                 Divider()
-                SwitchRow(I18n.s(R.string.v30_quips), s.idleQuips, subtitle = I18n.s(R.string.v30_quips_sub), icon = IrisIcons.Spark) { on -> vm.update { it.copy(idleQuips = on) } }
+                SwitchRow(I18n.s(R.string.v30_quips), s.idleQuips, icon = IrisIcons.Spark) { on -> vm.update { it.copy(idleQuips = on) } }
                 Divider()
                 SegmentedRow(
                     I18n.s(R.string.settings_9970ad), icon = IrisIcons.Contrast,

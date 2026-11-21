@@ -2344,4 +2344,9 @@
     <string name="v30_quips">閒言碎語</string>
     <string name="v30_quips_sub">等待時輪換一句小話</string>
     <string name="v30_copy_sd_log">複製生圖日誌</string>
+    <string name="v30_tb_float_sub2">翻譯、識屏、問 AI</string>
+    <string name="v30_fl_notif2">點小球開啟翻譯、識屏、問 AI</string>
+    <string name="v30_tb_tts_sub">輸入文字，唸出來</string>
+    <string name="v30_tb_stt_sub">按住說話，轉成文字</string>
+    <string name="v30_tb_find_sub">按名稱或意思找檔案</string>
 </resources>

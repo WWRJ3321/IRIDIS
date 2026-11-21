@@ -2344,4 +2344,9 @@
     <string name="v30_quips">Comentarios</string>
     <string name="v30_quips_sub">Una frase mientras esperas</string>
     <string name="v30_copy_sd_log">Copiar registro</string>
+    <string name="v30_tb_float_sub2">Traducir, leer pantalla, preguntar a la IA</string>
+    <string name="v30_fl_notif2">Toca la burbuja para traducir, leer la pantalla o preguntar a la IA</string>
+    <string name="v30_tb_tts_sub">Escribe y escúchalo</string>
+    <string name="v30_tb_stt_sub">Mantén pulsado y habla</string>
+    <string name="v30_tb_find_sub">Busca archivos por nombre o sentido</string>
 </resources>

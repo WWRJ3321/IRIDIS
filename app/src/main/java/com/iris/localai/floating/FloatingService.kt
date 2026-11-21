@@ -69,7 +69,7 @@ import kotlin.math.abs
 
 /** 悬浮窗的模式与小工具（纯 JVM，单测）。 */
 object FloatingLogic {
-    enum class Mode { TRANSLATE, INTERPRET, SCREEN, COMIC, SEARCH, ASK }
+    enum class Mode { TRANSLATE, SCREEN, ASK }
 
     /** 无障碍树里可读的文字，去重、按屏幕从上到下。 */
     fun screenText(root: UiNode?, maxChars: Int = 4000): String {
@@ -85,27 +85,6 @@ object FloatingLogic {
         val seen = HashSet<String>()
         return out.sortedBy { it.first }.map { it.second }.filter { seen.add(it) }.joinToString("\n").take(maxChars)
     }
-
-    /** 漫画气泡：把挨得很近的 OCR 行并成一块（同一气泡竖排 / 换行）。 */
-    fun bubbles(lines: List<OcrLine>, gapPx: Int = 24): List<OcrLine> {
-        val sorted = lines.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
-        val out = ArrayList<OcrLine>()
-        for (l in sorted) {
-            val i = out.indexOfLast { b ->
-                val r = b.bounds
-                l.bounds.top - r.bottom < gapPx && l.bounds.left < r.right + gapPx && l.bounds.right > r.left - gapPx
-            }
-            if (i < 0) { out += l; continue }
-            val b = out[i]
-            out[i] = OcrLine(
-                b.text + l.text,
-                com.iris.localai.agent.gui.PxRect(minOf(b.bounds.left, l.bounds.left), minOf(b.bounds.top, l.bounds.top), maxOf(b.bounds.right, l.bounds.right), maxOf(b.bounds.bottom, l.bounds.bottom)),
-            )
-        }
-        return out.filter { it.text.count { c -> c.isLetter() } >= 2 }
-    }
-
-    fun searchUrl(q: String): String = "https://www.bing.com/search?q=" + java.net.URLEncoder.encode(q, "UTF-8")
 }
 
 /**
@@ -118,7 +97,6 @@ class FloatingService : Service() {
     private lateinit var wm: WindowManager
     private var bubble: View? = null
     private var panel: View? = null
-    private var comic: View? = null
     private lateinit var bubbleLp: WindowManager.LayoutParams
     private var input: EditText? = null
     private var output: TextView? = null
@@ -146,7 +124,7 @@ class FloatingService : Service() {
     override fun onDestroy() {
         work?.cancel()
         scope.cancel()
-        listOf(panel, bubble, comic).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
+        listOf(panel, bubble).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
         _running.value = false
         super.onDestroy()
     }
@@ -288,7 +266,6 @@ class FloatingService : Service() {
     }
 
     private fun selectMode(m: FloatingLogic.Mode) {
-        if (mode == FloatingLogic.Mode.INTERPRET && m != mode) work?.cancel()
         mode = m
         val l = look()
         for ((k, v) in chips) {
@@ -296,20 +273,16 @@ class FloatingService : Service() {
             v.setTextColor(if (sel) l.onAccent else l.text)
             v.background = GradientDrawable().apply { cornerRadius = dp(16f).toFloat(); setColor(if (sel) l.accent else l.chip) }
         }
-        input?.visibility = if (m == FloatingLogic.Mode.SCREEN || m == FloatingLogic.Mode.COMIC || m == FloatingLogic.Mode.INTERPRET) View.GONE else View.VISIBLE
+        input?.visibility = if (m == FloatingLogic.Mode.SCREEN) View.GONE else View.VISIBLE
         output?.text = when (m) {
-            FloatingLogic.Mode.INTERPRET -> I18n.s(R.string.v30_fl_interpret_tip)
-            FloatingLogic.Mode.SCREEN, FloatingLogic.Mode.COMIC -> if (IrisAccessibilityService.connected) I18n.s(R.string.v30_fl_screen_tip) else I18n.s(R.string.v30_fl_need_a11y)
+            FloatingLogic.Mode.SCREEN -> if (IrisAccessibilityService.connected) I18n.s(R.string.v30_fl_screen_tip) else I18n.s(R.string.v30_fl_need_a11y)
             else -> ""
         }
     }
 
     private fun modeLabel(m: FloatingLogic.Mode) = when (m) {
         FloatingLogic.Mode.TRANSLATE -> I18n.s(R.string.v30_fl_translate)
-        FloatingLogic.Mode.INTERPRET -> I18n.s(R.string.v30_fl_interpret)
         FloatingLogic.Mode.SCREEN -> I18n.s(R.string.v30_fl_screen)
-        FloatingLogic.Mode.COMIC -> I18n.s(R.string.v30_fl_comic)
-        FloatingLogic.Mode.SEARCH -> I18n.s(R.string.v30_fl_search)
         FloatingLogic.Mode.ASK -> I18n.s(R.string.v30_fl_ask)
     }
 
@@ -338,10 +311,7 @@ class FloatingService : Service() {
                 when (mode) {
                     FloatingLogic.Mode.TRANSLATE -> if (text.isNotEmpty()) translate(text)
                     FloatingLogic.Mode.ASK -> if (text.isNotEmpty()) ask(Prompts.get(PromptKey.FLOAT_ASK), text)
-                    FloatingLogic.Mode.SEARCH -> if (text.isNotEmpty()) openUrl(FloatingLogic.searchUrl(text))
-                    FloatingLogic.Mode.INTERPRET -> interpret()
                     FloatingLogic.Mode.SCREEN -> readScreen()
-                    FloatingLogic.Mode.COMIC -> comic()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -399,84 +369,6 @@ class FloatingService : Service() {
         ask(Prompts.get(PromptKey.FLOAT_SCREEN), text)
     }
 
-    private suspend fun comic() {
-        if (!IrisAccessibilityService.connected) { show(I18n.s(R.string.v30_fl_need_a11y)); return }
-        show(I18n.s(R.string.v30_fl_reading))
-        hidePanelKeepMode()
-        val obs = hidden { AccessibilityGuiDevice(this).observe() }
-        val shot = obs.screenshot ?: run { show(I18n.s(R.string.v30_fl_nothing)); return }
-        val blocks = FloatingLogic.bubbles(GuiOcrProvider.get(this)?.recognize(shot, obs.width, obs.height).orEmpty())
-        if (blocks.isEmpty()) { showBubbleToast(I18n.s(R.string.v30_fl_nothing)); return }
-        val translated = ArrayList<Pair<OcrLine, String>>()
-        for (b in blocks.take(40)) {
-            var last = ""
-            runCatching { container.translator.translate(b.text).collect { last = it } }
-            if (last.isNotBlank()) translated += b to last
-        }
-        showComic(translated)
-    }
-
-    private fun hidePanelKeepMode() { hidePanel() }
-
-    private fun showBubbleToast(t: String) { android.widget.Toast.makeText(this, t, android.widget.Toast.LENGTH_SHORT).show() }
-
-    /** 整屏一层：每个气泡位置贴一块译文；点任意处关掉。 */
-    private fun showComic(items: List<Pair<OcrLine, String>>) {
-        comic?.let { runCatching { wm.removeView(it) } }
-        val l = look()
-        val layer = FrameLayout(this).apply { setOnClickListener { runCatching { wm.removeView(this) }; comic = null } }
-        for ((b, t) in items) {
-            val r = b.bounds
-            val tv = TextView(this).apply {
-                text = t; setTextColor(l.text); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                val p = dp(4f); setPadding(p, p, p, p)
-                background = GradientDrawable().apply { cornerRadius = dp(8f).toFloat(); setColor(ColorUtils.setAlphaComponent(l.surface, 0xF0)) }
-            }
-            layer.addView(tv, FrameLayout.LayoutParams(maxOf(r.right - r.left, dp(72f)), ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = r.left; topMargin = r.top })
-        }
-        val lp = WindowManager.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START }
-        wm.addView(layer, lp)
-        comic = layer
-    }
-
-    /** 同声传译：麦克风分段 → 识别 → 翻译，字幕一行行往下加，切走模式或关面板即停。 */
-    @SuppressLint("MissingPermission")
-    private suspend fun interpret() {
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            show(I18n.s(R.string.v30_fl_need_mic)); return
-        }
-        val rec = container.recognizer
-        show(I18n.s(R.string.v30_fl_listening))
-        withContext(Dispatchers.Default) { rec.prepare(container.settings.current.asrLanguage) }
-        val vad = withContext(Dispatchers.Default) { rec.newVad(0.5f) }
-        val lines = ArrayDeque<String>()
-        try {
-            Microphone.frames(source = MediaRecorder.AudioSource.MIC, effects = false).collect { frame ->
-                val segs = ArrayList<FloatArray>()
-                withContext(Dispatchers.Default) {
-                    vad.acceptWaveform(frame)
-                    while (!vad.empty()) { segs += vad.front().samples; vad.pop() }
-                }
-                for (seg in segs) {
-                    if (seg.size < ASR_SAMPLE_RATE / 3) continue
-                    val heard = rec.transcribe(seg).trim()
-                    if (heard.isEmpty()) continue
-                    var tr = ""
-                    runCatching { container.translator.translate(heard).collect { tr = it } }
-                    lines.addLast(heard + "\n→ " + tr.ifBlank { "…" })
-                    while (lines.size > 6) lines.removeFirst()
-                    show(lines.joinToString("\n\n"))
-                }
-            }
-        } finally {
-            withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Default) { vad.release() }
-        }
-    }
-
     // ---------------------------------------------------------------- foreground
 
     private fun startForegroundCompat() {
@@ -487,13 +379,12 @@ class FloatingService : Service() {
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_iris_mark)
             .setContentTitle(I18n.s(R.string.v30_floating))
-            .setContentText(I18n.s(R.string.v30_fl_notif))
+            .setContentText(I18n.s(R.string.v30_fl_notif2))
             .setContentIntent(open)
             .addAction(Notification.Action.Builder(null, I18n.s(R.string.v30_fl_close), stop).build())
             .setOngoing(true)
             .build()
-        val type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
-            (if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0)
+        val type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         runCatching { startForeground(NOTIF_ID, n, type) }.onFailure { startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) }
     }
 

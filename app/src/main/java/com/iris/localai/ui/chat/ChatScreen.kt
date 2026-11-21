@@ -245,9 +245,23 @@ private fun ChatScreenContent(
     // 2.7.0 边说边出字：按住说话时输入框原有内容 + 识别中的文字（null = 不在听写）。
     var dictBase by remember { mutableStateOf<String?>(null) }
     val dictPartial by vm.dictation.partial.collectAsState()
+    // 3.0 逐字打出：新识别出的字一个个出现（落后多时加速），识别改写前文时从共同前缀接着打。
     LaunchedEffect(dictPartial) {
         val b = dictBase; val p = dictPartial
-        if (b != null && p != null) input = com.iris.localai.voice.DictationText.join(b, p)
+        if (b != null && p != null) {
+            val target = com.iris.localai.voice.DictationText.join(b, p)
+            var cur = input.take(input.commonPrefixWith(target).length)
+            if (cur.length < b.length.coerceAtMost(target.length)) cur = target.take(b.length.coerceAtMost(target.length))
+            input = cur
+            while (cur.length < target.length) {
+                val behind = target.length - cur.length
+                val step = if (behind > 24) 3 else if (behind > 10) 2 else 1
+                var n = (cur.length + step).coerceAtMost(target.length)
+                if (n < target.length && Character.isHighSurrogate(target[n - 1])) n++
+                cur = target.take(n); input = cur
+                kotlinx.coroutines.delay(if (behind > 10) 16L else 32L)
+            }
+        }
     }
     // 2.7.0 长按消息文本的选择工具条：引用进输入框 / 朗读 / 翻译（结果在对话框里）。
     var selTranslate by remember { mutableStateOf<String?>(null) }
