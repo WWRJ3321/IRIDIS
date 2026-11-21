@@ -2354,4 +2354,16 @@
     <string name="v30b2_notes_current">Actual</string>
     <string name="v30b2_notes_count">%1$d cambios</string>
     <string name="v30b2_island_load">Cargando modelo</string>
+    <string name="v31_pq_torch_on">Linterna encendida</string>
+    <string name="v31_pq_torch_off">Linterna apagada</string>
+    <string name="v31_pq_bright">Brillo al %1$d%%</string>
+    <string name="v31_pq_volume">Volumen multimedia al %1$d%%</string>
+    <string name="v31_pq_silent">Modo silencio</string>
+    <string name="v31_pq_vibrate">Modo vibración</string>
+    <string name="v31_pq_normal">Modo sonido</string>
+    <string name="v31_pq_perm">Se necesita permiso: ajustes abiertos</string>
+    <string name="v31_pq_fail">No se pudo: %1$s</string>
+    <string name="v31_fl_app">Abrir IRIDIS</string>
+    <string name="v31_is_saved">Guardada en el dispositivo</string>
+    <string name="v31_is_gen">Generando</string>
 </resources>

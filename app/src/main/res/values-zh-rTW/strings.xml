@@ -2354,4 +2354,16 @@
     <string name="v30b2_notes_current">目前</string>
     <string name="v30b2_notes_count">%1$d 項</string>
     <string name="v30b2_island_load">正在載入模型</string>
+    <string name="v31_pq_torch_on">手電筒已開啟</string>
+    <string name="v31_pq_torch_off">手電筒已關閉</string>
+    <string name="v31_pq_bright">亮度已調到 %1$d%%</string>
+    <string name="v31_pq_volume">媒體音量已調到 %1$d%%</string>
+    <string name="v31_pq_silent">已切到靜音</string>
+    <string name="v31_pq_vibrate">已切到震動</string>
+    <string name="v31_pq_normal">已切到響鈴</string>
+    <string name="v31_pq_perm">需要先允許權限，已開啟設定頁</string>
+    <string name="v31_pq_fail">沒做成：%1$s</string>
+    <string name="v31_fl_app">開啟 IRIDIS</string>
+    <string name="v31_is_saved">已儲存到本機</string>
+    <string name="v31_is_gen">本地生圖中</string>
 </resources>

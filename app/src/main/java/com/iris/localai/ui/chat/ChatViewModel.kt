@@ -778,6 +778,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         if (attachments.isEmpty() && refs.isEmpty()) LaunchIntent.appName(trimmed)?.let { app ->
             if (launchCommand(trimmed, app)) return
         }
+        // Beta3「打开手电筒 / 亮度调到最高 / 静音」→ 系统接口直接做（不叫模型、不走无障碍）。
+        if (attachments.isEmpty() && refs.isEmpty()) com.iris.localai.agent.tools.PhoneQuick.parse(trimmed)?.let { act ->
+            if (quickPhoneCommand(trimmed, act)) return
+        }
         val ready = c.engine.state.value as? EngineState.Ready
         if (attachments.any { it.kind == AttachmentKind.IMAGE } && ready != null && ready.details.supportsVision != true)
             notice.value = if (ready.model.format == ModelFormat.GGUF) MmprojPairing.NO_MMPROJ_HINT else ATTACH_NO_VISION
@@ -1002,6 +1006,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val apps = runCatching { c.agent.phone.apps() }.getOrDefault(emptyList())
         val hit = AppMatcher.match(app, apps) ?: return false
         val reply = runCatching { c.agent.phone.openApp(hit.second); I18n.s(R.string.chat_7c8416, hit.first) }.getOrElse { I18n.s(R.string.chat_5d6224, hit.first, it.message) }
+        append(ChatMessage(role = Role.USER, content = userText))
+        append(ChatMessage(role = Role.ASSISTANT, content = reply))
+        return true
+    }
+
+    /** Beta3 一句话手机操作；false = phone 工具被关掉 / 禁止（交给模型）。 */
+    internal fun quickPhoneCommand(userText: String, act: com.iris.localai.agent.tools.PhoneQuick.Act): Boolean {
+        val ag = c.agent.settings.current
+        if (!ag.isEnabled(PhoneTool) || ag.permission(PhoneTool) == Permission.DENY) return false
+        val Q = com.iris.localai.agent.tools.PhoneQuick
+        val reply = runCatching {
+            val raw = Q.run(act, c.agent.phone)
+            if (!Q.ok(raw)) I18n.s(R.string.v31_pq_perm) else when (act) {
+                is com.iris.localai.agent.tools.PhoneQuick.Act.Torch -> I18n.s(if (raw.endsWith("on")) R.string.v31_pq_torch_on else R.string.v31_pq_torch_off)
+                is com.iris.localai.agent.tools.PhoneQuick.Act.Brightness -> I18n.s(R.string.v31_pq_bright, act.level)
+                is com.iris.localai.agent.tools.PhoneQuick.Act.Volume -> I18n.s(R.string.v31_pq_volume, act.level)
+                is com.iris.localai.agent.tools.PhoneQuick.Act.Ringer -> I18n.s(when (act.mode) { "silent" -> R.string.v31_pq_silent; "vibrate" -> R.string.v31_pq_vibrate; else -> R.string.v31_pq_normal })
+            }
+        }.getOrElse { I18n.s(R.string.v31_pq_fail, it.message ?: "") }
         append(ChatMessage(role = Role.USER, content = userText))
         append(ChatMessage(role = Role.ASSISTANT, content = reply))
         return true

@@ -75,7 +75,14 @@ import kotlin.math.abs
 object FloatingLogic {
     /** 小球被推出屏幕超过自身 1/4。 */
     fun pushedOut(x: Int, size: Int, screenW: Int): Boolean = x < -size / 4 || x > screenW - size + size / 4
-    enum class Mode { TRANSLATE, SCREEN, ASK }
+    enum class Mode { TRANSLATE, SCREEN, SEARCH, ASK }
+
+    /** Beta3 菜单贴在小球哪一侧、竖向居中对齐小球，并夹在屏幕内（px）。 */
+    fun menuPos(ballX: Int, ballY: Int, ball: Int, menuW: Int, menuH: Int, screenW: Int, screenH: Int, gap: Int, left: Boolean): Pair<Int, Int> {
+        val x = if (left) (ballX.coerceAtLeast(0) + ball + gap) else (ballX.coerceAtMost(screenW - ball) - gap - menuW)
+        val y = ballY + ball / 2 - menuH / 2
+        return x.coerceIn(gap, (screenW - menuW - gap).coerceAtLeast(gap)) to y.coerceIn(gap * 4, (screenH - menuH - gap * 4).coerceAtLeast(gap * 4))
+    }
 
     /** 无障碍树里可读的文字，去重、按屏幕从上到下。 */
     fun screenText(root: UiNode?, maxChars: Int = 4000): String {
@@ -119,6 +126,8 @@ class FloatingService : Service() {
     private lateinit var wm: WindowManager
     private var bubble: View? = null
     private var panel: View? = null
+    private var menu: View? = null
+    private var menuClosedAt = 0L
     private lateinit var bubbleLp: WindowManager.LayoutParams
     private var input: EditText? = null
     private var output: TextView? = null
@@ -152,7 +161,7 @@ class FloatingService : Service() {
         work?.cancel()
         scope.cancel()
         peekJob?.cancel(); slide?.cancel()
-        listOf(panel, bubble, dismissBox ?: dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
+        listOf(panel, menu, bubble, dismissBox ?: dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
         _running.value = false
         super.onDestroy()
     }
@@ -266,7 +275,7 @@ class FloatingService : Service() {
         peekJob?.cancel()
         peekJob = scope.launch {
             delay(FloatingLogic.PEEK_AFTER_MS)
-            if (panel != null) return@launch
+            if (panel != null || menu != null) return@launch
             val size = bubbleLp.width
             slideTo(FloatingLogic.edgeX(dockedLeft, size, resources.displayMetrics.widthPixels, dp(8f), peek = true), 380L)
             bubble?.animate()?.alpha(0.6f)?.setDuration(380)?.start()
@@ -327,7 +336,7 @@ class FloatingService : Service() {
 
     /** 丢进关闭圈：小球缩小淡出，然后停服务。 */
     private fun closeAll() {
-        hidePanel()
+        hideMenu(); hidePanel()
         val v = bubble
         if (v == null) { stopSelf(); return }
         v.animate().alpha(0f).scaleX(0.2f).scaleY(0.2f).setDuration(200).withEndAction { stopSelf() }.start()
@@ -335,7 +344,96 @@ class FloatingService : Service() {
 
     // ---------------------------------------------------------------- panel
 
-    private fun togglePanel() { if (panel == null) showPanel() else hidePanel() }
+    private fun togglePanel() {
+        when {
+            panel != null -> hidePanel()
+            menu != null -> hideMenu()
+            // 点小球时菜单外点击先把它收了：别马上又弹出来
+            android.os.SystemClock.uptimeMillis() - menuClosedAt < 300 -> {}
+            else -> showMenu()
+        }
+    }
+
+    /** Beta3 毛玻璃底：半透明面 + 上亮下淡的发丝描边（悬浮窗拿不到跨窗口模糊，用透明度和描边做出玻璃感）。 */
+    private fun glassBg(l: Look, radius: Float): GradientDrawable = GradientDrawable().apply {
+        cornerRadius = dp(radius).toFloat()
+        setColor(ColorUtils.setAlphaComponent(l.surface, 0xE6))
+        setStroke(dp(0.8f).coerceAtLeast(1), ColorUtils.setAlphaComponent(android.graphics.Color.WHITE, if (isDark()) 0x26 else 0x99))
+    }
+
+    private fun isDark(): Boolean = ColorUtils.calculateLuminance(look().surface) < 0.5
+
+    /** Beta3（按宣传片）：点小球 → 小球旁边弹出一列菜单，点哪项再开对应面板。 */
+    private fun showMenu() {
+        val l = look()
+        peekJob?.cancel()
+        val items = listOf(
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_translate, I18n.s(R.string.v30_fl_translate), { openMode(FloatingLogic.Mode.TRANSLATE) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_screen, I18n.s(R.string.v30_fl_screen), { openMode(FloatingLogic.Mode.SCREEN) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_search, I18n.s(R.string.v30_fl_search), { openMode(FloatingLogic.Mode.SEARCH) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_spark, I18n.s(R.string.v30_fl_ask), { openMode(FloatingLogic.Mode.ASK) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_open, I18n.s(R.string.v31_fl_app), { hideMenu(); runCatching { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
+        )
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = dp(6f); setPadding(p, p, p, p)
+            background = glassBg(l, 22f)
+            elevation = dp(8f).toFloat()
+        }
+        val rowH = dp(48f)
+        for ((icon, label, act) in items) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                val ph = dp(14f); setPadding(ph, 0, dp(22f), 0)
+                background = android.graphics.drawable.RippleDrawable(
+                    android.content.res.ColorStateList.valueOf(ColorUtils.setAlphaComponent(l.accent, 0x33)), null,
+                    GradientDrawable().apply { cornerRadius = dp(16f).toFloat(); setColor(android.graphics.Color.WHITE) },
+                )
+                setOnClickListener { act() }
+            }
+            row.addView(ImageView(this).apply { setImageResource(icon); setColorFilter(l.accent) }, LinearLayout.LayoutParams(dp(20f), dp(20f)))
+            row.addView(TextView(this).apply {
+                text = label; setTextColor(l.text); setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                paint.isFakeBoldText = false; typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(14f) })
+            root.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, rowH))
+        }
+        root.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val mw = root.measuredWidth.coerceAtLeast(dp(168f)); val mh = root.measuredHeight
+        val dm = resources.displayMetrics
+        val size = bubbleLp.width
+        val (x, y) = FloatingLogic.menuPos(bubbleLp.x, bubbleLp.y, size, mw, mh, dm.widthPixels, dm.heightPixels, dp(10f), dockedLeft)
+        val lp = WindowManager.LayoutParams(
+            mw, ViewGroup.LayoutParams.WRAP_CONTENT, overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.TOP or Gravity.START; this.x = x; this.y = y }
+        // 点菜单外面收起
+        root.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) { hideMenu(); true } else false }
+        // 从小球那一侧展开：缩放 + 淡入，行依次出现
+        root.pivotX = if (dockedLeft) 0f else mw.toFloat(); root.pivotY = mh / 2f
+        root.alpha = 0f; root.scaleX = 0.7f; root.scaleY = 0.7f
+        for (i in 0 until root.childCount) root.getChildAt(i).apply { alpha = 0f; translationX = (if (dockedLeft) -1 else 1) * dp(10f).toFloat() }
+        runCatching { wm.addView(root, lp) }.onSuccess {
+            menu = root
+            root.animate().alpha(1f).scaleX(1f).scaleY(1f).setInterpolator(OvershootInterpolator(1.2f)).setDuration(260).start()
+            for (i in 0 until root.childCount) root.getChildAt(i).animate().alpha(1f).translationX(0f).setStartDelay(60L + i * 35L).setDuration(200).setInterpolator(DecelerateInterpolator()).start()
+        }
+    }
+
+    private fun hideMenu() {
+        val m = menu ?: return
+        menu = null
+        menuClosedAt = android.os.SystemClock.uptimeMillis()
+        m.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f).setDuration(140).withEndAction { runCatching { wm.removeView(m) } }.start()
+        if (panel == null) schedulePeek()
+    }
+
+    private fun openMode(m: FloatingLogic.Mode) {
+        mode = m
+        hideMenu()
+        showPanel()
+    }
 
     private fun hidePanel() {
         val p = panel ?: return
@@ -351,21 +449,15 @@ class FloatingService : Service() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             val pad = dp(14f); setPadding(pad, pad, pad, pad)
-            background = GradientDrawable().apply { cornerRadius = dp(24f).toFloat(); setColor(l.surface) }
+            background = glassBg(l, 24f)
             elevation = dp(10f).toFloat()
         }
-        // 模式条
-        val strip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        for (m in FloatingLogic.Mode.entries) {
-            val chip = TextView(this).apply {
-                text = modeLabel(m); setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                val ph = dp(12f); val pv = dp(6f); setPadding(ph, pv, ph, pv)
-                setOnClickListener { selectMode(m) }
-            }
-            chips[m] = chip
-            strip.addView(chip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6f) })
-        }
-        root.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(strip) })
+        // Beta3：没有模式条，顶部只写当前功能名（从菜单里选的）
+        root.addView(TextView(this).apply {
+            text = modeLabel(mode); setTextColor(l.sub); setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            val p = dp(4f); setPadding(p, 0, p, 0)
+        })
         val field = EditText(this).apply {
             setTextColor(l.text); setHintTextColor(l.sub); setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             hint = I18n.s(R.string.v30_fl_hint); maxLines = 4
@@ -400,7 +492,7 @@ class FloatingService : Service() {
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = (bubbleLp.y + dp(56f)).coerceAtMost(resources.displayMetrics.heightPixels - dp(420f)).coerceAtLeast(dp(40f))
+            y = (bubbleLp.y - dp(40f)).coerceAtMost(resources.displayMetrics.heightPixels - dp(420f)).coerceAtLeast(dp(40f))
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
         // Beta2：展开动画——从小球所在一侧弹出（缩放 + 淡入 + 轻微下落）
@@ -432,6 +524,7 @@ class FloatingService : Service() {
     private fun modeLabel(m: FloatingLogic.Mode) = when (m) {
         FloatingLogic.Mode.TRANSLATE -> I18n.s(R.string.v30_fl_translate)
         FloatingLogic.Mode.SCREEN -> I18n.s(R.string.v30_fl_screen)
+        FloatingLogic.Mode.SEARCH -> I18n.s(R.string.v30_fl_search)
         FloatingLogic.Mode.ASK -> I18n.s(R.string.v30_fl_ask)
     }
 
@@ -460,6 +553,7 @@ class FloatingService : Service() {
                 when (mode) {
                     FloatingLogic.Mode.TRANSLATE -> if (text.isNotEmpty()) translate(text)
                     FloatingLogic.Mode.ASK -> if (text.isNotEmpty()) ask(Prompts.get(PromptKey.FLOAT_ASK), text)
+                    FloatingLogic.Mode.SEARCH -> if (text.isNotEmpty()) webSearch(text)
                     FloatingLogic.Mode.SCREEN -> readScreen()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -492,6 +586,12 @@ class FloatingService : Service() {
         }
     }
 
+    /** 交给系统默认的搜索（浏览器 / 搜索 App 自己选），没有就开网页搜索。 */
+    private fun webSearch(q: String) {
+        val i = Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY, q).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { startActivity(i) }.isFailure) openUrl("https://www.google.com/search?q=" + Uri.encode(q)) else hidePanel()
+    }
+
     private fun openUrl(url: String) {
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         hidePanel()
@@ -499,7 +599,7 @@ class FloatingService : Service() {
 
     /** 截屏前把自己的窗口藏起来。 */
     private suspend fun <T> hidden(block: suspend () -> T): T {
-        val views = listOf(bubble, panel)
+        val views = listOf(bubble, panel, menu)
         views.forEach { it?.visibility = View.INVISIBLE }
         delay(160)
         return try { block() } finally { views.forEach { it?.visibility = View.VISIBLE } }

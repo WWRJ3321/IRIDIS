@@ -358,7 +358,7 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
     com.iris.localai.ui.island.DynamicIsland(
         enabled = appSettings.dynamicIsland && !tour.active,
         hidden = buildSet {
-            if (top == Route.IMAGEGEN.name) add(com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN)
+            if (top == Route.IMAGEGEN.name) { add(com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN); add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD) } // 生图页的模型卡片自己显示下载进度
             if (top == Route.DOWNLOAD_MODELS.name) add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD)
             if (top == Route.CHAT.name) add(com.iris.localai.task.TaskProgress.Kind.OTHER) // 对话页底部已有加载行
         },

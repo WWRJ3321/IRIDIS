@@ -2354,4 +2354,16 @@
     <string name="v30b2_notes_current">Aktuell</string>
     <string name="v30b2_notes_count">%1$d Punkte</string>
     <string name="v30b2_island_load">Modell wird geladen</string>
+    <string name="v31_pq_torch_on">Taschenlampe an</string>
+    <string name="v31_pq_torch_off">Taschenlampe aus</string>
+    <string name="v31_pq_bright">Helligkeit auf %1$d%%</string>
+    <string name="v31_pq_volume">Medienlautstärke auf %1$d%%</string>
+    <string name="v31_pq_silent">Lautlos aktiviert</string>
+    <string name="v31_pq_vibrate">Vibration aktiviert</string>
+    <string name="v31_pq_normal">Klingeln aktiviert</string>
+    <string name="v31_pq_perm">Berechtigung nötig – Einstellungen geöffnet</string>
+    <string name="v31_pq_fail">Hat nicht geklappt: %1$s</string>
+    <string name="v31_fl_app">IRIDIS öffnen</string>
+    <string name="v31_is_saved">Auf dem Gerät gespeichert</string>
+    <string name="v31_is_gen">Wird erstellt</string>
 </resources>

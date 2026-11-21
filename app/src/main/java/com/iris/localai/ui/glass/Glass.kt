@@ -121,9 +121,14 @@ fun Modifier.glass(
     val liquid = LocalIrisStyle.current == IrisStyle.LIQUID
     val source = if (quality.blurs && !matte) backdrop else null
     val colors = Iris.colors
-    val style = if (matte) style.copy(vibrancy = 1f, rimAlpha = 0f, sheen = false) else style
+    val style = when { matte -> style.copy(vibrancy = 1f, rimAlpha = 0f, sheen = false); liquid -> style.copy(blurRadius = style.blurRadius.coerceAtLeast(28f), vibrancy = 1.3f, sheen = false); else -> style }
     val baseTint = style.tint ?: if (quality.blurs) colors.glassTint else colors.glassTintOpaque
-    val tint = if (matte) (style.tint ?: colors.surface).copy(alpha = 1f) else baseTint
+    // Beta3 液态：模糊可用时填充减到约一半（60 % 白 → 约 32 %），靠背景透出来，不像磨砂亚克力
+    val tint = when {
+        matte -> (style.tint ?: colors.surface).copy(alpha = 1f)
+        liquid && source != null && style.tint == null -> baseTint.copy(alpha = baseTint.alpha * 0.55f)
+        else -> baseTint
+    }
     val rim = colors.glassRim
     val solidBg = LocalSolidBackground.current
     val holder = remember { PanelState() }

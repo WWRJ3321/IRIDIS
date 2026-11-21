@@ -64,6 +64,8 @@ object ScreenTool : SuspendTool {
             ?: throw IllegalArgumentException("缺少参数 task")
         // 「打开微信」 only → launch it directly (no screen loop, no vision model needed).
         LaunchIntent.appName(task)?.let { app -> env.phone?.let { p -> return openApp(app, p) } }
+        // Beta3：手电筒 / 亮度 / 音量 / 静音 用系统接口，不开无障碍、不看屏幕。
+        PhoneQuick.parse(task)?.let { act -> env.phone?.let { p -> val r = PhoneQuick.run(act, p); return ToolResult(PhoneQuick.ok(r), r, r.take(40)) } }
         val gui = env.gui ?: return ToolResult(false, "Error: screen control is not available", "不可用")
         gui.blocker()?.let { b -> val t = blockerText(b); return ToolResult(false, "Error: $t", t.substringBefore('：')) }
         val r = gui.run(task, progress)
@@ -82,7 +84,6 @@ object GuiIntent {
         "(在|用)手机上|手机上(帮我|给我|替我)|" +
             "(打开|进入|去)($APPS).{0,24}(把|调|点|发|搜|找|开启|关闭|关掉|设置|设成|切换|改成|播放)|" +
             "(在|用|通过)微信(上|里)?(给|跟|向|和).{1,12}(发|说)|给.{1,12}发(一条|个|条)?(微信|QQ)|" +
-            "(亮度|音量)(调|开|设)(到|成)?(最高|最低|最大|最小)|" +
             "(在|用|通过)?($APPS)(的|上|里)?.{0,16}(群|聊天|好友)(里|中|上)?.{0,8}(发|说)|" +
             "(在|用|通过)($APPS)(里|上|中)?.{0,20}(发|搜|点|买|下单|播放|关注|评论|点赞|收藏|转账|付款)",
     )

@@ -2354,4 +2354,16 @@
     <string name="v30b2_notes_current">Current</string>
     <string name="v30b2_notes_count">%1$d items</string>
     <string name="v30b2_island_load">Loading model</string>
+    <string name="v31_pq_torch_on">Flashlight on</string>
+    <string name="v31_pq_torch_off">Flashlight off</string>
+    <string name="v31_pq_bright">Brightness set to %1$d%%</string>
+    <string name="v31_pq_volume">Media volume set to %1$d%%</string>
+    <string name="v31_pq_silent">Switched to silent</string>
+    <string name="v31_pq_vibrate">Switched to vibrate</string>
+    <string name="v31_pq_normal">Switched to ring</string>
+    <string name="v31_pq_perm">Permission needed — settings opened</string>
+    <string name="v31_pq_fail">Didn\'t work: %1$s</string>
+    <string name="v31_fl_app">Open IRIDIS</string>
+    <string name="v31_is_saved">Saved on device</string>
+    <string name="v31_is_gen">Generating</string>
 </resources>

@@ -12,15 +12,21 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -82,9 +88,31 @@ object IslandLogic {
     }
 }
 
+/** Beta3 灵动岛的位置：贴前摄挖孔（纯 JVM，单测）。单位都是 dp。 */
+object IslandGeom {
+    /** 收起时胶囊的高度：比状态栏矮一点，夹在 26–38 dp。 */
+    fun pillHeight(statusBarDp: Float): Float = (statusBarDp - 6f).coerceIn(26f, 38f)
+
+    /** 胶囊顶边：有挖孔时和挖孔垂直居中，否则在状态栏里垂直居中。 */
+    fun top(statusBarDp: Float, cutoutTopDp: Float?, cutoutHeightDp: Float?, pillDp: Float): Float =
+        if (cutoutTopDp != null && cutoutHeightDp != null && cutoutHeightDp > 0f) (cutoutTopDp + cutoutHeightDp / 2f - pillDp / 2f).coerceAtLeast(2f)
+        else ((statusBarDp - pillDp) / 2f).coerceAtLeast(2f)
+
+    /** 挖孔中心相对屏幕中线的偏移（挖孔不居中的机型，胶囊跟着挖孔走）；超出 ±120 dp 视为角落挖孔，不跟。 */
+    fun centerShift(screenWidthDp: Float, cutoutCenterXDp: Float?): Float {
+        val d = (cutoutCenterXDp ?: return 0f) - screenWidthDp / 2f
+        return if (kotlin.math.abs(d) > 120f) 0f else d
+    }
+
+    /** 中间要给挖孔让出的宽度（左右内容分在两侧）；没有居中挖孔就是 0。 */
+    fun gap(cutoutWidthDp: Float?, shiftDp: Float, hasCutout: Boolean): Float =
+        if (!hasCutout || cutoutWidthDp == null || cutoutWidthDp > 160f) 0f else cutoutWidthDp + 10f
+}
+
 /**
- * 顶部居中的黑色胶囊，长任务进行中显示（图标 + 标题 + 进度环）；点一下展开（副标题 + 停止 + 打开）。
- * 任务结束后显示结果 [IslandLogic.LINGER_MS] 再收起。[hidden] 的任务种类不显示（所在页面已有进度）。
+ * Beta3 应用内灵动岛（按宣传片做）：贴前摄挖孔居中的小黑胶囊——左边图标/生图缩略图 + 标题，右边百分比或转圈，
+ * 底边一条细进度线；点一下展开成圆角卡片（副标题 + 停止 + 打开），4 秒不碰自动收回；生图完成时展开成大图
+ * 「已保存到本机」停 [IslandLogic.LINGER_MS]。[hidden] 的任务种类不显示（所在页面已有进度）。
  */
 @Composable
 fun DynamicIsland(
@@ -96,77 +124,153 @@ fun DynamicIsland(
     val active by TaskProgress.active.collectAsStateWithLifecycle()
     var lingering by remember { mutableStateOf<TaskProgress.Task?>(null) }
     var expanded by remember { mutableStateOf(false) }
-    // 结束的那一份只经 surface 送来（active 里已经没有它）
     DisposableEffect(Unit) {
         val s = TaskProgress.TaskSurface { t -> if (t.finished && t.kind !in hidden) lingering = t }
         TaskProgress.addSurface(s)
         onDispose { TaskProgress.removeSurface(s) }
     }
-    LaunchedEffect(lingering?.serial, lingering?.phase) { if (lingering != null) { delay(IslandLogic.LINGER_MS); lingering = null; expanded = false } }
+    LaunchedEffect(lingering?.serial, lingering?.phase) {
+        if (lingering != null) { delay(if (bigDone(lingering)) IslandLogic.LINGER_MS + 1400 else IslandLogic.LINGER_MS); lingering = null; expanded = false }
+    }
+    LaunchedEffect(expanded) { if (expanded) { delay(4000); expanded = false } }
     val running = IslandLogic.pick(active, hidden)
     val task = running ?: lingering?.takeIf { it.kind !in hidden }
     val reduce = LocalReduceMotion.current
-    Box(modifier.fillMaxWidth().statusBarsPadding().padding(top = 6.dp), contentAlignment = Alignment.TopCenter) {
+
+    // ---- 位置：读挖孔 ----
+    val view = androidx.compose.ui.platform.LocalView.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sbPx = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(density)
+    val cut = remember(view, sbPx) { view.rootWindowInsets?.displayCutout?.boundingRectTop?.takeIf { !it.isEmpty } }
+    val sbDp = with(density) { sbPx.toDp().value }.takeIf { it > 0f } ?: 28f
+    val screenW = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.toFloat()
+    val pillH = IslandGeom.pillHeight(sbDp)
+    val cutTop = cut?.let { with(density) { it.top.toDp().value } }
+    val cutH = cut?.let { with(density) { it.height().toDp().value } }
+    val shift = IslandGeom.centerShift(screenW, cut?.let { with(density) { it.exactCenterX().toDp().value } })
+    val gap = IslandGeom.gap(cut?.let { with(density) { it.width().toDp().value } }, shift, cut != null)
+    val top = IslandGeom.top(sbDp, cutTop, cutH, pillH)
+
+    Box(modifier.fillMaxWidth().padding(top = top.dp).offset(x = shift.dp), contentAlignment = Alignment.TopCenter) {
         AnimatedVisibility(
             visible = enabled && task != null,
-            enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + scaleIn(IrisMotion.Bouncy.float(), initialScale = 0.6f),
-            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + scaleOut(IrisMotion.exit(), targetScale = 0.6f),
+            enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + scaleIn(IrisMotion.Bouncy.float(), initialScale = 0.5f),
+            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + scaleOut(IrisMotion.exit(), targetScale = 0.5f),
         ) {
             val t = task ?: return@AnimatedVisibility
-            IslandPill(t, expanded, onTap = { expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
+            IslandPill(t, expanded, pillH, gap, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
         }
     }
 }
 
+/** 生图完成且有图：岛展开成大图。 */
+private fun bigDone(t: TaskProgress.Task?): Boolean =
+    t != null && t.kind == TaskProgress.Kind.IMAGE_GEN && t.phase == TaskProgress.Phase.DONE && !t.result.isNullOrBlank()
+
 @Composable
-private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, onTap: () -> Unit, onOpen: () -> Unit) {
+private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, gap: Float, onTap: () -> Unit, onOpen: () -> Unit) {
     val c = Iris.colors
-    val ink = Color(0xFF0B0B0D)
+    val ink = Color(0xFF0E0F13)
     val accent = when (t.phase) {
         TaskProgress.Phase.FAILED -> c.danger
         TaskProgress.Phase.DONE -> c.success
-        else -> c.accent
+        else -> Color(0xFF6EAAFF)
     }
-    Column(
+    val big = bigDone(t)
+    val open = expanded || big
+    val shape = if (open) androidx.compose.foundation.shape.RoundedCornerShape(28.dp) else IrisRadius.pillShape
+    Box(
         Modifier
-            .widthIn(min = 132.dp, max = if (expanded) 360.dp else 260.dp)
-            .background(ink, IrisRadius.pillShape)
-            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onTap)
             .animateContentSize(IrisMotion.Snappy.size())
-            .padding(horizontal = 14.dp, vertical = if (expanded) 12.dp else 7.dp),
+            .widthIn(min = if (open) 300.dp else (gap + 120f).dp, max = if (open) 360.dp else 340.dp)
+            .clip(shape)
+            .background(ink)
+            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onTap),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(iconOf(t.kind), null, tint = accent, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.size(8.dp))
-            Text(
-                t.title, style = IrisType.labelSmall, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            Spacer(Modifier.size(10.dp))
-            AnimatedContent(IslandLogic.trailing(t), label = "islandTrail") { s ->
-                if (s.isNotEmpty()) Text(s, style = IrisType.labelSmall, color = Color.White.copy(alpha = 0.75f))
+        when {
+            big -> Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                com.iris.localai.ui.imagegen.Thumb(t.result!!, Modifier.size(276.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), maxSide = 640)
+                Row(Modifier.padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(IrisIcons.Check, null, tint = c.success, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(I18n.s(R.string.v31_is_saved), style = IrisType.labelSmall, color = Color.White)
+                }
             }
-            if (!t.finished) {
-                Spacer(Modifier.size(8.dp))
-                ProgressRing(t.percent, accent)
+            expanded -> Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Lead(t, accent, 28.dp)
+                    Spacer(Modifier.size(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(t.title, style = IrisType.labelSmall, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (t.subtitle.isNotBlank()) Text(t.subtitle, style = IrisType.caption, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Trail(t, accent)
+                }
+                if (t.percent >= 0 && !t.finished) Bar(t.percent, accent, Modifier.padding(top = 10.dp))
+                Row(Modifier.padding(top = 12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    if (!t.finished) IslandButton(I18n.s(R.string.v30_island_stop), c.danger) { TaskProgress.requestStop(t.id) }
+                    IslandButton(I18n.s(R.string.v30_island_open), Color.White.copy(alpha = 0.16f), onOpen)
+                }
+            }
+            else -> Box(Modifier.height(pillH.dp)) {
+                Row(Modifier.fillMaxHeight().padding(start = 6.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Lead(t, accent, (pillH - 10f).dp)
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        title(t), style = IrisType.labelSmall, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 150.dp),
+                    )
+                    Spacer(Modifier.width(gap.coerceAtLeast(12f).dp))
+                    Spacer(Modifier.weight(1f, fill = false))
+                    Trail(t, accent)
+                }
+                // 底边细进度线（有确定进度时）
+                if (t.percent >= 0 && !t.finished) Bar(t.percent, accent, Modifier.align(Alignment.BottomCenter).padding(start = pillH.dp, end = 14.dp, bottom = 3.dp), thin = true)
             }
         }
-        if (expanded) {
-            if (t.subtitle.isNotBlank()) {
-                Text(t.subtitle, style = IrisType.caption, color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-            }
-            Row(Modifier.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                if (!t.finished) IslandButton(I18n.s(R.string.v30_island_stop), c.danger) { TaskProgress.requestStop(t.id) }
-                IslandButton(I18n.s(R.string.v30_island_open), Color.White.copy(alpha = 0.16f), onOpen)
-            }
+    }
+}
+
+private fun title(t: TaskProgress.Task): String =
+    if (t.kind == TaskProgress.Kind.IMAGE_GEN && !t.finished) I18n.s(R.string.v31_is_gen) else t.title
+
+/** 左侧：生图时是实时预览缩略图，其他任务是图标。 */
+@Composable
+private fun Lead(t: TaskProgress.Task, accent: Color, size: androidx.compose.ui.unit.Dp) {
+    val frame = (t.payload as? com.iris.localai.service.ImageGenMonitor.Extra)?.preview
+    if (t.kind == TaskProgress.Kind.IMAGE_GEN && frame != null) {
+        val bmp = remember(frame) { runCatching { android.graphics.Bitmap.createBitmap(frame.argb, frame.width, frame.height, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap() }.getOrNull() }
+        if (bmp != null) {
+            androidx.compose.foundation.Image(bmp, null, Modifier.size(size).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            return
         }
+    }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) { Icon(iconOf(t.kind), null, tint = accent, modifier = Modifier.size(16.dp)) }
+}
+
+/** 右侧：百分比 / 步数，或不定进度的转圈，或结果符号。 */
+@Composable
+private fun Trail(t: TaskProgress.Task, accent: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AnimatedContent(IslandLogic.trailing(t), label = "islandTrail") { s ->
+            if (s.isNotEmpty()) Text(s, style = IrisType.labelSmall, color = if (t.finished) accent else Color(0xFF9CC2FF))
+        }
+        if (!t.finished && t.percent < 0) { Spacer(Modifier.size(6.dp)); ProgressRing(t.percent, accent) }
+    }
+}
+
+@Composable
+private fun Bar(percent: Int, color: Color, modifier: Modifier, thin: Boolean = false) {
+    val h = if (thin) 2.dp else 4.dp
+    Box(modifier.fillMaxWidth().height(h).clip(IrisRadius.pillShape).background(Color.White.copy(alpha = 0.14f))) {
+        Box(Modifier.fillMaxWidth(percent.coerceIn(0, 100) / 100f).fillMaxHeight().clip(IrisRadius.pillShape).background(color))
     }
 }
 
 @Composable
 private fun IslandButton(text: String, bg: Color, onClick: () -> Unit) {
     Box(
-        Modifier.background(bg, IrisRadius.pillShape).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp),
+        Modifier.clip(IrisRadius.pillShape).background(bg).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 7.dp),
     ) { Text(text, style = IrisType.labelSmall, color = Color.White) }
 }
 

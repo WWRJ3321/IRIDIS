@@ -106,7 +106,7 @@ class ScreenToolTest {
     }
 
     @Test fun chatModeTriggerIsNarrow() {
-        for (t in listOf("帮我打开设置把亮度调最高", "在手机上给妈妈发微信说我晚点到", "用微信给张三发消息说明天见", "给老王发条微信", "把亮度调到最高", "打开微信搜一下张三"))
+        for (t in listOf("帮我打开设置把亮度调最高", "在手机上给妈妈发微信说我晚点到", "用微信给张三发消息说明天见", "给老王发条微信", "打开微信搜一下张三"))
             assertTrue(t, GuiIntent.looksLikePhoneTask(t))
         for (t in listOf("亮度对眼睛有什么影响", "设置一个好的作息怎么做", "微信是哪家公司做的", "明天天气怎么样", "写一首诗", "怎么打开设置"))
             assertFalse(t, GuiIntent.looksLikePhoneTask(t))

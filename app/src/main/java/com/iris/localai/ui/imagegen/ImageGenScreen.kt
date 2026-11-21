@@ -478,8 +478,18 @@ private fun ModelChip(
             .padding(IrisDimens.space12),
     ) {
         val fg = if (selected) c.onAccentContainer else c.text
-        Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary)
-        Text(m.name, style = IrisType.labelSmall, color = fg, maxLines = 2)
+        val busy = dl is ImageDl.Downloading || dl is ImageDl.Extracting
+        // Beta3：导入的模型不再上下各写一遍「已导入」；下载中右上角一个 ✕ 取消
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                if (!m.imported) Text(tierLabel(m), style = IrisType.micro, color = c.textTertiary)
+                Text(m.name, style = IrisType.labelSmall, color = fg, maxLines = 2)
+            }
+            if (busy) androidx.compose.material3.Icon(
+                IrisIcons.Close, ImageGenText.CANCEL, tint = c.textSecondary,
+                modifier = Modifier.size(28.dp).clip(IrisRadius.pillShape).clickable(onClick = onCancel).padding(5.dp),
+            )
+        }
         if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary, maxLines = 2)
         // 许可摘要 + 原文链接
         if (m.licenseNote.isNotEmpty()) {
@@ -489,23 +499,22 @@ private fun ModelChip(
         }
         Spacer(Modifier.height(IrisDimens.space4))
         Spacer(Modifier.weight(1f))
-        Text(if (m.imported) I18n.s(R.string.ig269_own_files)
-            else ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) } ?: I18n.s(R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
-        Spacer(Modifier.height(IrisDimens.space4))
+        if (!busy) {
+            val size = ImageGenFiles.sizeBytes(m)?.let { Format.bytes(it) }
+            if (size != null || !m.imported) Text(size ?: I18n.s(R.string.imagegen_719560), style = IrisType.caption, color = c.textSecondary)
+            Spacer(Modifier.height(IrisDimens.space4))
+        }
         when (dl) {
             is ImageDl.Downloading, is ImageDl.Extracting -> {
                 val frac = if (dl is ImageDl.Downloading) dl.fraction else (dl as ImageDl.Extracting).fraction
-                val label = if (dl is ImageDl.Downloading) "${Format.bytes(dl.done)} / ${Format.bytes(dl.total)}" + (if (dl.source.isNotEmpty()) " · ${dl.source}" else "")
-                    else "${ImageGenText.EXTRACTING} ${(frac * 100).toInt()}%"
+                val pct = "${(frac * 100).toInt()}%"
+                val label = if (dl is ImageDl.Downloading) "$pct · ${DlSize.pair(dl.done, dl.total)}" else "${ImageGenText.EXTRACTING} $pct"
                 IrisProgressBar(frac, Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, style = IrisType.caption, color = c.textSecondary, modifier = Modifier.weight(1f), maxLines = 1)
-                    IrisButton(ImageGenText.CANCEL, onClick = onCancel, style = IrisButtonStyle.Text, compact = true, icon = IrisIcons.Close)
-                }
+                Text(label, style = IrisType.caption, color = c.textSecondary, maxLines = 1, softWrap = false)
             }
             else -> {
                 if (dl is ImageDl.Failed) Text(dl.message, style = IrisType.caption, color = c.danger, maxLines = 5)
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!(m.imported && downloaded)) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (downloaded) ImageGenText.DOWNLOADED else ImageGenText.NOT_DOWNLOADED, style = IrisType.caption,
                         color = if (downloaded) c.success else c.textTertiary, modifier = Modifier.weight(1f))
                     if (!downloaded) IrisButton(if (dl is ImageDl.Failed) ImageGenText.RETRY else ImageGenText.DOWNLOAD, onClick = onDownload,
@@ -518,6 +527,16 @@ private fun ModelChip(
                 }
             }
         }
+    }
+}
+
+/** Beta3「54 / 68 MB」：两个数用同一个单位，单位只写一次（纯函数，单测）。 */
+internal object DlSize {
+    fun pair(done: Long, total: Long): String {
+        val t = total.coerceAtLeast(0L)
+        val (div, unit) = when { t >= 1L shl 30 -> (1L shl 30).toDouble() to "GB"; t >= 1L shl 20 -> (1L shl 20).toDouble() to "MB"; else -> 1024.0 to "KB" }
+        fun f(v: Long): String { val x = v / div; return if (unit == "GB") String.format(java.util.Locale.ROOT, "%.2f", x) else x.toLong().toString() }
+        return "${f(done.coerceIn(0L, maxOf(t, done)))} / ${f(t)} $unit"
     }
 }
 

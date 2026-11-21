@@ -65,6 +65,10 @@ object GlassTokens {
     val lightTintStrong = Color.White.copy(alpha = 0.78f)
     val darkTintStrong = IrisDarkColors.glassTint.copy(alpha = 0.72f)
     const val NOISE = 0.15f
+    /** Beta3 液态：填充乘这个系数、模糊更大、颗粒更细。 */
+    const val LIQUID_TINT = 0.6f
+    val liquidBlur = 30.dp
+    const val LIQUID_NOISE = 0.06f
     /** Without blur the tint must carry the contrast on its own. */
     val lightFallback = IrisLightColors.surface.copy(alpha = 0.94f)
     val darkFallback = IrisDarkColors.surface.copy(alpha = 0.92f)
@@ -124,8 +128,11 @@ fun Modifier.glassSurface(
     val c = Iris.colors
     val dark = c.isDark
     val blur = state != null && LocalGlassQuality.current.blurs
-    val tint = if (strong) (if (dark) GlassTokens.darkTintStrong else GlassTokens.lightTintStrong)
+    val liquid = com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.LIQUID
+    val tint0 = if (strong) (if (dark) GlassTokens.darkTintStrong else GlassTokens.lightTintStrong)
         else if (dark) GlassTokens.darkTint else GlassTokens.lightTint
+    // Beta3 液态去塑料感：填充更薄（约 6 成），边与高光只由 liquidEdge 画一层
+    val tint = if (liquid) tint0.copy(alpha = tint0.alpha * GlassTokens.LIQUID_TINT) else tint0
     val fallback = if (dark) GlassTokens.darkFallback else GlassTokens.lightFallback
     // 1 dp rim, white 70 % → 15 % from top-left to bottom-right (dimmer in dark theme).
     val rim = Brush.linearGradient(
@@ -135,24 +142,25 @@ fun Modifier.glassSurface(
     )
     // Subtle vertical sheen: the top of the glass a little brighter than the bottom.
     val sheen = Brush.verticalGradient(
-        0f to Color.White.copy(alpha = if (dark) 0.07f else 0.18f),
+        0f to Color.White.copy(alpha = if (liquid) 0f else if (dark) 0.07f else 0.18f),
         1f to Color.Transparent,
     )
     val highlight = Color.White.copy(alpha = if (dark) 0.22f else 0.85f)
-    val shadowColor = Color.Black.copy(alpha = if (dark) 0.30f else 0.12f)
+    val shadowColor = Color.Black.copy(alpha = if (liquid) (if (dark) 0.16f else 0.06f) else if (dark) 0.30f else 0.12f)
     val base = (if (elevation.value > 0f) this.shadow(elevation, shape, clip = false, ambientColor = shadowColor, spotColor = shadowColor) else this)
         .clip(shape)
     val filled = if (blur) base.hazeEffect(state!!) {
         backgroundColor = c.background
-        blurRadius = GlassTokens.blurRadius
+        blurRadius = if (liquid) GlassTokens.liquidBlur else GlassTokens.blurRadius
         tints = listOf(HazeTint(tint))
         fallbackTint = HazeTint(fallback)
-        noiseFactor = GlassTokens.NOISE
+        noiseFactor = if (liquid) GlassTokens.LIQUID_NOISE else GlassTokens.NOISE
     } else base.background(fallback)
     return filled
         .background(sheen)
         .drawWithContent {
             drawContent()
+            if (liquid) return@drawWithContent
             // Thin inner top highlight: the shape's outline inset by the rim, fading out by ~40 % height.
             val inset = GlassTokens.rim.toPx() * 1.5f
             val w = size.width - inset * 2; val h = size.height - inset * 2
@@ -167,32 +175,28 @@ fun Modifier.glassSurface(
                 }
             }
         }
-        .border(GlassTokens.rim, rim, shape)
-        .then(if (com.iris.localai.ui.theme.LocalIrisStyle.current == com.iris.localai.ui.theme.IrisStyle.LIQUID) Modifier.liquidEdge(shape, dark) else Modifier)
+        .then(if (liquid) Modifier.liquidEdge(shape, dark) else Modifier.border(GlassTokens.rim, rim, shape))
 }
 
 /**
- * 3.0 液态玻璃的边缘：沿面板轮廓内侧的一圈折射光带（左上与右下亮、中段暗，像厚玻璃边缘把光弯过来），
- * 左上一团柔和的镜面高光，底部一道很淡的内阴影。全部画在面板自己的轮廓里（不采样屏幕外像素，1.7 的黑边问题不会出现）。
+ * 3.0 液态玻璃的边缘（Beta3 去塑料感）：一圈 0.8 dp 发丝线，上亮下透明（不再是 3 dp 整圈白边）；
+ * 顶边一条 1 dp 细亮线代替大面积镜面高光；底部内阴影去掉。全部画在面板自己的轮廓里。
  */
 fun Modifier.liquidEdge(shape: Shape, dark: Boolean): Modifier = this.drawWithContent {
     val outline = shape.createOutline(size, layoutDirection, this)
-    val band = 3.dp.toPx()
-    val bright = Color.White.copy(alpha = if (dark) 0.30f else 0.75f)
-    val mid = Color.White.copy(alpha = if (dark) 0.04f else 0.10f)
+    val hair = 0.8.dp.toPx()
+    val top = Color.White.copy(alpha = if (dark) 0.22f else 0.55f)
     drawOutline(
         outline,
-        Brush.linearGradient(0f to bright, 0.45f to mid, 0.55f to mid, 1f to bright.copy(alpha = bright.alpha * 0.6f), start = Offset.Zero, end = Offset(size.width, size.height)),
-        style = Stroke(width = band * 2f),
+        Brush.verticalGradient(0f to top, 0.5f to Color.Transparent, 1f to Color.White.copy(alpha = if (dark) 0.04f else 0.12f), startY = 0f, endY = size.height.coerceAtLeast(1f)),
+        style = Stroke(width = hair * 2f),
     )
-    // 镜面高光
-    val r = minOf(size.width, size.height) * 0.9f
-    drawCircle(
-        Brush.radialGradient(0f to Color.White.copy(alpha = if (dark) 0.10f else 0.22f), 1f to Color.Transparent, center = Offset(size.width * 0.18f, 0f), radius = r),
-        radius = r, center = Offset(size.width * 0.18f, 0f),
+    // 顶边细亮线（只占顶部 1 dp 高，左右淡出）
+    val line = 1.dp.toPx()
+    drawRect(
+        Brush.horizontalGradient(0f to Color.Transparent, 0.3f to top.copy(alpha = top.alpha * 0.6f), 0.7f to top.copy(alpha = top.alpha * 0.6f), 1f to Color.Transparent),
+        topLeft = Offset(0f, hair), size = androidx.compose.ui.geometry.Size(size.width, line),
     )
-    // 底部内阴影
-    drawRect(Brush.verticalGradient(0.82f to Color.Transparent, 1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.06f)))
     drawContent()
 }
 

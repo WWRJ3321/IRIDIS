@@ -2354,4 +2354,16 @@
     <string name="v30b2_notes_current">現在</string>
     <string name="v30b2_notes_count">%1$d 件</string>
     <string name="v30b2_island_load">モデルを読み込み中</string>
+    <string name="v31_pq_torch_on">ライトをオンにしました</string>
+    <string name="v31_pq_torch_off">ライトをオフにしました</string>
+    <string name="v31_pq_bright">明るさを %1$d%% にしました</string>
+    <string name="v31_pq_volume">メディア音量を %1$d%% にしました</string>
+    <string name="v31_pq_silent">サイレントにしました</string>
+    <string name="v31_pq_vibrate">バイブにしました</string>
+    <string name="v31_pq_normal">着信音をオンにしました</string>
+    <string name="v31_pq_perm">権限が必要です。設定を開きました</string>
+    <string name="v31_pq_fail">できませんでした：%1$s</string>
+    <string name="v31_fl_app">IRIDIS を開く</string>
+    <string name="v31_is_saved">端末に保存しました</string>
+    <string name="v31_is_gen">生成中</string>
 </resources>
