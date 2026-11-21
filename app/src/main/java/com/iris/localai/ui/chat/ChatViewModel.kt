@@ -354,6 +354,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     internal val _draft = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val draft = _draft.asStateFlow()
     fun setDraft(text: String?) { _draft.value = text }
+    /** Beta2：工具箱 语音转文本 选识别模型。 */
+    fun useAsrPack(id: String) = c.settings.update { it.copy(asrPack = id) }
     /**
      * a chat reply finished (true) or failed (false); stopped replies emit nothing. Not
      * replayed: the UI collects it only while resumed, so a reply finishing in the background

@@ -2350,4 +2350,8 @@
     <string name="v30_tb_tts_sub">输入文字，读出来</string>
     <string name="v30_tb_stt_sub">按住说话，转成文字</string>
     <string name="v30_tb_find_sub">按名字或意思找文件</string>
+    <string name="v30b2_stt_model">识别模型</string>
+    <string name="v30b2_stt_none">还没装语音识别模型</string>
+    <string name="v30b2_notes_current">当前</string>
+    <string name="v30b2_notes_count">%1$d 项</string>
 </resources>

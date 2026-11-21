@@ -1,6 +1,10 @@
 package com.iris.localai.floating
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -85,6 +89,22 @@ object FloatingLogic {
         val seen = HashSet<String>()
         return out.sortedBy { it.first }.map { it.second }.filter { seen.add(it) }.joinToString("\n").take(maxChars)
     }
+
+    /** Beta2：松手后贴向较近的一边。 */
+    fun dockLeft(x: Int, size: Int, screenW: Int): Boolean = x + size / 2 < screenW / 2
+
+    /** 贴边位置：[peek] 为真时一半藏进屏幕边，只露半圆。 */
+    fun edgeX(left: Boolean, size: Int, screenW: Int, margin: Int, peek: Boolean): Int =
+        if (left) (if (peek) -size / 2 else margin) else (if (peek) screenW - size / 2 else screenW - size - margin)
+
+    /** 小球中心是否落进底部关闭圈（半径 [r] 内）。 */
+    fun inDismiss(cx: Float, cy: Float, tx: Float, ty: Float, r: Float): Boolean {
+        val dx = cx - tx; val dy = cy - ty
+        return dx * dx + dy * dy <= r * r
+    }
+
+    /** 闲置多久后贴边半隐（毫秒）。 */
+    const val PEEK_AFTER_MS = 1600L
 }
 
 /**
@@ -103,6 +123,10 @@ class FloatingService : Service() {
     private var mode = FloatingLogic.Mode.TRANSLATE
     private var work: Job? = null
     private val chips = HashMap<FloatingLogic.Mode, TextView>()
+    private var dismissView: View? = null
+    private var dockedLeft = false
+    private var peekJob: Job? = null
+    private var slide: ValueAnimator? = null
 
     private val container get() = (application as IrisApp).container
 
@@ -124,7 +148,8 @@ class FloatingService : Service() {
     override fun onDestroy() {
         work?.cancel()
         scope.cancel()
-        listOf(panel, bubble).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
+        peekJob?.cancel(); slide?.cancel()
+        listOf(panel, bubble, dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
         _running.value = false
         super.onDestroy()
     }
@@ -150,7 +175,6 @@ class FloatingService : Service() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun showBubble() {
-        val l = look()
         val size = dp(48f)
         val v = ImageView(this).apply {
             setImageResource(R.drawable.ic_iris_mark)
@@ -158,31 +182,47 @@ class FloatingService : Service() {
             val pad = dp(12f); setPadding(pad, pad, pad, pad)
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF5660F0.toInt(), 0xFF18B4D2.toInt())).apply { shape = GradientDrawable.OVAL }
             elevation = dp(6f).toFloat()
-            alpha = 0.92f
+            alpha = 0f; scaleX = 0.4f; scaleY = 0.4f
             contentDescription = "IRIDIS"
         }
+        val sw = resources.displayMetrics.widthPixels
         bubbleLp = WindowManager.LayoutParams(
             size, size, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START; x = resources.displayMetrics.widthPixels - size - dp(8f); y = resources.displayMetrics.heightPixels / 3 }
+        ).apply { gravity = Gravity.TOP or Gravity.START; x = sw - size - dp(8f); y = resources.displayMetrics.heightPixels / 3 }
         var downX = 0f; var downY = 0f; var startX = 0; var startY = 0; var moved = false
         v.setOnTouchListener { _, e ->
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; startX = bubbleLp.x; startY = bubbleLp.y; moved = false; true }
+                MotionEvent.ACTION_DOWN -> {
+                    peekJob?.cancel(); slide?.cancel()
+                    // 半隐状态下按住：先弹回完整小球
+                    val w = resources.displayMetrics.widthPixels
+                    if (bubbleLp.x < 0 || bubbleLp.x > w - size) {
+                        bubbleLp.x = FloatingLogic.edgeX(dockedLeft, size, w, dp(8f), peek = false); runCatching { wm.updateViewLayout(v, bubbleLp) }
+                    }
+                    v.animate().alpha(0.95f).scaleX(0.9f).scaleY(0.9f).setDuration(120).start()
+                    downX = e.rawX; downY = e.rawY; startX = bubbleLp.x; startY = bubbleLp.y; moved = false; true
+                }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - downX; val dy = e.rawY - downY
-                    if (abs(dx) + abs(dy) > dp(6f)) moved = true
-                    if (moved) { bubbleLp.x = startX + dx.toInt(); bubbleLp.y = startY + dy.toInt(); runCatching { wm.updateViewLayout(v, bubbleLp) } }
+                    if (!moved && abs(dx) + abs(dy) > dp(6f)) { moved = true; showDismiss() }
+                    if (moved) {
+                        bubbleLp.x = startX + dx.toInt(); bubbleLp.y = startY + dy.toInt(); runCatching { wm.updateViewLayout(v, bubbleLp) }
+                        updateDismiss(bubbleLp.x + size / 2f, bubbleLp.y + size / 2f)
+                    }
                     true
                 }
-                MotionEvent.ACTION_UP -> {
-                    if (!moved) togglePanel()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.animate().scaleX(1f).scaleY(1f).setInterpolator(OvershootInterpolator(2.4f)).setDuration(260).start()
+                    if (!moved) { if (e.actionMasked == MotionEvent.ACTION_UP) togglePanel() else schedulePeek() }
                     else {
-                        // 贴边
+                        val hit = dismissHit(bubbleLp.x + size / 2f, bubbleLp.y + size / 2f)
+                        hideDismiss()
+                        if (hit) { closeAll(); return@setOnTouchListener true }
                         val w = resources.displayMetrics.widthPixels
-                        bubbleLp.x = if (bubbleLp.x + size / 2 < w / 2) dp(8f) else w - size - dp(8f)
-                        runCatching { wm.updateViewLayout(v, bubbleLp) }
+                        dockedLeft = FloatingLogic.dockLeft(bubbleLp.x, size, w)
+                        slideTo(FloatingLogic.edgeX(dockedLeft, size, w, dp(8f), peek = false), 320L) { schedulePeek() }
                     }
                     true
                 }
@@ -191,7 +231,91 @@ class FloatingService : Service() {
         }
         wm.addView(v, bubbleLp)
         bubble = v
-        l.hashCode()
+        dockedLeft = false
+        v.animate().alpha(0.95f).scaleX(1f).scaleY(1f).setInterpolator(OvershootInterpolator(2f)).setDuration(320).start()
+        schedulePeek()
+    }
+
+    /** 小球横向滑到 [targetX]（带减速曲线）。 */
+    private fun slideTo(targetX: Int, ms: Long, done: () -> Unit = {}) {
+        val v = bubble ?: return
+        slide?.cancel()
+        val from = bubbleLp.x
+        slide = ValueAnimator.ofInt(from, targetX).apply {
+            duration = ms; interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            addUpdateListener { bubbleLp.x = it.animatedValue as Int; runCatching { wm.updateViewLayout(v, bubbleLp) } }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                var cancelled = false
+                override fun onAnimationCancel(a: android.animation.Animator) { cancelled = true }
+                override fun onAnimationEnd(a: android.animation.Animator) { if (!cancelled) done() }
+            })
+            start()
+        }
+    }
+
+    /** 闲置 [FloatingLogic.PEEK_AFTER_MS] 后贴边半隐成半圆条；面板开着不隐。 */
+    private fun schedulePeek() {
+        peekJob?.cancel()
+        peekJob = scope.launch {
+            delay(FloatingLogic.PEEK_AFTER_MS)
+            if (panel != null) return@launch
+            val size = bubbleLp.width
+            slideTo(FloatingLogic.edgeX(dockedLeft, size, resources.displayMetrics.widthPixels, dp(8f), peek = true), 380L)
+            bubble?.animate()?.alpha(0.6f)?.setDuration(380)?.start()
+        }
+    }
+
+    // ---------------------------------------------------------------- 拖到底部关闭
+
+    private fun showDismiss() {
+        if (dismissView != null) return
+        val d = dp(64f)
+        val x = TextView(this).apply {
+            text = "✕"; gravity = Gravity.CENTER; setTextColor(android.graphics.Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xCC202024.toInt()); setStroke(dp(1.5f), 0x66FFFFFF) }
+            alpha = 0f; scaleX = 0.5f; scaleY = 0.5f; translationY = dp(40f).toFloat()
+        }
+        val lp = WindowManager.LayoutParams(
+            d, d, overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(56f) }
+        runCatching { wm.addView(x, lp) }.onSuccess {
+            dismissView = x
+            x.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f).setInterpolator(DecelerateInterpolator(2f)).setDuration(220).start()
+        }
+    }
+
+    private fun dismissCenter(): Pair<Float, Float> {
+        val dm = resources.displayMetrics
+        return dm.widthPixels / 2f to (dm.heightPixels - dp(56f) - dp(32f)).toFloat()
+    }
+
+    private fun dismissHit(cx: Float, cy: Float): Boolean {
+        if (dismissView == null) return false
+        val (tx, ty) = dismissCenter()
+        return FloatingLogic.inDismiss(cx, cy, tx, ty, dp(64f).toFloat())
+    }
+
+    private fun updateDismiss(cx: Float, cy: Float) {
+        val x = dismissView ?: return
+        val s = if (dismissHit(cx, cy)) 1.25f else 1f
+        if (x.scaleX != s) x.animate().scaleX(s).scaleY(s).setDuration(120).start()
+    }
+
+    private fun hideDismiss() {
+        val x = dismissView ?: return
+        dismissView = null
+        x.animate().alpha(0f).scaleX(0.5f).scaleY(0.5f).translationY(dp(40f).toFloat()).setDuration(180)
+            .withEndAction { runCatching { wm.removeView(x) } }.start()
+    }
+
+    /** 丢进关闭圈：小球缩小淡出，然后停服务。 */
+    private fun closeAll() {
+        hidePanel()
+        val v = bubble
+        if (v == null) { stopSelf(); return }
+        v.animate().alpha(0f).scaleX(0.2f).scaleY(0.2f).setDuration(200).withEndAction { stopSelf() }.start()
     }
 
     // ---------------------------------------------------------------- panel
@@ -199,8 +323,12 @@ class FloatingService : Service() {
     private fun togglePanel() { if (panel == null) showPanel() else hidePanel() }
 
     private fun hidePanel() {
-        panel?.let { runCatching { wm.removeView(it) } }
+        val p = panel ?: return
         panel = null; input = null; output = null; chips.clear()
+        p.animate().alpha(0f).scaleX(0.85f).scaleY(0.85f).translationY(-dp(12f).toFloat())
+            .setInterpolator(DecelerateInterpolator()).setDuration(160)
+            .withEndAction { runCatching { wm.removeView(p) } }.start()
+        schedulePeek()
     }
 
     private fun showPanel() {
@@ -260,9 +388,15 @@ class FloatingService : Service() {
             y = (bubbleLp.y + dp(56f)).coerceAtMost(resources.displayMetrics.heightPixels - dp(420f)).coerceAtLeast(dp(40f))
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
+        // Beta2：展开动画——从小球所在一侧弹出（缩放 + 淡入 + 轻微下落）
+        peekJob?.cancel()
+        root.alpha = 0f; root.scaleX = 0.6f; root.scaleY = 0.6f; root.translationY = -dp(16f).toFloat()
+        root.pivotX = if (dockedLeft) 0f else w.toFloat(); root.pivotY = 0f
         wm.addView(root, lp)
         panel = root
         selectMode(mode)
+        root.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+            .setInterpolator(OvershootInterpolator(1.1f)).setDuration(300).start()
     }
 
     private fun selectMode(m: FloatingLogic.Mode) {

@@ -61,7 +61,14 @@ private class HighlightNode(
 
     override fun ContentDrawScope.draw() {
         val a = alpha.value
-        if (a > 0.001f) drawRect(color.copy(alpha = color.alpha * a.coerceIn(0f, 1f)))
+        if (a > 0.001f) {
+            val col = color.copy(alpha = color.alpha * a.coerceIn(0f, 1f))
+            // Beta2: icon-sized targets (near-square) get a round highlight instead of a square one;
+            // wide targets (rows, pills) keep the rectangle, which their container already clips.
+            if (PressMotion.isIconLike(size.width, size.height)) {
+                drawCircle(col, radius = minOf(size.width, size.height) / 2f)
+            } else drawRect(col)
+        }
         drawContent()
     }
 }

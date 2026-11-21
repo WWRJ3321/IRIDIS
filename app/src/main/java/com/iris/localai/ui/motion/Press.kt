@@ -31,6 +31,12 @@ class PressMotion internal constructor(val pressedScale: Float) {
         fun tapKick(pressedScale: Float): Float = (pressedScale - 1f) * 9f
         /** A press shorter than this gets the kick. */
         const val QUICK_TAP_MS = 90L
+        /** Near-square press targets (icon buttons) draw a round highlight. */
+        fun isIconLike(w: Float, h: Float): Boolean {
+            if (w <= 0f || h <= 0f) return false
+            val r = if (w > h) w / h else h / w
+            return r <= 1.35f
+        }
     }
 }
 

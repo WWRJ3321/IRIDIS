@@ -394,8 +394,7 @@ fun StoragePage(
                         // never deleted from here (it would remove every image model at once).
                         SettingsRow(
                             e.label,
-                            subtitle = listOfNotNull(Format.bytes(e.bytes), I18n.s(R.string.v259_imagegen_manage),
-                                if (e.external) I18n.s(R.string.settings_b044a5, ModelDirs.SHARED_LABEL) else null).joinToString(" · "),
+                            subtitle = Format.bytes(e.bytes),
                             subtitleMaxLines = 2,
                             onClick = onImageModels, trailing = { if (onImageModels != null) Chevron() },
                         )
@@ -404,7 +403,7 @@ fun StoragePage(
                         ActionRow(e, I18n.s(R.string.chat_2f4aad), destructive = true, detail = I18n.s(R.string.v251_sd15_mnn_hidden)) { pending = StoragePending.HiddenImage }
                     } else if (e.id == Ids.MODEL_LEFTOVER || e.id == Ids.MODEL_LEFTOVER_SHARED) {
                         SettingsRow(
-                            e.label, subtitle = I18n.s(R.string.settings_d07d97, sizeLine(e)),
+                            e.label, subtitle = sizeLine(e),
                             onClick = { leftoverSheet = e.id == Ids.MODEL_LEFTOVER_SHARED }, trailing = { Chevron() },
                         )
                     } else {
@@ -413,10 +412,8 @@ fun StoragePage(
                         SettingsRow(
                             e.label,
                             subtitle = listOfNotNull(
-                                Format.bytes(e.bytes), m?.format?.label, if (e.withProjector) I18n.s(R.string.settings_dec5b6) else null,
+                                Format.bytes(e.bytes), m?.format?.label?.substringAfter(" · "), if (e.withProjector) I18n.s(R.string.settings_dec5b6) else null,
                                 if (inUse) StorageText.IN_USE else null,
-                                if (e.external) I18n.s(R.string.settings_b044a5, ModelDirs.SHARED_LABEL)
-                                else I18n.s(R.string.st258_in_app), // 算进应用占用，卸载应用会删除
                             ).joinToString(" · "),
                             subtitleMaxLines = 2,
                             trailing = {
@@ -433,31 +430,24 @@ fun StoragePage(
                 SettingsRow(I18n.s(R.string.chat_035516), subtitle = I18n.s(R.string.settings_b90522), onClick = onModels, trailing = { Chevron() })
                 ModelsFolderRows(folder, move, onMove = { storage.moveModels() })
             }
-            GroupFootnote(I18n.s(R.string.settings_4f3ac2))
-            folder?.let { GroupFootnote(it.path, monospace = true) }
 
             // ---- 模型缓存 ----
             CategorySection(Category.MODEL_CACHE, r) { g ->
                 g.entries.forEachIndexed { i, e ->
                     if (i > 0) Divider()
                     when {
-                        e.id == Ids.CACHE_ORPHAN -> ActionRow(e, I18n.s(R.string.chat_4403fc), enabled = !anyLoading, detail = I18n.s(R.string.settings_37c271)) { pending = StoragePending.OrphanCaches }
-                        e.id == Ids.CACHE_OPENCL -> ActionRow(e, I18n.s(R.string.chat_4403fc), enabled = !anyLoading, detail = I18n.s(R.string.settings_94f1cb)) { storage.clearOpenCl() }
+                        e.id == Ids.CACHE_ORPHAN -> ActionRow(e, I18n.s(R.string.chat_4403fc), enabled = !anyLoading) { pending = StoragePending.OrphanCaches }
+                        e.id == Ids.CACHE_OPENCL -> ActionRow(e, I18n.s(R.string.chat_4403fc), enabled = !anyLoading) { storage.clearOpenCl() }
                         e.id == Ids.CACHE_NPU -> SettingsRow(
-                            e.label, subtitle = I18n.s(R.string.settings_17a5e2, sizeLine(e)),
+                            e.label, subtitle = sizeLine(e),
                             onClick = { onOpen(SettingsPage.MODEL_BACKEND) }, trailing = { Chevron() },
                         )
                         else -> {
                             val m = models.firstOrNull { Ids.CACHE_PREFIX + it.id == e.id }
                             val loading = (engine as? EngineState.Loading)?.model?.path == m?.path
-                            val loaded = m != null && (engine as? EngineState.Ready)?.model?.path == m.path
                             ActionRow(
                                 e, I18n.s(R.string.chat_4403fc), enabled = m != null && !loading,
-                                detail = when {
-                                    loading -> I18n.s(R.string.settings_a0c7d7)
-                                    loaded -> I18n.s(R.string.settings_6b149e)
-                                    else -> I18n.s(R.string.settings_7f95af)
-                                },
+                                detail = if (loading) I18n.s(R.string.settings_a0c7d7) else null,
                             ) { m?.let { storage.clearModelCache(it.fileName) } }
                         }
                     }
@@ -474,7 +464,7 @@ fun StoragePage(
                             e.label, subtitle = I18n.s(R.string.settings_ecdf9c, e.count ?: 0, Format.bytes(e.bytes)),
                             onClick = { onOpen(SettingsPage.VOICE) }, trailing = { Chevron() },
                         )
-                        Ids.VOICE_OTHER -> SettingsRow(e.label, subtitle = sizeLine(e) + if (e.external) " · " + StorageLayoutText.VOICE_SHARED else "")
+                        Ids.VOICE_OTHER -> SettingsRow(e.label, subtitle = sizeLine(e))
                         else -> {
                             val pack = VoicePack.byId(e.id.removePrefix(Ids.VOICE_PREFIX))
                             val st = pack?.let { voiceStates[it] }
@@ -491,7 +481,7 @@ fun StoragePage(
                                 else -> I18n.s(R.string.settings_5d44a3)
                             }
                             SettingsRow(
-                                e.label, subtitle = listOfNotNull(Format.bytes(e.bytes), kind, state, StorageLayoutText.VOICE_SHARED.takeIf { e.external }).joinToString(" · "),
+                                e.label, subtitle = listOfNotNull(Format.bytes(e.bytes), kind, state).joinToString(" · "),
                                 trailing = {
                                     IrisButton(
                                         I18n.s(R.string.chat_2f4aad), { pack?.let { pending = StoragePending.Voice(it) } },
@@ -511,25 +501,23 @@ fun StoragePage(
                     if (i > 0) Divider()
                     when (e.id) {
                         Ids.WS_FILES -> SettingsRow(
-                            e.label, subtitle = sizeLine(e) + if (e.external) " · " + StorageLayoutText.WORKSPACE_SHARED else "",
+                            e.label, subtitle = sizeLine(e),
                             subtitleMaxLines = 2, onClick = onOpenFiles, trailing = { Chevron() },
                         )
                         Ids.WS_SKILLS -> SettingsRow(
-                            e.label, subtitle = I18n.s(R.string.settings_e6115d, e.count ?: 0, Format.bytes(e.bytes)) + if (e.external) " · " + StorageLayoutText.SKILLS_SHARED else "",
+                            e.label, subtitle = I18n.s(R.string.settings_e6115d, e.count ?: 0, Format.bytes(e.bytes)) ,
                             subtitleMaxLines = 2,
                         )
                         Ids.WS_KNOWLEDGE -> SettingsRow(
-                            e.label, subtitle = I18n.s(R.string.agent_9c50ee, e.count ?: 0, Format.bytes(e.bytes)) + if (e.external) " · " + StorageLayoutText.KNOWLEDGE_SHARED else "",
+                            e.label, subtitle = I18n.s(R.string.agent_9c50ee, e.count ?: 0, Format.bytes(e.bytes)) ,
                             subtitleMaxLines = 2,
                         )
-                        Ids.WS_UNDO -> ActionRow(e, I18n.s(R.string.chat_4403fc), detail = I18n.s(R.string.settings_ed4ae3)) { pending = StoragePending.Undo }
+                        Ids.WS_UNDO -> ActionRow(e, I18n.s(R.string.chat_4403fc)) { pending = StoragePending.Undo }
                         Ids.WS_MEMORY -> SettingsRow(e.label, subtitle = sizeLine(e), onClick = { onOpen(SettingsPage.MEMORY) }, trailing = { Chevron() })
                         else -> SettingsRow(e.label, subtitle = I18n.s(R.string.settings_164a6b, sizeLine(e)), subtitleMaxLines = 2)
                     }
                 }
             }
-            GroupFootnote(I18n.s(R.string.settings_cb4eb0))
-            GroupFootnote(StorageLayoutText.SUMMARY)
 
             // ---- 聊天记录 ----
             CategorySection(Category.CHATS, r) { g ->

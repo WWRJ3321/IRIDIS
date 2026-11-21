@@ -1,5 +1,9 @@
 package com.iris.localai.ui.toolbox
 
+import androidx.compose.ui.draw.clip
+
+import androidx.compose.foundation.horizontalScroll
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -163,10 +167,32 @@ private fun SttSection(chat: ChatViewModel) {
     var result by rememberSaveable { mutableStateOf("") }
     var holding by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    val lang = chat.settings.collectAsStateWithLifecycle().value.asrLanguage
+    val st = chat.settings.collectAsStateWithLifecycle().value
+    val lang = st.asrLanguage
+    // Beta2：可选识别模型——列出已装的语音识别包，点选即设为当前（与 模型 页 的选择同一设置）
+    val packStates by chat.voiceStore.states.collectAsStateWithLifecycle()
+    val asrPacks = remember(packStates) {
+        com.iris.localai.voice.VoicePack.entries.filter { it.kind == com.iris.localai.voice.VoiceKind.ASR && packStates[it] == com.iris.localai.voice.PackState.Installed }
+    }
+    val activeAsr = remember(packStates, st.asrPack) { chat.voiceStore.active(com.iris.localai.voice.VoiceKind.ASR, st.asrPack) }
     SectionTitle(I18n.s(R.string.v30_tb_stt))
     SettingsGroup {
         Column(Modifier.padding(IrisDimens.space16)) {
+            Text(I18n.s(R.string.v30b2_stt_model), style = IrisType.caption, color = c.textSecondary)
+            Spacer(Modifier.height(IrisDimens.space8))
+            if (asrPacks.isEmpty()) Text(I18n.s(R.string.v30b2_stt_none), style = IrisType.body, color = c.textTertiary)
+            else Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                asrPacks.forEach { p ->
+                    val sel = p == activeAsr
+                    Box(
+                        Modifier.clip(IrisRadius.pillShape)
+                            .background(if (sel) c.accentContainer else c.surfaceVariant)
+                            .clickable(enabled = !holding && !busy) { chat.useAsrPack(p.id) }
+                            .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
+                    ) { Text(p.title, style = IrisType.labelSmall, color = if (sel) c.onAccentContainer else c.textSecondary) }
+                }
+            }
+            Spacer(Modifier.height(IrisDimens.space12))
             Box(
                 Modifier.fillMaxWidth().height(52.dp)
                     .background(if (holding) c.accent else c.surfaceVariant, IrisRadius.pillShape)

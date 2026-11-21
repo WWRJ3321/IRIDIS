@@ -2349,4 +2349,8 @@
     <string name="v30_tb_tts_sub">輸入文字，唸出來</string>
     <string name="v30_tb_stt_sub">按住說話，轉成文字</string>
     <string name="v30_tb_find_sub">按名稱或意思找檔案</string>
+    <string name="v30b2_stt_model">辨識模型</string>
+    <string name="v30b2_stt_none">還沒裝語音辨識模型</string>
+    <string name="v30b2_notes_current">目前</string>
+    <string name="v30b2_notes_count">%1$d 項</string>
 </resources>

@@ -2349,4 +2349,8 @@
     <string name="v30_tb_tts_sub">文字を入力して読み上げ</string>
     <string name="v30_tb_stt_sub">押して話すと文字に</string>
     <string name="v30_tb_find_sub">名前や意味でファイル検索</string>
+    <string name="v30b2_stt_model">認識モデル</string>
+    <string name="v30b2_stt_none">音声認識モデルが未導入</string>
+    <string name="v30b2_notes_current">現在</string>
+    <string name="v30b2_notes_count">%1$d 件</string>
 </resources>

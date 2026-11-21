@@ -4,6 +4,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.aspectRatio
 import com.iris.localai.I18n
 import com.iris.localai.IrisApp
@@ -100,6 +103,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.Alignment
@@ -729,8 +733,11 @@ private fun AboutHeroCard() {
             .padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)
             .fillMaxWidth()
             .aspectRatio(1.18f)
+            // Beta2：卡片边界跟页面底色分开——轻阴影 + 发丝描边，混色也铺满到边
+            .shadow(6.dp, shape, ambientColor = Color(0xFF3A4BD8).copy(alpha = 0.18f), spotColor = Color(0xFF3A4BD8).copy(alpha = 0.22f))
             .clip(shape)
             .background(c.surface)
+            .border(0.6.dp, if (c.isDark) Color.White.copy(alpha = 0.10f) else Color(0xFF3A4BD8).copy(alpha = 0.10f), shape)
             .then(Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {
                 val now = System.currentTimeMillis()
                 taps = if (now - lastTap < 600) taps + 1 else 1
@@ -746,20 +753,10 @@ private fun AboutHeroCard() {
             }),
         contentAlignment = Alignment.Center,
     ) {
-        val tintShift = if (hue.value == 0f) null else androidx.compose.ui.graphics.ColorFilter.colorMatrix(hueMatrix(hue.value))
-        // 模糊的标志：两份不同大小 / 角度叠出光斑，外加一层顶部提亮
-        androidx.compose.foundation.Image(
-            painterResource(R.drawable.ic_launcher_foreground), null, colorFilter = tintShift,
-            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 2.6f; scaleY = 2.6f; translationY = size.height * 0.10f; rotationZ = spin.value / 3f; alpha = if (c.isDark) 0.85f else 0.75f }
-                .blur(42.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded),
-        )
-        androidx.compose.foundation.Image(
-            painterResource(R.drawable.ic_launcher_foreground), null, colorFilter = tintShift,
-            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.7f; scaleY = 1.7f; rotationZ = 180f - spin.value / 2f; translationX = size.width * 0.28f; translationY = -size.height * 0.30f; alpha = 0.55f }
-                .blur(56.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded),
-        )
+        // Beta2：HyperOS / ColorOS 式动态流动混色——几团柔光沿各自的李萨如轨迹慢慢游走、互相混合
+        AboutFlowBackground(hueShift = hue.value, spin = spin.value, dark = c.isDark, base = c.surface)
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
-            0f to c.surface.copy(alpha = if (c.isDark) 0.10f else 0.25f), 0.6f to Color.Transparent, 1f to c.surface.copy(alpha = if (c.isDark) 0.35f else 0.45f),
+            0f to c.surface.copy(alpha = if (c.isDark) 0.04f else 0.10f), 0.6f to Color.Transparent, 1f to c.surface.copy(alpha = if (c.isDark) 0.18f else 0.16f),
         )))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.height(36.dp).graphicsLayer { rotationY = spin.value; cameraDistance = 24f * density }, contentAlignment = Alignment.Center) {
@@ -767,11 +764,120 @@ private fun AboutHeroCard() {
                 androidx.compose.foundation.Image(painterResource(R.drawable.iridis_wordmark_accent), null, modifier = Modifier.height(36.dp).width(207.dp))
             }
             Spacer(Modifier.height(IrisDimens.space12))
-            Text(
-                if (egg) I18n.s(R.string.v30_egg_about) else I18n.s(R.string.settings_45020f, BuildConfig.VERSION_NAME),
-                style = IrisType.secondary, color = c.textSecondary,
+            if (egg) Text(I18n.s(R.string.v30_egg_about), style = IrisType.secondary, color = c.textSecondary)
+            else AboutVersion(BuildConfig.VERSION_NAME)
+        }
+    }
+}
+
+/** Beta2：关于页版本号——去掉「版本」，数字用细字宽字距，阶段（Beta 1）做成半透明小标签。 */
+@Composable
+private fun AboutVersion(versionName: String) {
+    val c = Iris.colors
+    val (num, stage) = AboutVersionText.parts(versionName)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            num,
+            style = IrisType.secondary.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                letterSpacing = androidx.compose.ui.unit.TextUnit(2.4f, androidx.compose.ui.unit.TextUnitType.Sp),
+                fontFeatureSettings = "tnum",
+            ),
+            color = c.text.copy(alpha = 0.78f),
+        )
+        if (stage != null) {
+            Spacer(Modifier.width(IrisDimens.space8))
+            Box(
+                Modifier.clip(IrisRadius.pillShape)
+                    .background(c.text.copy(alpha = if (c.isDark) 0.12f else 0.08f))
+                    .then(Modifier.border(0.5.dp, c.text.copy(alpha = 0.14f), IrisRadius.pillShape))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    stage.uppercase(),
+                    style = IrisType.micro.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        letterSpacing = androidx.compose.ui.unit.TextUnit(1.6f, androidx.compose.ui.unit.TextUnitType.Sp),
+                    ),
+                    color = c.text.copy(alpha = 0.72f),
+                )
+            }
+        }
+    }
+}
+
+/** 版本名拆成「数字」和「阶段」：「3.0.0 Beta1-full」→「3.0.0」+「Beta 1」（纯函数，单测）。 */
+object AboutVersionText {
+    fun parts(versionName: String): Pair<String, String?> {
+        val v = versionName.trim().replace(Regex("-(full|lite)$", RegexOption.IGNORE_CASE), "").trim()
+        val i = v.indexOf(' ')
+        if (i < 0) return v to null
+        val num = v.substring(0, i)
+        val stage = v.substring(i + 1).trim().replace(Regex("([A-Za-z])(\\d)"), "$1 $2")
+        return num to stage.ifEmpty { null }
+    }
+}
+
+/**
+ * Beta2：关于页卡片的流动混色背景。四团径向渐变柔光各走一条慢速李萨如轨迹（周期 14–26 秒，互不同步），
+ * 叠在卡片底色上自然混色；减弱动态时静止。[hueShift] 给彩蛋变色，[spin] 让彩蛋时整片转动。
+ */
+@Composable
+private fun AboutFlowBackground(hueShift: Float, spin: Float, dark: Boolean, base: Color) {
+    val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
+    val t = if (reduce) 0f else {
+        val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "aboutFlow")
+        inf.animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(78_000, easing = androidx.compose.animation.core.LinearEasing)),
+            label = "aboutFlowT",
+        ).value
+    }
+    val blobs = AboutFlow.BLOBS
+    androidx.compose.foundation.Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = spin / 3f; scaleX = 1.25f; scaleY = 1.25f }) {
+        drawRect(base)
+        val w = size.width; val h = size.height
+        for (b in blobs) {
+            val (fx, fy) = AboutFlow.position(b, t)
+            val col = AboutFlow.shift(if (dark) b.dark else b.light, hueShift)
+            val r = b.radius * maxOf(w, h)
+            val center = androidx.compose.ui.geometry.Offset(fx * w, fy * h)
+            drawCircle(
+                androidx.compose.ui.graphics.Brush.radialGradient(
+                    0f to col.copy(alpha = if (dark) 0.70f else 0.62f),
+                    0.55f to col.copy(alpha = if (dark) 0.28f else 0.24f),
+                    1f to col.copy(alpha = 0f),
+                    center = center, radius = r,
+                ),
+                radius = r, center = center,
             )
         }
+    }
+}
+
+/** 流动混色的柔光参数与轨迹（纯函数，单测）。 */
+object AboutFlow {
+    class Blob(val light: Color, val dark: Color, val cx: Float, val cy: Float, val ax: Float, val ay: Float, val kx: Int, val ky: Int, val phase: Float, val radius: Float)
+
+    val BLOBS = listOf(
+        Blob(Color(0xFF7C83FF), Color(0xFF5660F0), 0.30f, 0.32f, 0.22f, 0.18f, 3, 2, 0.0f, 0.62f),
+        Blob(Color(0xFF5FD6EA), Color(0xFF18B4D2), 0.72f, 0.40f, 0.20f, 0.24f, 2, 3, 1.7f, 0.58f),
+        Blob(Color(0xFFD69CFF), Color(0xFF9B5CF0), 0.55f, 0.78f, 0.26f, 0.16f, 4, 3, 3.1f, 0.55f),
+        Blob(Color(0xFFFFB3A6), Color(0xFFE0708A), 0.22f, 0.80f, 0.18f, 0.20f, 3, 5, 4.4f, 0.48f),
+    )
+
+    /** [t] ∈ [0,1) 一整圈；每团的整数倍频保证 t=1 与 t=0 首尾相接、不跳。 */
+    fun position(b: Blob, t: Float): Pair<Float, Float> {
+        val a = (2.0 * Math.PI * t).toFloat()
+        return (b.cx + b.ax * kotlin.math.sin(a * b.kx + b.phase)) to (b.cy + b.ay * kotlin.math.cos(a * b.ky + b.phase * 0.7f))
+    }
+
+    fun shift(c: Color, deg: Float): Color {
+        if (deg == 0f) return c
+        val hsl = FloatArray(3)
+        androidx.core.graphics.ColorUtils.colorToHSL(c.toArgb(), hsl)
+        hsl[0] = ((hsl[0] + deg) % 360f + 360f) % 360f
+        return Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
     }
 }
 

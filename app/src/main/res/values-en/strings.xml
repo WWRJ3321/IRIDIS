@@ -2349,4 +2349,8 @@
     <string name="v30_tb_tts_sub">Type text and hear it</string>
     <string name="v30_tb_stt_sub">Hold to talk, get text</string>
     <string name="v30_tb_find_sub">Find files by name or meaning</string>
+    <string name="v30b2_stt_model">Model</string>
+    <string name="v30b2_stt_none">No speech model installed</string>
+    <string name="v30b2_notes_current">Current</string>
+    <string name="v30b2_notes_count">%1$d items</string>
 </resources>

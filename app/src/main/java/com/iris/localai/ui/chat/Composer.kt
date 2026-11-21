@@ -354,9 +354,14 @@ fun Composer(
         val dictMode = DictationOverlay.of(recording, state.text)
         val fieldAlpha by animateFloatAsState(if (dictMode == DictationOverlay.Mode.FULL) 0f else 1f, IrisMotion.Color.float(), label = "fieldAlpha")
         Box(Modifier.tourTarget(TourId.INPUT)) {
+                // Beta2: hold a TextFieldValue so text set from outside (dictation, translate, draft)
+                // puts the cursor after the last character instead of leaving it at the start.
+                var tfv by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(state.text, androidx.compose.ui.text.TextRange(state.text.length))) }
+                val fieldValue = if (tfv.text == state.text) tfv
+                    else androidx.compose.ui.text.input.TextFieldValue(state.text, androidx.compose.ui.text.TextRange(state.text.length))
                 BasicTextField(
-                    value = state.text,
-                    onValueChange = onTextChange,
+                    value = fieldValue,
+                    onValueChange = { v -> tfv = v; if (v.text != state.text) onTextChange(v.text) },
                     textStyle = IrisType.message.copy(color = c.text, lineHeight = IrisType.row.lineHeight).chatScaled(),
                     cursorBrush = SolidColor(c.text),
                     maxLines = 8,

@@ -317,6 +317,16 @@ object ConversationOrder {
  * 之后：原地松手 = 留在多选；移动超过 touchSlop = 退出多选并拖动排序。
  */
 object HistoryPress {
+    /** Beta2：邻行让位的弹簧——比 2.7.6 的 MediumLow 更跟手，略带一点回弹，衔接不拖泥带水。 */
+    const val SHIFT_DAMPING = 0.82f
+    const val SHIFT_STIFFNESS = 620f
+    /** 松手归位：软着陆（轻微回弹）。 */
+    const val SETTLE_DAMPING = 0.74f
+    const val SETTLE_STIFFNESS = 480f
+
+    /** 拖动浮层的倾斜角（度）：每帧位移 [dy] 像素 → 最多 ±2.5°。 */
+    fun tiltFor(dy: Float): Float = (dy * 0.12f).coerceIn(-2.5f, 2.5f)
+
     /**
      * 2.7.6：TAP 短按打开；CANCEL 放弃（交给列表滚动）；SELECT 长按到时（手指没动）直接进多选并选中该条；
      * KEEP 进多选后原地松手（留在多选）；DRAG 进多选后移动超过 touchSlop（退出多选、拖动排序）。

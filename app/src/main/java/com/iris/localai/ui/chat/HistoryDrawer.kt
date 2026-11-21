@@ -203,6 +203,7 @@ fun HistoryDrawer(
     // 2.7.7：拖动行画在列表上方的浮层里（视口坐标 top = 手指 − 抓取偏移），列表里原行留空位（透明、钉住收手势）；
     // 自动滚动只动列表内容，浮层不动 = 一直在手指下。
     var dragTop by remember { mutableFloatStateOf(0f) }      // 浮层 top（列表视口坐标）
+    var dragVel by remember { mutableFloatStateOf(0f) }      // Beta2：每次移动的位移，给浮层一点随速度的倾斜
     var dragScrolled by remember { mutableFloatStateOf(0f) } // 起拖以来自动滚动累计（内容坐标换算用，只加一次）
     val fingerHolder = remember { floatArrayOf(Float.NaN) }  // 手指在列表视口里的 y（视口 Box 的 Initial 阶段写入）
     var dragFrom by remember { mutableIntStateOf(-1) }
@@ -366,7 +367,7 @@ fun HistoryDrawer(
                         val shiftTarget = if (dragId != null && itemKey != dragId) HistoryPress.neighborShift(index, dragFrom, dragTo, dragSize).toFloat() else 0f
                         val shift by animateFloatAsState(
                             shiftTarget,
-                            if (dragId == null || reduce) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+                            if (dragId == null || reduce) snap() else spring(dampingRatio = HistoryPress.SHIFT_DAMPING, stiffness = HistoryPress.SHIFT_STIFFNESS),
                             label = "dragShift",
                         )
                         val shiftMod = Modifier.graphicsLayer { translationY = shift }
@@ -437,7 +438,7 @@ fun HistoryDrawer(
                                                 if (next !== base) { live = next; latestReorder(next.map { it.id }) }
                                                 settleJob?.cancel()
                                                 if (!reduce) settleJob = dragScope.launch {
-                                                    animate(1f, 0f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)) { v, _ -> settleP = v }
+                                                    animate(1f, 0f, animationSpec = spring(dampingRatio = HistoryPress.SETTLE_DAMPING, stiffness = HistoryPress.SETTLE_STIFFNESS)) { v, _ -> settleP = v }
                                                     if (settleId == s.id) settleId = null
                                                 } else settleId = null
                                             }
@@ -507,7 +508,9 @@ fun HistoryDrawer(
                                                     if (!ch.pressed) { finish(commit = true); break }
                                                     if (!coords.isAttached) break
                                                     val f = fingerHolder[0].takeUnless { it.isNaN() } ?: continue
-                                                    dragTop = HistoryPress.overlayTop(f, grab, dragSize, listState.layoutInfo.viewportSize.height)
+                                                    val nt = HistoryPress.overlayTop(f, grab, dragSize, listState.layoutInfo.viewportSize.height)
+                                                    dragVel = nt - dragTop
+                                                    dragTop = nt
                                                     retarget(s.id)
                                                 }
                                             } finally {
@@ -528,10 +531,21 @@ fun HistoryDrawer(
                 // 拖动浮层：画在列表上面，top = dragTop（视口坐标），不随列表滚动。
                 val dragItem = dragId?.let { id -> entries.firstNotNullOfOrNull { (it as? DrawerEntry.Item)?.summary?.takeIf { s -> s.id == id } } }
                 if (dragItem != null) {
+                    // Beta2：浮层随拖动速度轻微倾斜、略放大，手指停下就回正——拿起 / 移动 / 放下连成一体
+                    LaunchedEffect(dragVel) { if (dragVel != 0f) { kotlinx.coroutines.delay(70); dragVel = 0f } }
+                    val tilt by animateFloatAsState(
+                        if (reduce) 0f else HistoryPress.tiltFor(dragVel),
+                        if (reduce) snap() else spring(dampingRatio = 0.62f, stiffness = 320f), label = "dragTilt",
+                    )
                     ConversationItem(
                         dragItem, selected = true, running = dragItem.id == runningId,
                         lift = overlayLift,
-                        modifier = Modifier.zIndex(2f).graphicsLayer { translationY = dragTop },
+                        modifier = Modifier.zIndex(2f).graphicsLayer {
+                            translationY = dragTop
+                            rotationZ = tilt
+                            val sc = 1f + 0.025f * overlayLift
+                            scaleX = sc; scaleY = sc
+                        },
                         onClick = {},
                     )
                 }
