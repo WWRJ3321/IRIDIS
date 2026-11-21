@@ -88,8 +88,8 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
     val state by vm.voice.state.collectAsStateWithLifecycle()
     var muted by rememberSaveable { mutableStateOf(false) }
     // 3.0 双模式：免提（自动断句）/ 按住说话；记在设置里，下次进来沿用。
-    var ptt by rememberSaveable { mutableStateOf(vm.settings.value.voicePushToTalk) }
-    var holding by remember { mutableStateOf(false) }
+    // Beta2：去掉按住说话模式，语音聊天只保留免提（自动断句）
+    val ptt = false
     LaunchedEffect(ptt) { vm.voice.setPushToTalk(ptt); vm.setVoicePushToTalk(ptt) }
     // 3.0 进入动画：圆从小到大弹出、一圈波纹散开，文字和按钮随后升起。
     val appear = remember { Animatable(if (reduce) 1f else 0f) }
@@ -265,29 +265,6 @@ fun VoiceOverlay(vm: ChatViewModel, onClose: () -> Unit) {
                 }
             }
 
-            // 3.0：模式切换（免提 / 按住说话）
-            VoiceModeSwitch(ptt, Modifier.graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 40f }) { ptt = it; holding = false }
-            if (ptt) {
-                Spacer(Modifier.height(IrisDimens.space16))
-                val holdColor by animateColorAsState(if (holding) accent else c.surfaceVariant, IrisMotion.standard(), label = "ptt")
-                Box(
-                    Modifier.size(width = 220.dp, height = 56.dp)
-                        .background(holdColor, IrisRadius.pillShape)
-                        .pointerInput(Unit) {
-                            detectTapGestures(onPress = {
-                                holding = true; haptic.perform(FeedbackEvent.LISTEN_START); vm.voice.pttPress()
-                                tryAwaitRelease()
-                                holding = false; haptic.perform(FeedbackEvent.LISTEN_STOP); vm.voice.pttRelease()
-                            })
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (holding) I18n.s(R.string.v30_ptt_release) else I18n.s(R.string.v30_ptt_hold),
-                        style = IrisType.label, color = if (holding) Color.White else c.text,
-                    )
-                }
-            }
             // Controls
             Row(
                 Modifier.graphicsLayer { alpha = appear.value; translationY = (1f - appear.value) * 60f }.fillMaxWidth().padding(top = IrisDimens.space20, bottom = IrisSpace.XL, start = IrisDimens.space24, end = IrisDimens.space24),

@@ -844,8 +844,8 @@ private fun AboutFlowBackground(hueShift: Float, spin: Float, dark: Boolean, bas
             val center = androidx.compose.ui.geometry.Offset(fx * w, fy * h)
             drawCircle(
                 androidx.compose.ui.graphics.Brush.radialGradient(
-                    0f to col.copy(alpha = if (dark) 0.70f else 0.62f),
-                    0.55f to col.copy(alpha = if (dark) 0.28f else 0.24f),
+                    0f to col.copy(alpha = if (dark) 0.42f else 0.30f),
+                    0.55f to col.copy(alpha = if (dark) 0.16f else 0.11f),
                     1f to col.copy(alpha = 0f),
                     center = center, radius = r,
                 ),

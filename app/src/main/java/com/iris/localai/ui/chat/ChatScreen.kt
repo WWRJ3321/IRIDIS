@@ -735,8 +735,6 @@ private fun ChatScreenContent(
                 // composer (no extra height, so nothing above it moves when it appears).
                 val showMeter = messages.isNotEmpty() && ui.context.limit > 0
                 val act = if (ui.isGenerating) activity else warming
-                // 3.0 闲言碎语：加载模型时
-                if (ui.engine is EngineState.Loading) com.iris.localai.ui.quips.IdleQuip(com.iris.localai.ui.quips.IdleQuips.Scene.LOAD, active = true, modifier = Modifier.fillMaxWidth().padding(bottom = IrisSpace.XS))
                 if (showMeter || ui.engine is EngineState.Loading || act != null) {
                     Row(
                         // the 1.11.1 fade band behind this row is gone (user: too abrupt); only

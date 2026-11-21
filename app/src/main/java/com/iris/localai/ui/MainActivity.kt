@@ -360,11 +360,13 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
         hidden = buildSet {
             if (top == Route.IMAGEGEN.name) add(com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN)
             if (top == Route.DOWNLOAD_MODELS.name) add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD)
+            if (top == Route.CHAT.name) add(com.iris.localai.task.TaskProgress.Kind.OTHER) // 对话页底部已有加载行
         },
         onOpen = { t ->
             when (t.kind) {
                 com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN -> push(Route.IMAGEGEN)
                 com.iris.localai.task.TaskProgress.Kind.DOWNLOAD -> push(Route.DOWNLOAD_MODELS)
+                com.iris.localai.task.TaskProgress.Kind.OTHER -> if (t.id == com.iris.localai.task.LoadIsland.ID) stack = listOf(Route.CHAT.name)
                 else -> {}
             }
         },

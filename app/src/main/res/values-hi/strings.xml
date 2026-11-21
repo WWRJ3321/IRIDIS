@@ -2353,4 +2353,5 @@
     <string name="v30b2_stt_none">कोई वाक् मॉडल इंस्टॉल नहीं</string>
     <string name="v30b2_notes_current">वर्तमान</string>
     <string name="v30b2_notes_count">%1$d बदलाव</string>
+    <string name="v30b2_island_load">मॉडल लोड हो रहा है</string>
 </resources>

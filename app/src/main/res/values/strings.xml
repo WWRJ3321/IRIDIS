@@ -2354,4 +2354,5 @@
     <string name="v30b2_stt_none">还没装语音识别模型</string>
     <string name="v30b2_notes_current">当前</string>
     <string name="v30b2_notes_count">%1$d 项</string>
+    <string name="v30b2_island_load">正在加载模型</string>
 </resources>

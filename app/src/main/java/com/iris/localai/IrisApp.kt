@@ -137,6 +137,7 @@ class IrisApp : Application() {
         if (ImageGenIpc.isImageGenProcess()) return
         container = AppContainer(this)
         DownloadNotifier.start(this, container) // progress notification for every model download
+        com.iris.localai.task.LoadIsland.start(container.scope, container.engine) // Beta2：加载模型也上灵动岛
         // 无障碍保活 (2.2.14) removed; GuiAgentRunner still calls IrisAccessibilityService.selfEnable before a task (2.1.9).
         // 「启动时预加载上次的模型」 — start loading the last model in the background right away,
         // while the UI is still coming up (PreloadPolicy decides; same lock as every other load).

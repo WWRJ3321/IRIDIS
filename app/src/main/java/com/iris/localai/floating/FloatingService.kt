@@ -73,6 +73,8 @@ import kotlin.math.abs
 
 /** 悬浮窗的模式与小工具（纯 JVM，单测）。 */
 object FloatingLogic {
+    /** 小球被推出屏幕超过自身 1/4。 */
+    fun pushedOut(x: Int, size: Int, screenW: Int): Boolean = x < -size / 4 || x > screenW - size + size / 4
     enum class Mode { TRANSLATE, SCREEN, ASK }
 
     /** 无障碍树里可读的文字，去重、按屏幕从上到下。 */
@@ -124,6 +126,7 @@ class FloatingService : Service() {
     private var work: Job? = null
     private val chips = HashMap<FloatingLogic.Mode, TextView>()
     private var dismissView: View? = null
+    private var dismissBox: View? = null
     private var dockedLeft = false
     private var peekJob: Job? = null
     private var slide: ValueAnimator? = null
@@ -149,7 +152,7 @@ class FloatingService : Service() {
         work?.cancel()
         scope.cancel()
         peekJob?.cancel(); slide?.cancel()
-        listOf(panel, bubble, dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
+        listOf(panel, bubble, dismissBox ?: dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
         _running.value = false
         super.onDestroy()
     }
@@ -222,7 +225,12 @@ class FloatingService : Service() {
                         if (hit) { closeAll(); return@setOnTouchListener true }
                         val w = resources.displayMetrics.widthPixels
                         dockedLeft = FloatingLogic.dockLeft(bubbleLp.x, size, w)
-                        slideTo(FloatingLogic.edgeX(dockedLeft, size, w, dp(8f), peek = false), 320L) { schedulePeek() }
+                        // Beta2：手动半隐——把小球往屏幕外推出 1/4 以上再松手，立即贴边半隐
+                        if (FloatingLogic.pushedOut(bubbleLp.x, size, w)) {
+                            peekJob?.cancel()
+                            slideTo(FloatingLogic.edgeX(dockedLeft, size, w, dp(8f), peek = true), 260L)
+                            v.animate().alpha(0.6f).setDuration(260).start()
+                        } else slideTo(FloatingLogic.edgeX(dockedLeft, size, w, dp(8f), peek = false), 320L) { schedulePeek() }
                     }
                     true
                 }
@@ -270,18 +278,24 @@ class FloatingService : Service() {
     private fun showDismiss() {
         if (dismissView != null) return
         val d = dp(64f)
+        // Beta2 修：窗口比圆大一圈，放大 / 位移时不被窗口裁成圆角方块
+        val win = (d * 1.7f).toInt()
         val x = TextView(this).apply {
             text = "✕"; gravity = Gravity.CENTER; setTextColor(android.graphics.Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xCC202024.toInt()); setStroke(dp(1.5f), 0x66FFFFFF) }
-            alpha = 0f; scaleX = 0.5f; scaleY = 0.5f; translationY = dp(40f).toFloat()
+            alpha = 0f; scaleX = 0.5f; scaleY = 0.5f; translationY = dp(14f).toFloat()
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            clipChildren = false
+            addView(x, android.widget.FrameLayout.LayoutParams(d, d, Gravity.CENTER))
         }
         val lp = WindowManager.LayoutParams(
-            d, d, overlayType(),
+            win, win, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(56f) }
-        runCatching { wm.addView(x, lp) }.onSuccess {
-            dismissView = x
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(56f) - (win - d) / 2 }
+        runCatching { wm.addView(box, lp) }.onSuccess {
+            dismissView = x; dismissBox = box
             x.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f).setInterpolator(DecelerateInterpolator(2f)).setDuration(220).start()
         }
     }
@@ -306,8 +320,9 @@ class FloatingService : Service() {
     private fun hideDismiss() {
         val x = dismissView ?: return
         dismissView = null
-        x.animate().alpha(0f).scaleX(0.5f).scaleY(0.5f).translationY(dp(40f).toFloat()).setDuration(180)
-            .withEndAction { runCatching { wm.removeView(x) } }.start()
+        val box = dismissBox; dismissBox = null
+        x.animate().alpha(0f).scaleX(0.5f).scaleY(0.5f).translationY(dp(14f).toFloat()).setDuration(180)
+            .withEndAction { runCatching { wm.removeView(box ?: x) } }.start()
     }
 
     /** 丢进关闭圈：小球缩小淡出，然后停服务。 */

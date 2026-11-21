@@ -469,7 +469,8 @@ class EngineManager(
                 val (v, moe) = withContext(kotlinx.coroutines.Dispatchers.IO) { memoryPlan(model, cfg, preferred == Backend.GPU) }
                 moeCpu = moe
                 Log.i(LoadTelemetry.TAG, "memory preflight: ${v.level} need=${MemoryPreflight.gb(v.needBytes)} avail=${MemoryPreflight.gb(v.availBytes)} moe_cpu=$moe")
-                v.message?.let { _notices.tryEmit(I18n.s(R.string.chat_b9fef6, model.displayName, it)) }
+                // Beta2：只在明显不够（SHORT）时提示；「偏紧」多数能正常加载（系统会回收缓存与后台），只写日志
+                if (v.level == MemoryPreflight.Level.SHORT) v.message?.let { _notices.tryEmit(I18n.s(R.string.chat_b9fef6, model.displayName, it)) }
             }
             val crashed = crashMemory.crashed(model.id)
             // Bonsai: Q1_0 / Q2_0 GGUF never go to the NPU; unknown types (PrismML PQ2_0 / PTQ1_0) are refused below.

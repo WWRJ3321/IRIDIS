@@ -2353,4 +2353,5 @@
     <string name="v30b2_stt_none">No speech model installed</string>
     <string name="v30b2_notes_current">Current</string>
     <string name="v30b2_notes_count">%1$d items</string>
+    <string name="v30b2_island_load">Loading model</string>
 </resources>

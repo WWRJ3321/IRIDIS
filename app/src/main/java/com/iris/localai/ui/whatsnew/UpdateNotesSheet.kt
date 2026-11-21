@@ -84,9 +84,9 @@ private fun ReleaseCard(r: UpdateNotes.Release, isCurrent: Boolean, open: Boolea
     Column(
         Modifier.fillMaxWidth()
             .clip(shape)
-            .background(c.surfaceElevated)
-            .border(0.5.dp, c.outline, shape)
-            .then(if (collapsible) Modifier.clickable(onClick = onToggle) else Modifier)
+            .background(c.surfaceVariant.copy(alpha = if (c.isDark) 0.55f else 0.6f))
+            // 不用按压高亮：高亮层跟着展开动画变高，看起来像一块黑影在动
+            .then(if (collapsible) Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onToggle) else Modifier)
             .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12)
             .animateContentSize(com.iris.localai.ui.motion.IrisMotion.Snappy.size()),
     ) {

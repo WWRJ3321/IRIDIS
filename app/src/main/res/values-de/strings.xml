@@ -2353,4 +2353,5 @@
     <string name="v30b2_stt_none">Kein Sprachmodell installiert</string>
     <string name="v30b2_notes_current">Aktuell</string>
     <string name="v30b2_notes_count">%1$d Punkte</string>
+    <string name="v30b2_island_load">Modell wird geladen</string>
 </resources>

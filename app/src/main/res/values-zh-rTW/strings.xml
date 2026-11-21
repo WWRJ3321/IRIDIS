@@ -2353,4 +2353,5 @@
     <string name="v30b2_stt_none">還沒裝語音辨識模型</string>
     <string name="v30b2_notes_current">目前</string>
     <string name="v30b2_notes_count">%1$d 項</string>
+    <string name="v30b2_island_load">正在載入模型</string>
 </resources>

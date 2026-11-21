@@ -2353,4 +2353,5 @@
     <string name="v30b2_stt_none">音声認識モデルが未導入</string>
     <string name="v30b2_notes_current">現在</string>
     <string name="v30b2_notes_count">%1$d 件</string>
+    <string name="v30b2_island_load">モデルを読み込み中</string>
 </resources>

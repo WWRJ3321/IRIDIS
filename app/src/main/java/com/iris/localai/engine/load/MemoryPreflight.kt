@@ -40,8 +40,9 @@ object MemoryPreflight {
         if (modelBytes <= 0 || availBytes <= 0) return Verdict(Level.OK, 0, availBytes, null)
         val need = if (needOverride > 0) needOverride else need(modelBytes, contextLength, gpu)
         val level = when {
-            need <= availBytes -> Level.OK
-            need <= availBytes + availBytes / 2 -> Level.TIGHT
+            // Beta2：availMem 不含可回收的缓存与后台，估算本身也偏保守——超出 25% 以内仍算够用
+            need <= availBytes + availBytes / 4 -> Level.OK
+            need <= availBytes * 2 -> Level.TIGHT
             else -> Level.SHORT
         }
         if (level == Level.OK) return Verdict(level, need, availBytes, null)

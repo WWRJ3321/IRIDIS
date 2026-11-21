@@ -41,4 +41,13 @@ class V300B2Test {
         assertEquals(2.5f, HistoryPress.tiltFor(400f), 0f)
         assertEquals(-2.5f, HistoryPress.tiltFor(-400f), 0f)
     }
+
+    @Test fun manualPeekAndMemoryMargin() {
+        assertTrue(FloatingLogic.pushedOut(-40, 120, 1080))
+        assertFalse(FloatingLogic.pushedOut(-10, 120, 1080))
+        assertTrue(FloatingLogic.pushedOut(1000, 120, 1080))
+        val gb = 1024L * 1024 * 1024
+        // 约需比可用多 14%（截图里 8.2 / 7.2）：不再提示
+        assertTrue(com.iris.localai.engine.load.MemoryPreflight.check(72 * gb / 10, 1L, 4096, false, needOverride = 82 * gb / 10).level == com.iris.localai.engine.load.MemoryPreflight.Level.OK)
+    }
 }
