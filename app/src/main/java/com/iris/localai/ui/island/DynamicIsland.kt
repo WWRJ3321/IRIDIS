@@ -126,6 +126,7 @@ fun DynamicIsland(
     hidden: Set<TaskProgress.Kind>,
     onOpen: (TaskProgress.Task) -> Unit,
     modifier: Modifier = Modifier,
+    bottomPad: Float = 16f,
 ) {
     val active by TaskProgress.active.collectAsStateWithLifecycle()
     var lingering by remember { mutableStateOf<TaskProgress.Task?>(null) }
@@ -150,7 +151,7 @@ fun DynamicIsland(
         modifier.fillMaxSize()
             .windowInsetsPadding(navBottom)
             .imePadding()
-            .padding(start = 12.dp, end = 12.dp, bottom = 84.dp),
+            .padding(start = 12.dp, end = 12.dp, bottom = bottomPad.dp),
         contentAlignment = Alignment.BottomStart,
     ) {
         AnimatedVisibility(
@@ -183,7 +184,7 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
     Box(
         Modifier
             .animateContentSize(IrisMotion.Snappy.size())
-            .widthIn(min = if (open) 300.dp else (gap + 120f).dp, max = if (open) 360.dp else 340.dp)
+            .widthIn(min = if (open) 300.dp else 0.dp, max = if (open) 360.dp else 260.dp)
             .clip(shape)
             .background(ink)
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onTap),
@@ -222,7 +223,6 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
                         modifier = Modifier.widthIn(max = 150.dp),
                     )
                     Spacer(Modifier.width(gap.coerceAtLeast(12f).dp))
-                    Spacer(Modifier.weight(1f, fill = false))
                     Trail(t, accent)
                 }
                 // 底边细进度线（有确定进度时）

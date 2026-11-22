@@ -2373,4 +2373,10 @@
     <string name="v31_fl_set_menu">メニュー</string>
     <string name="v31_fl_perm">オーバーレイ権限が必要</string>
     <string name="v31_fl_a11y">画面の読み取りと翻訳にはユーザー補助が必要</string>
+    <string name="v31_fl_ov_working">翻訳中…</string>
+    <string name="v31_fl_ov_close">閉じる</string>
+    <string name="v31_fl_ov_orig">原文</string>
+    <string name="v31_fl_ov_tr">訳文</string>
+    <string name="v31_fl_ov_copy">訳文をコピー</string>
+    <string name="v31_fl_ov_copied">コピー済み</string>
 </resources>

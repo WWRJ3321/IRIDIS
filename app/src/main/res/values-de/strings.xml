@@ -2373,4 +2373,10 @@
     <string name="v31_fl_set_menu">Menü</string>
     <string name="v31_fl_perm">Overlay-Berechtigung nötig</string>
     <string name="v31_fl_a11y">Bildschirm lesen und übersetzen braucht Bedienungshilfen</string>
+    <string name="v31_fl_ov_working">Übersetze…</string>
+    <string name="v31_fl_ov_close">Schließen</string>
+    <string name="v31_fl_ov_orig">Original</string>
+    <string name="v31_fl_ov_tr">Übersetzung</string>
+    <string name="v31_fl_ov_copy">Kopieren</string>
+    <string name="v31_fl_ov_copied">Kopiert</string>
 </resources>

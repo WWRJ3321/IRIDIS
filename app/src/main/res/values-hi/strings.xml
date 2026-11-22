@@ -2373,4 +2373,10 @@
     <string name="v31_fl_set_menu">मेनू</string>
     <string name="v31_fl_perm">ओवरले अनुमति चाहिए</string>
     <string name="v31_fl_a11y">स्क्रीन पढ़ने और अनुवाद के लिए एक्सेसिबिलिटी चाहिए</string>
+    <string name="v31_fl_ov_working">अनुवाद हो रहा है…</string>
+    <string name="v31_fl_ov_close">बंद करें</string>
+    <string name="v31_fl_ov_orig">मूल</string>
+    <string name="v31_fl_ov_tr">अनुवाद</string>
+    <string name="v31_fl_ov_copy">कॉपी</string>
+    <string name="v31_fl_ov_copied">कॉपी हुआ</string>
 </resources>

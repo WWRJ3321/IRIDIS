@@ -42,4 +42,17 @@ class V300B3Test {
         assertEquals("一段很长的网页正文内容在这里", FloatingLogic.pickScreenText("一段很长的网页正文内容在这里", "一段很长的网页正文"))
         assertEquals("ocr", FloatingLogic.pickScreenText("", "ocr"))
     }
+
+    @Test fun overlaySplitsTranslationPerBlock() {
+        val a = com.iris.localai.agent.gui.OcrLine("Deploy", com.iris.localai.agent.gui.PxRect(0, 0, 100, 40))
+        val b = com.iris.localai.agent.gui.OcrLine("Copy to\nbucket", com.iris.localai.agent.gui.PxRect(0, 50, 100, 90))
+        assertEquals("Deploy\nCopy to bucket", FloatingLogic.joinBlocks(listOf(a, b)))
+        assertEquals(listOf("部署"), FloatingLogic.splitTranslated("部署\n复制到", 2, done = false))
+        assertEquals(listOf("部署", "复制到存储桶"), FloatingLogic.splitTranslated("1. 部署\n2. 复制到存储桶\n", 2, done = true))
+        val root = com.iris.localai.agent.gui.UiNode(children = listOf(
+            com.iris.localai.agent.gui.UiNode(text = "Like", bounds = com.iris.localai.agent.gui.PxRect(0, 10, 50, 30)),
+            com.iris.localai.agent.gui.UiNode(text = "557", bounds = com.iris.localai.agent.gui.PxRect(60, 10, 90, 30)),
+        ))
+        assertEquals(listOf("Like"), FloatingLogic.treeBlocks(root).map { it.text })
+    }
 }

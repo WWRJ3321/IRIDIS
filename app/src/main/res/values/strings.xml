@@ -2374,4 +2374,10 @@
     <string name="v31_fl_set_menu">菜单</string>
     <string name="v31_fl_perm">需要悬浮窗权限</string>
     <string name="v31_fl_a11y">识屏和屏幕翻译需要开启无障碍</string>
+    <string name="v31_fl_ov_working">正在翻译…</string>
+    <string name="v31_fl_ov_close">关闭</string>
+    <string name="v31_fl_ov_orig">看原文</string>
+    <string name="v31_fl_ov_tr">看译文</string>
+    <string name="v31_fl_ov_copy">复制译文</string>
+    <string name="v31_fl_ov_copied">已复制</string>
 </resources>

@@ -106,6 +106,38 @@ object FloatingLogic {
 
     fun dockLeft(x: Int, size: Int, screenW: Int): Boolean = x + size / 2 < screenW / 2
 
+    /** Beta3 覆盖式屏幕翻译：无障碍树里带位置的文字块（有字就不再往子节点找），去掉无字母的。 */
+    fun treeBlocks(root: UiNode?): List<OcrLine> {
+        if (root == null) return emptyList()
+        val out = ArrayList<OcrLine>()
+        fun visit(n: UiNode) {
+            if (!n.visible) return
+            val t = n.text.trim()
+            if (t.isNotEmpty() && !n.password && !n.editable && !n.bounds.isEmpty) { out += OcrLine(t, n.bounds); return }
+            n.children.forEach(::visit)
+        }
+        visit(root)
+        val seen = HashSet<String>()
+        return out.filter { b -> b.text.any { it.isLetter() } && seen.add(b.text + b.bounds) }
+            .sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
+    }
+
+    /** 识字块和无障碍块取字多的那份（漫画走识字）。 */
+    fun pickBlocks(tree: List<OcrLine>, ocr: List<OcrLine>): List<OcrLine> {
+        val o = ocr.filter { b -> b.text.any { it.isLetter() } }
+        return if (o.sumOf { it.text.length } > tree.sumOf { it.text.length } * 6 / 5 + 10) o else tree.ifEmpty { o }
+    }
+
+    /** 一块一行送去翻译：块内换行压成空格。 */
+    fun joinBlocks(blocks: List<OcrLine>): String = blocks.joinToString("\n") { it.text.replace(Regex("\\s*\n\\s*"), " ") }
+
+    /** 译文按行拆回各块；[done] 前最后一行可能还没写完，不用。 */
+    fun splitTranslated(out: String, n: Int, done: Boolean): List<String> {
+        val lines = out.trim('\n').split('\n').map { it.trim().replace(Regex("^\\d+[.、:：)]\\s*"), "") }
+        val ready = if (done) lines else lines.dropLast(1)
+        return ready.take(n)
+    }
+
     /** Beta3 屏幕翻译取哪份文字：截图识字明显更多（漫画、图片里的字）就用识字，否则用无障碍文字。 */
     fun pickScreenText(tree: String, ocr: String): String {
         val t = tree.trim(); val o = ocr.trim()
@@ -173,6 +205,7 @@ class FloatingService : Service() {
         work?.cancel()
         scope.cancel()
         peekJob?.cancel(); slide?.cancel()
+        closeOverlay()
         listOf(panel, menu, bubble, dismissBox ?: dismissView).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
         _running.value = false
         super.onDestroy()
@@ -415,7 +448,7 @@ class FloatingService : Service() {
         peekJob?.cancel()
         val on = container.settings.current.floatItems
         val items = listOf(
-            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_translate, I18n.s(R.string.v31_fl_tr_screen), { openMode(FloatingLogic.Mode.TRANSLATE) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_translate, I18n.s(R.string.v31_fl_tr_screen), { if (IrisAccessibilityService.connected) { hideMenu(); overlayTranslate() } else openMode(FloatingLogic.Mode.TRANSLATE) }),
             Triple<Int, String, () -> Unit>(R.drawable.w31_ic_screen, I18n.s(R.string.v30_fl_screen), { openMode(FloatingLogic.Mode.SCREEN) }),
             // Beta3：搜索并进问 AI（面板里有「搜索」按钮）
             Triple<Int, String, () -> Unit>(R.drawable.w31_ic_spark, I18n.s(R.string.v30_fl_ask), { openMode(FloatingLogic.Mode.ASK) }),
@@ -686,6 +719,121 @@ class FloatingService : Service() {
     private suspend fun translateScreen() {
         val text = screenText() ?: return
         translate(text)
+    }
+
+    // ---------------------------------------------------------------- 覆盖式屏幕翻译（Beta3 r3）
+
+    private var overlay: android.widget.FrameLayout? = null
+    private var overlayBar: View? = null
+    private var overlayJob: kotlinx.coroutines.Job? = null
+    private var overlayText = ""
+
+    /** 截屏取字，译文直接盖在原文位置；底部一条小栏：原文/译文切换、复制、关闭。 */
+    private fun overlayTranslate() {
+        closeOverlay()
+        overlayJob = scope.launch {
+            try {
+                val obs = hidden { AccessibilityGuiDevice(this@FloatingService).observe() }
+                val tree = FloatingLogic.treeBlocks(obs.tree)
+                val ocr = obs.screenshot?.let { shot -> runCatching { GuiOcrProvider.get(this@FloatingService)?.recognize(shot, obs.width, obs.height).orEmpty() }.getOrNull() }.orEmpty()
+                val blocks = FloatingLogic.pickBlocks(tree, ocr).take(120)
+                showOverlayBar(I18n.s(R.string.v31_fl_ov_working))
+                if (blocks.isEmpty()) { showOverlayBar(I18n.s(R.string.v30_fl_nothing)); return@launch }
+                val screen = wm.currentWindowMetrics.bounds
+                val sx = if (obs.width > 0) screen.width().toFloat() / obs.width else 1f
+                val sy = if (obs.height > 0) screen.height().toFloat() / obs.height else 1f
+                val views = buildOverlay(blocks, sx, sy)
+                var last = ""
+                container.translator.translate(FloatingLogic.joinBlocks(blocks)).collect { out ->
+                    last = out
+                    FloatingLogic.splitTranslated(out, blocks.size, done = false).forEachIndexed { i, t -> views[i].apply { text = t; visibility = View.VISIBLE } }
+                }
+                val done = FloatingLogic.splitTranslated(last, blocks.size, done = true)
+                done.forEachIndexed { i, t -> views[i].apply { text = t; visibility = View.VISIBLE } }
+                overlayText = done.joinToString("\n")
+                showOverlayBar(null)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                Log.w(TAG, "overlay translate failed", t)
+                showOverlayBar(t.message ?: I18n.s(R.string.v30_fl_failed))
+            }
+        }
+    }
+
+    private fun buildOverlay(blocks: List<OcrLine>, sx: Float, sy: Float): List<android.widget.TextView> {
+        val root = android.widget.FrameLayout(this)
+        val views = blocks.map { b ->
+            val w = (b.bounds.width * sx).toInt().coerceAtLeast(dp(24f)); val h = (b.bounds.height * sy).toInt().coerceAtLeast(dp(12f))
+            android.widget.TextView(this).apply {
+                visibility = View.INVISIBLE
+                setTextColor(0xFF15171C.toInt())
+                background = android.graphics.drawable.GradientDrawable().apply { setColor(0xF5FFFFFF.toInt()); cornerRadius = dp(3f).toFloat() }
+                setPadding(dp(2f), 0, dp(2f), 0)
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                includeFontPadding = false
+                setAutoSizeTextTypeUniformWithConfiguration(6, maxOf(7, (h / resources.displayMetrics.scaledDensity * 0.8f).toInt().coerceAtMost(22)), 1, TypedValue.COMPLEX_UNIT_SP)
+                root.addView(this, android.widget.FrameLayout.LayoutParams(w, h).apply { leftMargin = (b.bounds.left * sx).toInt(); topMargin = (b.bounds.top * sy).toInt() })
+            }
+        }
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            android.graphics.PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
+        runCatching { wm.addView(root, lp) }
+        overlay = root
+        // 控制栏放在覆盖层之上
+        overlayBar?.let { runCatching { wm.removeView(it); wm.addView(it, it.layoutParams) } }
+        return views
+    }
+
+    /** [status] 非空时栏里显示状态文字，空时显示按钮。 */
+    private fun showOverlayBar(status: String?) {
+        overlayBar?.let { runCatching { wm.removeView(it) } }
+        val bar = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(14f), dp(6f), dp(6f), dp(6f))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xEE0E0F13.toInt()); cornerRadius = dp(22f).toFloat() }
+        }
+        fun btn(label: String, onClick: (android.widget.TextView) -> Unit) = android.widget.TextView(this).apply {
+            text = label; setTextColor(0xFFFFFFFF.toInt()); textSize = 13f
+            setPadding(dp(12f), dp(8f), dp(12f), dp(8f)); setOnClickListener { onClick(this) }
+            bar.addView(this)
+        }
+        if (status != null) {
+            android.widget.TextView(this).apply { text = status; setTextColor(0xFFFFFFFF.toInt()); textSize = 13f; setPadding(0, dp(8f), dp(8f), dp(8f)) }.also(bar::addView)
+            btn(I18n.s(R.string.v31_fl_ov_close)) { closeOverlay() }
+        } else {
+            btn(I18n.s(R.string.v31_fl_ov_orig)) { v ->
+                val o = overlay ?: return@btn
+                val showing = o.visibility == View.VISIBLE
+                o.visibility = if (showing) View.INVISIBLE else View.VISIBLE
+                v.text = I18n.s(if (showing) R.string.v31_fl_ov_tr else R.string.v31_fl_ov_orig)
+            }
+            btn(I18n.s(R.string.v31_fl_ov_copy)) { v ->
+                getSystemService(ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IRIDIS", overlayText))
+                v.text = I18n.s(R.string.v31_fl_ov_copied)
+            }
+            btn(I18n.s(R.string.v31_fl_ov_close)) { closeOverlay() }
+        }
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, android.graphics.PixelFormat.TRANSLUCENT,
+        ).apply { gravity = android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL; y = dp(48f) }
+        runCatching { wm.addView(bar, lp) }
+        overlayBar = bar
+    }
+
+    private fun closeOverlay() {
+        overlayJob?.cancel(); overlayJob = null
+        listOf(overlay, overlayBar).forEach { v -> v?.let { runCatching { wm.removeView(it) } } }
+        overlay = null; overlayBar = null; overlayText = ""
     }
 
     private suspend fun readScreen() {

@@ -2373,4 +2373,10 @@
     <string name="v31_fl_set_menu">Menu</string>
     <string name="v31_fl_perm">Needs overlay permission</string>
     <string name="v31_fl_a11y">Screen reading and translation need Accessibility</string>
+    <string name="v31_fl_ov_working">Translating…</string>
+    <string name="v31_fl_ov_close">Close</string>
+    <string name="v31_fl_ov_orig">Original</string>
+    <string name="v31_fl_ov_tr">Translation</string>
+    <string name="v31_fl_ov_copy">Copy</string>
+    <string name="v31_fl_ov_copied">Copied</string>
 </resources>

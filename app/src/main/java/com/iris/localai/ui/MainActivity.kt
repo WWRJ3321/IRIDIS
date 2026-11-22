@@ -357,6 +357,7 @@ private fun AppNavigation(chat: ChatViewModel, showTour: Boolean = false, onTour
     val top = stack.last()
     com.iris.localai.ui.island.DynamicIsland(
         enabled = appSettings.dynamicIsland && !tour.active,
+        bottomPad = if (top == Route.CHAT.name) 156f else 16f, // 对话页放在输入框卡片上方
         hidden = buildSet {
             if (top == Route.IMAGEGEN.name) { add(com.iris.localai.task.TaskProgress.Kind.IMAGE_GEN); add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD) } // 生图页的模型卡片自己显示下载进度
             if (top == Route.DOWNLOAD_MODELS.name) add(com.iris.localai.task.TaskProgress.Kind.DOWNLOAD)

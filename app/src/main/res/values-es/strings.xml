@@ -2373,4 +2373,10 @@
     <string name="v31_fl_set_menu">Menú</string>
     <string name="v31_fl_perm">Requiere permiso de superposición</string>
     <string name="v31_fl_a11y">Leer y traducir la pantalla requiere Accesibilidad</string>
+    <string name="v31_fl_ov_working">Traduciendo…</string>
+    <string name="v31_fl_ov_close">Cerrar</string>
+    <string name="v31_fl_ov_orig">Original</string>
+    <string name="v31_fl_ov_tr">Traducción</string>
+    <string name="v31_fl_ov_copy">Copiar</string>
+    <string name="v31_fl_ov_copied">Copiado</string>
 </resources>
