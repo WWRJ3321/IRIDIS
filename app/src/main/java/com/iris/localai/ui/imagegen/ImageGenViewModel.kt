@@ -43,6 +43,7 @@ import com.iris.localai.imagegen.ImageModel
 import com.iris.localai.imagegen.ImageRequest
 import com.iris.localai.imagegen.FileRole as FR
 import com.iris.localai.imagegen.LoraArch
+import com.iris.localai.imagegen.ImageSizes
 import com.iris.localai.imagegen.LoraCheck
 import com.iris.localai.imagegen.LoraEntry
 import com.iris.localai.imagegen.LoraInspect
@@ -161,7 +162,23 @@ data class ImageGenUi(
     val loraBusy: Boolean = false,
     /** 2.7.1：实时预览（当前 x0 估计的低清图）。 */
     val preview: PreviewFrame? = null,
+    /** r5：Anima NPU 包里编好的尺寸（引擎加载后写在模型目录）。 */
+    val packSizes: List<Pair<Int, Int>> = emptyList(),
 ) {
+    /** r5：按模型类型给的尺寸选项（固定尺寸包只有那一档）。 */
+    val sizeOptions: List<ImageSizes.Option> get() = ImageSizes.options(model, loraBase, packSizes)
+    /** 当前尺寸不在选项里（换模型、导入模型识别出结构后）→ 用默认值。 */
+    /** 读出底模结构：只有它改变了尺寸基准（如导入的其实是 SD1.5）才校正尺寸——「用这组参数」填的尺寸不被冲掉。 */
+    fun withArch(a: LoraArch): ImageGenUi {
+        val next = copy(loraBase = a)
+        return if (ImageSizes.base(model, loraBase) != ImageSizes.base(model, a)) next.withValidSize() else next
+    }
+    fun withValidSize(): ImageGenUi {
+        val o = sizeOptions
+        if (o.any { it.width == width && it.height == height }) return this
+        val d = ImageSizes.default(o)
+        return copy(width = d.width, height = d.height)
+    }
     /** 当前模型走 sd.cpp（GPU/CPU）才能挂 LoRA；NPU 模型权重编在上下文里。 */
     val loraSupported: Boolean get() = model.backend == Backend.SDCPP && !model.sdq
     val lorasHere: List<LoraEntry> get() = loras.filter { it.archOrUnknown.fits(loraBase) }
@@ -292,6 +309,11 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun setExpand(on: Boolean) = agentSettings.update { it.copy(imagePromptExpand = on) }
 
     /** 标签库：点标签追加到提示词（负面类追加到负面词）。 */
+    /** r5：提示词辅助——整理顺序 / 补画质词 / 填负面词。 */
+    fun arrangePrompt() = _ui.update { it.copy(prompt = com.iris.localai.imagegen.PromptOrder.arrange(it.prompt)) }
+    fun addQuality() = _ui.update { it.copy(prompt = com.iris.localai.imagegen.PromptOrder.addAll(it.prompt, com.iris.localai.imagegen.PromptOrder.quality(it.model.tagStyle), it.model.tagStyle)) }
+    fun addNegative() = _ui.update { it.copy(negative = com.iris.localai.imagegen.PromptOrder.addAll(it.negative, com.iris.localai.imagegen.PromptOrder.negative(it.model.tagStyle), false)) }
+
     fun useTag(t: PromptTag) = _ui.update {
         val text = t.text(it.model.tagStyle)
         if (t.cat == TagCat.NEGATIVE) it.copy(negative = PromptTags.append(it.negative, text))
@@ -350,11 +372,18 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             // a model's suggested prompt / negative fill fields that are empty or still the previous model's default
             fun pick(cur: String, oldDefault: String, newDefault: String) =
                 if (cur.isBlank() || (oldDefault.isNotEmpty() && cur == oldDefault)) newDefault else cur
-            it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = m.fixedSize ?: it.width, height = m.fixedSize ?: it.height,
+            // r5：尺寸按新模型的类型给（SD1.5 512 基 / 1024 基 / NPU 包自己的几档）；同一类且当前尺寸可用就留着。
+            val arch = baseArchCache[m.id] ?: LoraArch.UNKNOWN
+            val pack = if (m.animaQnn) packFor(m) else emptyList()
+            val (w, h) = ImageSizes.pick(it.width, it.height, ImageSizes.options(m, arch, pack),
+                sameBase = !old.animaQnn && !m.animaQnn && old.fixedSize == null && m.fixedSize == null && ImageSizes.base(old, it.loraBase) == ImageSizes.base(m, arch))
+            it.copy(modelId = m.id, steps = m.defaultSteps, cfg = m.defaultCfg, width = w, height = h, packSizes = pack,
                 prompt = pick(it.prompt, old.defaultPrompt, m.defaultPrompt), negative = pick(it.negative, old.defaultNegative, m.defaultNegative))
         }
         updateLoraBase()
     }
+
+    private fun packFor(m: ImageModel): List<Pair<Int, Int>> = runCatching { ImageSizes.readPack(repo.downloadedDir(m)) }.getOrDefault(emptyList())
 
     // ---- 2.7.1：LoRA ----
 
@@ -370,7 +399,7 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     private fun updateLoraBase() {
         val m = _ui.value.model
         if (m.backend != Backend.SDCPP || m.sdq) { _ui.update { it.copy(loraBase = LoraArch.UNKNOWN) }; return }
-        baseArchCache[m.id]?.let { a -> _ui.update { it.copy(loraBase = a) }; return }
+        baseArchCache[m.id]?.let { a -> _ui.update { it.withArch(a) }; return }
         viewModelScope.launch {
             val a = withContext(Dispatchers.IO) {
                 runCatching {
@@ -382,7 +411,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrDefault(LoraArch.UNKNOWN)
             }
             if (a != LoraArch.UNKNOWN) baseArchCache[m.id] = a
-            _ui.update { if (it.modelId == m.id) it.copy(loraBase = a) else it }
+            // r5：导入的模型读出结构后（SD1.5 / SDXL…）尺寸选项可能变了，当前尺寸不在里面就换成默认。
+            _ui.update { if (it.modelId == m.id) it.withArch(a) else it }
         }
     }
 
@@ -713,7 +743,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
             // 扩写在卸载文本模型之前（要用它）。
             val req = if (s.expand && req0.initImagePath == null) {
                 _ui.update { it.copy(expanding = true, expandNoModel = false) }
-                val p = expandPrompt(req0.prompt, model)
+                // r5：标签模型扩写出来的提示词按标签约定整理顺序、去重（用户自己写的不动）。
+                val p = expandPrompt(req0.prompt, model).let { e -> if (model.tagStyle && e != req0.prompt) com.iris.localai.imagegen.PromptOrder.arrange(e) else e }
                 _ui.update { it.copy(expanding = false, usedPrompt = p.takeIf { x -> x != req0.prompt }) }
                 req0.copy(prompt = p, negative = PromptExpand.negative(req0.negative, model.tagStyle))
             } else req0
@@ -743,6 +774,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 _ui.update { it.copy(running = false, preview = null, error = msg, lowMem = e is SdRules.LowMemory) }
             }
             if (model.backend == Backend.SDCPP) refresh()
+            // r5：Anima NPU 包第一次加载后才知道它有哪几档尺寸。
+            if (model.animaQnn) { val p = withContext(Dispatchers.IO) { packFor(model) }; _ui.update { if (it.modelId == model.id) it.copy(packSizes = p) else it } }
         }
     }
 

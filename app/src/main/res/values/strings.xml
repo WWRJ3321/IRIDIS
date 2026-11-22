@@ -2380,4 +2380,8 @@
     <string name="v31_fl_ov_tr">看译文</string>
     <string name="v31_fl_ov_copy">复制译文</string>
     <string name="v31_fl_ov_copied">已复制</string>
+    <string name="r5_ig_arrange">整理</string>
+    <string name="r5_ig_quality">画质词</string>
+    <string name="r5_ig_negative">负面词</string>
+    <string name="r5_ig_info">参数</string>
 </resources>

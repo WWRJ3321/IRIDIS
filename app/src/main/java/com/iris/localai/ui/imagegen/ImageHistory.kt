@@ -36,6 +36,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -143,19 +149,21 @@ internal fun HistoryViewer(
     val file = File(path)
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().enterOnce().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
+            // r5：顶栏只留关闭、序号、「参数」开关（文件名去掉）；图可双指缩放、双击放大、放大后拖动
+            var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
                 RoundIcon(IrisIcons.Close, onClose)
                 Text(HistoryText.position(i, paths.size), style = IrisType.labelSmall, color = Color.White, modifier = Modifier.weight(1f).padding(start = IrisDimens.space8))
-                Text(file.name.removeSuffix(".png"), style = IrisType.caption, color = Color.White.copy(alpha = 0.6f))
+                RoundIcon(IrisIcons.Info) { info = !info }
             }
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Thumb(path, Modifier.fillMaxSize(), maxSide = 1536, fit = true, plain = true)
+                ZoomImage(path, Modifier.fillMaxSize())
                 if (i > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronLeft) { onIndex(i - 1) } }
                 if (i < paths.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronRight) { onIndex(i + 1) } }
             }
             Column(Modifier.fillMaxWidth().background(Iris.colors.surface).padding(IrisDimens.space12)) {
                 val p = params
-                Column(Modifier.fillMaxWidth().heightIn(max = 150.dp).verticalScroll(rememberScrollState())) {
+                if (info) Column(Modifier.fillMaxWidth().heightIn(max = 150.dp).verticalScroll(rememberScrollState())) {
                     if (p == null) {
                         Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = Iris.colors.textTertiary)
                     } else {
@@ -164,7 +172,7 @@ internal fun HistoryViewer(
                         Text(metaLine(p, file), style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
                     }
                 }
-                Spacer(Modifier.height(IrisDimens.space8))
+                if (info) Spacer(Modifier.height(IrisDimens.space8))
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                     if (p != null) {
                         IrisButton(HistoryText.REUSE, icon = IrisIcons.Reload, style = IrisButtonStyle.Tonal, compact = true, onClick = {
@@ -188,6 +196,48 @@ internal fun HistoryViewer(
                 }
             }
         }
+    }
+}
+
+/** r5：看图页的缩放（纯逻辑，单测 V300B3R5Test）。 */
+object ImageZoom {
+    const val MIN = 1f
+    const val MAX = 5f
+    const val DOUBLE_TAP = 2.5f
+    fun scale(cur: Float, zoom: Float): Float = (cur * zoom).coerceIn(MIN, MAX)
+    /** 放大后能拖动的范围：图边不离开视口；1 倍时归零。 */
+    fun clampPan(x: Float, y: Float, scale: Float, w: Float, h: Float): Pair<Float, Float> {
+        if (scale <= 1f) return 0f to 0f
+        val mx = w * (scale - 1f) / 2f; val my = h * (scale - 1f) / 2f
+        return x.coerceIn(-mx, mx) to y.coerceIn(-my, my)
+    }
+    fun doubleTap(cur: Float): Float = if (cur > 1.01f) MIN else DOUBLE_TAP
+}
+
+@Composable
+private fun ZoomImage(path: String, modifier: Modifier) {
+    var scale by androidx.compose.runtime.remember(path) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    var tx by androidx.compose.runtime.remember(path) { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var ty by androidx.compose.runtime.remember(path) { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    Box(
+        modifier
+            .clipToBounds()
+            .pointerInput(path) {
+                detectTapGestures(onDoubleTap = {
+                    scale = ImageZoom.doubleTap(scale)
+                    if (scale <= 1f) { tx = 0f; ty = 0f }
+                })
+            }
+            .pointerInput(path) {
+                detectTransformGestures { _: androidx.compose.ui.geometry.Offset, pan: androidx.compose.ui.geometry.Offset, zoom: Float, _: Float ->
+                    scale = ImageZoom.scale(scale, zoom)
+                    val (x, y) = ImageZoom.clampPan(tx + pan.x, ty + pan.y, scale, size.width.toFloat(), size.height.toFloat())
+                    tx = x; ty = y
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Thumb(path, Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = tx; translationY = ty }, maxSide = 2048, fit = true, plain = true)
     }
 }
 

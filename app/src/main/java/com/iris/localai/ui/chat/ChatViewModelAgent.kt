@@ -109,7 +109,7 @@ internal fun ChatViewModel.agentPreview(tool: AgentTool, call: ToolCall): String
  * the message ([ChatMessage.agentSteps]) and drawn as cards. Only the final answer goes back
  * into later turns' history (small context windows).
  */
-internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: ((String) -> Unit)? = null) {
+internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: ((String) -> Unit)? = null, only: Set<String>? = null) {
     GenerateImageTool.imageStyle = cardOf(conversation.value)?.bindImageStyle.orEmpty()
     val s = c.settings.current
     val ag = c.agent.settings.current
@@ -124,7 +124,8 @@ internal suspend fun ChatViewModel.runAgentReply(reply: ChatMessage, voiceOut: (
     val prefix = if (details?.thinkingPrefilled == true && !disableThinking) "<think>" else ""
     val history = c.agent.history
     val memoryOn = c.agent.memorySettings.current.enabled
-    val tools = AgentTools.enabled(ag, history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached())
+    // r5：对话模式里的手机指令只带 [only] 里的工具（phone），其余工具说明不进提示。
+    val tools = TurnAgent.tools(AgentTools.enabled(ag, history != null, memoryOn, c.agent.knowledge.nonEmptyCached(), c.agent.imageGenOnCached()), { it.name }, ag.agentMode, only)
     val ctxTokens = details?.contextLength?.takeIf { it > 0 } ?: eff.contextLength
     // the turn cap scales with the window (was min(最大生成长度, 1536) — long writes were cut).
     val maxNew = AgentOutput.maxNew(eff.maxNewTokens, ctxTokens)

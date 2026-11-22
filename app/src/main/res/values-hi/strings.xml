@@ -2379,4 +2379,8 @@
     <string name="v31_fl_ov_tr">अनुवाद</string>
     <string name="v31_fl_ov_copy">कॉपी</string>
     <string name="v31_fl_ov_copied">कॉपी हुआ</string>
+    <string name="r5_ig_arrange">व्यवस्थित</string>
+    <string name="r5_ig_quality">गुणवत्ता</string>
+    <string name="r5_ig_negative">नेगेटिव</string>
+    <string name="r5_ig_info">विवरण</string>
 </resources>

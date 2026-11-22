@@ -105,8 +105,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Size presets for models without a fixed size (width × height). */
-internal val SIZE_PRESETS = listOf(512 to 512, 768 to 768, 1024 to 1024, 768 to 1024, 1024 to 768)
 
 /** 生图: model tiers, prompts, parameters, result, history and 生图自检. [onSendToChat] gets the PNG path. */
 @Composable
@@ -239,23 +237,30 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             full {
                 SettingsGroup {
                     Field(s.prompt, ImageGenText.PROMPT, minLines = 3) { v -> vm.edit { it.copy(prompt = v) } }
+                    // r5：提示词辅助——整理顺序（标签模型）、补画质词、填负面词
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = IrisDimens.rowPadding),
+                        horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                        if (s.model.tagStyle) Pill(I18n.s(R.string.r5_ig_arrange), selected = false, onClick = vm::arrangePrompt)
+                        Pill(I18n.s(R.string.r5_ig_quality), selected = false, onClick = vm::addQuality)
+                        Pill(I18n.s(R.string.r5_ig_negative), selected = s.negative.isNotBlank(), onClick = vm::addNegative)
+                    }
                     // 标签库：分类 → 点标签追加，长按删除，「+」添加
                     TagRow(s, onCat = { c -> vm.edit { it.copy(tagCat = c) } }, onTag = vm::useTag, onLong = { removingTag = it },
                         onAdd = { addingTag = true }, onManage = { managingTags = true })
                     val fixed = s.model.fixedSize
+                    // r5：尺寸按模型类型给（SD1.5 512 基、1024 基、NPU 包只列它支持的），比例 + 像素一枚胶囊，不再有说明小字
                     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12)) {
                         Text(I18n.s(R.string.imagegen_c8339f), style = IrisType.row, color = Iris.colors.text)
                         Spacer(Modifier.height(IrisDimens.space6))
-                        if (fixed != null) Text(I18n.s(R.string.imagegen_a5cf72, fixed, fixed, ImageGenText.FIXED_SIZE), style = IrisType.secondary, color = Iris.colors.textSecondary)
-                        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-                            for ((w, h) in SIZE_PRESETS) Pill("$w×$h", selected = s.width == w && s.height == h) { vm.edit { it.copy(width = w, height = h) } }
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
+                            for (o in s.sizeOptions) Pill(o.label, selected = s.width == o.width && s.height == o.height) { vm.edit { it.copy(width = o.width, height = o.height) } }
                         }
                     }
                     AdvancedFold("imagegen-adv") {
                         Field(s.negative, ImageGenText.NEGATIVE, minLines = 2) { v -> vm.edit { it.copy(negative = v) } }
                         // what it does, said right on the switch; without a loaded chat model it says so plainly.
                         SwitchRow(I18n.s(R.string.ig268_expand), s.expand,
-                            subtitle = if (s.expand && !chatLoaded) I18n.s(R.string.ig27c_nomodel) else I18n.s(R.string.ig268_expand_sub)) { on -> vm.setExpand(on) }
+                            subtitle = if (s.expand && !chatLoaded) I18n.s(R.string.ig27c_nomodel) else null) { on -> vm.setExpand(on) }
                         SliderRow(ImageGenText.STEPS, s.steps.toFloat(), 1f..50f, s.steps.toString(), steps = 48) { v -> vm.edit { it.copy(steps = v.toInt()) } }
                         SliderRow(ImageGenText.CFG, s.cfg, 1f..20f, "%.1f".format(s.cfg), steps = 37) { v -> vm.edit { it.copy(cfg = (v * 2).toInt() / 2f) } }
                         // Anima NPU：调度偏移，每个导入模型单独记
@@ -269,8 +274,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             trailingText = I18n.s(R.string.ig252_random),
                             onTrailing = if (ImageSeed.isRandom(s.seed)) null else ({ vm.edit { it.copy(seed = "") } }),
                         ) { v -> vm.edit { it.copy(seed = ImageSeed.sanitize(v)) } }
-                        if (fixed == null) SwitchRow(I18n.s(R.string.ig268_lowmem), s.lowMemMode,
-                            subtitle = I18n.s(if (s.model.animaQnn) R.string.ig271_lowmem_npu_sub else R.string.ig268_lowmem_sub)) { on -> vm.setLowMem(on) }
+                        if (fixed == null) SwitchRow(I18n.s(R.string.ig268_lowmem), s.lowMemMode) { on -> vm.setLowMem(on) }
                         // 参考图（图生图）：只在模型支持时出现
                         if (s.img2imgSupported) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.rowPadding, vertical = IrisDimens.space12), verticalAlignment = Alignment.CenterVertically) {
@@ -377,7 +381,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
             s.result?.let { path ->
                 full {
                     Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter)) {
-                        Thumb(path, Modifier.fillMaxWidth().aspectRatio(1f), maxSide = 1024, fit = true)
+                        // r5：点结果图直接进看图页（缩放 / 参数 / 保存 / 分享）
+                        Thumb(path, Modifier.fillMaxWidth().aspectRatio(1f).clickable { s.history.indexOf(path).takeIf { it >= 0 }?.let { viewing = it } }, maxSide = 1024, fit = true)
                         Spacer(Modifier.height(IrisDimens.space8))
                         Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                             IrisButton(ImageGenText.SAVE, icon = IrisIcons.Download, style = IrisButtonStyle.Tonal, compact = true, onClick = {
@@ -389,7 +394,6 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             })
                             IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onSendToChat(path) })
                         }
-                        Text(ImageGenFiles.IMAGES_SUB + "/" + File(path).name, style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space6))
                         s.usedPrompt?.let { up -> Text(I18n.s(R.string.ig268_used, up), style = IrisType.caption, color = Iris.colors.textTertiary, maxLines = 4) }
                         // the seed this image used (the seed field keeps what the user typed); 「固定此种子」 copies it in.
                         s.lastSeed?.let { used ->

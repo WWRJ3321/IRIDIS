@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -88,17 +89,29 @@ class Translator(
     fun targetFor(text: String): TransLang = LangDetect.target(text, settings.current.translateTarget, I18n.uiLang().substringBefore('-'))
 
     private fun viaModel(text: String, target: TransLang): Flow<String> = flow {
+        // r5：混元翻译用官方模板与参数；看到结束符 / 复述指令 / 复读就截断并停止生成（以前会一直译到 max tokens）。
+        val name = engine.readyModel?.fileName
+        val sp = HyMt.sampling(name)
         val params = engine.samplingFor(disableThinking = true).copy(
-            temperature = 0.2f, topP = 0.9f, topK = 40, minP = 0f, repeatPenalty = 1.05f,
+            temperature = sp.temperature, topP = sp.topP, topK = sp.topK, minP = sp.minP, repeatPenalty = sp.repeatPenalty,
             maxNewTokens = TranslatePrompt.maxTokens(text), contextShift = false,
         )
         val raw = StringBuilder()
-        engine.generate(TranslatePrompt.messages(text, target), params, Requester.CHAT, owner).collect { ev ->
-            when (ev) {
-                is GenEvent.Piece -> { raw.append(ev.text); emit(TranslateOutput.clean(raw.toString(), text)) }
-                is GenEvent.Done -> if (ev.error != null && raw.isEmpty()) throw IllegalStateException(ev.error)
+        var stopped = false
+        var last = ""
+        engine.generate(TranslatePrompt.messages(text, target, name), params, Requester.CHAT, owner)
+            .takeWhile { !stopped }
+            .collect { ev ->
+                when (ev) {
+                    is GenEvent.Piece -> {
+                        raw.append(ev.text)
+                        val r = TranslateStop.finish(raw.toString(), text, tailOnly = true)
+                        if (r.text != last) { last = r.text; emit(r.text) }
+                        if (r.stop) { stopped = true; engine.cancel(owner) }
+                    }
+                    is GenEvent.Done -> if (ev.error != null && raw.isEmpty()) throw IllegalStateException(ev.error)
+                }
             }
-        }
     }
 
     // ---- offline (Bergamot) ----

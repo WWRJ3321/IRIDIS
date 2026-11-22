@@ -1,6 +1,8 @@
 package com.iris.localai.ui.island
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -68,6 +70,13 @@ import kotlinx.coroutines.delay
 object IslandLogic {
     /** 结束后「已完成 / 已停止 / 失败」停留多久。 */
     const val LINGER_MS = 2600L
+
+    /** r5：岛的三种形态；内容在它们之间只淡入淡出，尺寸由外层一条弹簧动画。 */
+    enum class Mode { PILL, EXPANDED, BIG }
+    fun mode(expanded: Boolean, big: Boolean): Mode = if (big) Mode.BIG else if (expanded) Mode.EXPANDED else Mode.PILL
+    const val OPEN_RADIUS_DP = 28f
+    /** r5：进退场、尺寸、圆角共用的一条弹簧（getter，测试里不加载 Compose）。 */
+    val SPRING get() = IrisMotion.Snappy
 
     /** 正在跑的任务里优先显示生图，其次下载，再按开始时间；[hidden] = 当前页面自己已显示进度的种类。 */
     fun pick(active: List<TaskProgress.Task>, hidden: Set<TaskProgress.Kind>): TaskProgress.Task? =
@@ -154,13 +163,17 @@ fun DynamicIsland(
             .padding(start = 12.dp, end = 12.dp, bottom = bottomPad.dp),
         contentAlignment = Alignment.BottomStart,
     ) {
+        // r5：退场时 task 已是 null，以前内容立刻消失、只剩空的退场动画（看起来是「啪」一下没了）——留住最后一个任务画完退场。
+        var shown by remember { mutableStateOf<TaskProgress.Task?>(null) }
+        if (task != null) shown = task
+        // r5：进场 / 退场 / 尺寸 / 圆角同一条弹簧（IslandLogic.SPRING），不再一段 Bouncy、一段 Snappy、一段 Gentle。
         AnimatedVisibility(
             visible = enabled && task != null,
-            enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + slideInVertically(IrisMotion.Bouncy.offset()) { it / 2 },
-            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + slideOutVertically(IrisMotion.Snappy.offset()) { it * 2 },
+            enter = if (reduce) fadeIn() else fadeIn(IslandLogic.SPRING.float()) + slideInVertically(IslandLogic.SPRING.offset()) { it },
+            exit = if (reduce) fadeOut() else fadeOut(IslandLogic.SPRING.float()) + slideOutVertically(IslandLogic.SPRING.offset()) { it },
         ) {
-            val t = task ?: return@AnimatedVisibility
-            IslandPill(t, expanded, pillH, 0f, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
+            val t = task ?: shown ?: return@AnimatedVisibility
+            IslandPill(t, expanded && task != null, pillH, 0f, reduce, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
         }
     }
 }
@@ -170,7 +183,7 @@ private fun bigDone(t: TaskProgress.Task?): Boolean =
     t != null && t.kind == TaskProgress.Kind.IMAGE_GEN && t.phase == TaskProgress.Phase.DONE && !t.result.isNullOrBlank()
 
 @Composable
-private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, gap: Float, onTap: () -> Unit, onOpen: () -> Unit) {
+private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, gap: Float, reduce: Boolean, onTap: () -> Unit, onOpen: () -> Unit) {
     val c = Iris.colors
     val ink = Color(0xFF0E0F13)
     val accent = when (t.phase) {
@@ -180,17 +193,35 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
     }
     val big = bigDone(t)
     val open = expanded || big
-    val shape = if (open) androidx.compose.foundation.shape.RoundedCornerShape(28.dp) else IrisRadius.pillShape
+    val mode = IslandLogic.mode(expanded, big)
+    // r5：圆角跟尺寸用同一条弹簧一起变（以前胶囊→卡片圆角瞬间跳变，尺寸再慢慢长）。
+    val radius by androidx.compose.animation.core.animateDpAsState(
+        (if (open) IslandLogic.OPEN_RADIUS_DP else pillH / 2f).dp,
+        if (reduce) androidx.compose.animation.core.snap() else IslandLogic.SPRING.spec(androidx.compose.ui.unit.Dp.VisibilityThreshold),
+        label = "islandRadius",
+    )
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(radius)
     Box(
         Modifier
-            .animateContentSize(IrisMotion.Snappy.size())
+            // 尺寸只由这一处动画驱动（外层量动画、里层夹宽度、再裁剪）；内容切换只做淡入淡出，不再自己跳尺寸。
+            .animateContentSize(if (reduce) androidx.compose.animation.core.snap() else IslandLogic.SPRING.size())
             .widthIn(min = if (open) 300.dp else 0.dp, max = if (open) 360.dp else 260.dp)
             .clip(shape)
             .background(ink)
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onTap),
     ) {
-        when {
-            big -> Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+      AnimatedContent(
+        mode,
+        transitionSpec = {
+            if (reduce) androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+            else (fadeIn(IslandLogic.SPRING.float()) togetherWith fadeOut(IrisMotion.Quick.float()))
+                .using(androidx.compose.animation.SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() })
+        },
+        contentAlignment = Alignment.BottomStart,
+        label = "islandMode",
+      ) { m ->
+        when (m) {
+            IslandLogic.Mode.BIG -> Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 com.iris.localai.ui.imagegen.Thumb(t.result!!, Modifier.size(276.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), maxSide = 640)
                 Row(Modifier.padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(IrisIcons.Check, null, tint = c.success, modifier = Modifier.size(16.dp))
@@ -198,7 +229,7 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
                     Text(I18n.s(R.string.v31_is_saved), style = IrisType.labelSmall, color = Color.White)
                 }
             }
-            expanded -> Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+            IslandLogic.Mode.EXPANDED -> Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Lead(t, accent, 28.dp)
                     Spacer(Modifier.size(10.dp))
@@ -214,7 +245,7 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
                     IslandButton(I18n.s(R.string.v30_island_open), Color.White.copy(alpha = 0.16f), onOpen)
                 }
             }
-            else -> Box(Modifier.height(pillH.dp)) {
+            IslandLogic.Mode.PILL -> Box(Modifier.height(pillH.dp)) {
                 Row(Modifier.fillMaxHeight().padding(start = 6.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Lead(t, accent, (pillH - 10f).dp)
                     Spacer(Modifier.size(8.dp))
@@ -229,6 +260,7 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
                 if (t.percent >= 0 && !t.finished) Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) { Bar(t.percent, accent, Modifier.padding(start = pillH.dp, end = 14.dp, bottom = 3.dp), thin = true) } // r4：进度线不再把胶囊撑宽
             }
         }
+      }
     }
 }
 
@@ -253,7 +285,9 @@ private fun Lead(t: TaskProgress.Task, accent: Color, size: androidx.compose.ui.
 @Composable
 private fun Trail(t: TaskProgress.Task, accent: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        AnimatedContent(IslandLogic.trailing(t), label = "islandTrail") { s ->
+        // r5：百分比每跳一次不再整段淡出淡入（数字在闪、宽度在抖）；只有「进行中 ↔ 完成/失败」才过渡。
+        val s = IslandLogic.trailing(t)
+        AnimatedContent(t.finished, label = "islandTrail") { _ ->
             if (s.isNotEmpty()) Text(s, style = IrisType.labelSmall, color = if (t.finished) accent else Color(0xFF9CC2FF))
         }
         if (!t.finished && t.percent < 0) { Spacer(Modifier.size(6.dp)); ProgressRing(t.percent, accent) }

@@ -311,14 +311,17 @@ internal fun ChatViewModel.startReply(requester: Requester, onAnswerDelta: ((Str
                 watchdog.prompt()
                 // 智能体 mode. 2.1.7: voice uses tools too — 智能体 on, or a spoken task (VoiceRouting).
                 val agentOn = c.agent.settings.current.agentMode
+                // r5：手机指令的临时工具只用这一轮（取走即清空）。
+                val oneShot = if (requester == Requester.CHAT) turnTools else null
+                turnTools = null
                 val viaAgent = when (requester) {
                     // 「帮我打开设置把亮度调最高」 in 对话 mode runs once through the 智能体 (`screen`).
-                    Requester.CHAT -> agentOn || guiTurn(conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty())
+                    Requester.CHAT -> TurnAgent.viaAgent(agentOn, oneShot == null && guiTurn(conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty()), oneShot)
                     Requester.VOICE -> VoiceRouting.useAgent(
                         conversation.value.messages.lastOrNull { it.role == Role.USER }?.content.orEmpty(), agentOn)
                     else -> false
                 }
-                if (viaAgent) runAgentReply(bubble(), voiceOut = if (requester == Requester.VOICE) (onAnswerDelta ?: {}) else null)
+                if (viaAgent) runAgentReply(bubble(), voiceOut = if (requester == Requester.VOICE) (onAnswerDelta ?: {}) else null, only = oneShot)
                 else runReply(requester, bubble(), onAnswerDelta)
             }
         } finally {

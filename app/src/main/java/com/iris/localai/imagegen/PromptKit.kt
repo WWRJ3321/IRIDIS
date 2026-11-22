@@ -212,3 +212,60 @@ object TagLibrary {
     }
     fun tags(ctx: android.content.Context): List<PromptTag> = load(ctx).let { PromptTags.merged(it.custom, it.hidden) }
 }
+
+/**
+ * 3.0.0 Beta3 r5：标签提示词整理 + 预设（原创实现，参照 Anima / Illustrious / Noob 这类标签模型公开的写法约定：
+ * 画质 / 年代 / 分级 → 人数 → 角色、作品 → 画师（@ 前缀）→ 其余标签 → 自然语言句子）。纯逻辑，单测 V300B3R5Test。
+ * 不含任何第三方插件代码或词库。
+ */
+object PromptOrder {
+    enum class Slot { QUALITY, META, RATING, COUNT, ARTIST, GENERAL, SENTENCE }
+
+    private val QUALITY = Regex("^(masterpiece|best quality|high quality|good quality|normal quality|low quality|worst quality|amazing quality|very aesthetic|aesthetic|displeasing|very displeasing|absurdres|highres|lowres|score_\\d(_up)?)$")
+    private val META = Regex("^(newest|recent|mid|early|old|year \\d{4}|\\d{4}s?)$")
+    private val RATING = Regex("^(safe|sensitive|nsfw|explicit|general|questionable|rating:\\s*\\w+)$")
+    private val COUNT = Regex("^(\\d+\\+?(girl|boy|other)s?|solo|solo focus|multiple (girls|boys|others)|no humans)$")
+
+    /** 标签风格：下划线写成空格（score_9 这类保留），去掉多余空白。 */
+    fun normalizeTag(t: String): String {
+        val x = t.trim().replace(Regex("\\s+"), " ")
+        return if (Regex("^score_\\d").containsMatchIn(x)) x else x.replace('_', ' ')
+    }
+
+    fun slotOf(tag: String): Slot {
+        val t = tag.trim().lowercase()
+        return when {
+            QUALITY.matches(t) -> Slot.QUALITY
+            META.matches(t) -> Slot.META
+            RATING.matches(t) -> Slot.RATING
+            COUNT.matches(t) -> Slot.COUNT
+            t.startsWith("@") || t.startsWith("artist:") || t.startsWith("by ") -> Slot.ARTIST
+            // 一整句话（有句号或 6 个词以上）放最后
+            t.endsWith(".") || t.endsWith("。") || t.split(' ').size >= 6 -> Slot.SENTENCE
+            else -> Slot.GENERAL
+        }
+    }
+
+    /** 整理：拆逗号 → 规范写法 → 去重（不分大小写）→ 按槽位排序（同一槽位保持原来的先后）。 */
+    fun arrange(prompt: String): String {
+        val seen = HashSet<String>()
+        val tags = prompt.split(',', '，', '\n').map(::normalizeTag).filter { it.isNotEmpty() && seen.add(it.lowercase()) }
+        return tags.withIndex().sortedWith(compareBy({ slotOf(it.value).ordinal }, { it.index })).joinToString(", ") { it.value }
+    }
+
+    /** 一键画质词（标签模型在最前面，其他模型补在后面）。 */
+    fun quality(tagStyle: Boolean): String =
+        if (tagStyle) "masterpiece, best quality, score_7, newest, safe" else "highly detailed, sharp focus, high quality"
+
+    /** 一键负面词。 */
+    fun negative(tagStyle: Boolean): String =
+        if (tagStyle) "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, sepia, bad hands, extra digits, watermark, signature, text"
+        else "low quality, worst quality, blurry, deformed, extra fingers, watermark, text"
+
+    /** 把一串标签并进提示词（已有的不重复）；标签模型再整理一遍顺序。 */
+    fun addAll(prompt: String, tags: String, tagStyle: Boolean): String {
+        var p = prompt
+        tags.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { p = PromptTags.append(p, it) }
+        return if (tagStyle) arrange(p) else p
+    }
+}

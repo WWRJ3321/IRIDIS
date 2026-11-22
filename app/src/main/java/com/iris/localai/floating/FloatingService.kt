@@ -131,11 +131,55 @@ object FloatingLogic {
     /** 一块一行送去翻译：块内换行压成空格。 */
     fun joinBlocks(blocks: List<OcrLine>): String = blocks.joinToString("\n") { it.text.replace(Regex("\\s*\n\\s*"), " ") }
 
-    /** 译文按行拆回各块；[done] 前最后一行可能还没写完，不用。 */
+    /** 译文按行拆回各块；[done] 前最后一行可能还没写完，不用。r5：模型多插的空行不算一块。 */
     fun splitTranslated(out: String, n: Int, done: Boolean): List<String> {
-        val lines = out.trim('\n').split('\n').map { it.trim().replace(Regex("^\\d+[.、:：)]\\s*"), "") }
-        val ready = if (done) lines else lines.dropLast(1)
+        val raw = out.trim('\n').split('\n')
+        val ready = (if (done) raw else raw.dropLast(1)).map { it.trim().replace(Regex("^\\d+[.、:：)]\\s*"), "") }.filter { it.isNotEmpty() }
         return ready.take(n)
+    }
+
+    /** r5：一批译完后行数对得上才用（多一行少一行都会让后面的块全错位）；对不上返回 null，改成逐块译。 */
+    fun align(out: String, n: Int): List<String>? = splitTranslated(out, Int.MAX_VALUE, done = true).takeIf { it.size == n }
+
+    /** r5：同样的字只译一次（重复的按钮、标签）。返回去重后的文本和每块对应的下标。 */
+    fun dedupe(texts: List<String>): Pair<List<String>, IntArray> {
+        val uniq = ArrayList<String>()
+        val at = HashMap<String, Int>()
+        val map = IntArray(texts.size) { i -> at.getOrPut(texts[i].trim()) { uniq += texts[i].trim(); uniq.size - 1 } }
+        return uniq to map
+    }
+
+    /** r5：分批送翻译（小模型一次喂上百行容易错行、复读）：每批最多 [maxLines] 行、约 [maxChars] 字。 */
+    fun chunks(texts: List<String>, maxLines: Int = 8, maxChars: Int = 480): List<IntRange> {
+        val out = ArrayList<IntRange>()
+        var start = 0; var chars = 0
+        for (i in texts.indices) {
+            val len = texts[i].length
+            if (i > start && (i - start >= maxLines || chars + len > maxChars)) { out += start until i; start = i; chars = 0 }
+            chars += len
+        }
+        if (start < texts.size) out += start until texts.size
+        return out
+    }
+
+    /** 一块一行：块内换行压成空格。 */
+    fun oneLine(t: String): String = t.replace(Regex("\\s*\n\\s*"), " ").trim()
+
+    /**
+     * r5：防重复触发——同一件事（同一模式 + 同一段文字）正在跑时再点不重开；跑完后 [windowMs] 内的重复点击也忽略。
+     * 以前打开面板自动跑一次、用户再点「开始」又从头跑一次，看起来像「译了两遍」。
+     */
+    class RunGate(private val windowMs: Long = 1200) {
+        private var key: String? = null
+        private var busy = false
+        private var endedAt = 0L
+        @Synchronized fun tryStart(k: String, now: Long): Boolean {
+            if (k == key && (busy || now - endedAt < windowMs)) return false
+            key = k; busy = true
+            return true
+        }
+        @Synchronized fun end(k: String, now: Long) { if (k == key) { busy = false; endedAt = now } }
+        @Synchronized fun reset() { key = null; busy = false }
     }
 
     /** Beta3 屏幕翻译取哪份文字：截图识字明显更多（漫画、图片里的字）就用识字，否则用无障碍文字。 */
@@ -643,9 +687,14 @@ class FloatingService : Service() {
 
     // ---------------------------------------------------------------- actions
 
+    private val runGate = FloatingLogic.RunGate()
+
     private fun run() {
         val text = input?.text?.toString()?.trim().orEmpty()
         input?.let { getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(it.windowToken, 0) }
+        // r5：同一件事正在跑 / 刚跑完就不重开（翻译、识屏读的是当前屏幕，键只看模式）。
+        val key = mode.name + "|" + (if (mode == FloatingLogic.Mode.TRANSLATE || mode == FloatingLogic.Mode.SCREEN) "" else text)
+        if (!runGate.tryStart(key, android.os.SystemClock.elapsedRealtime())) return
         work?.cancel()
         work = scope.launch {
             try {
@@ -660,6 +709,8 @@ class FloatingService : Service() {
             } catch (t: Throwable) {
                 Log.w(TAG, "floating ${mode.name} failed", t)
                 show(t.message ?: I18n.s(R.string.v30_fl_failed))
+            } finally {
+                runGate.end(key, android.os.SystemClock.elapsedRealtime())
             }
         }
     }
@@ -728,8 +779,16 @@ class FloatingService : Service() {
     private var overlayJob: kotlinx.coroutines.Job? = null
     private var overlayText = ""
 
+    /** r5：译过的块（目标语言|原文 → 译文），同一屏再点一次不用重译；最多留 400 条。 */
+    private val overlayCache = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > 400
+    }
+    private fun cacheOverlay(k: String, v: String) { overlayCache[k] = v }
+
     /** 截屏取字，译文直接盖在原文位置；底部一条小栏：原文/译文切换、复制、关闭。 */
     private fun overlayTranslate() {
+        // r5：还在译时再点不重开（以前会取消后从头再译一遍）。
+        if (overlayJob?.isActive == true) return
         closeOverlay()
         overlayJob = scope.launch {
             try {
@@ -743,14 +802,34 @@ class FloatingService : Service() {
                 val sx = if (obs.width > 0) screen.width().toFloat() / obs.width else 1f
                 val sy = if (obs.height > 0) screen.height().toFloat() / obs.height else 1f
                 val views = buildOverlay(blocks, sx, sy)
-                var last = ""
-                container.translator.translate(FloatingLogic.joinBlocks(blocks)).collect { out ->
-                    last = out
-                    FloatingLogic.splitTranslated(out, blocks.size, done = false).forEachIndexed { i, t -> views[i].apply { text = t; visibility = View.VISIBLE } }
+                // r5：去重 → 先用缓存 → 其余分批译（每批行数对不上就逐块译），避免错行与「同一段译好几遍」。
+                val (uniq, map) = FloatingLogic.dedupe(blocks.map { FloatingLogic.oneLine(it.text) })
+                val out = arrayOfNulls<String>(uniq.size)
+                val target = container.settings.current.translateTarget
+                fun paint() = map.forEachIndexed { bi, ui -> out[ui]?.takeIf { it.isNotBlank() }?.let { t -> views[bi].apply { text = t; visibility = View.VISIBLE } } }
+                val todo = uniq.indices.filter { i -> overlayCache["$target|${uniq[i]}"]?.also { out[i] = it } == null }
+                paint()
+                for (r in FloatingLogic.chunks(todo.map { uniq[it] })) {
+                    val idx = todo.subList(r.first, r.last + 1)
+                    val src = idx.map { uniq[it] }
+                    var last = ""
+                    container.translator.translate(src.joinToString("\n")).collect { o ->
+                        last = o
+                        FloatingLogic.splitTranslated(o, src.size, done = false).forEachIndexed { k, t -> out[idx[k]] = t }
+                        paint()
+                    }
+                    val aligned = FloatingLogic.align(last, src.size)
+                    if (aligned != null) aligned.forEachIndexed { k, t -> out[idx[k]] = t }
+                    else for ((k, one) in src.withIndex()) {
+                        var t = ""
+                        container.translator.translate(one).collect { t = it }
+                        out[idx[k]] = FloatingLogic.oneLine(t)
+                        paint()
+                    }
+                    idx.forEach { i -> out[i]?.takeIf { it.isNotBlank() }?.let { cacheOverlay("$target|${uniq[i]}", it) } }
+                    paint()
                 }
-                val done = FloatingLogic.splitTranslated(last, blocks.size, done = true)
-                done.forEachIndexed { i, t -> views[i].apply { text = t; visibility = View.VISIBLE } }
-                overlayText = done.joinToString("\n")
+                overlayText = blocks.indices.joinToString("\n") { out[map[it]].orEmpty() }
                 showOverlayBar(null)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

@@ -113,7 +113,7 @@ internal fun ThinkPill(
                     while (true) {
                         val ev = awaitPointerEvent()
                         val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!moved && abs(ch.position.x - down.position.x) > slopPx) moved = true
+                        if (!moved && (abs(ch.position.x - down.position.x) > slopPx || abs(ch.position.y - down.position.y) > slopPx)) moved = true
                         if (moved) {
                             val i = ThinkLevelBar.indexAt(ch.position.x, segPx)
                             if (i != sel) { sel = i; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
@@ -122,7 +122,8 @@ internal fun ThinkPill(
                         if (!ch.pressed) break
                     }
                     open = false
-                    pick(sel)
+                    // r5：没滑动就松手 = 只是看一眼，不改开关（以前会把关掉的思考重新打开）。
+                    ThinkToggle.onRelease(moved, sel)?.let { pick(it) }
                 }
             },
         )

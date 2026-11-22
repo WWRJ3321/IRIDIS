@@ -62,13 +62,116 @@ object TranslatePrompt {
     fun system(target: TransLang): String =
         com.iris.localai.prompts.Prompts.get(com.iris.localai.prompts.PromptKey.TRANSLATE_SYSTEM, mapOf("lang" to target.english))
 
-    fun messages(text: String, target: TransLang): List<PromptMessage> = listOf(
-        PromptMessage(PromptMessage.SYSTEM, system(target)),
-        PromptMessage(PromptMessage.USER, text),
-    )
+    /** [modelName] 为腾讯混元翻译（[HyMt]）时用它的官方模板：没有 system prompt，指令和原文放在一条用户消息里。 */
+    fun messages(text: String, target: TransLang, modelName: String? = null): List<PromptMessage> =
+        if (HyMt.matches(modelName)) listOf(PromptMessage(PromptMessage.USER, HyMt.prompt(text, target)))
+        else listOf(
+            PromptMessage(PromptMessage.SYSTEM, system(target)),
+            PromptMessage(PromptMessage.USER, text),
+        )
 
     /** Output budget: about 3× the source length (tokens), at least 64, at most 2048. */
     fun maxTokens(text: String): Int = (text.length * 3 + 64).coerceIn(64, 2048)
+}
+
+/**
+ * r5：腾讯混元翻译（Hy-MT2 / HY-MT1.5 / Hunyuan-MT）。官方卡片：没有默认 system prompt；
+ * 中外互译模板「将以下文本翻译为{目标语言}，注意只需要输出翻译后的结果，不要额外解释：\n\n{原文}」；
+ * 推荐 temperature 0.7、top_p 0.6、top_k 20、repetition_penalty 1.05。
+ * 之前给它套通用的英文 system prompt，1.8B 会复述、加废话、译完再译一遍。
+ */
+object HyMt {
+    private val NAME = Regex("(?i)(hy[-_ ]?mt|hunyuan[-_ ]?mt)")
+    fun matches(modelName: String?): Boolean = !modelName.isNullOrBlank() && NAME.containsMatchIn(modelName)
+
+    /** 官方要求用语言全称，中文指令里用中文名。 */
+    fun langName(t: TransLang): String = when (t) { TransLang.ZH -> "中文"; TransLang.EN -> "英语" }
+
+    /** 只有中↔英，总是中外互译模板。 */
+    fun prompt(text: String, target: TransLang): String =
+        "将以下文本翻译为${langName(target)}，注意只需要输出翻译后的结果，不要额外解释：\n\n$text"
+
+    data class Sampling(val temperature: Float, val topP: Float, val topK: Int, val minP: Float, val repeatPenalty: Float)
+    val OFFICIAL = Sampling(0.7f, 0.6f, 20, 0f, 1.05f)
+    /** 其他模型翻译用的（原来的值）。 */
+    val GENERIC = Sampling(0.2f, 0.9f, 40, 0f, 1.05f)
+    fun sampling(modelName: String?): Sampling = if (matches(modelName)) OFFICIAL else GENERIC
+}
+
+/**
+ * r5：模型翻译的「收尾」——遇到停止标记（漏出来的对话结束符、模型又开始复述指令）就截断并停止生成；
+ * 整句复读、短语死循环只留第一次。纯逻辑，单测 V300B3R5Test。
+ */
+object TranslateStop {
+    /** 模板结束符没被引擎当成 EOS 时会漏进文本：看到就停。 */
+    private val MARKERS = listOf(
+        "<|hy_", "<｜hy_", "<|im_end|>", "<|endoftext|>", "<|eot_id|>", "<|end|>", "</s>", "<｜end▁of▁sentence｜>",
+        "<|im_start|>", "<|start_header_id|>",
+        // 模型译完又复述指令、开始下一轮
+        "将以下文本翻译为", "把下面的文本翻译成", "Translate the following",
+    )
+
+    data class Result(val text: String, val stop: Boolean)
+
+    fun cutMarkers(raw: String): Result {
+        var at = -1
+        for (m in MARKERS) {
+            val i = raw.indexOf(m, ignoreCase = m.first().isLetter())
+            if (i >= 0 && (at < 0 || i < at)) at = i
+        }
+        return if (at < 0) Result(raw, false) else Result(raw.substring(0, at), true)
+    }
+
+    private val SENT = Regex("(?<=[。！？!?；;\\n])|(?<=[.] )")
+    private fun norm(x: String) = x.trim().lowercase().replace(Regex("\\s+"), " ").trim('.', '。', ',', '，', ' ')
+    private fun meaningful(x: String) = x.count { it.isLetterOrDigit() } >= 4
+
+    /** 原文里本来就有重复的句子 / 行（比如列表里两行一样），这时不按「复读」截。 */
+    fun sourceRepeats(source: String): Boolean {
+        val seen = HashSet<String>()
+        return source.split(SENT).map(::norm).filter { it.isNotEmpty() }.any { !seen.add(it) }
+    }
+
+    /** 整句复读：同一句第二次出现处截断。 */
+    fun cutSentenceRepeat(out: String, source: String): Result {
+        if (sourceRepeats(source)) return Result(out, false)
+        val seen = HashSet<String>()
+        var pos = 0
+        for (part in out.split(SENT)) {
+            val n = norm(part)
+            if (meaningful(n) && !seen.add(n)) return Result(out.substring(0, pos).trimEnd(), true)
+            pos += part.length
+        }
+        return Result(out, false)
+    }
+
+    /** 短语死循环：同一段（2–30 字，含字母或汉字）紧挨着重复 ≥ 4 次 → 只留第一次，后面全截掉。 */
+    fun cutLoop(out: String, from: Int = 0): Result {
+        val n = out.length
+        var i = from.coerceIn(0, n)
+        while (i < n) {
+            for (len in 2..30) {
+                if (i + len * 4 > n) break
+                val unit = out.substring(i, i + len)
+                if (unit.none { it.isLetter() }) continue
+                var k = 1
+                while (i + len * (k + 1) <= n && out.regionMatches(i + len * k, unit, 0, len)) k++
+                if (k >= 4) return Result(out.substring(0, i + len).trimEnd(), true)
+            }
+            i++
+        }
+        return Result(out, false)
+    }
+
+    /** 全套：标记 → 清理（思考、标签）→ 死循环 → 整句复读。[stop] = 该停止生成了。 */
+    fun finish(raw: String, source: String, tailOnly: Boolean = false): Result {
+        val m = cutMarkers(raw)
+        val cleaned = TranslateOutput.clean(m.text, source)
+        // 边生成边查时只看最后一段（更早的死循环在它出现时就截过了）。
+        val l = cutLoop(cleaned, if (tailOnly) cleaned.length - 400 else 0)
+        val r = cutSentenceRepeat(l.text, source)
+        return Result(r.text.trim(), m.stop || l.stop || r.stop)
+    }
 }
 
 /** Cleans what the model streamed: thinking removed (closed, unclosed or prefilled), labels and wrapping quotes dropped. */

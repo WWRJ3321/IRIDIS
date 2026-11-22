@@ -229,6 +229,8 @@ data class AppSettings(
     /** GGUF: store the KV cache as Q8_0 (needs Flash Attention). Halves KV memory traffic. */
     val kvQuant: Boolean = false,
     val deepThinking: Boolean = true,
+    /** r5：已把 r4 自动打开的智能体模式关过一次（[com.iris.localai.ui.chat.TurnAgent.migrateAgentMode]）。 */
+    val agentReset292: Boolean = false,
     val lastModelFile: String? = null,
     val autoLoadLastModel: Boolean = true,
     /** crash-diag: skip loading visual.mnn (treat vision models as text-only). Takes effect on next model load. */

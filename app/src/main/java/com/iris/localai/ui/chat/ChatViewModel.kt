@@ -132,7 +132,7 @@ data class ChatUiState(
     val isGenerating: Boolean get() = streamingId != null
     val readyModel: LocalModel? get() = (engine as? EngineState.Ready)?.model
     /** r4：没加载模型（如崩溃后不预加载）时也能点，先记住开关；加载了且模型不支持才置灰。 */
-    val supportsThinking: Boolean get() = (engine as? EngineState.Ready)?.let { it.details.supportsThinking == true } ?: true
+    val supportsThinking: Boolean get() = (engine as? EngineState.Ready).let { r -> ThinkToggle.enabled(r != null, r?.details?.supportsThinking, r?.details?.thinkAlways == true) }
 }
 
 /** Context meter for the current conversation. */
@@ -229,7 +229,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
         val ready = st.engine as? EngineState.Ready
         val s = c.settings.current
         val eff = EffectiveModelConfig.resolve(s, ready?.model?.format, ready?.model?.id?.let { cfgs[it] })
-        st.copy(deepThinking = eff.thinking, context = usageFor(st.conversation, ready, meas[st.conversation.id], summ))
+        // r5：没就绪时显示「将要用的模型」的开关（与 setDeepThinking 写的同一处），加载完不再跳回「开」。
+        val shown = if (ready != null) eff.thinking else ThinkToggle.shown(s.deepThinking, thinkTargetId()?.let { cfgs[it]?.thinking })
+        st.copy(deepThinking = shown, context = usageFor(st.conversation, ready, meas[st.conversation.id], summ))
     }
         // fix: first value after the constructor has finished (Eagerly + Main.immediate ran
         // usageFor inside <init>, before later fields were initialised).
@@ -616,9 +618,17 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
     /** Writes to the loaded model's own thinking switch when it has one, otherwise the global one. */
     fun setDeepThinking(on: Boolean) {
-        val id = c.engine.readyModel?.id
-        if (id != null && c.modelConfigs.get(id).thinking != null) c.modelConfigs.update(id) { it.copy(thinking = on) }
-        else c.settings.update { it.copy(deepThinking = on) }
+        // r5：总写全局；目标模型（就绪 / 加载中 / 上次用的）有自己的思考设置时也写它——不再被模型设置盖回「开」。
+        val id = thinkTargetId()
+        val w = ThinkToggle.write(on, id?.let { c.modelConfigs.get(it).thinking })
+        c.settings.update { it.copy(deepThinking = w.global) }
+        if (id != null && w.model != null) c.modelConfigs.update(id) { it.copy(thinking = w.model) }
+    }
+    internal fun thinkTargetId(): String? = when (val e = c.engine.state.value) {
+        is EngineState.Ready -> e.model.id
+        is EngineState.Loading -> e.model.id
+        is EngineState.Failed -> ThinkToggle.targetId(null, null, e.model?.id, c.settings.current.lastModelFile)
+        else -> ThinkToggle.targetId(null, null, null, c.settings.current.lastModelFile)
     }
     /**
      * the setting always changes; while a reply runs on GGUF/CPU the decoder also picks up
@@ -782,8 +792,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (launchCommand(trimmed, app)) return
         }
         // Beta3「打开手电筒 / 亮度调到最高 / 静音」→ 系统接口直接做（不叫模型、不走无障碍）。
-        // r4：手电筒/亮度/音量不再走硬指令，交给模型调用 phone 工具（需要智能体模式，自动打开）。
-        if (attachments.isEmpty() && refs.isEmpty() && com.iris.localai.agent.tools.PhoneQuick.parse(trimmed) != null && !c.agent.settings.current.agentMode) setAgentMode(true)
+        // r4：手电筒/亮度/音量交给模型调用 phone 工具。r5：只在这一轮带 phone 工具走一次智能体，不再永久打开智能体模式。
+        run {
+            val ag = c.agent.settings.current
+            turnTools = TurnAgent.oneShotTools(ag.agentMode, com.iris.localai.agent.tools.PhoneQuick.parse(trimmed) != null,
+                ag.isEnabled(PhoneTool) && ag.permission(PhoneTool) != Permission.DENY, attachments.isNotEmpty() || refs.isNotEmpty())
+        }
         val ready = c.engine.state.value as? EngineState.Ready
         if (attachments.any { it.kind == AttachmentKind.IMAGE } && ready != null && ready.details.supportsVision != true)
             notice.value = if (ready.model.format == ModelFormat.GGUF) MmprojPairing.NO_MMPROJ_HINT else ATTACH_NO_VISION
@@ -1110,6 +1124,17 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
 
     val agentSettings = c.agent.settings.settings
     fun setAgentMode(on: Boolean) = c.agent.settings.update { it.copy(agentMode = on) }
+
+    /** r5：这一轮临时给模型的工具（手机指令 = phone）；startReply 取走即清空。 */
+    @Volatile internal var turnTools: Set<String>? = null
+
+    init {
+        // r5：r4 命中手机指令时把智能体模式永久打开了——升级后关一次（之后用户自己开的不再动）。
+        if (!c.settings.current.agentReset292) {
+            TurnAgent.migrateAgentMode(c.agent.settings.current.agentMode, migrated = false)?.let { setAgentMode(it) }
+            c.settings.update { it.copy(agentReset292 = true) }
+        }
+    }
 
     /** 2.2 「技能」 sheet: installed skills (only while the skill tool is on) and the enabled agent tools. */
     fun refCatalog(): RefCatalog {

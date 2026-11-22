@@ -153,6 +153,8 @@ class AnimaQnnEngine(
                     runCatching { perf.burst() }
                     try {
                         val (w, h, argb) = ldRunner.generate(req.prompt, req.steps.coerceIn(1, 50), req.seed, req.lowMem, onProgress, model.animaShift)
+                        // r5：LD 布局的包尺寸由包决定——记下来，生图页只列这一档。
+                        runCatching { File(d, ImageSizes.PACK_FILE).writeText(ImageSizes.formatPack(listOf(w to h))) }
                         return@synchronized encodePng(argb, w, h)
                     } finally {
                         runCatching { perf.relax() }
@@ -196,6 +198,8 @@ class AnimaQnnEngine(
         sizes = AnimaMath.parseSizes(loader.graphNames(f.parts[0]))
         multi = sizes.isNotEmpty()
         if (!multi) sizes = listOf(512 to 512)
+        // r5：把包里编好的尺寸写进模型目录，生图页据此只列这几档（主进程读 ImageSizes.readPack）。
+        runCatching { File(d, ImageSizes.PACK_FILE).writeText(ImageSizes.formatPack(sizes)) }
         dir = d
     }
 

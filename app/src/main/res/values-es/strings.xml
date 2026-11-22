@@ -2379,4 +2379,8 @@
     <string name="v31_fl_ov_tr">Traducción</string>
     <string name="v31_fl_ov_copy">Copiar</string>
     <string name="v31_fl_ov_copied">Copiado</string>
+    <string name="r5_ig_arrange">Ordenar</string>
+    <string name="r5_ig_quality">Calidad</string>
+    <string name="r5_ig_negative">Negativo</string>
+    <string name="r5_ig_info">Detalles</string>
 </resources>
