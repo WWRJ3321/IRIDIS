@@ -64,6 +64,15 @@ class MnnHub(private val repo: ModelRepository) {
     @Volatile private var sources: List<DownloadSource> = emptyList()
     @Volatile private var lastRequest: Pair<String, DownloadSource>? = null
 
+
+    /** r4 下载卡顿：每块都发进度会让下载页整页重组；最多每 250ms 发一次。 */
+    @Volatile private var lastTick = 0L
+    private fun tick(): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastTick < 250) return false
+        lastTick = now; return true
+    }
+
     suspend fun download(input: String, source: DownloadSource, demote: DownloadSource? = null, file: String? = null): LocalModel = withContext(Dispatchers.IO) {
         val repoId = MnnModels.parseRepoId(input) ?: throw IOException(I18n.s(R.string.data_81c8d3))
         val name = ModelFiles.sanitizeFileName(repoId.substringAfter('/'))
@@ -119,7 +128,7 @@ class MnnHub(private val repo: ModelRepository) {
                 if (out.exists() && out.length() == f.size) continue
                 val before = done - (HttpDownload.partFile(out).takeIf { it.exists() }?.length() ?: 0L)
                 _state.value = _state.value.copy(file = f.path)
-                fetch(urlsFor(repoId, f.path, order), out, f.size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
+                fetch(urlsFor(repoId, f.path, order), out, f.size) { got -> done = before + got; if (tick()) _state.value = _state.value.copy(doneBytes = done) }
                 done = before + f.size
             }
             if (!part.renameTo(target)) throw IOException(I18n.s(R.string.data_04dd9d))
@@ -150,7 +159,7 @@ class MnnHub(private val repo: ModelRepository) {
             if (free < size - have + 256L * 1024 * 1024) throw IOException(I18n.s(R.string.data_9c1de2, Format.bytes(size - have), Format.bytes(free)))
             _state.value = _state.value.copy(totalBytes = size, doneBytes = have, file = fileName)
             // fetchOnce writes target.part and renames it when complete, so a half file is never listed.
-            fetch(urlsFor(repoId, path, order), target, size) { got -> _state.value = _state.value.copy(doneBytes = got) }
+            fetch(urlsFor(repoId, path, order), target, size) { got -> if (tick()) _state.value = _state.value.copy(doneBytes = got) }
             lastDone = repoId; _state.value = State()
         } finally {
             repo.releasePart(partName)
@@ -299,7 +308,7 @@ class MnnHub(private val repo: ModelRepository) {
                 try {
                     val cands = GgufSearch.urls(hit, path, source, demote)
                     DownloadSources.lastSpeed?.takeIf { source == DownloadSource.AUTO && demote == null }?.let { _state.value = _state.value.copy(notice = it) }
-                    fetch(cands, out, size) { got -> done = before + got; _state.value = _state.value.copy(doneBytes = done) }
+                    fetch(cands, out, size) { got -> done = before + got; if (tick()) _state.value = _state.value.copy(doneBytes = done) }
                 } catch (e: DownloadSources.NotFound) {
                     throw IOException(GATED)
                 }

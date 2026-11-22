@@ -5,7 +5,7 @@
     <string name="api_notification_title">IRIDIS-API-Dienst läuft</string>
     <string name="api_notification_text">OpenAI-kompatible API · Port %1$d</string>
     <string name="api_stop">Stopp</string>
-    <string name="gui_a11y_label">IRIDIS-GUI-Agent</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">Lässt den IRIDIS-GUI-Agenten bei einer von dir gestarteten Aufgabe den Bildschirm sehen (Screenshots und UI-Elemente) und für dich tippen, wischen und schreiben. Er handelt nur während einer Aufgabe, die schwebende Leiste stoppt ihn jederzeit; vor Zahlen, Senden oder Löschen fragt er nach. Der Bildschirm wird nur von Modellen auf dem Gerät verarbeitet und nie hochgeladen.</string>
     <string name="lang_system">Wie System</string>
     <string name="lang_code">de</string>

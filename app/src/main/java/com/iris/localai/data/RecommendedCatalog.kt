@@ -175,14 +175,7 @@ object RecommendedCatalog {
         lms3("8B", 5_027_783_968L, I18n.s(R.string.data_0ca462)),
         // 南北阁 Nanbeige4.2 3B（循环 Transformer：22 层跑两遍，比同尺寸慢）；bartowski imatrix，HF tree API 2026-11-14。
         gguf("Nanbeige 4.2 3B", NANBEIGE_REPO, "Nanbeige_Nanbeige4.2-3B-Q4_K_M.gguf", 2_684_023_968L, I18n.s(R.string.v255_nanbeige_purpose)),
-        // Gemma 4 19B-A4B REAP（MoE，12 GB 机 IQ3_XXS / 16 GB 机 Q4_0）
-        reap(REAP_IQ3, "IQ3_XXS", 8_311_270_560L),
-        reap(REAP_Q4, "Q4_0", 10_647_317_152L),
-        // LFM2.5 24B-A2B 无审查版（lfm2moe，激活 2B），用户指定 IQ2_XS；大小来自 HF tree API 2026-11-15。
-        Item(
-            LFM_REPO, Section.CHAT, "LFM2.5 24B-A2B 无审查（IQ2_XS）", I18n.s(R.string.v259_lfm_purpose), 8_516_829_600L, Engine.GGUF,
-            Kind.Gguf(LFM_REPO, "LFM2.5-24B-A2B-GSQ-RCO-IQ2_XS.gguf", 8_516_829_600L), quant = "IQ2_XS", licence = "LFM Open License",
-        ),
+        // r4：推荐里的 MoE 只留 Edge0-35B（用户 2026-11-22）；REAP / LFM2.5 去掉，仍可在线搜索下载。
         // 实验: Edge0-35B（Qwen3.6-35B-A3B 底座 + LoRA + prerouter，SSD 流式专家，仅 CPU / i8mm）。
         // 资产由我们用官方 make_assets.py 从 Edge0/Edge0-35B-A3B-preview 转换，托管在 HF（hf-mirror 同步）。
         Item(

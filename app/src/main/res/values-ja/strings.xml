@@ -5,7 +5,7 @@
     <string name="api_notification_title">IRIDIS API サービス実行中</string>
     <string name="api_notification_text">OpenAI 互換 API · ポート %1$d</string>
     <string name="api_stop">停止</string>
-    <string name="gui_a11y_label">IRIDIS GUI エージェント</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">タスク開始時に IRIDIS の GUI エージェントが画面（スクリーンショットと UI 要素）を見て、代わりにタップ・スワイプ・入力します。動作はタスク実行中のみで、フローティングバーでいつでも停止できます。支払い・送信・削除などは事前に確認します。画面は端末内のモデルだけで処理され、アップロードされません。</string>
     <string name="lang_system">システムに従う</string>
     <string name="lang_code">ja</string>

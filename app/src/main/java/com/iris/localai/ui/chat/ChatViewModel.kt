@@ -131,7 +131,8 @@ data class ChatUiState(
 ) {
     val isGenerating: Boolean get() = streamingId != null
     val readyModel: LocalModel? get() = (engine as? EngineState.Ready)?.model
-    val supportsThinking: Boolean get() = (engine as? EngineState.Ready)?.details?.supportsThinking == true
+    /** r4：没加载模型（如崩溃后不预加载）时也能点，先记住开关；加载了且模型不支持才置灰。 */
+    val supportsThinking: Boolean get() = (engine as? EngineState.Ready)?.let { it.details.supportsThinking == true } ?: true
 }
 
 /** Context meter for the current conversation. */
@@ -781,9 +782,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
             if (launchCommand(trimmed, app)) return
         }
         // Beta3「打开手电筒 / 亮度调到最高 / 静音」→ 系统接口直接做（不叫模型、不走无障碍）。
-        if (attachments.isEmpty() && refs.isEmpty()) com.iris.localai.agent.tools.PhoneQuick.parse(trimmed)?.let { act ->
-            if (quickPhoneCommand(trimmed, act)) return
-        }
+        // r4：手电筒/亮度/音量不再走硬指令，交给模型调用 phone 工具（需要智能体模式，自动打开）。
+        if (attachments.isEmpty() && refs.isEmpty() && com.iris.localai.agent.tools.PhoneQuick.parse(trimmed) != null && !c.agent.settings.current.agentMode) setAgentMode(true)
         val ready = c.engine.state.value as? EngineState.Ready
         if (attachments.any { it.kind == AttachmentKind.IMAGE } && ready != null && ready.details.supportsVision != true)
             notice.value = if (ready.model.format == ModelFormat.GGUF) MmprojPairing.NO_MMPROJ_HINT else ATTACH_NO_VISION

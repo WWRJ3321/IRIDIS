@@ -78,14 +78,8 @@ object DeviceRecommend {
      * 额外推荐（不替换 [pickId]）：12 GB 机 Gemma 4 19B REAP IQ3_XXS，16 GB 及以上 Q4_0（MoE，建议开专家按需加载）。
      * 按 [ramGb] 档位判断；入门芯片不推荐。
      */
-    fun extraIds(totalBytes: Long, chip: Chip): List<String> {
-        if (totalBytes <= 0 || chip == Chip.ENTRY) return emptyList()
-        return when (ramGb(totalBytes)) {
-            12 -> listOf(RecommendedCatalog.REAP_IQ3)
-            in 16..Int.MAX_VALUE -> listOf(RecommendedCatalog.REAP_Q4)
-            else -> emptyList()
-        }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun extraIds(totalBytes: Long, chip: Chip): List<String> = emptyList() // r4：REAP 已从推荐移除
 
     fun extras(totalBytes: Long, chip: Chip): List<RecommendedCatalog.Item> = extraIds(totalBytes, chip).mapNotNull(RecommendedCatalog::byId)
 }

@@ -5,7 +5,7 @@
     <string name="api_notification_title">IRIDIS API सेवा चल रही है</string>
     <string name="api_notification_text">OpenAI-संगत API · पोर्ट %1$d</string>
     <string name="api_stop">रोकें</string>
-    <string name="gui_a11y_label">IRIDIS GUI एजेंट</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">जब आप कोई काम शुरू करते हैं, तो IRIDIS का GUI एजेंट स्क्रीन (स्क्रीनशॉट और UI तत्व) देखकर आपकी ओर से टैप, स्वाइप और टाइप करता है। यह केवल काम चलने के दौरान काम करता है और फ़्लोटिंग बार से कभी भी रोका जा सकता है; भुगतान, भेजने या हटाने से पहले पूछता है। स्क्रीन केवल डिवाइस के मॉडल प्रोसेस करते हैं, कुछ भी अपलोड नहीं होता।</string>
     <string name="lang_system">सिस्टम के अनुसार</string>
     <string name="lang_code">hi</string>

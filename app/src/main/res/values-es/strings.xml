@@ -5,7 +5,7 @@
     <string name="api_notification_title">Servicio API de IRIDIS en marcha</string>
     <string name="api_notification_text">API compatible con OpenAI · puerto %1$d</string>
     <string name="api_stop">Detener</string>
-    <string name="gui_a11y_label">Agente GUI de IRIDIS</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">Permite que el agente GUI de IRIDIS vea la pantalla (capturas y elementos de la interfaz) y toque, deslice y escriba por ti cuando inicias una tarea. Solo actúa mientras la tarea está en curso y la barra flotante puede detenerlo en cualquier momento; antes de pagar, enviar o eliminar te pregunta. La pantalla solo la procesan modelos del dispositivo y nunca se sube.</string>
     <string name="lang_system">Según el sistema</string>
     <string name="lang_code">es</string>

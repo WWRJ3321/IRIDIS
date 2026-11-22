@@ -55,4 +55,15 @@ class V300B3Test {
         ))
         assertEquals(listOf("Like"), FloatingLogic.treeBlocks(root).map { it.text })
     }
+
+    @Test fun formatPairsCollapseGgufAndMnn() {
+        fun mk(id: String, e: com.iris.localai.data.RecommendedCatalog.Engine, name: String = "Qwen3.5 2B") =
+            com.iris.localai.data.RecommendedCatalog.Item(id, com.iris.localai.data.RecommendedCatalog.Section.entries.first(), name, "轻快", 1L, e, com.iris.localai.data.RecommendedCatalog.Kind.Hub(id))
+        val a = mk("m", com.iris.localai.data.RecommendedCatalog.Engine.MNN); val b = mk("g", com.iris.localai.data.RecommendedCatalog.Engine.GGUF); val c = mk("x", com.iris.localai.data.RecommendedCatalog.Engine.GGUF, "Qwen3.5 4B")
+        val g = com.iris.localai.data.FormatPairs.groups(listOf(a, b, c))
+        assertEquals(2, g.size)
+        assertEquals("g", com.iris.localai.data.FormatPairs.pick(g[0], null) { false }.id)
+        assertEquals("m", com.iris.localai.data.FormatPairs.pick(g[0], null) { it.id == "m" }.id)
+        assertEquals("m", com.iris.localai.data.FormatPairs.pick(g[0], "m") { false }.id)
+    }
 }

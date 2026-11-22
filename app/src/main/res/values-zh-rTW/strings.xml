@@ -5,7 +5,7 @@
     <string name="api_notification_title">IRIDIS API 服務執行中</string>
     <string name="api_notification_text">OpenAI 相容介面 · 埠 %1$d</string>
     <string name="api_stop">停止</string>
-    <string name="gui_a11y_label">IRIDIS GUI 智慧代理</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">讓 IRIDIS 的 GUI 智慧代理在你發起任務時查看螢幕（截圖和介面元素）並代你點按、滑動、輸入。只在任務執行時操作，懸浮條可隨時停止；付款、傳送、刪除等操作會先問你。畫面只交給本機模型處理，不會上傳。</string>
     <string name="lang_system">跟隨系統</string>
     <string name="lang_code">zh-TW</string>

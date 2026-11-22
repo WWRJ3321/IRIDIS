@@ -157,7 +157,7 @@ fun DynamicIsland(
         AnimatedVisibility(
             visible = enabled && task != null,
             enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + slideInVertically(IrisMotion.Bouncy.offset()) { it / 2 },
-            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + slideOutVertically(IrisMotion.Snappy.offset()) { it / 2 },
+            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + slideOutVertically(IrisMotion.Snappy.offset()) { it * 2 },
         ) {
             val t = task ?: return@AnimatedVisibility
             IslandPill(t, expanded, pillH, 0f, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
@@ -226,7 +226,7 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
                     Trail(t, accent)
                 }
                 // 底边细进度线（有确定进度时）
-                if (t.percent >= 0 && !t.finished) Bar(t.percent, accent, Modifier.align(Alignment.BottomCenter).padding(start = pillH.dp, end = 14.dp, bottom = 3.dp), thin = true)
+                if (t.percent >= 0 && !t.finished) Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) { Bar(t.percent, accent, Modifier.padding(start = pillH.dp, end = 14.dp, bottom = 3.dp), thin = true) } // r4：进度线不再把胶囊撑宽
             }
         }
     }

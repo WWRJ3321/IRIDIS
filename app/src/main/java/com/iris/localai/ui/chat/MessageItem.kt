@@ -140,7 +140,9 @@ fun UserMessage(
             Modifier
                 .clip(IrisRadius.bubbleShape)
                 .background(c.surfaceVariant)
-                .combinedClickable(onClick = {}, onLongClick = {
+                .combinedClickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, // r4：长按不再留大圆水波影子
+                    onClick = {}, onLongClick = {
                     haptics.perform(FeedbackEvent.LONG_PRESS); menu = true
                 })
                 .padding(horizontal = IrisDimens.space16, vertical = IrisSpace.S),

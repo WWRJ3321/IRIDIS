@@ -5,7 +5,7 @@
     <string name="api_notification_title">IRIDIS API service running</string>
     <string name="api_notification_text">OpenAI-compatible API · port %1$d</string>
     <string name="api_stop">Stop</string>
-    <string name="gui_a11y_label">IRIDIS GUI agent</string>
+    <string name="gui_a11y_label">IRIDIS GUI</string>
     <string name="gui_a11y_desc">Lets the IRIDIS GUI agent see the screen (screenshots and UI elements) and tap, swipe and type for you when you start a task. It acts only while a task runs and the floating bar can stop it anytime; it asks first before paying, sending or deleting. The screen is processed only by on-device models and never uploaded.</string>
     <string name="lang_system">Follow system</string>
     <string name="lang_code">en</string>

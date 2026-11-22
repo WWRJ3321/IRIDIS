@@ -70,7 +70,7 @@ class V266Test {
             assertEquals(series.size, series.distinct().size)
         }
         val chat = RecommendedCatalog.section(Section.CHAT).map { it.id }
-        assertTrue(chat.indexOf(RecommendedCatalog.REAP_IQ3) + 1 == chat.indexOf(RecommendedCatalog.REAP_Q4))
+        assertFalse(chat.contains(RecommendedCatalog.REAP_IQ3)) // r4：REAP 移出推荐
         // 语音保持原顺序（与语音页一致）
         assertEquals(RecommendedCatalog.ITEMS.filter { it.section == Section.SPEECH }, RecommendedCatalog.section(Section.SPEECH))
         // 跳卡片详情仍按 id，不受排序影响

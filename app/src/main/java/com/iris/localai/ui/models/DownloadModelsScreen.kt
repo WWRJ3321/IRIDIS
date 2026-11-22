@@ -291,6 +291,7 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
             last >= list.layoutInfo.totalItemsCount - 3
         } }
         LaunchedEffect(nearEnd, search.hits.size, tab) { if (tab > 0 && nearEnd && search.hits.isNotEmpty()) vm.loadMore() }
+        var fmtPick by androidx.compose.runtime.remember { mutableStateOf(mapOf<String, String>()) }
         LazyColumn(
             state = list, modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = IrisDimens.space32 + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
@@ -379,10 +380,11 @@ fun DownloadModelsScreen(onBack: () -> Unit, onTryPrompt: (String) -> Unit, vm: 
                     if (run.size >= 2 && sec in RecommendedCatalog.SERIES_TITLED) item(key = "ser-" + sec.name + "-" + run.first().id, contentType = "series") {
                         Text(series, style = IrisType.caption, color = c.textTertiary, modifier = Modifier.padding(start = IrisDimens.pageGutter + IrisDimens.space4, top = IrisDimens.space8, bottom = IrisDimens.space2))
                     }
-                    items(run, key = { it.id }, contentType = { "rec" }) { item ->
+                    items(com.iris.localai.data.FormatPairs.groups(run), key = { it.first().id }, contentType = { "rec" }) { group ->
+                        val item = com.iris.localai.data.FormatPairs.pick(group, fmtPick[group.first().id]) { x -> status(x).let { st -> st is RecStatus.Installed || st is RecStatus.Downloading || st is RecStatus.Paused } }
                         val s = status(item)
                         // switching category / filter fades cards in and out instead of swapping at once.
-                        androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item)) }
+                        androidx.compose.foundation.layout.Box(if (LocalReduceMotion.current) androidx.compose.ui.Modifier else androidx.compose.ui.Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()), propagateMinConstraints = true) { RecCard(item, s, size(item), ramHint(item), actions, onOpen = { detailId = item.id }, mtpPath = ggufPath(item), alts = group, onSwitch = { x -> fmtPick = fmtPick + (group.first().id to x.id) }) }
                     }
                     }
                     if (shown.size < all.size || open && all.size > RecommendedCatalog.visible(sec, false).size) {
@@ -491,7 +493,7 @@ private fun Badge(text: String, tone: Color? = null) {
 private fun ramTone(hint: String): Color = if (hint == I18n.s(R.string.models_60a35c)) Iris.colors.success else Iris.colors.warning
 
 @Composable
-private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, mtpPath: String? = null) {
+private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, mtpPath: String? = null, alts: List<RecommendedCatalog.Item> = emptyList(), onSwitch: (RecommendedCatalog.Item) -> Unit = {}) {
     // 「MTP」 only when the downloaded GGUF's header has MTP layers (read on IO).
     val mtp by androidx.compose.runtime.produceState(false, mtpPath) {
         value = mtpPath != null && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -500,7 +502,17 @@ private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, 
     }
     Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
         if (size > 0) Badge(I18n.s(R.string.chat_768d35) + Format.bytes(size))
-        Badge(item.engine.label)
+        if (alts.size > 1) Row(Modifier.clip(IrisRadius.pillShape).background(Iris.colors.surfaceVariant)) {
+            alts.forEach { a ->
+                val on = a.id == item.id
+                Text(
+                    a.engine.label, style = IrisType.micro, color = if (on) Iris.colors.onAccent else Iris.colors.textSecondary, maxLines = 1,
+                    modifier = Modifier.clip(IrisRadius.pillShape).background(if (on) Iris.colors.accent else Color.Transparent)
+                        .clickable(enabled = !on) { onSwitch(a) }
+                        .padding(horizontal = IrisDimens.space6, vertical = IrisDimens.space2),
+                )
+            }
+        } else Badge(item.engine.label)
         if (mtp) Badge(MtpTag.LABEL)
         ramHint?.let { Badge(it, ramTone(it)) }
     }
@@ -519,7 +531,7 @@ private fun PrimaryButton(item: RecommendedCatalog.Item, s: RecStatus, actions: 
 }
 
 @Composable
-private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ramHint: String?, actions: RecActions, onOpen: () -> Unit, mtpPath: String? = null) {
+private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ramHint: String?, actions: RecActions, onOpen: () -> Unit, mtpPath: String? = null, alts: List<RecommendedCatalog.Item> = emptyList(), onSwitch: (RecommendedCatalog.Item) -> Unit = {}) {
     val c = Iris.colors
     CardShell(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -527,7 +539,7 @@ private fun RecCard(item: RecommendedCatalog.Item, s: RecStatus, size: Long, ram
                 Text(item.name, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(item.purpose, style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.height(IrisDimens.space4))
-                Badges(item, size, ramHint, mtpPath)
+                Badges(item, size, ramHint, mtpPath, alts, onSwitch)
             }
             if (s !is RecStatus.Failed) {
                 Spacer(Modifier.width(IrisDimens.space12))

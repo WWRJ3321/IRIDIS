@@ -63,7 +63,7 @@ object ModelGuide {
     const val L_LITERT = "litert-community/gemma-4-E2B-it-litert-lm"
     const val L_9B = "lmstudio-community/Qwen3.5-9B-GGUF"
     const val L_SMALL = "taobao-mnn/Qwen3.5-0.8B-MNN"
-    val LINKS: List<String> get() = listOf(L_GGUF, L_MNN, L_LITERT, L_9B, L_SMALL, RecommendedCatalog.REAP_Q4, RecommendedCatalog.REAP_IQ3, RecommendedCatalog.LFM_REPO)
+    val LINKS: List<String> get() = listOf(L_GGUF, L_MNN, L_LITERT, L_9B, L_SMALL, com.iris.localai.engine.edge0.Edge0Assets.REPO)
 
     fun chinese(): Boolean = runCatching { I18n.s(R.string.lang_code) }.getOrDefault("zh").startsWith("zh")
 
@@ -117,15 +117,15 @@ object ModelGuide {
             Item("Q8_0", "8 位，几乎无损，约 F16 一半大。"),
             Item("Q6_K / Q5_K_M", "接近 Q8，更小，内存够就选。"),
             Item("Q4_K_M", "最常用的平衡点，优先选。", L_GGUF),
-            Item("Q4_0", "老式 4 位，ARM 有加速，有时比 Q4_K_M 快。", RecommendedCatalog.REAP_Q4),
-            Item("Q3 / Q2 / IQ", "更小，用来硬塞大模型，质量明显下降。IQ = 改进的低位量化。", RecommendedCatalog.REAP_IQ3),
+            Item("Q4_0", "老式 4 位，ARM 有加速，有时比 Q4_K_M 快。"),
+            Item("Q3 / Q2 / IQ", "更小，用来硬塞大模型，质量明显下降。IQ = 改进的低位量化。"),
             Item("MXFP4", "4 位浮点，gpt-oss 和部分 Gemma 4 官方版用。"),
             Item("K / S / M / L", "K = 分组量化；S/M/L = 小/中/大，越大越好、越大文件。"),
             Item("imatrix / UD", "imatrix 用校准数据保护重要权重；UD = Unsloth 动态量化，低位更好。"),
         )),
         Section(MOE, "稠密与 MoE", listOf(
             Item("稠密", "每个字所有参数都参与。9B 稠密 = 每字算 90 亿。"),
-            Item("MoE", "混合专家：每个字只用几个专家。A3B、A4B = 激活参数量。", RecommendedCatalog.REAP_Q4),
+            Item("MoE", "混合专家：每个字只用几个专家。A3B、A4B = 激活参数量。", com.iris.localai.engine.edge0.Edge0Assets.REPO),
             Item("经验", "内存看总参数，速度看激活参数：26B-A4B 要装下 26B，速度接近 4B。"),
             Item("专家按需加载", "内存不够时冷门专家留在存储里用到再读：能跑，但慢。"),
         )),
@@ -135,13 +135,13 @@ object ModelGuide {
             Item("Thinking / Reasoning", "先思考再回答：更准，更慢。"),
             Item("Distill", "蒸馏版：大模型教小模型。"),
             Item("VL / Omni", "能看图（VL），或图像语音都行（Omni）。"),
-            Item("Abliterated / Uncensored", "去掉拒答。", RecommendedCatalog.LFM_REPO),
+            Item("Abliterated / Uncensored", "去掉拒答。"),
             Item("MTP", "一次猜多个字来加速，不需要草稿模型。"),
         )),
         Section(PHONE, "手机能跑多大", listOf(
             Item("8 GB", "4B 以内的 Q4，或小 MoE。", L_SMALL),
             Item("12 GB", "7–9B 的 Q4。", L_9B),
-            Item("16 GB 以上", "14B 的 Q4，或 26B-A4B 类 MoE（偏紧）。", RecommendedCatalog.REAP_Q4),
+            Item("16 GB 以上", "14B 的 Q4，或 26B-A4B 类 MoE（偏紧）。", com.iris.localai.engine.edge0.Edge0Assets.REPO),
             Item("速度", "GPU/NPU 比 CPU 快；同内存下 MoE 常比稠密快。先跑「测速」。"),
         )),
     )
@@ -171,15 +171,15 @@ object ModelGuide {
             Item("Q8_0", "8-bit, almost lossless, half of F16."),
             Item("Q6_K / Q5_K_M", "Close to Q8, smaller."),
             Item("Q4_K_M", "The usual sweet spot; pick first.", L_GGUF),
-            Item("Q4_0", "Older 4-bit with ARM fast paths; sometimes faster.", RecommendedCatalog.REAP_Q4),
-            Item("Q3 / Q2 / IQ", "Smaller, to squeeze big models in; clear quality drop.", RecommendedCatalog.REAP_IQ3),
+            Item("Q4_0", "Older 4-bit with ARM fast paths; sometimes faster."),
+            Item("Q3 / Q2 / IQ", "Smaller, to squeeze big models in; clear quality drop."),
             Item("MXFP4", "4-bit float used by gpt-oss and some Gemma 4 releases."),
             Item("K / S / M / L", "K = k-quant; S/M/L = small/medium/large."),
             Item("imatrix / UD", "Calibration-aware quants; UD = Unsloth Dynamic, better at low bits."),
         )),
         Section(MOE, "Dense vs MoE", listOf(
             Item("Dense", "Every parameter runs for every token."),
-            Item("MoE", "Mixture of experts: a few experts per token. A3B / A4B = active params.", RecommendedCatalog.REAP_Q4),
+            Item("MoE", "Mixture of experts: a few experts per token. A3B / A4B = active params.", com.iris.localai.engine.edge0.Edge0Assets.REPO),
             Item("Rule of thumb", "Memory follows total params; speed follows active params."),
             Item("Experts on demand", "Rare experts stay on storage until needed: runs, but slower."),
         )),
@@ -189,13 +189,13 @@ object ModelGuide {
             Item("Thinking / Reasoning", "Thinks first: more accurate, slower."),
             Item("Distill", "Small model taught by a big one."),
             Item("VL / Omni", "Sees images (VL), or images and audio (Omni)."),
-            Item("Abliterated / Uncensored", "Refusals removed.", RecommendedCatalog.LFM_REPO),
+            Item("Abliterated / Uncensored", "Refusals removed."),
             Item("MTP", "Multi-token prediction for speed; no draft model."),
         )),
         Section(PHONE, "What fits on a phone", listOf(
             Item("8 GB", "Up to 4B at Q4, or a small MoE.", L_SMALL),
             Item("12 GB", "7–9B at Q4.", L_9B),
-            Item("16 GB+", "14B at Q4, or a 26B-A4B MoE (tight).", RecommendedCatalog.REAP_Q4),
+            Item("16 GB+", "14B at Q4, or a 26B-A4B MoE (tight).", com.iris.localai.engine.edge0.Edge0Assets.REPO),
             Item("Speed", "GPU/NPU beat CPU; MoE often beats dense. Run the benchmark."),
         )),
     )

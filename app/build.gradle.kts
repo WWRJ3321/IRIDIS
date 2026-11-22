@@ -39,7 +39,7 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 290
+        versionCode = 291
         versionName = "3.0.0 Beta3"
 
         ndk { abiFilters += "arm64-v8a" }
