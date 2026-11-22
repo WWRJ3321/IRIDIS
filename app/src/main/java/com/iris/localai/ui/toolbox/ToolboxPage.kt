@@ -86,6 +86,7 @@ fun ToolboxPage(chat: ChatViewModel, onBack: () -> Unit, onOpenImageGen: () -> U
         "tts" -> SubpageScaffold(I18n.s(R.string.v30_tb_tts), { open = null }) { ScrollBody { TtsSection(chat) } }
         "stt" -> SubpageScaffold(I18n.s(R.string.v30_tb_stt), { open = null }) { ScrollBody { SttSection(chat) } }
         "find" -> SubpageScaffold(I18n.s(R.string.v30_tb_find), { open = null }) { ScrollBody { FindSection() } }
+        "float" -> SubpageScaffold(I18n.s(R.string.v30_floating), { open = null }) { ScrollBody { FloatSection(chat, floating) } }
         else -> {
             val tools = listOf(
                 Tool("image", IrisIcons.Image, I18n.s(R.string.v30_w_image), I18n.s(R.string.v30_tb_image_sub)),
@@ -96,11 +97,6 @@ fun ToolboxPage(chat: ChatViewModel, onBack: () -> Unit, onOpenImageGen: () -> U
             )
             fun tap(id: String) = when (id) {
                 "image" -> onOpenImageGen()
-                "float" -> when {
-                    floating -> FloatingService.stop(ctx)
-                    !FloatingService.canDraw(ctx) -> { runCatching { ctx.startActivity(FloatingService.permissionIntent(ctx)) }; Unit }
-                    else -> FloatingService.start(ctx)
-                }
                 else -> { open = id }
             }
             SubpageScaffold(I18n.s(R.string.v30_toolbox), onBack) {
@@ -115,6 +111,55 @@ fun ToolboxPage(chat: ChatViewModel, onBack: () -> Unit, onOpenImageGen: () -> U
                     }
                 }
             }
+        }
+    }
+}
+
+/** Beta3：悬浮窗设置页（工具箱里点进来，不再一点就开）。 */
+@Composable
+private fun FloatSection(chat: ChatViewModel, running: Boolean) {
+    val ctx = LocalContext.current
+    val st = chat.settings.collectAsStateWithLifecycle().value
+    // 从系统授权页回来时重新读权限
+    var tick by remember { mutableStateOf(0) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) tick++ }
+        owner.lifecycle.addObserver(o); onDispose { owner.lifecycle.removeObserver(o) }
+    }
+    val canDraw = remember(tick) { FloatingService.canDraw(ctx) }
+    val a11y = remember(tick) { com.iris.localai.agent.gui.android.IrisAccessibilityService.connected }
+    Spacer(Modifier.height(IrisDimens.space8))
+    SettingsGroup {
+        SwitchRow(I18n.s(R.string.v31_fl_set_on), running, subtitle = if (canDraw) null else I18n.s(R.string.v31_fl_perm), icon = IrisIcons.Layers) { on ->
+            when {
+                !on -> FloatingService.stop(ctx)
+                !FloatingService.canDraw(ctx) -> runCatching { ctx.startActivity(FloatingService.permissionIntent(ctx)) }
+                else -> FloatingService.start(ctx)
+            }
+        }
+        SwitchRow(I18n.s(R.string.v31_fl_set_peek), st.floatPeek) { on -> chat.updateSettings { it.copy(floatPeek = on) } }
+        SliderRow(I18n.s(R.string.v31_fl_set_size), st.floatSize.toFloat(), 40f..64f, "${st.floatSize} dp", steps = 5) { v -> chat.updateSettings { it.copy(floatSize = v.toInt()) } }
+    }
+    SectionTitle(I18n.s(R.string.v31_fl_set_menu))
+    SettingsGroup {
+        val names = mapOf(
+            com.iris.localai.floating.FloatingLogic.Mode.TRANSLATE to I18n.s(R.string.v31_fl_tr_screen),
+            com.iris.localai.floating.FloatingLogic.Mode.SCREEN to I18n.s(R.string.v30_fl_screen),
+            com.iris.localai.floating.FloatingLogic.Mode.ASK to I18n.s(R.string.v30_fl_ask),
+        )
+        com.iris.localai.floating.FloatingLogic.MENU.forEach { m ->
+            SwitchRow(names.getValue(m), m.name in st.floatItems) { on ->
+                chat.updateSettings { it.copy(floatItems = if (on) it.floatItems + m.name else it.floatItems - m.name) }
+            }
+        }
+    }
+    if (!a11y) {
+        Spacer(Modifier.height(IrisDimens.space12))
+        SettingsGroup {
+            SettingsRow(I18n.s(R.string.v31_fl_a11y), onClick = {
+                runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            })
         }
     }
 }

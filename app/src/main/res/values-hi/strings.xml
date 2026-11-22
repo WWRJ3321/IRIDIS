@@ -2366,4 +2366,11 @@
     <string name="v31_fl_app">IRIDIS खोलें</string>
     <string name="v31_is_saved">डिवाइस पर सहेजा गया</string>
     <string name="v31_is_gen">बन रहा है</string>
+    <string name="v31_fl_tr_screen">स्क्रीन अनुवाद</string>
+    <string name="v31_fl_set_on">फ़्लोटिंग बटन</string>
+    <string name="v31_fl_set_peek">निष्क्रिय होने पर किनारे में छिपाएं</string>
+    <string name="v31_fl_set_size">बटन का आकार</string>
+    <string name="v31_fl_set_menu">मेनू</string>
+    <string name="v31_fl_perm">ओवरले अनुमति चाहिए</string>
+    <string name="v31_fl_a11y">स्क्रीन पढ़ने और अनुवाद के लिए एक्सेसिबिलिटी चाहिए</string>
 </resources>

@@ -23,14 +23,23 @@ class V300B3Test {
         // 右侧小球（x=1000, 尺寸 140, 屏宽 1080）：菜单在左边
         val (x, y) = FloatingLogic.menuPos(1000, 800, 140, 400, 600, 1080, 2400, 20, left = false)
         assertEquals(1080 - 140 - 20 - 400, x)
-        assertEquals(800 + 70 - 300, y)
+        assertEquals(800, y) // 卡片顶部和小球等高
         // 左侧：菜单在右边
         val (lx, _) = FloatingLogic.menuPos(0, 800, 140, 400, 600, 1080, 2400, 20, left = true)
         assertEquals(160, lx)
         // 贴顶时夹在屏幕内
         val (_, ty) = FloatingLogic.menuPos(1000, 0, 140, 400, 600, 1080, 2400, 20, left = false)
         assertTrue(ty >= 80)
+        // 贴底时卡片往上收，小球跟着对齐卡片顶部
+        val (_, by) = FloatingLogic.menuPos(1000, 2300, 140, 400, 600, 1080, 2400, 20, left = false)
+        assertEquals(2400 - 600 - 80, by)
     }
 
     @Test fun searchModeExists() { assertTrue(FloatingLogic.Mode.entries.any { it.name == "SEARCH" }) }
+
+    @Test fun screenTranslatePicksOcrForManga() {
+        assertEquals("吹き出しのセリフがたくさんある", FloatingLogic.pickScreenText("戻る", "吹き出しのセリフがたくさんある"))
+        assertEquals("一段很长的网页正文内容在这里", FloatingLogic.pickScreenText("一段很长的网页正文内容在这里", "一段很长的网页正文"))
+        assertEquals("ocr", FloatingLogic.pickScreenText("", "ocr"))
+    }
 }

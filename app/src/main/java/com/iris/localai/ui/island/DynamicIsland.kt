@@ -38,6 +38,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -137,28 +143,23 @@ fun DynamicIsland(
     val task = running ?: lingering?.takeIf { it.kind !in hidden }
     val reduce = LocalReduceMotion.current
 
-    // ---- 位置：读挖孔 ----
-    val view = androidx.compose.ui.platform.LocalView.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sbPx = androidx.compose.foundation.layout.WindowInsets.statusBars.getTop(density)
-    val cut = remember(view, sbPx) { view.rootWindowInsets?.displayCutout?.boundingRectTop?.takeIf { !it.isEmpty } }
-    val sbDp = with(density) { sbPx.toDp().value }.takeIf { it > 0f } ?: 28f
-    val screenW = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.toFloat()
-    val pillH = IslandGeom.pillHeight(sbDp)
-    val cutTop = cut?.let { with(density) { it.top.toDp().value } }
-    val cutH = cut?.let { with(density) { it.height().toDp().value } }
-    val shift = IslandGeom.centerShift(screenW, cut?.let { with(density) { it.exactCenterX().toDp().value } })
-    val gap = IslandGeom.gap(cut?.let { with(density) { it.width().toDp().value } }, shift, cut != null)
-    val top = IslandGeom.top(sbDp, cutTop, cutH, pillH)
-
-    Box(modifier.fillMaxWidth().padding(top = top.dp).offset(x = shift.dp), contentAlignment = Alignment.TopCenter) {
+    // 3.0 Beta3：岛移到左下（输入栏上方），展开/生图大图向上弹出；不再贴挖孔
+    val pillH = 34f
+    val navBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars
+    Box(
+        modifier.fillMaxSize()
+            .windowInsetsPadding(navBottom)
+            .imePadding()
+            .padding(start = 12.dp, end = 12.dp, bottom = 84.dp),
+        contentAlignment = Alignment.BottomStart,
+    ) {
         AnimatedVisibility(
             visible = enabled && task != null,
-            enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + scaleIn(IrisMotion.Bouncy.float(), initialScale = 0.5f),
-            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + scaleOut(IrisMotion.exit(), targetScale = 0.5f),
+            enter = if (reduce) fadeIn() else fadeIn(IrisMotion.enter()) + slideInVertically(IrisMotion.Bouncy.offset()) { it / 2 },
+            exit = if (reduce) fadeOut() else fadeOut(IrisMotion.exit()) + slideOutVertically(IrisMotion.Snappy.offset()) { it / 2 },
         ) {
             val t = task ?: return@AnimatedVisibility
-            IslandPill(t, expanded, pillH, gap, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
+            IslandPill(t, expanded, pillH, 0f, onTap = { if (bigDone(t)) onOpen(t) else expanded = !expanded }, onOpen = { expanded = false; onOpen(t) })
         }
     }
 }

@@ -201,7 +201,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: Activity?, backdro
     val c = Iris.colors
     val loading = engine as? EngineState.Loading
     val target: String? = when {
-        loading != null -> if (loading.applyingTier != null) I18n.s(R.string.chat_213e62) else I18n.s(R.string.chat_2040f7, loading.model.displayName)
+        loading != null -> if (loading.applyingTier != null) I18n.s(R.string.chat_213e62) else loading.model.displayName // Beta3：去掉「正在加载」
         else -> activity?.label
     }
     val since = loading?.since ?: activity?.since ?: 0L
@@ -217,7 +217,7 @@ internal fun ActivityIndicator(engine: EngineState, activity: Activity?, backdro
     var last by remember { mutableStateOf(shown) }
     if (shown != null) last = shown
     val tnum = IrisType.caption.copy(fontFeatureSettings = "tnum")
-    Box(modifier, contentAlignment = Alignment.CenterStart) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         AnimatedVisibility(visible = shown != null, enter = fadeIn(IrisMotion.enter()), exit = fadeOut(IrisMotion.standard())) {
             Row(
                 Modifier
@@ -247,6 +247,11 @@ internal fun ActivityIndicator(engine: EngineState, activity: Activity?, backdro
                     )
                 }
             }
+        }
+        // Beta3：加载时右边空着的地方放闲言碎语
+        if (loading != null && loading.applyingTier == null) {
+            Spacer(Modifier.size(IrisSpace.S))
+            com.iris.localai.ui.quips.IdleQuip(com.iris.localai.ui.quips.IdleQuips.Scene.LOAD, active = true, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -2367,4 +2367,11 @@
     <string name="v31_fl_app">打开 IRIDIS</string>
     <string name="v31_is_saved">已保存到本机</string>
     <string name="v31_is_gen">本地生图中</string>
+    <string name="v31_fl_tr_screen">屏幕翻译</string>
+    <string name="v31_fl_set_on">开启悬浮窗</string>
+    <string name="v31_fl_set_peek">闲置时贴边半隐</string>
+    <string name="v31_fl_set_size">小球大小</string>
+    <string name="v31_fl_set_menu">菜单</string>
+    <string name="v31_fl_perm">需要悬浮窗权限</string>
+    <string name="v31_fl_a11y">识屏和屏幕翻译需要开启无障碍</string>
 </resources>

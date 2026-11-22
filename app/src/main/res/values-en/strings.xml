@@ -2366,4 +2366,11 @@
     <string name="v31_fl_app">Open IRIDIS</string>
     <string name="v31_is_saved">Saved on device</string>
     <string name="v31_is_gen">Generating</string>
+    <string name="v31_fl_tr_screen">Screen translate</string>
+    <string name="v31_fl_set_on">Floating button</string>
+    <string name="v31_fl_set_peek">Tuck into edge when idle</string>
+    <string name="v31_fl_set_size">Button size</string>
+    <string name="v31_fl_set_menu">Menu</string>
+    <string name="v31_fl_perm">Needs overlay permission</string>
+    <string name="v31_fl_a11y">Screen reading and translation need Accessibility</string>
 </resources>

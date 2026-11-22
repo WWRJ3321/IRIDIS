@@ -427,6 +427,12 @@ data class AppSettings(
     val liquidGlass: Boolean = true,
     /** 生成界面闲言碎语：等待时轮换的小句子。 */
     val idleQuips: Boolean = true,
+    /** Beta3 悬浮窗：闲置时贴边半隐。 */
+    val floatPeek: Boolean = true,
+    /** Beta3 悬浮窗：小球直径（dp）。 */
+    val floatSize: Int = 48,
+    /** Beta3 悬浮窗：菜单里显示哪些功能（[com.iris.localai.floating.FloatingLogic.Mode] 名）。 */
+    val floatItems: Set<String> = setOf("TRANSLATE", "SCREEN", "ASK"),
     /** 自定义提示词：键 = [com.iris.localai.prompts.PromptKey.id]，值 = 用户改写的文本（空 = 用默认）。 */
     val promptOverrides: Map<String, String> = emptyMap(),
     /** 彩蛋：已发现的彩蛋 id。 */

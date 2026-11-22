@@ -77,10 +77,11 @@ object FloatingLogic {
     fun pushedOut(x: Int, size: Int, screenW: Int): Boolean = x < -size / 4 || x > screenW - size + size / 4
     enum class Mode { TRANSLATE, SCREEN, SEARCH, ASK }
 
-    /** Beta3 菜单贴在小球哪一侧、竖向居中对齐小球，并夹在屏幕内（px）。 */
+    /** Beta3 卡片（菜单 / 面板）贴在小球旁边、顶部和小球等高（小球在卡片右上或左上），夹在屏幕内（px）。
+     *  贴底放不下时卡片往上收，调用方把小球也挪到返回的 y，保持等高。 */
     fun menuPos(ballX: Int, ballY: Int, ball: Int, menuW: Int, menuH: Int, screenW: Int, screenH: Int, gap: Int, left: Boolean): Pair<Int, Int> {
         val x = if (left) (ballX.coerceAtLeast(0) + ball + gap) else (ballX.coerceAtMost(screenW - ball) - gap - menuW)
-        val y = ballY + ball / 2 - menuH / 2
+        val y = ballY
         return x.coerceIn(gap, (screenW - menuW - gap).coerceAtLeast(gap)) to y.coerceIn(gap * 4, (screenH - menuH - gap * 4).coerceAtLeast(gap * 4))
     }
 
@@ -100,7 +101,16 @@ object FloatingLogic {
     }
 
     /** Beta2：松手后贴向较近的一边。 */
+    /** Beta3 菜单里的功能（顺序即菜单顺序）；搜索已并进问 AI。 */
+    val MENU = listOf(Mode.TRANSLATE, Mode.SCREEN, Mode.ASK)
+
     fun dockLeft(x: Int, size: Int, screenW: Int): Boolean = x + size / 2 < screenW / 2
+
+    /** Beta3 屏幕翻译取哪份文字：截图识字明显更多（漫画、图片里的字）就用识字，否则用无障碍文字。 */
+    fun pickScreenText(tree: String, ocr: String): String {
+        val t = tree.trim(); val o = ocr.trim()
+        return if (o.length > t.length * 6 / 5 + 10) o else t.ifEmpty { o }
+    }
 
     /** 贴边位置：[peek] 为真时一半藏进屏幕边，只露半圆。 */
     fun edgeX(left: Boolean, size: Int, screenW: Int, margin: Int, peek: Boolean): Int =
@@ -128,6 +138,8 @@ class FloatingService : Service() {
     private var panel: View? = null
     private var menu: View? = null
     private var menuClosedAt = 0L
+    private var menuLp: WindowManager.LayoutParams? = null
+    private var panelLp: WindowManager.LayoutParams? = null
     private lateinit var bubbleLp: WindowManager.LayoutParams
     private var input: EditText? = null
     private var output: TextView? = null
@@ -187,11 +199,11 @@ class FloatingService : Service() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun showBubble() {
-        val size = dp(48f)
+        val size = dp(container.settings.current.floatSize.coerceIn(36, 72).toFloat())
         val v = ImageView(this).apply {
             setImageResource(R.drawable.ic_iris_mark)
             setColorFilter(android.graphics.Color.WHITE)
-            val pad = dp(12f); setPadding(pad, pad, pad, pad)
+            val pad = size / 4; setPadding(pad, pad, pad, pad)
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF5660F0.toInt(), 0xFF18B4D2.toInt())).apply { shape = GradientDrawable.OVAL }
             elevation = dp(6f).toFloat()
             alpha = 0f; scaleX = 0.4f; scaleY = 0.4f
@@ -221,6 +233,7 @@ class FloatingService : Service() {
                     if (!moved && abs(dx) + abs(dy) > dp(6f)) { moved = true; showDismiss() }
                     if (moved) {
                         bubbleLp.x = startX + dx.toInt(); bubbleLp.y = startY + dy.toInt(); runCatching { wm.updateViewLayout(v, bubbleLp) }
+                        follow(FloatingLogic.dockLeft(bubbleLp.x, size, resources.displayMetrics.widthPixels))
                         updateDismiss(bubbleLp.x + size / 2f, bubbleLp.y + size / 2f)
                     }
                     true
@@ -251,6 +264,20 @@ class FloatingService : Service() {
         dockedLeft = false
         v.animate().alpha(0.95f).scaleX(1f).scaleY(1f).setInterpolator(OvershootInterpolator(2f)).setDuration(320).start()
         schedulePeek()
+        // Beta3：设置里改小球大小，马上生效
+        scope.launch {
+            container.settings.settings.collect { st ->
+                val px = dp(st.floatSize.coerceIn(36, 72).toFloat())
+                val b = bubble ?: return@collect
+                if (bubbleLp.width != px) {
+                    bubbleLp.width = px; bubbleLp.height = px
+                    val pad = px / 4; b.setPadding(pad, pad, pad, pad)
+                    bubbleLp.x = FloatingLogic.edgeX(dockedLeft, px, resources.displayMetrics.widthPixels, dp(8f), peek = false)
+                    runCatching { wm.updateViewLayout(b, bubbleLp) }
+                    schedulePeek()
+                }
+            }
+        }
     }
 
     /** 小球横向滑到 [targetX]（带减速曲线）。 */
@@ -260,7 +287,7 @@ class FloatingService : Service() {
         val from = bubbleLp.x
         slide = ValueAnimator.ofInt(from, targetX).apply {
             duration = ms; interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-            addUpdateListener { bubbleLp.x = it.animatedValue as Int; runCatching { wm.updateViewLayout(v, bubbleLp) } }
+            addUpdateListener { bubbleLp.x = it.animatedValue as Int; runCatching { wm.updateViewLayout(v, bubbleLp) }; follow(dockedLeft) }
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 var cancelled = false
                 override fun onAnimationCancel(a: android.animation.Animator) { cancelled = true }
@@ -275,7 +302,7 @@ class FloatingService : Service() {
         peekJob?.cancel()
         peekJob = scope.launch {
             delay(FloatingLogic.PEEK_AFTER_MS)
-            if (panel != null || menu != null) return@launch
+            if (panel != null || menu != null || !container.settings.current.floatPeek) return@launch
             val size = bubbleLp.width
             slideTo(FloatingLogic.edgeX(dockedLeft, size, resources.displayMetrics.widthPixels, dp(8f), peek = true), 380L)
             bubble?.animate()?.alpha(0.6f)?.setDuration(380)?.start()
@@ -344,6 +371,25 @@ class FloatingService : Service() {
 
     // ---------------------------------------------------------------- panel
 
+    /** Beta3：卡片跟着小球走——顶部和小球等高，贴在小球朝屏幕中间的一侧。 */
+    private fun follow(left: Boolean) {
+        val dm = resources.displayMetrics
+        val size = bubbleLp.width
+        for ((view, lp) in listOf(menu to menuLp, panel to panelLp)) {
+            if (view == null || lp == null) continue
+            val h = view.height.takeIf { it > 0 } ?: lp.height.coerceAtLeast(0)
+            val (x, y) = FloatingLogic.menuPos(bubbleLp.x, bubbleLp.y, size, lp.width, h, dm.widthPixels, dm.heightPixels, dp(10f), left)
+            if (lp.x != x || lp.y != y) { lp.x = x; lp.y = y; runCatching { wm.updateViewLayout(view, lp) } }
+            view.pivotX = if (left) 0f else lp.width.toFloat()
+        }
+    }
+
+    /** 卡片被夹在屏幕内时把小球挪到卡片顶部，保持等高。 */
+    private fun alignBall(y: Int) {
+        val b = bubble ?: return
+        if (bubbleLp.y != y) { bubbleLp.y = y; runCatching { wm.updateViewLayout(b, bubbleLp) } }
+    }
+
     private fun togglePanel() {
         when {
             panel != null -> hidePanel()
@@ -367,11 +413,13 @@ class FloatingService : Service() {
     private fun showMenu() {
         val l = look()
         peekJob?.cancel()
+        val on = container.settings.current.floatItems
         val items = listOf(
-            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_translate, I18n.s(R.string.v30_fl_translate), { openMode(FloatingLogic.Mode.TRANSLATE) }),
+            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_translate, I18n.s(R.string.v31_fl_tr_screen), { openMode(FloatingLogic.Mode.TRANSLATE) }),
             Triple<Int, String, () -> Unit>(R.drawable.w31_ic_screen, I18n.s(R.string.v30_fl_screen), { openMode(FloatingLogic.Mode.SCREEN) }),
-            Triple<Int, String, () -> Unit>(R.drawable.w31_ic_search, I18n.s(R.string.v30_fl_search), { openMode(FloatingLogic.Mode.SEARCH) }),
+            // Beta3：搜索并进问 AI（面板里有「搜索」按钮）
             Triple<Int, String, () -> Unit>(R.drawable.w31_ic_spark, I18n.s(R.string.v30_fl_ask), { openMode(FloatingLogic.Mode.ASK) }),
+        ).filterIndexed { i, _ -> FloatingLogic.MENU[i].name in on } + listOf(
             Triple<Int, String, () -> Unit>(R.drawable.w31_ic_open, I18n.s(R.string.v31_fl_app), { hideMenu(); runCatching { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
         )
         val root = LinearLayout(this).apply {
@@ -408,10 +456,12 @@ class FloatingService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.TOP or Gravity.START; this.x = x; this.y = y }
+        alignBall(y)
+        menuLp = lp
         // 点菜单外面收起
         root.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) { hideMenu(); true } else false }
         // 从小球那一侧展开：缩放 + 淡入，行依次出现
-        root.pivotX = if (dockedLeft) 0f else mw.toFloat(); root.pivotY = mh / 2f
+        root.pivotX = if (dockedLeft) 0f else mw.toFloat(); root.pivotY = 0f
         root.alpha = 0f; root.scaleX = 0.7f; root.scaleY = 0.7f
         for (i in 0 until root.childCount) root.getChildAt(i).apply { alpha = 0f; translationX = (if (dockedLeft) -1 else 1) * dp(10f).toFloat() }
         runCatching { wm.addView(root, lp) }.onSuccess {
@@ -423,7 +473,7 @@ class FloatingService : Service() {
 
     private fun hideMenu() {
         val m = menu ?: return
-        menu = null
+        menu = null; menuLp = null
         menuClosedAt = android.os.SystemClock.uptimeMillis()
         m.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f).setDuration(140).withEndAction { runCatching { wm.removeView(m) } }.start()
         if (panel == null) schedulePeek()
@@ -437,8 +487,8 @@ class FloatingService : Service() {
 
     private fun hidePanel() {
         val p = panel ?: return
-        panel = null; input = null; output = null; chips.clear()
-        p.animate().alpha(0f).scaleX(0.85f).scaleY(0.85f).translationY(-dp(12f).toFloat())
+        panel = null; panelLp = null; input = null; output = null; chips.clear()
+        p.animate().alpha(0f).scaleX(0.85f).scaleY(0.85f)
             .setInterpolator(DecelerateInterpolator()).setDuration(160)
             .withEndAction { runCatching { wm.removeView(p) } }.start()
         schedulePeek()
@@ -461,6 +511,9 @@ class FloatingService : Service() {
         val field = EditText(this).apply {
             setTextColor(l.text); setHintTextColor(l.sub); setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             hint = I18n.s(R.string.v30_fl_hint); maxLines = 4
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_GO
+            setRawInputType(android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+            setOnEditorActionListener { _, a, _ -> if (a == android.view.inputmethod.EditorInfo.IME_ACTION_GO) { run(); true } else false }
             background = GradientDrawable().apply { cornerRadius = dp(14f).toFloat(); setColor(l.chip) }
             val p = dp(12f); setPadding(p, p, p, p)
         }
@@ -480,30 +533,43 @@ class FloatingService : Service() {
             background = GradientDrawable().apply { cornerRadius = dp(20f).toFloat(); setColor(if (primary) l.accent else l.chip) }
             setOnClickListener { onClick() }
         }.also { actions.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8f) }) }
-        action(I18n.s(R.string.v30_fl_paste), false) { pasteClipboard() }
+        if (mode == FloatingLogic.Mode.ASK) action(I18n.s(R.string.v30_fl_search), false) {
+            val q = input?.text?.toString()?.trim().orEmpty(); if (q.isNotEmpty()) webSearch(q)
+        }
         action(I18n.s(R.string.v30_fl_copy), false) { copyOut() }
-        action(I18n.s(R.string.v30_fl_close), false) { hidePanel() }
         action(I18n.s(R.string.v30_fl_go), true) { run() }
         root.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12f) })
-        val w = minOf(dp(360f), resources.displayMetrics.widthPixels - dp(24f))
+        val dm = resources.displayMetrics
+        val w = minOf(dp(360f), dm.widthPixels - bubbleLp.width - dp(30f))
+        root.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        val (px, py) = FloatingLogic.menuPos(bubbleLp.x, bubbleLp.y, bubbleLp.width, w, root.measuredHeight.coerceAtLeast(dp(220f)), dm.widthPixels, dm.heightPixels, dp(10f), dockedLeft)
         val lp = WindowManager.LayoutParams(
             w, ViewGroup.LayoutParams.WRAP_CONTENT, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = (bubbleLp.y - dp(40f)).coerceAtMost(resources.displayMetrics.heightPixels - dp(420f)).coerceAtLeast(dp(40f))
+            gravity = Gravity.TOP or Gravity.START
+            x = px; y = py
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
         // Beta2：展开动画——从小球所在一侧弹出（缩放 + 淡入 + 轻微下落）
         peekJob?.cancel()
-        root.alpha = 0f; root.scaleX = 0.6f; root.scaleY = 0.6f; root.translationY = -dp(16f).toFloat()
+        root.alpha = 0f; root.scaleX = 0.6f; root.scaleY = 0.6f; root.translationY = 0f
         root.pivotX = if (dockedLeft) 0f else w.toFloat(); root.pivotY = 0f
         wm.addView(root, lp)
-        panel = root
+        panel = root; panelLp = lp
+        alignBall(py)
         selectMode(mode)
         root.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
             .setInterpolator(OvershootInterpolator(1.1f)).setDuration(300).start()
+        // Beta3 少一步：屏幕翻译 / 识屏一打开就跑；搜索 / 问 AI 先填剪贴板，键盘回车就发
+        when (mode) {
+            FloatingLogic.Mode.TRANSLATE, FloatingLogic.Mode.SCREEN -> root.post { run() }
+            else -> {
+                pasteClipboard()
+                input?.let { f -> f.requestFocus(); f.setSelection(f.text.length); f.postDelayed({ getSystemService(InputMethodManager::class.java)?.showSoftInput(f, 0) }, 200) }
+            }
+        }
     }
 
     private fun selectMode(m: FloatingLogic.Mode) {
@@ -514,15 +580,15 @@ class FloatingService : Service() {
             v.setTextColor(if (sel) l.onAccent else l.text)
             v.background = GradientDrawable().apply { cornerRadius = dp(16f).toFloat(); setColor(if (sel) l.accent else l.chip) }
         }
-        input?.visibility = if (m == FloatingLogic.Mode.SCREEN) View.GONE else View.VISIBLE
+        input?.visibility = if (m == FloatingLogic.Mode.SCREEN || m == FloatingLogic.Mode.TRANSLATE) View.GONE else View.VISIBLE
         output?.text = when (m) {
-            FloatingLogic.Mode.SCREEN -> if (IrisAccessibilityService.connected) I18n.s(R.string.v30_fl_screen_tip) else I18n.s(R.string.v30_fl_need_a11y)
+            FloatingLogic.Mode.SCREEN, FloatingLogic.Mode.TRANSLATE -> if (IrisAccessibilityService.connected) I18n.s(R.string.v30_fl_screen_tip) else I18n.s(R.string.v30_fl_need_a11y)
             else -> ""
         }
     }
 
     private fun modeLabel(m: FloatingLogic.Mode) = when (m) {
-        FloatingLogic.Mode.TRANSLATE -> I18n.s(R.string.v30_fl_translate)
+        FloatingLogic.Mode.TRANSLATE -> I18n.s(R.string.v31_fl_tr_screen)
         FloatingLogic.Mode.SCREEN -> I18n.s(R.string.v30_fl_screen)
         FloatingLogic.Mode.SEARCH -> I18n.s(R.string.v30_fl_search)
         FloatingLogic.Mode.ASK -> I18n.s(R.string.v30_fl_ask)
@@ -551,7 +617,7 @@ class FloatingService : Service() {
         work = scope.launch {
             try {
                 when (mode) {
-                    FloatingLogic.Mode.TRANSLATE -> if (text.isNotEmpty()) translate(text)
+                    FloatingLogic.Mode.TRANSLATE -> translateScreen()
                     FloatingLogic.Mode.ASK -> if (text.isNotEmpty()) ask(Prompts.get(PromptKey.FLOAT_ASK), text)
                     FloatingLogic.Mode.SEARCH -> if (text.isNotEmpty()) webSearch(text)
                     FloatingLogic.Mode.SCREEN -> readScreen()
@@ -603,6 +669,23 @@ class FloatingService : Service() {
         views.forEach { it?.visibility = View.INVISIBLE }
         delay(160)
         return try { block() } finally { views.forEach { it?.visibility = View.VISIBLE } }
+    }
+
+    /** Beta3 屏幕翻译：先读无障碍文字，截图识字（漫画气泡这类图里的字）更多就用识字结果，再翻译。 */
+    private suspend fun screenText(): String? {
+        if (!IrisAccessibilityService.connected) { show(I18n.s(R.string.v30_fl_need_a11y)); return null }
+        show(I18n.s(R.string.v30_fl_reading))
+        val obs = hidden { AccessibilityGuiDevice(this).observe() }
+        val tree = FloatingLogic.screenText(obs.tree)
+        val ocr = obs.screenshot?.let { shot -> runCatching { GuiOcrProvider.get(this)?.recognize(shot, obs.width, obs.height).orEmpty().joinToString("\n") { it.text } }.getOrNull() }.orEmpty()
+        val text = FloatingLogic.pickScreenText(tree, ocr)
+        if (text.isBlank()) { show(I18n.s(R.string.v30_fl_nothing)); return null }
+        return text
+    }
+
+    private suspend fun translateScreen() {
+        val text = screenText() ?: return
+        translate(text)
     }
 
     private suspend fun readScreen() {

@@ -2366,4 +2366,11 @@
     <string name="v31_fl_app">IRIDIS öffnen</string>
     <string name="v31_is_saved">Auf dem Gerät gespeichert</string>
     <string name="v31_is_gen">Wird erstellt</string>
+    <string name="v31_fl_tr_screen">Bildschirm übersetzen</string>
+    <string name="v31_fl_set_on">Schwebender Knopf</string>
+    <string name="v31_fl_set_peek">Im Leerlauf an den Rand</string>
+    <string name="v31_fl_set_size">Knopfgröße</string>
+    <string name="v31_fl_set_menu">Menü</string>
+    <string name="v31_fl_perm">Overlay-Berechtigung nötig</string>
+    <string name="v31_fl_a11y">Bildschirm lesen und übersetzen braucht Bedienungshilfen</string>
 </resources>

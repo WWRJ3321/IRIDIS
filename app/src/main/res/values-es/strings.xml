@@ -2366,4 +2366,11 @@
     <string name="v31_fl_app">Abrir IRIDIS</string>
     <string name="v31_is_saved">Guardada en el dispositivo</string>
     <string name="v31_is_gen">Generando</string>
+    <string name="v31_fl_tr_screen">Traducir pantalla</string>
+    <string name="v31_fl_set_on">Botón flotante</string>
+    <string name="v31_fl_set_peek">Ocultar en el borde en reposo</string>
+    <string name="v31_fl_set_size">Tamaño del botón</string>
+    <string name="v31_fl_set_menu">Menú</string>
+    <string name="v31_fl_perm">Requiere permiso de superposición</string>
+    <string name="v31_fl_a11y">Leer y traducir la pantalla requiere Accesibilidad</string>
 </resources>

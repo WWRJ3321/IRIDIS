@@ -2366,4 +2366,11 @@
     <string name="v31_fl_app">IRIDIS を開く</string>
     <string name="v31_is_saved">端末に保存しました</string>
     <string name="v31_is_gen">生成中</string>
+    <string name="v31_fl_tr_screen">画面翻訳</string>
+    <string name="v31_fl_set_on">フローティングボタン</string>
+    <string name="v31_fl_set_peek">待機中は端に隠す</string>
+    <string name="v31_fl_set_size">ボタンの大きさ</string>
+    <string name="v31_fl_set_menu">メニュー</string>
+    <string name="v31_fl_perm">オーバーレイ権限が必要</string>
+    <string name="v31_fl_a11y">画面の読み取りと翻訳にはユーザー補助が必要</string>
 </resources>
