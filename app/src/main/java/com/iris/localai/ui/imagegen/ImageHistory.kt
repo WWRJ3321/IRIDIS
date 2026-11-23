@@ -152,33 +152,22 @@ internal fun HistoryViewer(
     val path = paths.getOrNull(i) ?: run { onClose(); return }
     val params by produceState<ImageGenFiles.Params?>(null, path) { value = vm.params(path) }
     val file = File(path)
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        // Beta4 r3：对话框窗口铺满整屏、系统栏透明、不加灰色遮罩——之前状态栏是一条灰带，
-        // 底部操作被手势条压住、标签被截掉。
-        val view = androidx.compose.ui.platform.LocalView.current
-        androidx.compose.runtime.SideEffect {
-            (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
-                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
-                w.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
-                w.setDimAmount(0f)
-                @Suppress("DEPRECATION") run {
-                    w.statusBarColor = android.graphics.Color.TRANSPARENT
-                    w.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-                if (android.os.Build.VERSION.SDK_INT >= 29) { w.isNavigationBarContrastEnforced = false; w.isStatusBarContrastEnforced = false }
-                if (android.os.Build.VERSION.SDK_INT >= 28) w.attributes = w.attributes.apply {
-                    layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-                androidx.core.view.WindowInsetsControllerCompat(w, w.decorView).apply {
-                    isAppearanceLightStatusBars = false; isAppearanceLightNavigationBars = false
-                }
-            }
-        }
+    // Beta4 r3b：不再开独立对话框窗口，直接盖在生图页上（窗口本身是全面屏，状态栏/手势条位置可靠）。
+    androidx.activity.compose.BackHandler(onBack = onClose)
+    val activity = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()
+    androidx.compose.runtime.DisposableEffect(activity) {
+        val w = activity?.window
+        val ctl = w?.let { androidx.core.view.WindowInsetsControllerCompat(it, it.decorView) }
+        val oldS = ctl?.isAppearanceLightStatusBars; val oldN = ctl?.isAppearanceLightNavigationBars
+        ctl?.isAppearanceLightStatusBars = false; ctl?.isAppearanceLightNavigationBars = false
+        onDispose { if (ctl != null) { oldS?.let { ctl.isAppearanceLightStatusBars = it }; oldN?.let { ctl.isAppearanceLightNavigationBars = it } } }
+    }
+    run {
         val rm = com.iris.localai.ui.theme.LocalReduceMotion.current
         // 「i」= 详情面板显隐；打开看图时面板从底部滑上来。
         val info = androidx.compose.runtime.remember { androidx.compose.animation.core.MutableTransitionState(false) }
         androidx.compose.runtime.LaunchedEffect(Unit) { info.targetState = true }
-        Box(Modifier.fillMaxSize().enterOnce().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(Color.Black).clickable(interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {}) {
             // 图铺满整屏（顶栏、面板浮在上面），双指缩放、双击放大、放大后拖动
             ZoomImage(path, Modifier.fillMaxSize())
             // 顶栏：上方渐变压暗，状态栏下面

@@ -155,14 +155,6 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
         selected = selected.filter { it in s.history }.toSet()
         if (s.history.isEmpty()) { selecting = false; viewing = null }
     }
-    viewing?.let { idx ->
-        HistoryViewer(
-            paths = s.history, index = idx, vm = vm,
-            onIndex = { viewing = it }, onClose = { viewing = null }, onSendToChat = onSendToChat,
-            onReused = { viewing = null; scope.launch { gridState.animateScrollToItem(0) } },
-            onDelete = { p -> confirmDelete = listOf(p) },
-        )
-    }
     confirmDelete?.let { list ->
         ConfirmDialog(
             title = if (list.size == 1) HistoryText.DELETE_ONE_TITLE else HistoryText.deleteManyTitle(list.size),
@@ -209,6 +201,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     }
     val pickRef = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::pickReference) }
 
+    Box(Modifier.fillMaxSize()) {
     SubpageScaffold(ImageGenText.TITLE, onBack, scrollUnder = false) {
         LazyVerticalGrid(
             state = gridState,
@@ -446,6 +439,23 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
 
             full { SectionFold("imagegen-check", ImageGenText.SELF_CHECK) { SelfCheckCard(s.report, onRun = vm::runSelfCheck) } }
         }
+    }
+    // Beta4 r3b：看图页改成本窗口内的全屏覆盖层（独立对话框窗口在 HyperOS 上顶部留白、底部被截）
+    androidx.compose.animation.AnimatedVisibility(
+        visible = viewing != null && s.history.isNotEmpty(),
+        enter = androidx.compose.animation.fadeIn(com.iris.localai.ui.motion.IrisMotion.Quick.float()),
+        exit = androidx.compose.animation.fadeOut(com.iris.localai.ui.motion.IrisMotion.Quick.float()),
+    ) {
+        val last = remember { intArrayOf(0) }
+        viewing?.let { last[0] = it }
+        val idx = viewing ?: last[0]
+        if (s.history.isNotEmpty())             HistoryViewer(
+                paths = s.history, index = idx, vm = vm,
+                onIndex = { viewing = it }, onClose = { viewing = null }, onSendToChat = onSendToChat,
+                onReused = { viewing = null; scope.launch { gridState.animateScrollToItem(0) } },
+                onDelete = { p -> confirmDelete = listOf(p) },
+            )
+    }
     }
 }
 
