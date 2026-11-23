@@ -287,7 +287,8 @@ private fun Trail(t: TaskProgress.Task, accent: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         // r5：百分比每跳一次不再整段淡出淡入（数字在闪、宽度在抖）；只有「进行中 ↔ 完成/失败」才过渡。
         val s = IslandLogic.trailing(t)
-        AnimatedContent(t.finished, label = "islandTrail") { _ ->
+        val rm = LocalReduceMotion.current
+        AnimatedContent(t.finished, transitionSpec = { if (rm) com.iris.localai.ui.motion.IrisMotion.none else com.iris.localai.ui.motion.IrisMotion.crossfade() }, label = "islandTrail") { _ ->
             if (s.isNotEmpty()) Text(s, style = IrisType.labelSmall, color = if (t.finished) accent else Color(0xFF9CC2FF))
         }
         if (!t.finished && t.percent < 0) { Spacer(Modifier.size(6.dp)); ProgressRing(t.percent, accent) }

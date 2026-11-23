@@ -244,7 +244,7 @@ fun AssistantMessage(
         message.error?.let { err ->
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
                 Icon(Icons.Outlined.ErrorOutline, null, tint = c.danger, modifier = Modifier.padding(top = IrisDimens.space2).size(18.dp))
-                Text(err, style = IrisType.secondary, color = c.danger)
+                MessageSelection { Text(err, style = IrisType.secondary, color = c.danger) }
             }
         }
         // Fades in once the reply is complete; history messages show it immediately.

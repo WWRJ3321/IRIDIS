@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">%1$s を読み込む</string>
     <string name="b4_gs_retry">再読み込み</string>
     <string name="b4_gs_more">ほかのモデル</string>
+    <string name="b4r2_retry_npu">NPU で再試行</string>
+    <string name="b4r2_img_make_room">メモリ不足時はテキストモデルを先に解放</string>
+    <string name="b4r2_img_make_room_sub">生成後に再読み込み、数秒余分にかかります</string>
+    <string name="b4r2_img_ref_fallback">参照画像があるとき、非対応のモデルは自動で切り替えます</string>
+    <string name="b4r2_char_edit">このキャラを編集</string>
+    <string name="b4r2_char_avatar">アイコンを変更</string>
 </resources>

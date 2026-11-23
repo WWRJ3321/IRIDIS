@@ -1,5 +1,6 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.motion.SelectCheck
 import com.iris.localai.I18n
 import com.iris.localai.character.CharacterStore
 import com.iris.localai.data.ModelNames
@@ -357,7 +358,7 @@ internal fun ModelMorphPanel(
                                     engineTag(m), style = IrisType.micro.copy(fontSize = IrisFontSize.XS, lineHeight = 16.sp), color = c.textSecondary,
                                     maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.padding(start = IrisSpace.S),
                                 )
-                                if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = IrisSpace.S).size(16.dp))
+                                SelectCheck(selected) { Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = IrisSpace.S).size(16.dp)) }
                             }
                         }
                         }
@@ -437,6 +438,7 @@ internal fun CharacterMorphPanel(
     onDismiss: () -> Unit,
     onPick: (String?) -> Unit,
     onManage: () -> Unit,
+    onEdit: (String) -> Unit = {},
 ) {
     // same pill → panel morph as 模型 (header = the pill itself), but slim: width hugs the rows in
     // [168, 220]dp from the pill's left edge, full height, no scrolling.
@@ -450,6 +452,7 @@ internal fun CharacterMorphPanel(
         ) {
             CharRow(false, false, I18n.s(R.string.ch233_none), {}, fill = false) { Box(Modifier.size(28.dp)) }
             cards.forEach { e -> CharRow(true, false, e.card.name.ifBlank { e.id }, {}, fill = false) { Box(Modifier.size(28.dp)) } }
+            if (current != null) CompactMenuRow(I18n.s(R.string.b4r2_char_edit), com.iris.localai.ui.icons.IrisIcons.Edit, fill = false) {}
             CompactMenuRow(I18n.s(R.string.ch233_manage), Icons.Outlined.ManageAccounts, fill = false) {}
         }
         MorphPanel(progress, expanded, pillInRoot, onDismiss, I18n.s(R.string.chat_def9e9),
@@ -467,6 +470,7 @@ internal fun CharacterMorphPanel(
                 CharRow(e.id == current?.id, expanded, e.card.name.ifBlank { e.id }, { onPick(e.id) }) { CharacterAvatar(e.avatar, e.card.name, 28.dp) }
             }
             MorphHairline()
+            if (current != null) CompactMenuRow(I18n.s(R.string.b4r2_char_edit), com.iris.localai.ui.icons.IrisIcons.Edit) { if (expanded) onEdit(current.id) }
             CompactMenuRow(I18n.s(R.string.ch233_manage), Icons.Outlined.ManageAccounts) { if (expanded) onManage() }
         }
     }
@@ -485,7 +489,7 @@ internal fun CharRow(selected: Boolean, enabled: Boolean, name: String, onClick:
             style = (if (selected) IrisType.menuItemSelected else IrisType.menuItem).copy(fontSize = IrisFontSize.S, lineHeight = 20.sp),
             color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = IrisSpace.S).then(if (fill) Modifier.weight(1f) else Modifier),
         )
-        if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = IrisSpace.S).size(16.dp))
+        SelectCheck(selected) { Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.padding(start = IrisSpace.S).size(16.dp)) }
     }
 }
 

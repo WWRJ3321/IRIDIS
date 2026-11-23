@@ -1,4 +1,6 @@
 package com.iris.localai.ui.agent
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.rememberScrollState
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -301,7 +303,9 @@ fun KnowledgePage(
                     onDismiss = { skipped = emptyList() }, title = I18n.s(R.string.v272_kb_skip_title),
                     confirmText = I18n.s(R.string.settings_ac2c8f), onConfirm = { skipped = emptyList() }, dismissText = null,
                 ) {
-                    Text(skipped.joinToString("\n"), style = IrisType.secondary, color = c.textSecondary)
+                    Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                        SelectionContainer { Text(skipped.joinToString("\n"), style = IrisType.secondary, color = c.textSecondary) }
+                    }
                 }
             }
             SectionTitle(I18n.s(R.string.agent_b271e4))

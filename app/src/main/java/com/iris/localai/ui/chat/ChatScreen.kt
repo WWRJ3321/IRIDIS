@@ -920,6 +920,7 @@ private fun ChatScreenContent(
                     onDismiss = { charMenu = false },
                     onPick = { id -> charMenu = false; vm.pickCharacter(id) },
                     onManage = { charMenu = false; onOpenCharacters() },
+                    onEdit = { id -> charMenu = false; com.iris.localai.ui.character.CharacterNav.editId = id; onOpenCharacters() },
                 )
             }
     }

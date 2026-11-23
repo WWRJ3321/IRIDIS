@@ -12,7 +12,7 @@ class V300B4Test {
 
     @Test fun noModelOffersRecommendedDownload() { assertEquals(Step.DOWNLOAD, s()); assertEquals(Step.NONE, s(rec = false)) }
     @Test fun downloadingShowsProgress() = assertEquals(Step.DOWNLOADING, s(dl = true))
-    @Test fun installedButIdleOffersLoad() = assertEquals(Step.LOAD, s(installed = 2))
+    @Test fun installedButIdleShowsNothing() = assertEquals(Step.NONE, s(installed = 2))
     @Test fun failedOffersRetry() = assertEquals(Step.RETRY, s(installed = 1, failed = true))
     @Test fun readyOrLoadingHidesCard() { assertEquals(Step.NONE, s(installed = 1, ready = true)); assertEquals(Step.NONE, s(installed = 1, loading = true, dl = true)) }
     @Test fun fallbackSkipsEmbeddingModels() {

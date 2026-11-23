@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
@@ -86,6 +87,11 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     var tick by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf<CharacterStore.Entry?>(null) }
+    // opened from the chat's 「编辑当前角色」: straight into the editor, back to the chat when done.
+    val fromChat = remember { CharacterNav.take() }
+    LaunchedEffect(fromChat) {
+        if (fromChat != null) editing = withContext(Dispatchers.IO) { runCatching { store.get(fromChat) }.getOrNull() }
+    }
     var creating by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<CharacterStore.Entry?>(null) }
     var exporting by remember { mutableStateOf<Pair<CharacterStore.Entry, Boolean>?>(null) } // (card, png?)
@@ -160,8 +166,8 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
     if (target != null) {
         CharacterEditor(
             entry = target as? CharacterStore.Entry,
-            onClose = { editing = null; creating = false },
-            onSaved = { editing = null; creating = false; tick++; toast(I18n.s(R.string.kb232_saved)) },
+            onClose = { editing = null; creating = false; if (fromChat != null) onBack() },
+            onSaved = { editing = null; creating = false; tick++; toast(I18n.s(R.string.kb232_saved)); if (fromChat != null) onBack() },
         )
     } else
     SubpageScaffold(I18n.s(R.string.ch232_title), onBack) {
@@ -180,8 +186,8 @@ fun CharactersPage(onBack: () -> Unit, onStartChat: (String) -> Unit) {
             Spacer(Modifier.height(IrisDimens.space16))
             val list = cards
             when {
-                list == null -> Text(I18n.s(R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
-                list.isEmpty() -> Text(I18n.s(R.string.ch232_empty), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(IrisDimens.space16))
+                list == null -> Text(I18n.s(R.string.chat_62a33a), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
+                list.isEmpty() -> Text(I18n.s(R.string.ch232_empty), style = IrisType.secondary, color = c.textTertiary, modifier = Modifier.padding(horizontal = IrisDimens.groupGutter + IrisDimens.rowPadding, vertical = IrisDimens.space16))
                 else -> SettingsGroup {
                     list.forEachIndexed { i, e ->
                         if (i > 0) HairlineDivider(start = IrisDimens.space16 + 44.dp + IrisDimens.space12)
@@ -246,6 +252,7 @@ private fun CardRow(e: CharacterStore.Entry, onOpen: () -> Unit, onEdit: () -> U
             val line = e.card.blurb()
             if (line.isNotEmpty()) Text(line, style = IrisType.secondary, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        PressableIcon(IrisIcons.Edit, I18n.s(R.string.kb232_edit), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary, onClick = onEdit)
         Box {
             PressableIcon(IrisIcons.More, I18n.s(R.string.agent_0ec9ea), size = 40.dp, iconSize = 18.dp, tint = c.textSecondary) { menu = true }
             IrisMenu(menu, { menu = false }) {
@@ -353,9 +360,16 @@ private fun CharacterEditor(entry: CharacterStore.Entry?, onClose: () -> Unit, o
             Spacer(Modifier.height(IrisDimens.space8))
             Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space16), verticalAlignment = Alignment.CenterVertically) {
                 val preview = remember(avatar) { avatar?.let { b -> runCatching { BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() }.getOrNull() } }
-                Box(Modifier.clip(CircleShape).clickable { pickImage.launch(arrayOf("image/*")) }) {
+                Box(Modifier.size(72.dp)) {
+                    Box(Modifier.clip(CircleShape).clickable { pickImage.launch(arrayOf("image/*")) }) {
                     if (preview != null) Image(preview, null, Modifier.size(72.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                     else CharacterAvatar(entry?.avatar, name, 72.dp)
+                    }
+                    // 换头像 hint: a small image badge on the avatar's corner
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).size(24.dp).clip(CircleShape).background(c.surfaceVariant).clickable { pickImage.launch(arrayOf("image/*")) },
+                        contentAlignment = Alignment.Center,
+                    ) { androidx.compose.material3.Icon(IrisIcons.Image, I18n.s(R.string.b4r2_char_avatar), tint = c.text, modifier = Modifier.size(14.dp)) }
                 }
             }
             Field(I18n.s(R.string.ch232_f_name), name, { name = it }, single = true)

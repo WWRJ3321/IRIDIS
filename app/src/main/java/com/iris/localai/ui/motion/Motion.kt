@@ -79,6 +79,8 @@ object IrisMotion {
     val Detent = SpringToken(response = 0.21f, damping = 1.0f)
     /** Live meters (microphone level): stiff with a hint of bounce, follows the signal closely. */
     val Meter = SpringToken(response = 0.21f, damping = 0.8f)
+    /** Beta4 r2：拖动历史对话时卡片的倾斜（原 HistoryDrawer 里写死的 0.62 / 320，同值收进令牌）。 */
+    val Tilt = SpringToken(response = 0.35f, damping = 0.62f)
 
     // ---- Scales ------------------------------------------------------------------------------
     /** Press scale for icon buttons, for wide buttons / chips, for list rows. */

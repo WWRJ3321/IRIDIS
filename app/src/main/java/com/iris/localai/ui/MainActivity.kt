@@ -1,4 +1,5 @@
 package com.iris.localai.ui
+import androidx.compose.foundation.text.selection.SelectionContainer
 
 import com.iris.localai.BuildConfig
 import com.iris.localai.I18n
@@ -253,7 +254,7 @@ private fun CrashDialog(report: String, onNeverAgain: () -> Unit, onClose: () ->
             Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
                 Text(I18n.s(R.string.ui_406ea7), style = IrisType.secondary, color = c.textSecondary)
                 Spacer(Modifier.height(IrisDimens.space8))
-                Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text)
+                SelectionContainer { Text(report, style = IrisType.monoSmall.copy(fontSize = IrisType.micro.fontSize, lineHeight = IrisType.micro.lineHeight), color = c.text) }
             }
             com.iris.localai.ui.components.SwitchRow(I18n.s(R.string.v272_crash_never), checked = never, subtitle = I18n.s(R.string.v272_crash_never_sub)) { never = it }
         }

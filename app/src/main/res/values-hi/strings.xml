@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">%1$s लोड करें</string>
     <string name="b4_gs_retry">फिर से लोड करें</string>
     <string name="b4_gs_more">अन्य मॉडल</string>
+    <string name="b4r2_retry_npu">NPU फिर आज़माएँ</string>
+    <string name="b4r2_img_make_room">मेमोरी कम हो तो पहले टेक्स्ट मॉडल हटाएँ</string>
+    <string name="b4r2_img_make_room_sub">बाद में फिर लोड होगा, कुछ सेकंड ज़्यादा लगेंगे</string>
+    <string name="b4r2_img_ref_fallback">संदर्भ छवि के साथ, असमर्थित मॉडल अपने-आप बदल जाता है</string>
+    <string name="b4r2_char_edit">इस किरदार को संपादित करें</string>
+    <string name="b4r2_char_avatar">अवतार बदलें</string>
 </resources>

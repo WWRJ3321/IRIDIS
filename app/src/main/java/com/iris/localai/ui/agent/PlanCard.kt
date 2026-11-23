@@ -107,7 +107,7 @@ fun PlanCard(plan: Plan?, backdrop: GlassBackdrop, onClear: () -> Unit, modifier
                     modifier = Modifier.weight(1f),
                 )
                 Icon(Icons.Outlined.KeyboardArrowDown, null, tint = c.textTertiary, modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = turn })
-                PressableIcon(Icons.Outlined.Close, I18n.s(R.string.agent_ed1da1), size = IrisDimens.space32, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
+                PressableIcon(Icons.Outlined.Close, I18n.s(R.string.agent_ed1da1), size = 40.dp, iconSize = IrisDimens.space16, tint = c.textTertiary, onClick = onClear)
             }
             AnimatedVisibility(open, enter = IrisMotion.expand(), exit = IrisMotion.collapse()) {
                 Column(
@@ -176,11 +176,13 @@ internal fun FlowNode(n: Int, text: String, status: PlanStatus, first: Boolean, 
 fun ProgressRing(progress: Float, done: Boolean, modifier: Modifier = Modifier) {
     val c = Iris.colors
     val track = c.outline
-    val fill = if (done) c.success else c.accent
+    val fill = com.iris.localai.ui.motion.selectTint(if (done) c.success else c.accent, "ringFill")
+    // Beta4 r2：进度环不再一格一格跳，跟进度条一样用 Smooth 弹簧追新值。
+    val p by androidx.compose.animation.core.animateFloatAsState(progress.coerceIn(0f, 1f), com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Smooth, 0.0005f), label = "ring")
     Canvas(modifier) {
         val w = IrisDimens.space2.toPx()
         drawCircle(track, size.minDimension / 2 - w / 2, style = Stroke(w))
-        drawArc(fill, -90f, 360f * progress.coerceIn(0f, 1f), false, style = Stroke(w, cap = StrokeCap.Round),
+        drawArc(fill, -90f, 360f * p, false, style = Stroke(w, cap = StrokeCap.Round),
             topLeft = Offset(w / 2, w / 2), size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w))
     }
 }

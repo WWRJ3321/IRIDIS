@@ -149,14 +149,16 @@ internal fun SlowLoadBanner(engine: EngineState, backdrop: GlassBackdrop, onUseC
     val loading = engine as? EngineState.Loading
     val secs = loadingSeconds(engine)
     val text = loading?.takeIf { it.applyingTier == null }?.let { SlowLoadHint.notice(it.backend, secs) }
+    var lastText by remember { mutableStateOf(text) }
+    if (text != null) lastText = text
     var dismissedFor by remember { mutableStateOf<Long?>(null) }
     val visible = text != null && dismissedFor != loading?.since
     AnimatedVisibility(visible = visible, enter = fadeIn(IrisMotion.enter()), exit = fadeOut(IrisMotion.standard())) {
         // 2.0.x: one compact card — text, 「改用 CPU」, and × (was two text buttons under the text).
         BannerCard(backdrop, Modifier.padding(bottom = IrisDimens.space8).fillMaxWidth()) {
-            Text(text.orEmpty(), style = IrisType.secondary, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(lastText.orEmpty(), style = IrisType.secondary, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             IrisButton(SlowLoadHint.ACTION, { dismissedFor = loading?.since; onUseCpu() }, style = IrisButtonStyle.Text, compact = true)
-            PressableIcon(Icons.Outlined.Close, I18n.s(R.string.ui_b15d91), size = IrisDimens.space32, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
+            PressableIcon(Icons.Outlined.Close, I18n.s(R.string.ui_b15d91), size = 40.dp, iconSize = IrisDimens.iconSmall, tint = c.textTertiary) { dismissedFor = loading?.since }
         }
     }
 }
@@ -261,13 +263,20 @@ internal fun ActivityIndicator(engine: EngineState, activity: Activity?, backdro
 @Composable
 internal fun ModelRestoreBanner(model: LocalModel?, backdrop: GlassBackdrop, onBack: () -> Unit, onDismiss: () -> Unit) {
     val c = Iris.colors
+    val reduce = LocalReduceMotion.current
+    var last by remember { mutableStateOf(model) }
+    if (model != null) last = model
     LaunchedEffect(model) { if (model != null) { kotlinx.coroutines.delay(8_000L); onDismiss() } }
-    AnimatedVisibility(visible = model != null, enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(
+        visible = model != null,
+        enter = if (reduce) androidx.compose.animation.EnterTransition.None else IrisMotion.riseIn(),
+        exit = if (reduce) androidx.compose.animation.ExitTransition.None else IrisMotion.sinkOut(),
+    ) {
         Box(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space8), contentAlignment = Alignment.Center) {
             BannerCard(backdrop, Modifier.widthIn(max = 520.dp), onClick = onDismiss) {
-                Text(I18n.s(R.string.mr234_hint, model?.displayName.orEmpty()), style = IrisType.secondary, color = c.text,
+                Text(I18n.s(R.string.mr234_hint, last?.displayName.orEmpty()), style = IrisType.secondary, color = c.text,
                     maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                androidx.compose.material3.TextButton(onClick = onBack) { Text(I18n.s(R.string.mr234_back), color = c.accent) }
+                IrisButton(I18n.s(R.string.mr234_back), onBack, style = IrisButtonStyle.Text, compact = true)
             }
         }
     }

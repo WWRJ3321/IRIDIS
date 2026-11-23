@@ -160,10 +160,10 @@ internal fun ThinkPill(
                         Box(
                             Modifier.width(ThinkLevelBar.SEGMENT_DP.dp).fillMaxHeight().padding(3.dp)
                                 .clip(IrisRadius.pillShape)
-                                .background(if (on) c.accent else androidx.compose.ui.graphics.Color.Transparent),
+                                .background(com.iris.localai.ui.motion.selectTint(if (on) c.accent else c.accent.copy(alpha = 0f))),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(t, style = IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = if (on) c.onAccent else c.text, maxLines = 1)
+                            Text(t, style = IrisType.labelSmall.copy(fontSize = IrisType.label.fontSize), color = com.iris.localai.ui.motion.selectTint(if (on) c.onAccent else c.text), maxLines = 1)
                         }
                     }
                 }

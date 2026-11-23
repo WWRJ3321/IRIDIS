@@ -245,12 +245,12 @@ private fun FilterPill(text: String, selected: Boolean, onClick: () -> Unit) {
     val c = Iris.colors
     Box(
         Modifier.clip(IrisRadius.pillShape)
-            .background(if (selected) c.accent else c.surfaceVariant)
+            .background(com.iris.localai.ui.motion.selectTint(if (selected) c.accent else c.surfaceVariant))
             .clickable(onClick = onClick)
             .heightIn(min = 36.dp)
             .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space8),
         contentAlignment = Alignment.Center,
-    ) { Text(text, style = IrisType.secondary, color = if (selected) c.onAccent else c.text) }
+    ) { Text(text, style = IrisType.secondary, color = com.iris.localai.ui.motion.selectTint(if (selected) c.onAccent else c.text)) }
 }
 
 @Composable

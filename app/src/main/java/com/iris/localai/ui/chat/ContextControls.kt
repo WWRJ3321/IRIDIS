@@ -1,5 +1,6 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.ui.motion.SelectCheck
 import com.iris.localai.I18n
 import com.iris.localai.R
 import com.iris.localai.ui.components.SegmentedRow
@@ -200,7 +201,7 @@ fun ContextSheet(
 private fun StrategyRow(title: String, subtitle: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     SettingsRow(title, subtitle = subtitle, enabled = enabled, role = Role.RadioButton, onClick = onClick) {
         Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-            if (selected) Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+            SelectCheck(selected) { Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium)) }
         }
     }
 }

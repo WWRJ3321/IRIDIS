@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">載入 %1$s</string>
     <string name="b4_gs_retry">重新載入</string>
     <string name="b4_gs_more">其他模型</string>
+    <string name="b4r2_retry_npu">重試 NPU</string>
+    <string name="b4r2_img_make_room">記憶體不足時先卸載文字模型</string>
+    <string name="b4r2_img_make_room_sub">生完再載回，要多等幾秒</string>
+    <string name="b4r2_img_ref_fallback">帶參考圖時，選的模型不支援會自動換一個</string>
+    <string name="b4r2_char_edit">編輯目前角色</string>
+    <string name="b4r2_char_avatar">換頭像</string>
 </resources>

@@ -728,6 +728,7 @@ private fun AboutHeroCard() {
     var egg by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val feedback = com.iris.localai.ui.feedback.rememberIrisFeedback()
+    val reduce = com.iris.localai.ui.theme.LocalReduceMotion.current
     Box(
         Modifier
             .padding(horizontal = IrisDimens.groupGutter, vertical = IrisDimens.space8)
@@ -747,8 +748,8 @@ private fun AboutHeroCard() {
                     taps = 0; egg = true
                     feedback.perform(com.iris.localai.ui.feedback.FeedbackEvent.REPLY_DONE)
                     runCatching { (appCtx as com.iris.localai.IrisApp).container.settings }.getOrNull()?.update { st -> if ("about-spin" in st.eggsFound) st else st.copy(eggsFound = st.eggsFound + "about-spin") }
-                    scope.launch { spin.snapTo(0f); spin.animateTo(360f, androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 60f)) }
-                    scope.launch { hue.animateTo(hue.value + 180f, androidx.compose.animation.core.tween(1600)) }
+                    scope.launch { spin.snapTo(0f); spin.animateTo(360f, com.iris.localai.ui.motion.motionSpec(com.iris.localai.ui.motion.IrisMotion.Rebound, reduce)) }
+                    scope.launch { hue.animateTo(hue.value + 180f, com.iris.localai.ui.motion.IrisMotion.progress(1600)) }
                 }
             }),
         contentAlignment = Alignment.Center,
@@ -829,7 +830,7 @@ private fun AboutFlowBackground(hueShift: Float, spin: Float, dark: Boolean, bas
         val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "aboutFlow")
         inf.animateFloat(
             0f, 1f,
-            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(78_000, easing = androidx.compose.animation.core.LinearEasing)),
+            androidx.compose.animation.core.infiniteRepeatable(com.iris.localai.ui.motion.IrisMotion.linearLoop(78_000)),
             label = "aboutFlowT",
         ).value
     }

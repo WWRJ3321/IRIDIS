@@ -1,4 +1,5 @@
 package com.iris.localai.ui.agent
+import com.iris.localai.ui.components.InlineError
 
 import com.iris.localai.ui.components.IrisButton
 import com.iris.localai.ui.components.IrisButtonStyle
@@ -79,7 +80,7 @@ fun WorkspaceFolderPicker(
                 }
             }
             Text(dir.path, style = IrisType.secondary, color = c.textSecondary, modifier = Modifier.padding(vertical = IrisSpace.XS))
-            error?.let { Text(it, style = IrisType.secondary, color = c.danger, modifier = Modifier.padding(bottom = IrisSpace.XS)) }
+            InlineError(error, Modifier.padding(bottom = IrisSpace.XS), style = IrisType.secondary)
             Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
                 if (root == null) SettingsRow("..", icon = IrisIcons.Folder, subtitle = I18n.s(R.string.ws233_up), onClick = { dir.parentFile?.let { dir = it }; error = null })
                 subs.forEach { f -> SettingsRow(f.name, icon = IrisIcons.Folder, onClick = { dir = f; error = null }) }

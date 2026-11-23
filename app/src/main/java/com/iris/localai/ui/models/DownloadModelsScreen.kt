@@ -1,4 +1,5 @@
 package com.iris.localai.ui.models
+import androidx.compose.foundation.text.selection.SelectionContainer
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -506,8 +507,8 @@ private fun Badges(item: RecommendedCatalog.Item, size: Long, ramHint: String?, 
             alts.forEach { a ->
                 val on = a.id == item.id
                 Text(
-                    a.engine.label, style = IrisType.micro, color = if (on) Iris.colors.onAccent else Iris.colors.textSecondary, maxLines = 1,
-                    modifier = Modifier.clip(IrisRadius.pillShape).background(if (on) Iris.colors.accent else Color.Transparent)
+                    a.engine.label, style = IrisType.micro, color = com.iris.localai.ui.motion.selectTint(if (on) Iris.colors.onAccent else Iris.colors.textSecondary), maxLines = 1,
+                    modifier = Modifier.clip(IrisRadius.pillShape).background(com.iris.localai.ui.motion.selectTint(if (on) Iris.colors.accent else Iris.colors.accent.copy(alpha = 0f)))
                         .clickable(enabled = !on) { onSwitch(a) }
                         .padding(horizontal = IrisDimens.space6, vertical = IrisDimens.space2),
                 )
@@ -587,7 +588,7 @@ private fun DownloadBlock(s: RecStatus, onPause: () -> Unit, onRetry: () -> Unit
             }
         }
         is RecStatus.Failed -> Column(verticalArrangement = Arrangement.spacedBy(IrisDimens.space6)) {
-            Text(s.reason, style = IrisType.caption, color = c.danger)
+            SelectionContainer { Text(s.reason, style = IrisType.caption, color = c.danger) }
             Row(horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
                 IrisButton(SourceText.RETRY_OTHER, onRetry, style = IrisButtonStyle.Tonal, compact = true, icon = Icons.Outlined.Refresh)
                 IrisButton(SourceText.IMPORT, onImport, style = IrisButtonStyle.Text, compact = true, icon = Icons.Outlined.Add)

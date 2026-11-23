@@ -1,4 +1,7 @@
 package com.iris.localai.ui.models
+import androidx.compose.foundation.text.selection.SelectionContainer
+import com.iris.localai.ui.components.InlineError
+import com.iris.localai.ui.motion.RollingText
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -550,14 +553,14 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: SettingsViewModel? = null, onOp
                                     style = IrisType.labelSmall, color = c.textSecondary,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 )
-                                Text("${(import.progress * 100).toInt()}%", style = IrisType.labelSmall, color = c.textSecondary)
+                                RollingText("${(import.progress * 100).toInt()}%", style = IrisType.labelSmall.copy(fontFeatureSettings = "tnum"), color = c.textSecondary)
                             }
                             Spacer(Modifier.height(IrisDimens.space8))
                             IrisProgressBar(progress = import.progress)
                             IrisButton(I18n.s(R.string.chat_625fb2), vm::cancelImport, style = IrisButtonStyle.Text, compact = true, modifier = Modifier.padding(top = IrisDimens.space4))
                         }
                     }
-                    import.error?.let { Text(it, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(top = IrisDimens.space8)) }
+                    InlineError(import.error, Modifier.padding(top = IrisDimens.space8))
                 }
             }
 
@@ -593,7 +596,10 @@ fun ModelsScreen(onBack: () -> Unit, settingsVm: SettingsViewModel? = null, onOp
             }
             (engine as? EngineState.Failed)?.let { f ->
                 item(key = "failed", contentType = "failed") {
-                    Text(f.message, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space12))
+                    SelectionContainer(
+                        (if (LocalReduceMotion.current) Modifier else Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()))
+                            .padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4, vertical = IrisDimens.space12),
+                    ) { Text(f.message, style = IrisType.caption, color = c.danger) }
                 }
             }
 
@@ -761,7 +767,7 @@ private fun ModelRow(m: LocalModel, tag: String? = null, state: EngineState, bus
             modifier = dragHandle.size(40.dp).padding(IrisDimens.space8),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(IrisDimens.space2)) {
-            Text(m.displayName, style = IrisType.rowStrong, color = c.text)
+            Text(m.displayName, style = IrisType.rowStrong, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.Top) {
                 run {
                     // 视觉 badge for every format, using the same test its engine uses when loading:

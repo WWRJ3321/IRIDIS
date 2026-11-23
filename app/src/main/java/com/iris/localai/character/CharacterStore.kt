@@ -13,6 +13,9 @@ class CharacterStore(private val root: () -> File, private val fallback: File) {
 
     private val cache = HashMap<String, Pair<Long, Entry>>()
 
+    /** bumps on every save / delete, so open chats re-read their card (name, avatar). */
+    val revision = kotlinx.coroutines.flow.MutableStateFlow(0)
+
     fun dir(): File {
         val d = File(root(), DIR)
         if ((d.isDirectory || d.mkdirs()) && d.canWrite()) return d
@@ -53,13 +56,14 @@ class CharacterStore(private val root: () -> File, private val fallback: File) {
             File(File(d, ASSETS), rel).apply { parentFile?.mkdirs() }.writeBytes(bytes)
         }
         cache.remove(useId)
+        revision.value++
         useId
     }
 
     fun delete(id: String): Boolean = synchronized(cache) {
         val d = safeId(id)?.let { File(dir(), it) } ?: return false
         cache.remove(id)
-        d.deleteRecursively()
+        d.deleteRecursively().also { revision.value++ }
     }
 
     private fun newId(name: String): String {

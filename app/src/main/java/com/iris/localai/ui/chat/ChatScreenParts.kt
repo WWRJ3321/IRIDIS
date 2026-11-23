@@ -177,7 +177,7 @@ internal fun ChatEmptyState(
     }
 }
 
-/** 3.0.0 Beta4：空对话页一步上手——没模型就一键下载本机推荐，装了没加载就一键加载。 */
+/** 3.0.0 Beta4：空对话页一步上手——没模型就一键下载本机推荐；r2 去掉「加载 X」（发消息时自动加载）。 */
 @Composable
 private fun GetStartedCard(engine: EngineState) {
     val vm: com.iris.localai.ui.models.ModelsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -203,8 +203,11 @@ private fun GetStartedCard(engine: EngineState) {
             ?: chatModels.firstOrNull { it.fileName == settings.lastModelFile }
             ?: chatModels.firstOrNull()
     }
-    androidx.compose.animation.AnimatedVisibility(visible = step != com.iris.localai.data.GetStarted.Step.NONE) {
+    androidx.compose.animation.AnimatedVisibility(visible = step != com.iris.localai.data.GetStarted.Step.NONE, enter = IrisMotion.riseIn(), exit = IrisMotion.sinkOut()) {
         Column(Modifier.padding(top = IrisDimens.space24), horizontalAlignment = Alignment.CenterHorizontally) {
+          // r2：下载 → 下载中 → 重试 之间淡入淡出，不再瞬间换按钮。
+          val rm = com.iris.localai.ui.theme.LocalReduceMotion.current
+          androidx.compose.animation.AnimatedContent(step, transitionSpec = { if (rm) IrisMotion.none else IrisMotion.crossfade() }, contentAlignment = Alignment.Center, label = "getStarted") { step ->
             when (step) {
                 com.iris.localai.data.GetStarted.Step.DOWNLOAD -> rec?.let { r ->
                     com.iris.localai.ui.components.IrisButton(
@@ -219,14 +222,13 @@ private fun GetStartedCard(engine: EngineState) {
                         style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
                     )
                 }
-                com.iris.localai.data.GetStarted.Step.LOAD -> target?.let { m ->
-                    com.iris.localai.ui.components.IrisButton(I18n.s(R.string.b4_gs_load, m.displayName), onClick = { vm.loadNow(m) })
-                }
                 com.iris.localai.data.GetStarted.Step.RETRY -> target?.let { m ->
                     com.iris.localai.ui.components.IrisButton(I18n.s(R.string.b4_gs_retry), onClick = { vm.loadNow(m) }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal)
                 }
                 com.iris.localai.data.GetStarted.Step.NONE -> Unit
+                else -> Unit
             }
+          }
             if (step == com.iris.localai.data.GetStarted.Step.DOWNLOAD) {
                 com.iris.localai.ui.components.IrisButton(
                     I18n.s(R.string.b4_gs_more),

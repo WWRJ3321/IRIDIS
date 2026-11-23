@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">Load %1$s</string>
     <string name="b4_gs_retry">Try again</string>
     <string name="b4_gs_more">Other models</string>
+    <string name="b4r2_retry_npu">Retry NPU</string>
+    <string name="b4r2_img_make_room">Unload text model when memory is low</string>
+    <string name="b4r2_img_make_room_sub">Reloaded after; a few seconds longer</string>
+    <string name="b4r2_img_ref_fallback">With a reference image, an unsupported model is swapped automatically</string>
+    <string name="b4r2_char_edit">Edit this character</string>
+    <string name="b4r2_char_avatar">Change avatar</string>
 </resources>

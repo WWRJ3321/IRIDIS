@@ -1,4 +1,11 @@
 package com.iris.localai.ui.toolbox
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.text.selection.SelectionContainer
+import com.iris.localai.ui.components.Fold
+import com.iris.localai.ui.components.rememberLast
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.motion.motion
+import com.iris.localai.ui.theme.LocalReduceMotion
 
 import androidx.compose.ui.draw.clip
 
@@ -231,16 +238,16 @@ private fun SttSection(chat: ChatViewModel) {
                     val sel = p == activeAsr
                     Box(
                         Modifier.clip(IrisRadius.pillShape)
-                            .background(if (sel) c.accentContainer else c.surfaceVariant)
+                            .background(com.iris.localai.ui.motion.selectTint(if (sel) c.accentContainer else c.surfaceVariant))
                             .clickable(enabled = !holding && !busy) { chat.useAsrPack(p.id) }
                             .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
-                    ) { Text(p.title, style = IrisType.labelSmall, color = if (sel) c.onAccentContainer else c.textSecondary) }
+                    ) { Text(p.title, style = IrisType.labelSmall, color = com.iris.localai.ui.motion.selectTint(if (sel) c.onAccentContainer else c.textSecondary)) }
                 }
             }
             Spacer(Modifier.height(IrisDimens.space12))
             Box(
                 Modifier.fillMaxWidth().height(52.dp)
-                    .background(if (holding) c.accent else c.surfaceVariant, IrisRadius.pillShape)
+                    .background(com.iris.localai.ui.motion.selectTint(if (holding) c.accent else c.surfaceVariant, "pttBg"), IrisRadius.pillShape)
                     .pointerInput(lang) {
                         detectTapGestures(onPress = {
                             if (busy) return@detectTapGestures
@@ -259,18 +266,24 @@ private fun SttSection(chat: ChatViewModel) {
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                val reduce = LocalReduceMotion.current
+                val fg = com.iris.localai.ui.motion.selectTint(if (holding) c.onAccent else c.text, "pttFg")
+                AnimatedContent(
                     when { holding -> I18n.s(R.string.v30_ptt_release); busy -> I18n.s(R.string.v30_tb_recognizing); else -> I18n.s(R.string.v30_ptt_hold) },
-                    style = IrisType.label, color = if (holding) c.onAccent else c.text,
-                )
+                    transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "ptt",
+                ) { t -> Text(t, style = IrisType.label, color = fg) }
             }
-            if (result.isNotBlank()) {
-                Spacer(Modifier.height(IrisDimens.space12))
-                Text(result, style = IrisType.body, color = c.text)
-                Row(Modifier.padding(top = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                    IrisButton(I18n.s(R.string.v30_fl_copy), { clipboard.setText(AnnotatedString(result)) }, compact = true, style = IrisButtonStyle.Tonal, icon = IrisIcons.Copy)
-                    IrisButton(I18n.s(R.string.v30_tb_to_chat), { chat.setDraft(result) }, compact = true, style = IrisButtonStyle.Tonal, icon = IrisIcons.Chat)
-                    IrisButton(I18n.s(R.string.v30_tb_clear), { result = "" }, compact = true, style = IrisButtonStyle.Text)
+            // 清空时收起，退场期间仍显示最后一段
+            val shownResult = rememberLast(result.ifBlank { null }).orEmpty()
+            Fold(result.isNotBlank()) {
+                Column {
+                    Spacer(Modifier.height(IrisDimens.space12))
+                    SelectionContainer { Text(shownResult, style = IrisType.body, color = c.text) }
+                    Row(Modifier.padding(top = IrisDimens.space8), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                        IrisButton(I18n.s(R.string.v30_fl_copy), { clipboard.setText(AnnotatedString(shownResult)) }, compact = true, style = IrisButtonStyle.Tonal, icon = IrisIcons.Copy)
+                        IrisButton(I18n.s(R.string.v30_tb_to_chat), { chat.setDraft(shownResult) }, compact = true, style = IrisButtonStyle.Tonal, icon = IrisIcons.Chat)
+                        IrisButton(I18n.s(R.string.v30_tb_clear), { result = "" }, compact = true, style = IrisButtonStyle.Text)
+                    }
                 }
             }
         }

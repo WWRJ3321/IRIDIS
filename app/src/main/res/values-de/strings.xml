@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">%1$s laden</string>
     <string name="b4_gs_retry">Erneut laden</string>
     <string name="b4_gs_more">Andere Modelle</string>
+    <string name="b4r2_retry_npu">NPU erneut versuchen</string>
+    <string name="b4r2_img_make_room">Bei wenig Speicher Textmodell entladen</string>
+    <string name="b4r2_img_make_room_sub">Danach neu geladen, dauert einige Sekunden länger</string>
+    <string name="b4r2_img_ref_fallback">Mit Referenzbild wird ein ungeeignetes Modell automatisch gewechselt</string>
+    <string name="b4r2_char_edit">Diese Figur bearbeiten</string>
+    <string name="b4r2_char_avatar">Avatar ändern</string>
 </resources>

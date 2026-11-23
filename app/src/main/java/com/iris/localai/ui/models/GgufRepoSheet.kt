@@ -1,4 +1,5 @@
 package com.iris.localai.ui.models
+import com.iris.localai.ui.components.InlineError
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -101,7 +102,7 @@ internal fun GgufRepoSheet(vm: ModelsViewModel, hubActive: Boolean) {
             val files = st.files
             // licence line dropped (noise); gated repos still say so below.
             if (st.filesLoading) Text(I18n.s(R.string.models_1fc70c), style = IrisType.caption, color = c.textSecondary)
-            st.filesError?.let { Text(it, style = IrisType.caption, color = c.danger) }
+            InlineError(st.filesError)
             if (files != null) {
                 if (files.gated) {
                     Text(MnnHub.GATED, style = IrisType.caption, color = c.danger)

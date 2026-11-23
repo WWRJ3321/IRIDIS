@@ -1,5 +1,8 @@
 package com.iris.localai.ui.imagegen
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
+import com.iris.localai.ui.motion.SelectCheck
 import com.iris.localai.I18n
 import com.iris.localai.R
 import com.iris.localai.ui.theme.IrisRadius
@@ -120,13 +123,14 @@ internal fun HistoryTile(path: String, selecting: Boolean, selected: Boolean, on
     ) {
         Thumb(path, Modifier.fillMaxSize())
         if (selecting) {
-            if (selected) Box(Modifier.fillMaxSize().clip(IrisRadius.mediumShape).border(2.dp, c.accent, IrisRadius.mediumShape))
+            val ring = com.iris.localai.ui.motion.selectTint(if (selected) c.accent else Color.Transparent, "tileRing")
+            Box(Modifier.fillMaxSize().clip(IrisRadius.mediumShape).border(2.dp, ring, IrisRadius.mediumShape))
             Box(
                 Modifier.align(Alignment.TopEnd).padding(IrisDimens.space6).size(22.dp).clip(CircleShape)
-                    .background(if (selected) c.accent else Color.Black.copy(alpha = 0.35f))
+                    .background(com.iris.localai.ui.motion.selectTint(if (selected) c.accent else Color.Black.copy(alpha = 0.35f), "tileDot"))
                     .border(1.5.dp, Color.White, CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { if (selected) Icon(IrisIcons.Check, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
+            ) { SelectCheck(selected) { Icon(IrisIcons.Check, null, tint = Color.White, modifier = Modifier.size(14.dp)) } }
         }
     }
 }
@@ -161,41 +165,88 @@ internal fun HistoryViewer(
                 if (i > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronLeft) { onIndex(i - 1) } }
                 if (i < paths.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronRight) { onIndex(i + 1) } }
             }
-            Column(Modifier.fillMaxWidth().background(Iris.colors.surface).padding(IrisDimens.space12)) {
-                val p = params
-                if (info) Column(Modifier.fillMaxWidth().heightIn(max = 150.dp).verticalScroll(rememberScrollState())) {
-                    if (p == null) {
-                        Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = Iris.colors.textTertiary)
-                    } else {
-                        Text(p.prompt, style = IrisType.secondary, color = Iris.colors.text)
-                        if (p.negative.isNotBlank()) Text(HistoryText.negative(p.negative), style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.padding(top = IrisDimens.space4))
-                        Text(metaLine(p, file), style = IrisType.caption, color = Iris.colors.textTertiary, modifier = Modifier.padding(top = IrisDimens.space4))
+            // Beta4 r2：详情不再是黑页下面突兀的一块白底——改成同色系深色面板（顶部圆角、细分隔线），
+            // 「i」开关用展开/收起动画；提示词可长按选择，旁边一个复制按钮；操作改成一排图标+短标签，全部一屏放下不用横滑。
+            val p = params
+            val copy: (String) -> Unit = { t ->
+                context.getSystemService(android.content.ClipboardManager::class.java)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText("prompt", t))
+                toast(HistoryText.COPIED)
+            }
+            // 面板打开时从底部滑上来（减少动态效果时直接出现）
+            val rmOpen = com.iris.localai.ui.theme.LocalReduceMotion.current
+            val rise = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (rmOpen) 0f else 1f) }
+            androidx.compose.runtime.LaunchedEffect(Unit) { rise.animateTo(0f, com.iris.localai.ui.motion.IrisMotion.Gentle.float()) }
+            Column(
+                Modifier.fillMaxWidth()
+                    .graphicsLayer { translationY = size.height * rise.value; alpha = 1f - rise.value * 0.6f }
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(ViewerChrome.PANEL)
+                    .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
+            ) {
+                val rm = com.iris.localai.ui.theme.LocalReduceMotion.current
+                androidx.compose.animation.AnimatedVisibility(
+                    info,
+                    enter = if (rm) androidx.compose.animation.EnterTransition.None else com.iris.localai.ui.motion.IrisMotion.expand(),
+                    exit = if (rm) androidx.compose.animation.ExitTransition.None else com.iris.localai.ui.motion.IrisMotion.collapse(),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space12)) {
+                        if (p == null) {
+                            Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = ViewerChrome.TEXT3)
+                        } else {
+                            Row(verticalAlignment = Alignment.Top) {
+                                androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f).heightIn(max = 132.dp).verticalScroll(rememberScrollState())) {
+                                    Column {
+                                        Text(p.prompt, style = IrisType.caption.copy(lineHeight = 20.sp), color = ViewerChrome.TEXT1)
+                                        if (p.negative.isNotBlank()) Text(HistoryText.negative(p.negative), style = IrisType.micro, color = ViewerChrome.TEXT2, modifier = Modifier.padding(top = IrisDimens.space6))
+                                    }
+                                }
+                                Box(
+                                    Modifier.padding(start = IrisDimens.space4).size(40.dp).clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.10f)).clickable { copy(p.prompt) },
+                                    contentAlignment = Alignment.Center,
+                                ) { Icon(IrisIcons.Copy, HistoryText.COPY_PROMPT, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                            }
+                            Text(metaLine(p, file), style = IrisType.micro, color = ViewerChrome.TEXT3, maxLines = 2, modifier = Modifier.padding(top = IrisDimens.space8))
+                        }
+                        Box(Modifier.padding(top = IrisDimens.space12).fillMaxWidth().height(0.5.dp).background(Color.White.copy(alpha = 0.10f)))
                     }
                 }
-                if (info) Spacer(Modifier.height(IrisDimens.space8))
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
-                    if (p != null) {
-                        IrisButton(HistoryText.REUSE, icon = IrisIcons.Reload, style = IrisButtonStyle.Tonal, compact = true, onClick = {
-                            vm.reuse(p); toast(HistoryText.REUSED); onReused()
-                        })
-                        IrisButton(HistoryText.COPY_PROMPT, icon = IrisIcons.Copy, style = IrisButtonStyle.Tonal, compact = true, onClick = {
-                            context.getSystemService(android.content.ClipboardManager::class.java)
-                                ?.setPrimaryClip(android.content.ClipData.newPlainText("prompt", p.prompt))
-                            toast(HistoryText.COPIED)
-                        })
-                    }
-                    IrisButton(ImageGenText.SAVE, icon = IrisIcons.Download, style = IrisButtonStyle.Tonal, compact = true, onClick = {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    if (p != null) ViewerAction(IrisIcons.Reload, HistoryText.REUSE) { vm.reuse(p); toast(HistoryText.REUSED); onReused() }
+                    ViewerAction(IrisIcons.Download, ImageGenText.SAVE) {
                         val ok = runCatching { ChatImageLoader.saveToGallery(context, file.readBytes()) }.getOrDefault(false)
                         toast(if (ok) I18n.s(R.string.imagegen_e8561b) else I18n.s(R.string.imagegen_6de920))
-                    })
-                    IrisButton(ImageGenText.SHARE, icon = IrisIcons.Share, style = IrisButtonStyle.Tonal, compact = true, onClick = {
-                        runCatching { ChatImageLoader.share(context, file.readBytes()) }
-                    })
-                    IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onClose(); onSendToChat(path) })
-                    IrisButton(ImageGenText.DELETE, icon = IrisIcons.Trash, style = IrisButtonStyle.Tonal, compact = true, destructive = true, onClick = { onDelete(path) })
+                    }
+                    ViewerAction(IrisIcons.Share, ImageGenText.SHARE) { runCatching { ChatImageLoader.share(context, file.readBytes()) } }
+                    ViewerAction(IrisIcons.Chat, ImageGenText.TO_CHAT) { onClose(); onSendToChat(path) }
+                    ViewerAction(IrisIcons.Trash, ImageGenText.DELETE, tint = ViewerChrome.DANGER) { onDelete(path) }
                 }
             }
         }
+    }
+}
+
+/** 看图页深色面板的配色（与黑底同系，不跟随浅色主题）。 */
+private object ViewerChrome {
+    val PANEL = Color(0xFF16171A)
+    val TEXT1 = Color.White.copy(alpha = 0.92f)
+    val TEXT2 = Color.White.copy(alpha = 0.62f)
+    val TEXT3 = Color.White.copy(alpha = 0.45f)
+    val DANGER = Color(0xFFFF6B6B)
+}
+
+@Composable
+private fun ViewerAction(icon: ImageVector, label: String, tint: Color = Color.White, onClick: () -> Unit) {
+    Column(
+        Modifier.width(64.dp).clip(IrisRadius.mediumShape).clickable(onClick = onClick).padding(vertical = IrisDimens.space6),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, label, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Text(label, style = IrisType.micro, color = if (tint == Color.White) ViewerChrome.TEXT2 else tint, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = IrisDimens.space4))
     }
 }
 

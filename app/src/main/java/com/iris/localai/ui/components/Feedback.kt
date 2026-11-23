@@ -200,3 +200,32 @@ fun EmptyState(
         }
     }
 }
+
+/** Keeps the last non-null value, so content folding away can still show what it showed. */
+@Suppress("UNCHECKED_CAST")
+@Composable
+fun <T : Any> rememberLast(value: T?): T? {
+    val box = remember { arrayOfNulls<Any>(1) }
+    if (value != null) box[0] = value
+    return value ?: (box[0] as T?)
+}
+
+/** 行内错误：Fold 展开/收起，退场时仍显示最后一条，可长按选择复制。 */
+@Composable
+fun InlineError(
+    text: String?,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = IrisType.caption,
+    color: Color = Iris.colors.danger,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    val shown = rememberLast(text)
+    Fold(text != null, modifier) {
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Text(
+                shown.orEmpty(), style = style, color = color, maxLines = maxLines,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
+    }
+}

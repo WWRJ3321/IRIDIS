@@ -335,7 +335,7 @@ fun IrisSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit
         scrimColor = LARGE_SCRIM,
         contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0) },
         tonalElevation = 0.dp,
-        shape = SmoothRoundedShape(24.dp, 24.dp, 0.dp, 0.dp),
+        shape = SmoothRoundedShape(IrisRadius.sheet, IrisRadius.sheet, 0.dp, 0.dp),
         dragHandle = {
             Box(
                 Modifier

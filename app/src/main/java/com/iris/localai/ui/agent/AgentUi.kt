@@ -298,7 +298,7 @@ fun AgentPermissionDialog(toolLabel: String, toolName: String, preview: String, 
                 Modifier.fillMaxWidth().clip(IrisRadius.smallShape).background(c.codeBackground)
                     .heightIn(max = 220.dp).verticalScroll(rememberScrollState()).padding(IrisSpace.S),
             ) {
-                Text(preview, style = IrisType.monoSmall, color = c.text)
+                SelectionContainer { Text(preview, style = IrisType.monoSmall, color = c.text) }
             }
         }
     }

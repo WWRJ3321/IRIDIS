@@ -276,7 +276,10 @@ fun Composer(
             Row(Modifier.fillMaxWidth().padding(start = IrisSpace.S), verticalAlignment = Alignment.CenterVertically) {
                 Icon(IrisIcons.Translate, null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(IrisSpace.XS))
-                Text(if (state.translating) TranslateText.TRANSLATING else I18n.s(R.string.chat_9aa52a), style = IrisType.labelSmall, color = c.textSecondary, modifier = Modifier.weight(1f))
+                AnimatedContent(
+                    state.translating, Modifier.weight(1f),
+                    transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "trLabel",
+                ) { on -> Text(if (on) TranslateText.TRANSLATING else I18n.s(R.string.chat_9aa52a), style = IrisType.labelSmall, color = c.textSecondary) }
                 if (state.translating) TypingDots()
                 PressableIcon(Icons.Outlined.Close, TranslateText.UNDO, size = 32.dp, iconSize = 16.dp, tint = c.textSecondary, onClick = onUndoTranslate)
             }

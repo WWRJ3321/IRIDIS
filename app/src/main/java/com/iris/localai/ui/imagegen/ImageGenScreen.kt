@@ -1,4 +1,8 @@
 package com.iris.localai.ui.imagegen
+import androidx.compose.foundation.text.selection.SelectionContainer
+import com.iris.localai.ui.components.InlineError
+import com.iris.localai.ui.components.Fold
+import com.iris.localai.ui.motion.RollingText
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -316,16 +320,20 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         style = IrisType.caption, color = Iris.colors.accent,
                         modifier = Modifier.padding(bottom = IrisDimens.space6),
                     )
-                    if (s.expanding) Text(I18n.s(R.string.ig268_expanding), style = IrisType.caption, color = Iris.colors.textSecondary,
-                        modifier = Modifier.padding(bottom = IrisDimens.space6))
-                    if (s.expandNoModel && !s.expanding) Text(I18n.s(R.string.ig27c_nomodel), style = IrisType.caption, color = Iris.colors.textSecondary,
-                        modifier = Modifier.padding(bottom = IrisDimens.space6))
+                    Fold(s.expanding) {
+                        Text(I18n.s(R.string.ig268_expanding), style = IrisType.caption, color = Iris.colors.textSecondary,
+                            modifier = Modifier.padding(bottom = IrisDimens.space6))
+                    }
+                    Fold(s.expandNoModel && !s.expanding) {
+                        Text(I18n.s(R.string.ig27c_nomodel), style = IrisType.caption, color = Iris.colors.textSecondary,
+                            modifier = Modifier.padding(bottom = IrisDimens.space6))
+                    }
                     // sd.cpp models — GPU or CPU for the next image, 「重试 GPU」 after a crash, 「改用 CPU」.
                     // NPU models — only 「重试 NPU」 after the app died during an NPU run.
                     if (s.model.sdq && s.sdHtpCrashed && !s.running) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = IrisDimens.space6)) {
                             Text(SdCppEngine.SDQ_CRASHED, style = IrisType.caption, color = Iris.colors.textSecondary, modifier = Modifier.weight(1f))
-                            IrisButton("重试 NPU", onClick = vm::retryGpu, style = IrisButtonStyle.Text, compact = true)
+                            IrisButton(I18n.s(R.string.b4r2_retry_npu), onClick = vm::retryGpu, style = IrisButtonStyle.Text, compact = true)
                         }
                     }
                     if (s.model.backend == Backend.SDCPP && !s.model.sdq && !s.running) {
@@ -356,7 +364,7 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                         } else {
                             IrisProgressBar(if (s.total > 0) s.step.toFloat() / s.total else null)
                             Spacer(Modifier.height(IrisDimens.space6))
-                            Text(I18n.s(R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption, color = Iris.colors.textSecondary)
+                            RollingText(I18n.s(R.string.imagegen_1563a6, s.step, s.total), style = IrisType.caption.copy(fontFeatureSettings = "tnum"), color = Iris.colors.textSecondary)
                         }
                         // 3.0 闲言碎语
                         com.iris.localai.ui.quips.IdleQuip(com.iris.localai.ui.quips.IdleQuips.Scene.IMAGE, active = true, modifier = Modifier.fillMaxWidth().padding(top = IrisDimens.space6))
@@ -365,22 +373,22 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                     } else {
                         IrisButton(ImageGenText.GENERATE, onClick = vm::generate, modifier = Modifier.fillMaxWidth(), icon = IrisIcons.Spark, enabled = s.canGenerate)
                     }
-                    s.error?.let {
-                        Spacer(Modifier.height(IrisDimens.space8))
-                        Text(it, style = IrisType.secondary, color = Iris.colors.danger)
-                        if (s.model.backend == Backend.SDCPP && it != ImageGenText.CANCELLED) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (s.lowMem) IrisButton(I18n.s(R.string.sd243_force), onClick = vm::generateAnyway, style = IrisButtonStyle.Text, compact = true)
-                                IrisButton(I18n.s(R.string.v30_copy_sd_log), onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
-                            }
+                    InlineError(s.error, Modifier.padding(top = IrisDimens.space8), style = IrisType.secondary)
+                    Fold(s.error != null && s.model.backend == Backend.SDCPP && s.error != ImageGenText.CANCELLED) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (s.lowMem) IrisButton(I18n.s(R.string.sd243_force), onClick = vm::generateAnyway, style = IrisButtonStyle.Text, compact = true)
+                            IrisButton(I18n.s(R.string.v30_copy_sd_log), onClick = { copySdLog() }, style = IrisButtonStyle.Text, compact = true)
                         }
                     }
                 }
             }
 
             s.result?.let { path ->
-                full {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.groupGutter)) {
+                full(key = "result") {
+                    Column(
+                        (if (LocalReduceMotion.current) Modifier else Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard()))
+                            .fillMaxWidth().padding(horizontal = IrisDimens.groupGutter),
+                    ) {
                         // r5：点结果图直接进看图页（缩放 / 参数 / 保存 / 分享）
                         Thumb(path, Modifier.fillMaxWidth().aspectRatio(1f).clickable { s.history.indexOf(path).takeIf { it >= 0 }?.let { viewing = it } }, maxSide = 1024, fit = true)
                         Spacer(Modifier.height(IrisDimens.space8))
@@ -394,7 +402,9 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
                             })
                             IrisButton(ImageGenText.TO_CHAT, icon = IrisIcons.Chat, style = IrisButtonStyle.Tonal, compact = true, onClick = { onSendToChat(path) })
                         }
-                        s.usedPrompt?.let { up -> Text(I18n.s(R.string.ig268_used, up), style = IrisType.caption, color = Iris.colors.textTertiary, maxLines = 4) }
+                        s.usedPrompt?.let { up ->
+                            SelectionContainer { Text(I18n.s(R.string.ig268_used, up), style = IrisType.caption, color = Iris.colors.textTertiary, maxLines = 4, overflow = TextOverflow.Ellipsis) }
+                        }
                         // the seed this image used (the seed field keeps what the user typed); 「固定此种子」 copies it in.
                         s.lastSeed?.let { used ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -408,14 +418,16 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
 
             // history manager — viewer with parameters, multi-select delete, 用这组参数.
             if (s.history.isNotEmpty()) {
-                full {
-                    HistoryHeader(
-                        count = s.history.size, bytes = s.historyBytes, selecting = selecting, selectedCount = selected.size,
-                        onManage = { selecting = true },
-                        onToggleAll = { selected = if (selected.size == s.history.size) emptySet() else s.history.toSet() },
-                        onDelete = { if (selected.isNotEmpty()) confirmDelete = selected.toList() },
-                        onDone = { selecting = false; selected = emptySet() },
-                    )
+                full(key = "historyHeader") {
+                    Box(if (LocalReduceMotion.current) Modifier else Modifier.animateItem(fadeInSpec = IrisMotion.standard(), placementSpec = IrisMotion.Gentle.offset(), fadeOutSpec = IrisMotion.standard())) {
+                        HistoryHeader(
+                            count = s.history.size, bytes = s.historyBytes, selecting = selecting, selectedCount = selected.size,
+                            onManage = { selecting = true },
+                            onToggleAll = { selected = if (selected.size == s.history.size) emptySet() else s.history.toSet() },
+                            onDelete = { if (selected.isNotEmpty()) confirmDelete = selected.toList() },
+                            onDone = { selecting = false; selected = emptySet() },
+                        )
+                    }
                 }
                 items(s.history, key = { it }) { p ->
                     // deleted tiles fade out, new ones fade in, the rest glide into place.
@@ -437,7 +449,8 @@ fun ImageGenScreen(onBack: () -> Unit, onSendToChat: (String) -> Unit, vm: Image
     }
 }
 
-private fun LazyGridScope.full(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
+private fun LazyGridScope.full(key: Any? = null, content: @Composable androidx.compose.foundation.lazy.grid.LazyGridItemScope.() -> Unit) =
+    item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
 
 @Composable
 internal fun Field(
@@ -460,10 +473,10 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
     val c = Iris.colors
     Box(
         Modifier.clip(IrisRadius.pillShape)
-            .background(if (selected) c.accentContainer else c.surfaceVariant)
+            .background(com.iris.localai.ui.motion.selectTint(if (selected) c.accentContainer else c.surfaceVariant))
             .clickable(onClick = onClick)
             .padding(horizontal = IrisDimens.space12, vertical = IrisDimens.space6),
-    ) { Text(text, style = IrisType.labelSmall, color = if (selected) c.onAccentContainer else c.textSecondary) }
+    ) { Text(text, style = IrisType.labelSmall, color = com.iris.localai.ui.motion.selectTint(if (selected) c.onAccentContainer else c.textSecondary)) }
 }
 
 /** Tier/model chip: name, size, 已下载/未下载 + 下载. */
@@ -476,12 +489,12 @@ private fun ModelChip(
     Column(
         Modifier.width(170.dp).fillMaxHeight()
             .clip(IrisRadius.largeShape)
-            .background(if (selected) c.accentContainer else c.surfaceElevated)
-            .border(1.dp, if (selected) c.onAccentContainer.copy(alpha = 0.25f) else c.outline, IrisRadius.largeShape)
+            .background(com.iris.localai.ui.motion.selectTint(if (selected) c.accentContainer else c.surfaceElevated))
+            .border(1.dp, com.iris.localai.ui.motion.selectTint(if (selected) c.onAccentContainer.copy(alpha = 0.25f) else c.outline), IrisRadius.largeShape)
             .clickable(onClick = onClick)
             .padding(IrisDimens.space12),
     ) {
-        val fg = if (selected) c.onAccentContainer else c.text
+        val fg = com.iris.localai.ui.motion.selectTint(if (selected) c.onAccentContainer else c.text)
         val busy = dl is ImageDl.Downloading || dl is ImageDl.Extracting
         // Beta3：导入的模型不再上下各写一遍「已导入」；下载中右上角一个 ✕ 取消
         Row(verticalAlignment = Alignment.Top) {
@@ -491,7 +504,7 @@ private fun ModelChip(
             }
             if (busy) androidx.compose.material3.Icon(
                 IrisIcons.Close, ImageGenText.CANCEL, tint = c.textSecondary,
-                modifier = Modifier.size(28.dp).clip(IrisRadius.pillShape).clickable(onClick = onCancel).padding(5.dp),
+                modifier = Modifier.size(40.dp).clip(IrisRadius.pillShape).clickable(onClick = onCancel).padding(11.dp),
             )
         }
         if (m.note.isNotEmpty()) Text(m.note, style = IrisType.micro, color = c.textTertiary, maxLines = 2)
@@ -514,10 +527,10 @@ private fun ModelChip(
                 val pct = "${(frac * 100).toInt()}%"
                 val label = if (dl is ImageDl.Downloading) "$pct · ${DlSize.pair(dl.done, dl.total)}" else "${ImageGenText.EXTRACTING} $pct"
                 IrisProgressBar(frac, Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4))
-                Text(label, style = IrisType.caption, color = c.textSecondary, maxLines = 1, softWrap = false)
+                RollingText(label, style = IrisType.caption.copy(fontFeatureSettings = "tnum"), color = c.textSecondary)
             }
             else -> {
-                if (dl is ImageDl.Failed) Text(dl.message, style = IrisType.caption, color = c.danger, maxLines = 5)
+                InlineError((dl as? ImageDl.Failed)?.message, maxLines = 5)
                 if (!(m.imported && downloaded)) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (downloaded) ImageGenText.DOWNLOADED else ImageGenText.NOT_DOWNLOADED, style = IrisType.caption,
                         color = if (downloaded) c.success else c.textTertiary, modifier = Modifier.weight(1f))
@@ -580,7 +593,7 @@ private fun SelfCheckCard(report: String?, onRun: () -> Unit) {
             }
             if (report != null) {
                 Spacer(Modifier.height(IrisDimens.space8))
-                Text(report, style = IrisType.monoSmall, color = Iris.colors.text)
+                SelectionContainer { Text(report, style = IrisType.monoSmall, color = Iris.colors.text) }
             }
         }
     }

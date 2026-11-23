@@ -1,4 +1,5 @@
 package com.iris.localai.ui.agent
+import com.iris.localai.ui.motion.RollingText
 
 import com.iris.localai.ui.motion.IrisMotion
 import androidx.compose.animation.core.RepeatMode
@@ -97,7 +98,7 @@ fun ImageGenLiveCard(line: String, modifier: Modifier = Modifier) {
         IrisProgressBar(target, Modifier.width(168.dp), height = 4.dp, track = c.outline)
         Row(Modifier.width(168.dp).padding(top = IrisDimens.space4)) {
             Text(line, style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (target != null) Text("${(shown * 100).toInt()}%", style = IrisType.caption, color = c.textTertiary)
+            if (target != null) RollingText("${(shown * 100).toInt()}%", style = IrisType.caption.copy(fontFeatureSettings = "tnum"), color = c.textTertiary)
         }
     }
 }

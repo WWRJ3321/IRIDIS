@@ -1,4 +1,7 @@
 package com.iris.localai.ui.imagegen
+import com.iris.localai.ui.components.InlineError
+import com.iris.localai.ui.motion.RollingText
+import androidx.compose.ui.text.style.TextOverflow
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -66,7 +69,10 @@ internal fun ImportChip(progress: Float?, file: String, onClick: () -> Unit) {
         Spacer(Modifier.weight(1f))
         if (progress != null) {
             IrisProgressBar(progress, Modifier.fillMaxWidth().padding(vertical = IrisDimens.space4))
-            Text("${(progress * 100).toInt()}% · $file", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RollingText("${(progress * 100).toInt()}%", style = IrisType.caption.copy(fontFeatureSettings = "tnum"), color = c.textSecondary)
+                Text(" · $file", style = IrisType.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -124,7 +130,7 @@ internal fun ImportDialog(vm: ImageGenViewModel, onDismiss: () -> Unit) {
                 else for ((_, n, r) in p.files) Text("${roleText(r)} · $n", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
                 if (p.reuseLlm.isNotEmpty()) Text("${I18n.s(R.string.ig269_te)} · ${I18n.s(R.string.ig269_downloaded, p.reuseLlm.substringAfterLast('/'))}", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
                 if (p.reuseVae.isNotEmpty()) Text("${I18n.s(R.string.ig269_vae)} · ${I18n.s(R.string.ig269_downloaded, p.reuseVae.substringAfterLast('/'))}", style = IrisType.caption, color = c.textSecondary, maxLines = 1)
-                p.error?.let { Text(it, style = IrisType.caption, color = c.warning) }
+                InlineError(p.error, color = c.warning)
                 Spacer(Modifier.height(IrisDimens.space8))
             }
             OutlinedTextField(name, { name = it.take(40) }, label = { Text(I18n.s(R.string.ig269_name)) }, singleLine = true,

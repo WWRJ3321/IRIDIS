@@ -1,4 +1,11 @@
 package com.iris.localai.ui.models
+import androidx.compose.animation.AnimatedContent
+import com.iris.localai.ui.components.Fold
+import com.iris.localai.ui.components.InlineError
+import com.iris.localai.ui.motion.IrisMotion
+import com.iris.localai.ui.motion.motion
+import com.iris.localai.ui.motion.SelectCheck
+import com.iris.localai.ui.theme.LocalReduceMotion
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -188,15 +195,18 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 }
             }
             // 上次加载崩溃后 GPU 被安全关闭：可手动重新检测。
-            if (gpuOff || gpuRecheckNote != null) {
+            Fold(gpuOff || gpuRecheckNote != null) {
+                val reduce = LocalReduceMotion.current
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = IrisDimens.pageGutter + IrisDimens.space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        gpuRecheckNote ?: I18n.s(R.string.engine_cl_off), style = IrisType.caption, color = c.textTertiary,
-                        maxLines = 3, modifier = Modifier.weight(1f),
-                    )
+                    AnimatedContent(
+                        gpuRecheckNote ?: I18n.s(R.string.engine_cl_off), Modifier.weight(1f),
+                        transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "gpuNote",
+                    ) { t ->
+                        Text(t, style = IrisType.caption, color = c.textTertiary, maxLines = 3)
+                    }
                     if (gpuOff) IrisButton(
                         I18n.s(R.string.models_gpu_recheck), {
                             val restart = engine.crashMemory.retryGpu()
@@ -499,7 +509,7 @@ fun ModelConfigSheet(model: LocalModel, onDismiss: () -> Unit) {
                 // pick / replace from a file; 移除 = never load one
                 if (mmprojBusy) SettingsRow(I18n.s(R.string.mm245_copying), trailing = { TypingDots() })
                 else CheckRow(I18n.s(R.string.mm235_pick), false) { mmprojFilePicker.launch(arrayOf("*/*")) }
-                mmprojError?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.XS)) }
+                InlineError(mmprojError, Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.XS))
                 if (o.mmproj != MmprojPairing.OFF && (o.mmproj != null || mmprojAuto != null))
                     CheckRow(I18n.s(R.string.mm235_remove), false) { set { it.copy(mmproj = MmprojPairing.OFF) } }
             }
@@ -531,7 +541,7 @@ private fun BackendRow(
                 Text(I18n.s(R.string.chat_4403fc), style = IrisType.labelSmall, color = Iris.colors.accent, modifier = Modifier.clickable(onClick = trailingAction).padding(IrisDimens.space8))
             }
             Box(Modifier.size(IrisDimens.iconLarge), contentAlignment = Alignment.Center) {
-                if (selected) Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.text, modifier = Modifier.size(IrisDimens.iconMedium))
+                SelectCheck(selected) { Icon(Icons.Outlined.Check, I18n.s(R.string.chat_f08afd), tint = Iris.colors.accent, modifier = Modifier.size(IrisDimens.iconMedium)) }
             }
         }
     }
@@ -558,13 +568,13 @@ private fun OvSlider(
     subtitle: String? = null, steps: Int = 0, onChange: (Float) -> Unit, onReset: () -> Unit,
 ) {
     SliderRow(title, value, range, if (inherited) I18n.s(R.string.models_82a38b, display) else display, subtitle = subtitle, steps = steps, onChange = onChange)
-    if (!inherited) ResetLink(onReset)
+    Fold(!inherited) { ResetLink(onReset) }
 }
 
 @Composable
 private fun OvSwitch(title: String, checked: Boolean, inherited: Boolean, subtitle: String? = null, onChange: (Boolean) -> Unit, onReset: () -> Unit) {
     SwitchRow(title + if (inherited) I18n.s(R.string.models_c63342) else "", checked, subtitle = subtitle, onChange = onChange)
-    if (!inherited) ResetLink(onReset)
+    Fold(!inherited) { ResetLink(onReset) }
 }
 
 @Composable

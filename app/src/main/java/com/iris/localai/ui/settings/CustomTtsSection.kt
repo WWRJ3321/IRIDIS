@@ -1,4 +1,5 @@
 package com.iris.localai.ui.settings
+import com.iris.localai.ui.components.InlineError
 
 import com.iris.localai.ui.components.IrisDialog
 import com.iris.localai.ui.components.TextInputDialog
@@ -87,7 +88,7 @@ internal fun CustomTtsSection(vm: SettingsViewModel) {
             Divider()
             SettingsRow(I18n.s(R.string.tts245_paste_url), subtitle = I18n.s(R.string.tts245_paste_url_sub), onClick = { vm.clearTtsImportMessage(); askUrl = true })
         }
-        state.error?.let { err -> Text(err, style = IrisType.caption, color = c.danger, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.S)) }
+        InlineError(state.error, Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.S))
         state.added?.let { name -> Text(I18n.s(R.string.tts245_added, name), style = IrisType.caption, color = c.textSecondary, modifier = Modifier.padding(horizontal = IrisSpace.L, vertical = IrisSpace.S)) }
     }
     GroupFootnote(I18n.s(R.string.tts245_footnote))

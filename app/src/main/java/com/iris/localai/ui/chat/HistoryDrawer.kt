@@ -535,7 +535,7 @@ fun HistoryDrawer(
                     LaunchedEffect(dragVel) { if (dragVel != 0f) { kotlinx.coroutines.delay(70); dragVel = 0f } }
                     val tilt by animateFloatAsState(
                         if (reduce) 0f else HistoryPress.tiltFor(dragVel),
-                        if (reduce) snap() else spring(dampingRatio = 0.62f, stiffness = 320f), label = "dragTilt",
+                        if (reduce) snap() else IrisMotion.Tilt.float(), label = "dragTilt",
                     )
                     ConversationItem(
                         dragItem, selected = true, running = dragItem.id == runningId,

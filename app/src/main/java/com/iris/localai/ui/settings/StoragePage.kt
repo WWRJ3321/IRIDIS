@@ -1,4 +1,6 @@
 package com.iris.localai.ui.settings
+import com.iris.localai.ui.components.Fold
+import com.iris.localai.ui.components.rememberLast
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -779,13 +781,19 @@ private fun StorageSummary(r: StorageUsage.Report?, free: Long?, scanning: Boole
             )
             Spacer(Modifier.height(IrisDimens.space16))
             StorageBar(r)
-            if (r != null) {
-                Spacer(Modifier.height(IrisSpace.M))
-                Legend(r)
+            val lastR = rememberLast(r)
+            Fold(r != null) {
+                Column {
+                    Spacer(Modifier.height(IrisSpace.M))
+                    lastR?.let { Legend(it) }
+                }
             }
-            if (note != null) {
-                Spacer(Modifier.height(IrisDimens.space12))
-                Text(note, style = IrisType.secondary, color = c.accent)
+            val lastNote = rememberLast(note)
+            Fold(note != null) {
+                Column {
+                    Spacer(Modifier.height(IrisDimens.space12))
+                    Text(lastNote.orEmpty(), style = IrisType.secondary, color = c.accent)
+                }
             }
         }
     }

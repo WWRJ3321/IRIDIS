@@ -1196,8 +1196,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), VoiceChatBridge {
     }
 
     /** Card of the conversation on screen (avatar + name in the top bar and on replies). */
-    val character: StateFlow<CharacterStore.Entry?> = shown
-        .map { it.characterId }.distinctUntilChanged()
+    val character: StateFlow<CharacterStore.Entry?> = kotlinx.coroutines.flow.combine(
+        shown.map { it.characterId }.distinctUntilChanged(), c.characters.revision,
+    ) { id, _ -> id }
         .map { id -> id?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.characters.get(it) }.getOrNull() } } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

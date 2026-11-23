@@ -1,4 +1,5 @@
 package com.iris.localai.ui.agent
+import androidx.compose.foundation.text.selection.SelectionContainer
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -95,7 +96,7 @@ fun GuiAgentSection() {
             )
         }
     }
-    if (run.lines.isNotEmpty()) GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true)
+    if (run.lines.isNotEmpty()) SelectionContainer { GroupFootnote(run.lines.takeLast(12).joinToString("\n"), monospace = true) }
     GroupFootnote(GuiAgentText.NOTE)
     // 无障碍保活 card removed.
 

@@ -1,4 +1,6 @@
 package com.iris.localai.ui.settings
+import com.iris.localai.ui.motion.selectTint
+import com.iris.localai.ui.motion.SelectCheck
 
 import com.iris.localai.I18n
 import com.iris.localai.R
@@ -68,21 +70,24 @@ fun PaletteSwatches(selectedId: String, onSelect: (IrisPalette) -> Unit) {
                         .padding(horizontal = IrisDimens.space4, vertical = IrisDimens.space6),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    val accent = p.colors(c.isDark).accent
+                    // 未选中时用同色 0 透明，渐变时不经过黑色
+                    val ring = selectTint(if (isSel) accent else accent.copy(alpha = 0f), "paletteRing")
                     Box(
                         Modifier
                             .size(44.dp)
-                            .then(if (isSel) Modifier.border(IrisDimens.space2, p.colors(c.isDark).accent, CircleShape) else Modifier)
+                            .border(IrisDimens.space2, ring, CircleShape)
                             .padding(IrisDimens.space4)
                             .clip(CircleShape)
                             .then(p.swatchGradient?.let { g -> Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(g)) } ?: Modifier.background(p.colors(c.isDark).accent)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isSel) Icon(IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp))
+                        SelectCheck(isSel) { Icon(IrisIcons.Check, null, tint = p.colors(c.isDark).onAccent, modifier = Modifier.size(18.dp)) }
                     }
                     Spacer(Modifier.height(IrisDimens.space4))
                     Text(
                         p.label, style = IrisType.caption, textAlign = TextAlign.Center,
-                        color = if (isSel) c.text else c.textSecondary,
+                        color = selectTint(if (isSel) c.text else c.textSecondary, "paletteLabel"),
                     )
                 }
             }

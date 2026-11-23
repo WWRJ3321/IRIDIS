@@ -2388,4 +2388,10 @@
     <string name="b4_gs_load">Cargar %1$s</string>
     <string name="b4_gs_retry">Reintentar</string>
     <string name="b4_gs_more">Otros modelos</string>
+    <string name="b4r2_retry_npu">Reintentar NPU</string>
+    <string name="b4r2_img_make_room">Liberar el modelo de texto si falta memoria</string>
+    <string name="b4r2_img_make_room_sub">Se recarga después; tarda unos segundos más</string>
+    <string name="b4r2_img_ref_fallback">Con imagen de referencia, un modelo no compatible se cambia solo</string>
+    <string name="b4r2_char_edit">Editar este personaje</string>
+    <string name="b4r2_char_avatar">Cambiar avatar</string>
 </resources>

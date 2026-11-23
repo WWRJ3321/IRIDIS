@@ -1,4 +1,9 @@
 package com.iris.localai.ui.agent
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 import com.iris.localai.BuildConfig
 import com.iris.localai.I18n
@@ -103,20 +108,20 @@ fun AgentExtraSections() {
         value = withContext(Dispatchers.IO) { agent.imageModels() }
     }
     if (imageModels.isNotEmpty()) {
-        SectionTitle("生图")
+        SectionTitle(I18n.s(R.string.chat_19a9bc))
         SettingsGroup {
             val picked = s.imageModel.takeIf { id -> imageModels.any { it.id == id } }.orEmpty()
-            CheckRow("自动", selected = picked.isEmpty()) { agent.settings.update { it.copy(imageModel = "") } }
+            CheckRow(I18n.s(R.string.settings_3aed2c), selected = picked.isEmpty()) { agent.settings.update { it.copy(imageModel = "") } }
             imageModels.forEach { m ->
                 Divider()
                 CheckRow(m.name, selected = picked == m.id) { agent.settings.update { it.copy(imageModel = m.id) } }
             }
             Divider()
-            SwitchRow("内存不够时先卸载文本模型", s.imageMakeRoom, subtitle = "生完再装回，要多等几秒") { on ->
+            SwitchRow(I18n.s(R.string.b4r2_img_make_room), s.imageMakeRoom, subtitle = I18n.s(R.string.b4r2_img_make_room_sub)) { on ->
                 agent.settings.update { it.copy(imageMakeRoom = on) }
             }
         }
-        GroupFootnote("带参考图时，选的模型不支持会自动换一个")
+        GroupFootnote(I18n.s(R.string.b4r2_img_ref_fallback))
     }
 
     // ---- 技能 ----
@@ -344,7 +349,13 @@ fun BackupSection() {
         }
     }
     message?.let { m ->
-        IrisDialog(onDismiss = { message = null }, title = m, confirmText = I18n.s(R.string.settings_ac2c8f), onConfirm = { message = null }, dismissText = null)
+        // 首行当标题，全文放正文（可滚动、可复制）
+        val head = m.lineSequence().first().take(40)
+        IrisDialog(onDismiss = { message = null }, title = head, confirmText = I18n.s(R.string.settings_ac2c8f), onConfirm = { message = null }, dismissText = null) {
+            if (m != head) Box(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                SelectionContainer { Text(m, style = IrisType.secondary, color = Iris.colors.textSecondary) }
+            }
+        }
     }
 }
 
