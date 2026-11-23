@@ -16,6 +16,10 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("3.0.0 Beta4", listOf(
+            f("一步上手：还没模型时，对话页直接给出本机推荐模型，一点就下载，下完自动加载；装了还没加载就一点加载，失败可重试。"),
+            f("刚下载完、从没选过默认模型时，直接发消息也会自动加载第一个模型，不再提示先去选模型。"),
+        )),
         Release("3.0.0 Beta3", listOf(
             f("下载页精简：同一模型的 GGUF / MNN 合成一张卡，点格式切换；推荐里的 MoE 只留 Edge0-35B；下载时不再卡顿。"),
             f("手电筒、亮度、音量交给模型调用手机工具完成，只在这一句临时带上手机工具，不会打开智能体模式；无障碍服务名改为 IRIDIS GUI。"),

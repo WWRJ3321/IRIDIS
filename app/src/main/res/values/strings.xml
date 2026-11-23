@@ -2384,4 +2384,9 @@
     <string name="r5_ig_quality">画质词</string>
     <string name="r5_ig_negative">负面词</string>
     <string name="r5_ig_info">参数</string>
+    <string name="b4_gs_download">下载 %1$s · %2$s</string>
+    <string name="b4_gs_downloading">正在下载 %1$s</string>
+    <string name="b4_gs_load">加载 %1$s</string>
+    <string name="b4_gs_retry">重新加载</string>
+    <string name="b4_gs_more">其他模型</string>
 </resources>

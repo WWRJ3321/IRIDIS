@@ -187,6 +187,8 @@ class ModelsViewModel(app: Application) : AndroidViewModel(app) {
         if (c.settings.current.warnPopups && v.level == MemoryPreflight.Level.SHORT && v.message != null) _memWarn.value = m to v.message
         else c.engine.load(m)
     }
+    /** Beta4 空对话页「加载」：对话页没有内存确认弹窗，直接加载（加载失败会显示「重新加载」）。 */
+    fun loadNow(m: LocalModel) = viewModelScope.launch { c.engine.load(m) }
     private val _memWarn = MutableStateFlow<Pair<LocalModel, String>?>(null)
     val memWarn = _memWarn.asStateFlow()
     fun confirmMemLoad() { val p = _memWarn.value ?: return; _memWarn.value = null; viewModelScope.launch { c.engine.load(p.first) } }

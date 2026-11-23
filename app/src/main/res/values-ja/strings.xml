@@ -2383,4 +2383,9 @@
     <string name="r5_ig_quality">品質タグ</string>
     <string name="r5_ig_negative">ネガティブ</string>
     <string name="r5_ig_info">詳細</string>
+    <string name="b4_gs_download">%1$s を入手 · %2$s</string>
+    <string name="b4_gs_downloading">%1$s をダウンロード中</string>
+    <string name="b4_gs_load">%1$s を読み込む</string>
+    <string name="b4_gs_retry">再読み込み</string>
+    <string name="b4_gs_more">ほかのモデル</string>
 </resources>

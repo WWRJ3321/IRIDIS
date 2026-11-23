@@ -739,6 +739,7 @@ class EngineManager(
         val target = models.find(preferredFileName)
             ?: readyModel
             ?: defaultModel()
+            ?: com.iris.localai.data.GetStarted.fallback(models.models.value, { it.fileName }, com.iris.localai.knowledge.KbEmbedModels::isEmbedFile) // Beta4：刚下载完、从没选过也能直接发
             ?: return false
         return load(target, reason = I18n.s(R.string.engine_4978ec))
     }

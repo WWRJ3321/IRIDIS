@@ -173,6 +173,69 @@ internal fun ChatEmptyState(
         )
         Spacer(Modifier.height(IrisDimens.space20))
         Text(I18n.s(R.string.chat_61295b), style = IrisType.display, color = c.text, textAlign = TextAlign.Center)
+        GetStartedCard(engine)
+    }
+}
+
+/** 3.0.0 Beta4：空对话页一步上手——没模型就一键下载本机推荐，装了没加载就一键加载。 */
+@Composable
+private fun GetStartedCard(engine: EngineState) {
+    val vm: com.iris.localai.ui.models.ModelsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val models by vm.models.collectAsStateWithLifecycle()
+    val hub by vm.hub.collectAsStateWithLifecycle()
+    val settings by vm.settingsFlow.collectAsStateWithLifecycle()
+    val rec = remember {
+        val man = if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MANUFACTURER }.getOrNull() else null
+        val soc = if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { android.os.Build.SOC_MODEL }.getOrNull() else android.os.Build.HARDWARE
+        com.iris.localai.data.DeviceRecommend.pick(vm.totalRam(), com.iris.localai.data.DeviceRecommend.chip(man, soc))
+    }
+    val chatModels = remember(models) { models.filterNot { com.iris.localai.knowledge.KbEmbedModels.isEmbedFile(it.fileName) } }
+    val step = com.iris.localai.data.GetStarted.step(
+        installed = chatModels.size,
+        ready = engine is EngineState.Ready,
+        loading = engine is EngineState.Loading,
+        failed = engine is EngineState.Failed,
+        downloading = hub.active,
+        hasRecommend = rec != null,
+    )
+    val target = remember(chatModels, settings.defaultModelFile, settings.lastModelFile) {
+        chatModels.firstOrNull { it.fileName == settings.defaultModelFile }
+            ?: chatModels.firstOrNull { it.fileName == settings.lastModelFile }
+            ?: chatModels.firstOrNull()
+    }
+    androidx.compose.animation.AnimatedVisibility(visible = step != com.iris.localai.data.GetStarted.Step.NONE) {
+        Column(Modifier.padding(top = IrisDimens.space24), horizontalAlignment = Alignment.CenterHorizontally) {
+            when (step) {
+                com.iris.localai.data.GetStarted.Step.DOWNLOAD -> rec?.let { r ->
+                    com.iris.localai.ui.components.IrisButton(
+                        I18n.s(R.string.b4_gs_download, r.name, com.iris.localai.data.Format.bytes(r.sizeBytes)),
+                        onClick = { vm.downloadCatalog(r) },
+                    )
+                }
+                com.iris.localai.data.GetStarted.Step.DOWNLOADING -> {
+                    com.iris.localai.ui.components.IrisButton(
+                        I18n.s(R.string.b4_gs_downloading, rec?.takeIf { it.repoId == hub.repoId }?.name ?: hub.repoId.substringAfterLast('/')) + " · " + (hub.progress * 100).toInt() + "%",
+                        onClick = { com.iris.localai.ui.models.DownloadNav.opener?.invoke() },
+                        style = com.iris.localai.ui.components.IrisButtonStyle.Tonal,
+                    )
+                }
+                com.iris.localai.data.GetStarted.Step.LOAD -> target?.let { m ->
+                    com.iris.localai.ui.components.IrisButton(I18n.s(R.string.b4_gs_load, m.displayName), onClick = { vm.loadNow(m) })
+                }
+                com.iris.localai.data.GetStarted.Step.RETRY -> target?.let { m ->
+                    com.iris.localai.ui.components.IrisButton(I18n.s(R.string.b4_gs_retry), onClick = { vm.loadNow(m) }, style = com.iris.localai.ui.components.IrisButtonStyle.Tonal)
+                }
+                com.iris.localai.data.GetStarted.Step.NONE -> Unit
+            }
+            if (step == com.iris.localai.data.GetStarted.Step.DOWNLOAD) {
+                com.iris.localai.ui.components.IrisButton(
+                    I18n.s(R.string.b4_gs_more),
+                    onClick = { com.iris.localai.ui.models.DownloadNav.opener?.invoke() },
+                    style = com.iris.localai.ui.components.IrisButtonStyle.Text,
+                    compact = true,
+                )
+            }
+        }
     }
 }
 

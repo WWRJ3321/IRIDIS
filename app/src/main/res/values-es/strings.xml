@@ -2383,4 +2383,9 @@
     <string name="r5_ig_quality">Calidad</string>
     <string name="r5_ig_negative">Negativo</string>
     <string name="r5_ig_info">Detalles</string>
+    <string name="b4_gs_download">Descargar %1$s · %2$s</string>
+    <string name="b4_gs_downloading">Descargando %1$s</string>
+    <string name="b4_gs_load">Cargar %1$s</string>
+    <string name="b4_gs_retry">Reintentar</string>
+    <string name="b4_gs_more">Otros modelos</string>
 </resources>

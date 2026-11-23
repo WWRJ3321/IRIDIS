@@ -2383,4 +2383,9 @@
     <string name="r5_ig_quality">गुणवत्ता</string>
     <string name="r5_ig_negative">नेगेटिव</string>
     <string name="r5_ig_info">विवरण</string>
+    <string name="b4_gs_download">%1$s पाएं · %2$s</string>
+    <string name="b4_gs_downloading">%1$s डाउनलोड हो रहा है</string>
+    <string name="b4_gs_load">%1$s लोड करें</string>
+    <string name="b4_gs_retry">फिर से लोड करें</string>
+    <string name="b4_gs_more">अन्य मॉडल</string>
 </resources>

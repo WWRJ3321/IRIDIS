@@ -39,8 +39,8 @@ android {
         applicationId = "com.iridis"
         minSdk = 31
         targetSdk = 35
-        versionCode = 292
-        versionName = "3.0.0 Beta3"
+        versionCode = 293
+        versionName = "3.0.0 Beta4"
 
         ndk { abiFilters += "arm64-v8a" }
         if (prebuiltNative == null) externalNativeBuild {
