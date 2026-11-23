@@ -2395,4 +2395,6 @@
     <string name="b4r2_img_ref_fallback">带参考图时，选的模型不支持会自动换一个</string>
     <string name="b4r2_char_edit">编辑当前角色</string>
     <string name="b4r2_char_avatar">换头像</string>
+    <string name="b4r3_prompt">提示词</string>
+    <string name="b4r3_copy">复制</string>
 </resources>

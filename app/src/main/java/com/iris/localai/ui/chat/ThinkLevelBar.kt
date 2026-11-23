@@ -88,42 +88,40 @@ internal fun ThinkPill(
     var sel by remember { mutableIntStateOf(0) }
     val cur by rememberUpdatedState(ThinkLevelBar.current(thinking, level))
     val en by rememberUpdatedState(enabled)
-    val click by rememberUpdatedState(onClick)
-    val disabledClick by rememberUpdatedState(onDisabledClick)
     val pick by rememberUpdatedState(onPick)
 
     Box(modifier) {
+        // Beta4 r3：点按交给 ComposerPill 自己的点击（和旁边「智能体」「高速」同一套，之前自定义手势在部分机型上
+        // 点按被吞掉、思考关不掉）；这里只在长按弹出档位条后跟踪滑动，松手时应用。
         ComposerPill(
-            text, selected = thinking, enabled = enabled, onClick = onClick, icon = icon, customGesture = true,
+            text, selected = thinking, enabled = enabled, onClick = onClick, icon = icon,
+            onDisabledClick = onDisabledClick,
+            onLongClick = {
+                sel = cur
+                open = true
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            },
             modifier = Modifier.pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val r = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() ?: Cancelled }
-                    if (r === Cancelled) return@awaitEachGesture
-                    if (r != null) {
-                        (r as androidx.compose.ui.input.pointer.PointerInputChange).consume()
-                        if (en) click() else disabledClick()
-                        return@awaitEachGesture
-                    }
-                    if (!en) { disabledClick(); return@awaitEachGesture }
-                    sel = cur
-                    open = true
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     var moved = false
                     while (true) {
                         val ev = awaitPointerEvent()
                         val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!moved && (abs(ch.position.x - down.position.x) > slopPx || abs(ch.position.y - down.position.y) > slopPx)) moved = true
-                        if (moved) {
-                            val i = ThinkLevelBar.indexAt(ch.position.x, segPx)
-                            if (i != sel) { sel = i; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                        if (open) {
+                            if (!moved && (abs(ch.position.x - down.position.x) > slopPx || abs(ch.position.y - down.position.y) > slopPx)) moved = true
+                            if (moved) {
+                                val i = ThinkLevelBar.indexAt(ch.position.x, segPx)
+                                if (i != sel) { sel = i; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                            }
                         }
-                        ch.consume()
                         if (!ch.pressed) break
                     }
-                    open = false
-                    // r5：没滑动就松手 = 只是看一眼，不改开关（以前会把关掉的思考重新打开）。
-                    ThinkToggle.onRelease(moved, sel)?.let { pick(it) }
+                    if (open) {
+                        open = false
+                        // 没滑动就松手 = 只是看一眼，不改开关。
+                        ThinkToggle.onRelease(moved, sel)?.let { pick(it) }
+                    }
                 }
             },
         )

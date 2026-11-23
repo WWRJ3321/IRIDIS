@@ -2394,4 +2394,6 @@
     <string name="b4r2_img_ref_fallback">संदर्भ छवि के साथ, असमर्थित मॉडल अपने-आप बदल जाता है</string>
     <string name="b4r2_char_edit">इस किरदार को संपादित करें</string>
     <string name="b4r2_char_avatar">अवतार बदलें</string>
+    <string name="b4r3_prompt">प्रॉम्प्ट</string>
+    <string name="b4r3_copy">कॉपी</string>
 </resources>

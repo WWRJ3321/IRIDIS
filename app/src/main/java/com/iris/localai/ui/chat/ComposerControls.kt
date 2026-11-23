@@ -8,6 +8,7 @@ import com.iris.localai.ui.theme.IrisSpace
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -98,6 +99,7 @@ object ComposerPillStyle {
  * One composer pill. [selected] = on (blue). [enabled] = false greys it out but it stays tappable
  * when [onDisabledClick] is given, so a tap can explain why (e.g. the model has no thinking).
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun ComposerPill(
     text: String,
@@ -113,6 +115,8 @@ internal fun ComposerPill(
     compact: Boolean = false,
     /** taps handled by the caller's own gesture (思考 long-press bar). */
     customGesture: Boolean = false,
+    /** long-press (思考 opens its 低 中 高 bar); taps still go through the normal click. */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val c = Iris.colors
     val dark = c.isDark
@@ -135,11 +139,19 @@ internal fun ComposerPill(
                     stateDescription = if (on) I18n.s(R.string.chat_9db7a8) else if (enabled) I18n.s(R.string.chat_9c5850) else I18n.s(R.string.chat_d1e4a7)
                 }
             }
-            .clickable(
-                enabled = clickable,
-                interactionSource = interaction,
-                indication = LocalIndication.current,
-                onClick = { if (enabled) onClick() else onDisabledClick?.invoke() },
+            .then(
+                if (onLongClick != null) Modifier.combinedClickable(
+                    enabled = clickable,
+                    interactionSource = interaction,
+                    indication = LocalIndication.current,
+                    onLongClick = { if (enabled) onLongClick() else onDisabledClick?.invoke() },
+                    onClick = { if (enabled) onClick() else onDisabledClick?.invoke() },
+                ) else Modifier.clickable(
+                    enabled = clickable,
+                    interactionSource = interaction,
+                    indication = LocalIndication.current,
+                    onClick = { if (enabled) onClick() else onDisabledClick?.invoke() },
+                )
             )
             .padding(horizontal = (if (compact) ComposerPillStyle.COMPACT_H_PADDING_DP else ComposerPillStyle.H_PADDING_DP).dp),
         verticalAlignment = Alignment.CenterVertically,

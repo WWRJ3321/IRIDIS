@@ -2394,4 +2394,6 @@
     <string name="b4r2_img_ref_fallback">With a reference image, an unsupported model is swapped automatically</string>
     <string name="b4r2_char_edit">Edit this character</string>
     <string name="b4r2_char_avatar">Change avatar</string>
+    <string name="b4r3_prompt">Prompt</string>
+    <string name="b4r3_copy">Copy</string>
 </resources>

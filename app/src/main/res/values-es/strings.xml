@@ -2394,4 +2394,6 @@
     <string name="b4r2_img_ref_fallback">Con imagen de referencia, un modelo no compatible se cambia solo</string>
     <string name="b4r2_char_edit">Editar este personaje</string>
     <string name="b4r2_char_avatar">Cambiar avatar</string>
+    <string name="b4r3_prompt">Prompt</string>
+    <string name="b4r3_copy">Copiar</string>
 </resources>

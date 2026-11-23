@@ -1,6 +1,7 @@
 package com.iris.localai.ui.imagegen
 
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.width
 import com.iris.localai.ui.motion.SelectCheck
 import com.iris.localai.I18n
@@ -152,75 +153,121 @@ internal fun HistoryViewer(
     val params by produceState<ImageGenFiles.Params?>(null, path) { value = vm.params(path) }
     val file = File(path)
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().enterOnce().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
-            // r5：顶栏只留关闭、序号、「参数」开关（文件名去掉）；图可双指缩放、双击放大、放大后拖动
-            var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
-            Row(Modifier.fillMaxWidth().padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6), verticalAlignment = Alignment.CenterVertically) {
+        // Beta4 r3：对话框窗口铺满整屏、系统栏透明、不加灰色遮罩——之前状态栏是一条灰带，
+        // 底部操作被手势条压住、标签被截掉。
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
+                w.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                w.setDimAmount(0f)
+                @Suppress("DEPRECATION") run {
+                    w.statusBarColor = android.graphics.Color.TRANSPARENT
+                    w.navigationBarColor = android.graphics.Color.TRANSPARENT
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 29) { w.isNavigationBarContrastEnforced = false; w.isStatusBarContrastEnforced = false }
+                if (android.os.Build.VERSION.SDK_INT >= 28) w.attributes = w.attributes.apply {
+                    layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+                androidx.core.view.WindowInsetsControllerCompat(w, w.decorView).apply {
+                    isAppearanceLightStatusBars = false; isAppearanceLightNavigationBars = false
+                }
+            }
+        }
+        val rm = com.iris.localai.ui.theme.LocalReduceMotion.current
+        // 「i」= 详情面板显隐；打开看图时面板从底部滑上来。
+        val info = androidx.compose.runtime.remember { androidx.compose.animation.core.MutableTransitionState(false) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { info.targetState = true }
+        Box(Modifier.fillMaxSize().enterOnce().background(Color.Black)) {
+            // 图铺满整屏（顶栏、面板浮在上面），双指缩放、双击放大、放大后拖动
+            ZoomImage(path, Modifier.fillMaxSize())
+            // 顶栏：上方渐变压暗，状态栏下面
+            Row(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
+                    .statusBarsPadding()
+                    .padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space6),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 RoundIcon(IrisIcons.Close, onClose)
                 Text(HistoryText.position(i, paths.size), style = IrisType.labelSmall, color = Color.White, modifier = Modifier.weight(1f).padding(start = IrisDimens.space8))
-                RoundIcon(IrisIcons.Info) { info = !info }
+                RoundIcon(IrisIcons.Info) { info.targetState = !info.targetState }
             }
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                ZoomImage(path, Modifier.fillMaxSize())
-                if (i > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronLeft) { onIndex(i - 1) } }
-                if (i < paths.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronRight) { onIndex(i + 1) } }
-            }
-            // Beta4 r2：详情不再是黑页下面突兀的一块白底——改成同色系深色面板（顶部圆角、细分隔线），
-            // 「i」开关用展开/收起动画；提示词可长按选择，旁边一个复制按钮；操作改成一排图标+短标签，全部一屏放下不用横滑。
+            if (i > 0) Box(Modifier.align(Alignment.CenterStart).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronLeft) { onIndex(i - 1) } }
+            if (i < paths.size - 1) Box(Modifier.align(Alignment.CenterEnd).padding(IrisDimens.space8)) { RoundIcon(IrisIcons.ChevronRight) { onIndex(i + 1) } }
+
             val p = params
             val copy: (String) -> Unit = { t ->
                 context.getSystemService(android.content.ClipboardManager::class.java)
                     ?.setPrimaryClip(android.content.ClipData.newPlainText("prompt", t))
                 toast(HistoryText.COPIED)
             }
-            // 面板打开时从底部滑上来（减少动态效果时直接出现）
-            val rmOpen = com.iris.localai.ui.theme.LocalReduceMotion.current
-            val rise = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (rmOpen) 0f else 1f) }
-            androidx.compose.runtime.LaunchedEffect(Unit) { rise.animateTo(0f, com.iris.localai.ui.motion.IrisMotion.Gentle.float()) }
-            Column(
-                Modifier.fillMaxWidth()
-                    .graphicsLayer { translationY = size.height * rise.value; alpha = 1f - rise.value * 0.6f }
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    .background(ViewerChrome.PANEL)
-                    .padding(horizontal = IrisDimens.space16, vertical = IrisDimens.space12),
+            androidx.compose.animation.AnimatedVisibility(
+                visibleState = info,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = if (rm) androidx.compose.animation.fadeIn() else
+                    androidx.compose.animation.slideInVertically(com.iris.localai.ui.motion.IrisMotion.Gentle.offset()) { it } +
+                        androidx.compose.animation.fadeIn(),
+                exit = if (rm) androidx.compose.animation.fadeOut() else
+                    androidx.compose.animation.slideOutVertically(com.iris.localai.ui.motion.IrisMotion.Smooth.offset()) { it } +
+                        androidx.compose.animation.fadeOut(),
             ) {
-                val rm = com.iris.localai.ui.theme.LocalReduceMotion.current
-                androidx.compose.animation.AnimatedVisibility(
-                    info,
-                    enter = if (rm) androidx.compose.animation.EnterTransition.None else com.iris.localai.ui.motion.IrisMotion.expand(),
-                    exit = if (rm) androidx.compose.animation.ExitTransition.None else com.iris.localai.ui.motion.IrisMotion.collapse(),
+                // 深色面板一直铺到屏幕底边（手势条下面也是面板色），内容在手势条上方
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        .background(ViewerChrome.PANEL)
+                        .navigationBarsPadding()
+                        .padding(start = IrisDimens.space16, end = IrisDimens.space16, top = IrisDimens.space8, bottom = IrisDimens.space8),
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(bottom = IrisDimens.space12)) {
-                        if (p == null) {
-                            Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = ViewerChrome.TEXT3)
-                        } else {
-                            Row(verticalAlignment = Alignment.Top) {
-                                androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f).heightIn(max = 132.dp).verticalScroll(rememberScrollState())) {
+                    if (p == null) {
+                        Text(HistoryText.NO_PARAMS, style = IrisType.caption, color = ViewerChrome.TEXT3, modifier = Modifier.padding(vertical = IrisDimens.space8))
+                    } else {
+                        // 标题行：「提示词」+ 复制（一直可见，不会被长文字挤掉）
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(I18n.s(R.string.b4r3_prompt), style = IrisType.micro, color = ViewerChrome.TEXT3, modifier = Modifier.weight(1f))
+                            Row(
+                                Modifier.height(40.dp).clip(com.iris.localai.ui.theme.IrisRadius.pillShape).clickable { copy(p.prompt) }
+                                    .padding(horizontal = IrisDimens.space12),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(IrisIcons.Copy, null, tint = ViewerChrome.TEXT1, modifier = Modifier.size(16.dp))
+                                Text(I18n.s(R.string.b4r3_copy), style = IrisType.micro, color = ViewerChrome.TEXT1, modifier = Modifier.padding(start = IrisDimens.space6))
+                            }
+                        }
+                        // 提示词：默认 3 行带省略号，点一下展开（展开后可滚动、长按选择）
+                        var open by androidx.compose.runtime.saveable.rememberSaveable(path) { androidx.compose.runtime.mutableStateOf(false) }
+                        Box(
+                            Modifier.fillMaxWidth()
+                                .then(if (rm) Modifier else Modifier.animateContentSize(com.iris.localai.ui.motion.IrisMotion.Gentle.size()))
+                                .clickable(interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { open = !open },
+                        ) {
+                            if (open) {
+                                androidx.compose.foundation.text.selection.SelectionContainer(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
                                     Column {
                                         Text(p.prompt, style = IrisType.caption.copy(lineHeight = 20.sp), color = ViewerChrome.TEXT1)
                                         if (p.negative.isNotBlank()) Text(HistoryText.negative(p.negative), style = IrisType.micro, color = ViewerChrome.TEXT2, modifier = Modifier.padding(top = IrisDimens.space6))
                                     }
                                 }
-                                Box(
-                                    Modifier.padding(start = IrisDimens.space4).size(40.dp).clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.10f)).clickable { copy(p.prompt) },
-                                    contentAlignment = Alignment.Center,
-                                ) { Icon(IrisIcons.Copy, HistoryText.COPY_PROMPT, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                            } else {
+                                Text(p.prompt, style = IrisType.caption.copy(lineHeight = 20.sp), color = ViewerChrome.TEXT1, maxLines = 3,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             }
-                            Text(metaLine(p, file), style = IrisType.micro, color = ViewerChrome.TEXT3, maxLines = 2, modifier = Modifier.padding(top = IrisDimens.space8))
                         }
-                        Box(Modifier.padding(top = IrisDimens.space12).fillMaxWidth().height(0.5.dp).background(Color.White.copy(alpha = 0.10f)))
+                        Text(metaLine(p, file), style = IrisType.micro, color = ViewerChrome.TEXT3, maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = IrisDimens.space8))
                     }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (p != null) ViewerAction(IrisIcons.Reload, HistoryText.REUSE) { vm.reuse(p); toast(HistoryText.REUSED); onReused() }
-                    ViewerAction(IrisIcons.Download, ImageGenText.SAVE) {
-                        val ok = runCatching { ChatImageLoader.saveToGallery(context, file.readBytes()) }.getOrDefault(false)
-                        toast(if (ok) I18n.s(R.string.imagegen_e8561b) else I18n.s(R.string.imagegen_6de920))
+                    Box(Modifier.padding(vertical = IrisDimens.space8).fillMaxWidth().height(0.5.dp).background(Color.White.copy(alpha = 0.10f)))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        if (p != null) ViewerAction(IrisIcons.Reload, HistoryText.REUSE) { vm.reuse(p); toast(HistoryText.REUSED); onReused() }
+                        ViewerAction(IrisIcons.Download, ImageGenText.SAVE) {
+                            val ok = runCatching { ChatImageLoader.saveToGallery(context, file.readBytes()) }.getOrDefault(false)
+                            toast(if (ok) I18n.s(R.string.imagegen_e8561b) else I18n.s(R.string.imagegen_6de920))
+                        }
+                        ViewerAction(IrisIcons.Share, ImageGenText.SHARE) { runCatching { ChatImageLoader.share(context, file.readBytes()) } }
+                        ViewerAction(IrisIcons.Chat, ImageGenText.TO_CHAT) { onClose(); onSendToChat(path) }
+                        ViewerAction(IrisIcons.Trash, ImageGenText.DELETE, tint = ViewerChrome.DANGER) { onDelete(path) }
                     }
-                    ViewerAction(IrisIcons.Share, ImageGenText.SHARE) { runCatching { ChatImageLoader.share(context, file.readBytes()) } }
-                    ViewerAction(IrisIcons.Chat, ImageGenText.TO_CHAT) { onClose(); onSendToChat(path) }
-                    ViewerAction(IrisIcons.Trash, ImageGenText.DELETE, tint = ViewerChrome.DANGER) { onDelete(path) }
                 }
             }
         }

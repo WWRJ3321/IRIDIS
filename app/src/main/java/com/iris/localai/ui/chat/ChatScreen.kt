@@ -825,7 +825,7 @@ private fun ChatScreenContent(
                         hideKeyboard(); input = ""; editingId = null
                     },
                     onCancelEdit = { editingId = null; input = "" },
-                    onToggleThinking = { vm.toggleThinking(!ui.deepThinking) },
+                    onToggleThinking = { vm.toggleThinking(!vm.state.value.deepThinking) },
                     onThinkLevel = { vm.setThinkLevel(it) },
                     onHoldToTalkStart = { /* keep the keyboard (user: 语音输入会中断键盘) */ withMic { listening = true; dictBase = input; vm.dictation.warmLanguage = settings.asrLanguage; vm.dictation.start() } },
                     onHoldToTalkEnd = {
