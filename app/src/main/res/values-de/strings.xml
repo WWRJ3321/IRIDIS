@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Hochskaliert, im Verlauf gespeichert</string>
     <string name="b5_upscale_failed">Hochskalieren fehlgeschlagen: %1$s</string>
+    <string name="b6_layout">Startseiten-Layout</string>
+    <string name="b6_layout_sub">Position der Tasten oben und im Eingabefeld</string>
+    <string name="b6_layout_top">Obere Leiste</string>
+    <string name="b6_layout_composer">Eingabefeld</string>
+    <string name="b6_layout_hint">Taste in ein freies Feld ziehen oder auf eine andere zum Tauschen</string>
+    <string name="b6_layout_reset">Standard wiederherstellen</string>
+    <string name="b6_layout_chat">Chat</string>
+    <string name="b6_layout_input">Text</string>
+    <string name="b6_item_menu">Seitenleiste</string>
+    <string name="b6_item_model">Modell</string>
+    <string name="b6_item_character">Rolle</string>
+    <string name="b6_item_new">Neu</string>
+    <string name="b6_item_agent">Agent</string>
+    <string name="b6_item_skills">Skills</string>
+    <string name="b6_item_attach">Anhang</string>
+    <string name="b6_item_think">Denken</string>
+    <string name="b6_item_speed">Tempo</string>
+    <string name="b6_item_voice">Sprache</string>
 </resources>

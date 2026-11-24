@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">放大中 %1$d%%</string>
     <string name="b5_upscale_done">已放大，存進歷史</string>
     <string name="b5_upscale_failed">放大失敗：%1$s</string>
+    <string name="b6_layout">主頁佈局</string>
+    <string name="b6_layout_sub">頂欄和輸入框按鈕的位置</string>
+    <string name="b6_layout_top">頂欄</string>
+    <string name="b6_layout_composer">輸入框</string>
+    <string name="b6_layout_hint">拖動按鈕到空格，或拖到另一個按鈕上互換</string>
+    <string name="b6_layout_reset">恢復預設</string>
+    <string name="b6_layout_chat">聊天內容</string>
+    <string name="b6_layout_input">輸入文字</string>
+    <string name="b6_item_menu">側欄</string>
+    <string name="b6_item_model">模型</string>
+    <string name="b6_item_character">角色</string>
+    <string name="b6_item_new">新建</string>
+    <string name="b6_item_agent">智能體</string>
+    <string name="b6_item_skills">技能</string>
+    <string name="b6_item_attach">附件</string>
+    <string name="b6_item_think">思考</string>
+    <string name="b6_item_speed">速度</string>
+    <string name="b6_item_voice">語音</string>
 </resources>

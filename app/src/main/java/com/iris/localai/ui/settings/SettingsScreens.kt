@@ -151,7 +151,7 @@ import kotlin.math.roundToInt
  * with rarely used items folded under 「高级」. No storage key or default value changed.
  */
 /** DEVELOPER = 开发者选项 (reached from 关于 IRIDIS); CONTEXT and MEMORY open the same 「记忆与上下文」 page. */
-enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT, DOWNLOAD_SOURCE, PROMPTS }
+enum class SettingsPage { APPEARANCE, LANGUAGE, HOME, MODEL_BACKEND, GENERATION, CONTEXT, PERFORMANCE, TIER_PROFILES, VOICE, API, ABOUT, DIAGNOSTICS, AGENT, MEMORY, STORAGE, DEVELOPER, DEV_CONTEXT, DOWNLOAD_SOURCE, PROMPTS, LAYOUT }
 
 private val THEME_OPTIONS get() = listOf(ThemeMode.SYSTEM to I18n.s(R.string.settings_71bbc7), ThemeMode.LIGHT to I18n.s(R.string.settings_48d0a0), ThemeMode.DARK to I18n.s(R.string.settings_41e8e8))
 
@@ -268,6 +268,9 @@ fun SettingsHome(vm: SettingsViewModel, onBack: () -> Unit, onOpen: (SettingsPag
             SectionTitle(I18n.s(R.string.settings_379b88))
             SettingsGroup {
                 NavItem(I18n.s(R.string.settings_afcde2), SettingsText.APPEARANCE, IrisIcons.Contrast) { onOpen(SettingsPage.APPEARANCE) }
+                Divider()
+                // 3.0.0 Beta6 自定布局
+                NavItem(I18n.s(R.string.b6_layout), I18n.s(R.string.b6_layout_sub), IrisIcons.Layers) { onOpen(SettingsPage.LAYOUT) }
                 Divider()
                 // 语言 is its own entry (moved out of 外观).
                 val ctx = LocalContext.current

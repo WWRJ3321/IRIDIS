@@ -1,5 +1,8 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.data.HomeItem
+import com.iris.localai.data.HomeLayout
+
 import com.iris.localai.I18n
 import com.iris.localai.character.CharacterPick
 import com.iris.localai.character.CharacterStore
@@ -216,6 +219,7 @@ private fun ChatScreenContent(
     val customOrder by vm.customOrder.collectAsStateWithLifecycle()
     val models by vm.models.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val homeLayout = remember(settings.homeLayout) { HomeLayout.parse(settings.homeLayout) }
     val guiSetup by vm.guiSetup.collectAsStateWithLifecycle()
     /** last load per model / backend (model sheet: 「上次加载 N 秒 · 已用缓存」). */
     val tierApply by vm.tierApply.collectAsStateWithLifecycle()
@@ -656,42 +660,56 @@ private fun ChatScreenContent(
             ) {
                 // Identical 42 dp side buttons at the same 16 dp edge inset; the model pill follows the
                 // menu button on the left (2.2.13), never closer than 8 dp to either button.
-                Box(
+                // 3.0.0 Beta6 自定布局: the four buttons sit in the 顶栏 slots of [homeLayout]
+                // (default = menu, 模型, 角色 on the left, 新建对话 on the right). Pills on the left share
+                // what is left after the round buttons; a narrow row shrinks 角色 to the card's avatar.
+                androidx.compose.foundation.layout.BoxWithConstraints(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
                     contentAlignment = Alignment.Center,
                 ) {
-                    FloatingIconButton(Icons.Outlined.Menu, I18n.s(R.string.chat_f8dce1), Modifier.align(Alignment.CenterStart).tourTarget(TourId.MENU), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
-                    // 模型 and 角色 pills side by side after the menu button; on a narrow row the
-                    // 角色 pill shrinks to the card's avatar.
-                    androidx.compose.foundation.layout.BoxWithConstraints(
-                        Modifier.align(Alignment.CenterStart)
-                            .padding(start = IrisDimens.topBarControl + IrisDimens.space8, end = IrisDimens.topBarControl + IrisDimens.space8),
-                    ) {
-                        val compactChar = CharacterPick.compact(maxWidth.value.toInt(), character != null)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            ModelTitle(
+                    val roundCount = listOf(HomeItem.MENU, HomeItem.NEW_CHAT).count { homeLayout.slotOf(it).row == HomeLayout.Row.TOP }
+                    val pillRoom = maxWidth - (IrisDimens.topBarControl + IrisDimens.space8) * roundCount
+                    val compactChar = CharacterPick.compact(pillRoom.value.toInt(), character != null)
+                    val topItem: @Composable (HomeItem, Modifier) -> Unit = { item, m ->
+                        when (item) {
+                            HomeItem.MENU -> FloatingIconButton(Icons.Outlined.Menu, I18n.s(R.string.chat_f8dce1), Modifier.tourTarget(TourId.MENU), size = IrisDimens.topBarControl) { hideKeyboard(); scope.launch { drawer.open() } }
+                            HomeItem.MODEL -> ModelTitle(
                                 ui.engine,
-                                Modifier
-                                    .weight(1f, fill = false)
+                                m
                                     .onGloballyPositioned { pillBounds = it.boundsInRoot() }
                                     .tourTarget(TourId.MODEL)
                                     // hidden while the morphing surface stands in for it
                                     .graphicsLayer { alpha = if (modelMenu || modelMorph.value > 0f) 0f else 1f },
                             ) { hideKeyboard(); charMenu = false; modelMenu = true }
-                            Spacer(Modifier.width(IrisDimens.space8))
-                            CharacterTitle(
+                            HomeItem.CHARACTER -> CharacterTitle(
                                 character, compactChar,
-                                Modifier
-                                    .then(if (compactChar) Modifier else Modifier.weight(1f, fill = false))
+                                (if (compactChar) Modifier else m)
                                     .onGloballyPositioned { charPillBounds = it.boundsInRoot() }
                                     .tourTarget(TourId.CHARACTER)
                                     // hidden while its panel (which morphs from it) is showing — same as 模型
                                     .graphicsLayer { alpha = if (charMenu || charMorph.value > 0f) 0f else 1f },
                                 expanded = { charMorph.value },
                             ) { hideKeyboard(); modelMenu = false; charMenu = !charMenu }
+                            HomeItem.NEW_CHAT -> FloatingIconButton(Icons.Outlined.EditNote, I18n.s(R.string.chat_1ac07a), Modifier.tourTarget(TourId.NEW_CHAT), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
+                            else -> {}
                         }
                     }
-                    FloatingIconButton(Icons.Outlined.EditNote, I18n.s(R.string.chat_1ac07a), Modifier.align(Alignment.CenterEnd).tourTarget(TourId.NEW_CHAT), size = IrisDimens.topBarControl, enabled = messages.isNotEmpty()) { vm.newChat() }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8),
+                        ) {
+                            homeLayout.start(HomeLayout.Row.TOP).forEach { androidx.compose.runtime.key(it) { topItem(it, Modifier.weight(1f, fill = false)) } }
+                        }
+                        val endItems = homeLayout.end(HomeLayout.Row.TOP)
+                        if (endItems.isNotEmpty()) {
+                            Spacer(Modifier.width(IrisDimens.space8))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(IrisDimens.space8)) {
+                                endItems.forEach { androidx.compose.runtime.key(it) { topItem(it, Modifier.widthIn(max = 150.dp)) } }
+                            }
+                        }
+                    }
                 }
                 // the hairline progress bar under the top bar is gone — the pill above the
                 // composer (with % and 「取消」) is the one place that shows a model load.
@@ -819,6 +837,7 @@ private fun ChatScreenContent(
                         }
                     },
                     onUndoTranslate = { draftJob?.cancel(); draftJob = null; draftOriginal?.let { input = it }; draftOriginal = null },
+                    layout = homeLayout,
                     onSend = {
                         val askedBefore = settings.askedNotificationPermission || android.os.Build.VERSION.SDK_INT < 33
                         maybeAskNotifications()

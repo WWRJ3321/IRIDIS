@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">बड़ा करके इतिहास में सहेजा</string>
     <string name="b5_upscale_failed">बड़ा करना विफल: %1$s</string>
+    <string name="b6_layout">होम लेआउट</string>
+    <string name="b6_layout_sub">ऊपरी बार और इनपुट बटनों की जगह</string>
+    <string name="b6_layout_top">ऊपरी बार</string>
+    <string name="b6_layout_composer">इनपुट बॉक्स</string>
+    <string name="b6_layout_hint">बटन को खाली जगह पर, या बदलने के लिए दूसरे बटन पर खींचें</string>
+    <string name="b6_layout_reset">डिफ़ॉल्ट पर लौटें</string>
+    <string name="b6_layout_chat">चैट</string>
+    <string name="b6_layout_input">टेक्स्ट</string>
+    <string name="b6_item_menu">साइडबार</string>
+    <string name="b6_item_model">मॉडल</string>
+    <string name="b6_item_character">किरदार</string>
+    <string name="b6_item_new">नया</string>
+    <string name="b6_item_agent">एजेंट</string>
+    <string name="b6_item_skills">स्किल</string>
+    <string name="b6_item_attach">अटैच</string>
+    <string name="b6_item_think">सोचें</string>
+    <string name="b6_item_speed">गति</string>
+    <string name="b6_item_voice">आवाज़</string>
 </resources>

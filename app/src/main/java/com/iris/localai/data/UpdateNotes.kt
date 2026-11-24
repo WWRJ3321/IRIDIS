@@ -16,6 +16,9 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("3.0.0 Beta6", listOf(
+            f("新增「设置 › 主页布局」：顶栏 4 个按钮、输入框上下两排 6 个按钮都可以拖到别的格子；一键恢复默认。"),
+        )),
         Release("3.0.0 Beta5", listOf(
             f("生图看图页新增「放大」：2× 或 4×，用 Real-ESRGAN 动漫模型在本机放大，结果作为新图存进历史；第一次用时下载 18 MB 模型。"),
             f("对话附件新增「拍照」：直接调用相机，拍完作为图片附件。"),

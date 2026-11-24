@@ -1,5 +1,9 @@
 package com.iris.localai.ui.chat
 
+import com.iris.localai.data.HomeItem
+import com.iris.localai.data.HomeLayout
+import androidx.compose.runtime.key
+
 import com.iris.localai.I18n
 import com.iris.localai.R
 import com.iris.localai.data.Attachment
@@ -237,6 +241,8 @@ fun Composer(
     /** 「翻译」 the draft: target setting ("auto" / "zh" / "en"), and 撤销翻译. */
     onTranslateDraft: (String) -> Unit = {},
     onUndoTranslate: () -> Unit = {},
+    /** 3.0.0 Beta6 自定布局. */
+    layout: HomeLayout = HomeLayout.DEFAULT,
     modifier: Modifier = Modifier,
 ) {
     val c = Iris.colors
@@ -287,53 +293,86 @@ fun Composer(
             }
         }
 
-        // 「智能体」 is a small pill in the card's top-left corner, above the text field
-        // (user: 「智能体放左上」). Same colours as the 1.10.1 pills, just smaller.
-        Row(
-            Modifier.fillMaxWidth().padding(start = IrisSpace.XS, top = IrisSpace.XS, end = IrisSpace.XS),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ComposerPill(
-                ComposerText.AGENT,
-                selected = state.agentMode,
-                onClick = onToggleAgent,
-                icon = IrisIcons.Agent,
-                compact = true,
-                modifier = Modifier.tourTarget(TourId.AGENT),
-            )
-            // 2.2 「技能」: pick an installed skill / agent tool for this message.
-            var skillSheet by remember { mutableStateOf(false) }
-            var catalog by remember { mutableStateOf(RefCatalog.EMPTY) }
-            Spacer(Modifier.width(IrisSpace.XS))
-            ComposerPill(
-                ComposerText.SKILLS,
-                selected = state.refs.isNotEmpty(),
-                toggle = false,
-                onClick = { catalog = refCatalog(); skillSheet = true },
-                icon = IrisIcons.Skill,
-                compact = true,
-                modifier = Modifier.tourTarget(TourId.SKILLS),
-            )
-            if (skillSheet) SkillPickerSheet(catalog, onPick = { onAddRef(it); skillSheet = false }, onDismiss = { skillSheet = false })
-            Spacer(Modifier.weight(1f))
-            // attach pictures / files — top-right, opposite 智能体, so the bottom row keeps its layout.
-            // a small IRIS menu first (user: not straight into the file manager).
-            // a 「+」 as tall as the chips, its right edge on the capsule's right edge.
-            var attachMenu by remember { mutableStateOf(false) }
-            Box {
-                PressableIcon(IrisIcons.Plus, ComposerText.ATTACH, modifier = Modifier.tourTarget(TourId.ATTACH), size = ComposerPillStyle.COMPACT_HEIGHT_DP.dp, iconSize = 22.dp, tint = c.textSecondary, onClick = { attachMenu = true })
-                IrisMenu(attachMenu, { attachMenu = false }) {
-                    IrisMenuItem(ComposerText.ATTACH_PHOTOS, IrisIcons.Image) { attachMenu = false; onPickPhotos() }
-                    IrisMenuItem(ComposerText.TAKE_PHOTO, IrisIcons.Camera) { attachMenu = false; onTakePhoto() }
-                    IrisMenuItem(ComposerText.ATTACH_FILES, IrisIcons.Folder) { attachMenu = false; onPickFiles() }
-                    // translate the draft before sending (default 中↔英 by detection).
-                    if (state.text.isNotBlank() && !state.translating) {
-                        for ((target, label) in listOf("auto" to TranslateText.DRAFT_AUTO, "zh" to TranslateText.DRAFT_ZH, "en" to TranslateText.DRAFT_EN)) {
-                            IrisMenuItem(label, IrisIcons.Translate) { attachMenu = false; onTranslateDraft(target) }
+        // 3.0.0 Beta6 自定布局：上排 / 下排的按钮按 [layout] 摆在格子里（默认＝Beta5 的样子）。
+        val recording = state.listening || state.transcribing
+        var cancelArmed by remember { mutableStateOf(false) }
+        var skillSheet by remember { mutableStateOf(false) }
+        var catalog by remember { mutableStateOf(RefCatalog.EMPTY) }
+        var attachMenu by remember { mutableStateOf(false) }
+        if (skillSheet) SkillPickerSheet(catalog, onPick = { onAddRef(it); skillSheet = false }, onDismiss = { skillSheet = false })
+        val renderItem: @Composable (HomeItem) -> Unit = { item ->
+            when (item) {
+                HomeItem.AGENT -> ComposerPill(
+                    ComposerText.AGENT,
+                    selected = state.agentMode,
+                    onClick = onToggleAgent,
+                    icon = IrisIcons.Agent,
+                    compact = true,
+                    modifier = Modifier.tourTarget(TourId.AGENT),
+                )
+                // 2.2 「技能」: pick an installed skill / agent tool for this message.
+                HomeItem.SKILLS -> ComposerPill(
+                    ComposerText.SKILLS,
+                    selected = state.refs.isNotEmpty(),
+                    toggle = false,
+                    onClick = { catalog = refCatalog(); skillSheet = true },
+                    icon = IrisIcons.Skill,
+                    compact = true,
+                    modifier = Modifier.tourTarget(TourId.SKILLS),
+                )
+                // attach pictures / files: a small IRIS menu first (user: not straight into the file manager).
+                HomeItem.ATTACH -> Box {
+                    PressableIcon(IrisIcons.Plus, ComposerText.ATTACH, modifier = Modifier.tourTarget(TourId.ATTACH), size = ComposerPillStyle.COMPACT_HEIGHT_DP.dp, iconSize = 22.dp, tint = c.textSecondary, onClick = { attachMenu = true })
+                    IrisMenu(attachMenu, { attachMenu = false }) {
+                        IrisMenuItem(ComposerText.ATTACH_PHOTOS, IrisIcons.Image) { attachMenu = false; onPickPhotos() }
+                        IrisMenuItem(ComposerText.TAKE_PHOTO, IrisIcons.Camera) { attachMenu = false; onTakePhoto() }
+                        IrisMenuItem(ComposerText.ATTACH_FILES, IrisIcons.Folder) { attachMenu = false; onPickFiles() }
+                        // translate the draft before sending (default 中↔英 by detection).
+                        if (state.text.isNotBlank() && !state.translating) {
+                            for ((target, label) in listOf("auto" to TranslateText.DRAFT_AUTO, "zh" to TranslateText.DRAFT_ZH, "en" to TranslateText.DRAFT_EN)) {
+                                IrisMenuItem(label, IrisIcons.Translate) { attachMenu = false; onTranslateDraft(target) }
+                            }
                         }
                     }
                 }
+                HomeItem.THINK -> ThinkPill(
+                    ComposerText.THINK,
+                    thinking = state.deepThinking,
+                    level = state.thinkLevel,
+                    enabled = state.thinkingSupported,
+                    onClick = onToggleThinking,
+                    onDisabledClick = onThinkingUnsupported,
+                    onPick = onThinkLevel,
+                    icon = IrisIcons.Think,
+                    modifier = Modifier.tourTarget(TourId.THINK),
+                )
+                HomeItem.SPEED -> SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
+                // one long accent capsule. Tap = 语音通话, long-press = 语音输入 (slide up to cancel);
+                // with text / attachments 发送, while generating 停止.
+                HomeItem.VOICE -> {
+                    val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty(), recording = recording)
+                    Box(Modifier.tourTarget(TourId.VOICE)) { VoiceCapsuleButton(
+                        action = action,
+                        holding = state.listening,
+                        micLevel = state.micLevel,
+                        sendEnabled = !state.transcribing,
+                        cancelArmed = cancelArmed,
+                        onSend = onSend,
+                        onStop = onStop,
+                        onCall = onVoiceMode,
+                        generating = state.generating,
+                        onInterruptSend = onInterruptSend,
+                        onHoldStart = onHoldToTalkStart,
+                        onHoldEnd = onHoldToTalkEnd,
+                        onHoldCancel = onHoldToTalkCancel,
+                        onCancelArmed = { cancelArmed = it },
+                    ) }
+                }
+                else -> {}
             }
+        }
+        if (!layout.isEmpty(HomeLayout.Row.UPPER)) {
+            LayoutRow(layout, HomeLayout.Row.UPPER, Modifier.padding(start = IrisSpace.XS, top = IrisSpace.XS, end = IrisSpace.XS), renderItem)
         }
         AnimatedVisibility(
             visible = state.attachments.isNotEmpty(),
@@ -353,8 +392,6 @@ fun Composer(
         // the text field stays in composition while dictating. Swapping it out (1.10–1.14.0)
         // dropped its focus, the keyboard closed, the composer jumped down by the IME height and the
         // finger ended up outside the mic button — which cancelled the hold and cut the dictation off.
-        val recording = state.listening || state.transcribing
-        var cancelArmed by remember { mutableStateOf(false) }
         // 2.7.4: with dictated (or existing) text the field stays visible while recording and the
         // indicator just fades out in place (an overlay, no height of its own), so the field never jumps.
         val dictMode = DictationOverlay.of(recording, state.text)
@@ -413,49 +450,32 @@ fun Composer(
             }
         }
 
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // bottom row: 思考 + speed on the left (they scroll on a very narrow screen instead
-            // of squeezing the buttons), then — as before 1.10.1 — the press-and-hold mic and the
-            // round action button (停止 / 发送 / 语音对话) on the right. No 「+」 menu any more.
-            Row(
-                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(IrisSpace.XS),
-            ) {
-                Spacer(Modifier.width(0.dp))
-                ThinkPill(
-                    ComposerText.THINK,
-                    thinking = state.deepThinking,
-                    level = state.thinkLevel,
-                    enabled = state.thinkingSupported,
-                    onClick = onToggleThinking,
-                    onDisabledClick = onThinkingUnsupported,
-                    onPick = onThinkLevel,
-                    icon = IrisIcons.Think,
-                    modifier = Modifier.tourTarget(TourId.THINK),
-                )
-                SpeedChip(state.resourceTier, state.resourceNote, { composerTop }, onResourceTier)
-                Spacer(Modifier.width(IrisSpace.XS))
+        if (!layout.isEmpty(HomeLayout.Row.LOWER)) {
+            // the left side scrolls on a very narrow screen instead of squeezing the buttons.
+            LayoutRow(layout, HomeLayout.Row.LOWER, Modifier, renderItem)
+        }
+    }
+}
+
+/**
+ * 3.0.0 Beta6：一排格子。左边几格从左排起（窄屏时横向滚动），右边几格贴右。
+ */
+@Composable
+private fun LayoutRow(layout: HomeLayout, row: HomeLayout.Row, modifier: Modifier, render: @Composable (HomeItem) -> Unit) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(IrisSpace.XS),
+        ) {
+            layout.start(row).forEach { key(it) { render(it) } }
+        }
+        val end = layout.end(row)
+        if (end.isNotEmpty()) {
+            Spacer(Modifier.width(IrisSpace.XS))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(IrisSpace.XS)) {
+                end.forEach { key(it) { render(it) } }
             }
-            // one long accent capsule (users: the voice button was too small). Tap = 语音通话,
-            // long-press = 语音输入 (slide up to cancel); with text / attachments 发送, while generating 停止.
-            val action = ComposerActions.of(generating = state.generating, hasText = state.text.isNotBlank(), hasAttachments = state.attachments.isNotEmpty(), recording = recording)
-            Box(Modifier.tourTarget(TourId.VOICE)) { VoiceCapsuleButton(
-                action = action,
-                holding = state.listening,
-                micLevel = state.micLevel,
-                sendEnabled = !state.transcribing,
-                cancelArmed = cancelArmed,
-                onSend = onSend,
-                onStop = onStop,
-                onCall = onVoiceMode,
-                generating = state.generating,
-                onInterruptSend = onInterruptSend,
-                onHoldStart = onHoldToTalkStart,
-                onHoldEnd = onHoldToTalkEnd,
-                onHoldCancel = onHoldToTalkCancel,
-                onCancelArmed = { cancelArmed = it },
-            ) }
         }
     }
 }

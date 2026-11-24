@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">拡大中 %1$d%%</string>
     <string name="b5_upscale_done">拡大して履歴に保存しました</string>
     <string name="b5_upscale_failed">拡大に失敗：%1$s</string>
+    <string name="b6_layout">ホームのレイアウト</string>
+    <string name="b6_layout_sub">上部バーと入力欄のボタン配置</string>
+    <string name="b6_layout_top">上部バー</string>
+    <string name="b6_layout_composer">入力欄</string>
+    <string name="b6_layout_hint">ボタンを空き枠へ、または別のボタンへドラッグして入れ替え</string>
+    <string name="b6_layout_reset">デフォルトに戻す</string>
+    <string name="b6_layout_chat">チャット</string>
+    <string name="b6_layout_input">テキスト入力</string>
+    <string name="b6_item_menu">サイドバー</string>
+    <string name="b6_item_model">モデル</string>
+    <string name="b6_item_character">キャラクター</string>
+    <string name="b6_item_new">新規</string>
+    <string name="b6_item_agent">エージェント</string>
+    <string name="b6_item_skills">スキル</string>
+    <string name="b6_item_attach">添付</string>
+    <string name="b6_item_think">思考</string>
+    <string name="b6_item_speed">速度</string>
+    <string name="b6_item_voice">音声</string>
 </resources>

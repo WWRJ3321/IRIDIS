@@ -282,6 +282,8 @@ data class AppSettings(
     // ---- 1.7.0 ----
     /** In-chat performance overlay (speed / CPU / memory / GPU if readable) while generating. */
     val perfOverlay: Boolean = false,
+    /** 3.0.0 Beta6 自定布局（[HomeLayout.encode]），空 = 默认。 */
+    val homeLayout: String = "",
     /** 风险提示弹窗（加载前内存不足、生图内存偏紧）；false = 不弹，直接加载 / 生成。 */
     val warnPopups: Boolean = true,
     /** 2.7.2：崩溃后显示报告（上次意外退出的弹窗）；false = 不弹，只记日志。弹窗里的「不再提示」就是关掉它。 */

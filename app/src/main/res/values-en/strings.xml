@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Upscaled and saved to history</string>
     <string name="b5_upscale_failed">Upscale failed: %1$s</string>
+    <string name="b6_layout">Home layout</string>
+    <string name="b6_layout_sub">Where the top bar and input buttons go</string>
+    <string name="b6_layout_top">Top bar</string>
+    <string name="b6_layout_composer">Input box</string>
+    <string name="b6_layout_hint">Drag a button to an empty slot, or onto another to swap</string>
+    <string name="b6_layout_reset">Reset to default</string>
+    <string name="b6_layout_chat">Chat</string>
+    <string name="b6_layout_input">Text</string>
+    <string name="b6_item_menu">Sidebar</string>
+    <string name="b6_item_model">Model</string>
+    <string name="b6_item_character">Character</string>
+    <string name="b6_item_new">New</string>
+    <string name="b6_item_agent">Agent</string>
+    <string name="b6_item_skills">Skills</string>
+    <string name="b6_item_attach">Attach</string>
+    <string name="b6_item_think">Think</string>
+    <string name="b6_item_speed">Speed</string>
+    <string name="b6_item_voice">Voice</string>
 </resources>

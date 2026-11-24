@@ -125,7 +125,9 @@ private enum class Route { APPEARANCE, LANGUAGE, CHAT, MODELS, SETTINGS, GENERAT
     /** 关于 › 许可证 and 单个许可证全文 as real routes (the file rides in LicenseNav). */
     LICENSES, LICENSE_TEXT,
     /** 3.0：AI 工具箱、自定义提示词。 */
-    TOOLBOX, PROMPTS }
+    TOOLBOX, PROMPTS,
+    /** 3.0.0 Beta6 主页布局. */
+    LAYOUT }
 
 class MainActivity : ComponentActivity() {
 
@@ -451,6 +453,7 @@ private fun Screen(r: Route, chat: ChatViewModel, settingsVm: SettingsViewModel,
         Route.MCP -> McpPage(onBack = pop)
         Route.TOOLBOX -> com.iris.localai.ui.toolbox.ToolboxPage(chat, onBack = pop, onOpenImageGen = { push(Route.IMAGEGEN) })
         Route.PROMPTS -> com.iris.localai.ui.prompts.PromptsPage(settingsVm, onBack = pop)
+        Route.LAYOUT -> com.iris.localai.ui.settings.LayoutPage(settingsVm, onBack = pop)
         Route.FILES -> FilesPage(onBack = pop)
         Route.BROWSER -> BrowserPage(onBack = pop)
         Route.APP_FILES -> AppFilesPage(onBack = pop)
@@ -484,6 +487,7 @@ private fun routeOf(p: SettingsPage): Route = when (p) {
     SettingsPage.DEV_CONTEXT -> Route.DEV_CONTEXT
     SettingsPage.DOWNLOAD_SOURCE -> Route.DOWNLOAD_SOURCE
     SettingsPage.PROMPTS -> Route.PROMPTS
+    SettingsPage.LAYOUT -> Route.LAYOUT
 }
 
 /** System "remove animations" switch, re-read whenever the app comes back to the foreground. */

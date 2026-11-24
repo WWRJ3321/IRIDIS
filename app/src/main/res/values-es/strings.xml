@@ -2404,4 +2404,22 @@
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Ampliada y guardada en el historial</string>
     <string name="b5_upscale_failed">Error al ampliar: %1$s</string>
+    <string name="b6_layout">Diseño de inicio</string>
+    <string name="b6_layout_sub">Posición de los botones de la barra y la entrada</string>
+    <string name="b6_layout_top">Barra superior</string>
+    <string name="b6_layout_composer">Cuadro de entrada</string>
+    <string name="b6_layout_hint">Arrastra un botón a un hueco o sobre otro para intercambiar</string>
+    <string name="b6_layout_reset">Restablecer</string>
+    <string name="b6_layout_chat">Chat</string>
+    <string name="b6_layout_input">Texto</string>
+    <string name="b6_item_menu">Panel lateral</string>
+    <string name="b6_item_model">Modelo</string>
+    <string name="b6_item_character">Personaje</string>
+    <string name="b6_item_new">Nuevo</string>
+    <string name="b6_item_agent">Agente</string>
+    <string name="b6_item_skills">Habilidades</string>
+    <string name="b6_item_attach">Adjuntar</string>
+    <string name="b6_item_think">Pensar</string>
+    <string name="b6_item_speed">Velocidad</string>
+    <string name="b6_item_voice">Voz</string>
 </resources>
