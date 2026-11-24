@@ -2422,4 +2422,6 @@
     <string name="b6_item_think">सोचें</string>
     <string name="b6_item_speed">गति</string>
     <string name="b6_item_voice">आवाज़</string>
+    <string name="b6r2_layout_hint">बटन दबाकर मनचाही जगह खींचें; होम पेज बिल्कुल वैसा ही होगा</string>
+    <string name="b6r2_layout_full">यह पंक्ति भर गई है</string>
 </resources>

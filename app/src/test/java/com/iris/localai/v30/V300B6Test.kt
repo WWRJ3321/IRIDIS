@@ -3,8 +3,8 @@ package com.iris.localai.v30
 import com.iris.localai.data.HomeItem
 import com.iris.localai.data.HomeLayout
 import com.iris.localai.data.HomeLayout.Row
-import com.iris.localai.data.HomeLayout.Slot
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,30 +22,39 @@ class V300B6Test {
         assertSame(HomeLayout.DEFAULT, HomeLayout.parse(""))
     }
 
-    @Test fun moveToEmptyAndSwap() {
-        val a = HomeLayout.DEFAULT.move(HomeItem.VOICE, Slot(Row.UPPER, 4))
+    /** r1 bug: moving one step aside did nothing on the home page. Now every step reorders. */
+    @Test fun oneStepAsideReorders() {
+        val a = HomeLayout.DEFAULT.move(HomeItem.AGENT, Row.UPPER, false, 1)
+        assertNotSame(HomeLayout.DEFAULT, a)
+        assertEquals(listOf(HomeItem.SKILLS, HomeItem.AGENT), a.start(Row.UPPER))
+        val b = HomeLayout.DEFAULT.move(HomeItem.CHARACTER, Row.TOP, true, 0)
+        assertEquals(listOf(HomeItem.MENU, HomeItem.MODEL), b.start(Row.TOP))
+        assertEquals(listOf(HomeItem.CHARACTER, HomeItem.NEW_CHAT), b.end(Row.TOP))
+        assertEquals(b, HomeLayout.parse(b.encode()))
+    }
+
+    @Test fun acrossRowsAndCap() {
+        val a = HomeLayout.DEFAULT.move(HomeItem.VOICE, Row.UPPER, true, 0)
         assertEquals(listOf(HomeItem.VOICE, HomeItem.ATTACH), a.end(Row.UPPER))
         assertTrue(a.end(Row.LOWER).isEmpty())
-        val b = a.move(HomeItem.THINK, Slot(Row.UPPER, 0)) // onto 智能体 → swap
-        assertEquals(Slot(Row.UPPER, 0), b.slotOf(HomeItem.THINK))
-        assertEquals(Slot(Row.LOWER, 0), b.slotOf(HomeItem.AGENT))
-        assertEquals(b, HomeLayout.parse(b.encode()))
+        assertSame(a, a.move(HomeItem.THINK, Row.UPPER, false, 0)) // 5th in a row → refused
     }
 
     @Test fun groupsStaySeparate() {
         val d = HomeLayout.DEFAULT
-        assertSame(d, d.move(HomeItem.MENU, Slot(Row.UPPER, 3)))
-        assertSame(d, d.move(HomeItem.VOICE, Slot(Row.TOP, 3)))
-        assertSame(d, d.move(HomeItem.VOICE, Slot(Row.LOWER, 9)))
+        assertSame(d, d.move(HomeItem.MENU, Row.UPPER, false, 0))
+        assertSame(d, d.move(HomeItem.VOICE, Row.TOP, true, 0))
+        assertSame(d, d.move(HomeItem.AGENT, Row.UPPER, false, 0))
     }
 
     @Test fun parseRepairs() {
-        // junk, a wrong group, a duplicate slot and missing items → every item placed once
-        val l = HomeLayout.parse("MENU@TOP:5,NEW_CHAT@TOP:5,VOICE@TOP:1,THINK@UPPER:0,bad,AGENT@LOWER:x")
-        assertEquals(HomeItem.entries.size, l.slots.size)
-        assertEquals(HomeItem.entries.size, l.slots.values.toSet().size)
-        assertEquals(Slot(Row.TOP, 5), l.slotOf(HomeItem.MENU))
-        assertEquals(Slot(Row.UPPER, 0), l.slotOf(HomeItem.THINK))
-        assertTrue(HomeItem.entries.all { l.slotOf(it).row.group == it.group })
+        assertSame(HomeLayout.DEFAULT, HomeLayout.parse("MENU@TOP:5,NEW_CHAT@TOP:5")) // r1 format → default
+        val l = HomeLayout.parse("v2|TOP:NEW_CHAT.MENU.NEW_CHAT/VOICE|UPPER:AGENT.SKILLS.ATTACH.THINK.SPEED/|bad")
+        val all = Row.entries.flatMap { l.start(it) + l.end(it) }
+        assertEquals(HomeItem.entries.size, all.size)
+        assertEquals(HomeItem.entries.toSet(), all.toSet())
+        assertEquals(HomeItem.NEW_CHAT, l.start(Row.TOP).first()); assertTrue(HomeItem.MENU in l.start(Row.TOP))
+        assertTrue(Row.entries.all { r -> (l.start(r) + l.end(r)).all { it.group == r.group } })
+        assertTrue(l.count(Row.UPPER) <= HomeLayout.MAX_COMPOSER)
     }
 }

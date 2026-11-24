@@ -2422,4 +2422,6 @@
     <string name="b6_item_think">Think</string>
     <string name="b6_item_speed">Speed</string>
     <string name="b6_item_voice">Voice</string>
+    <string name="b6r2_layout_hint">Hold a button and drag it where you want; the home page will match</string>
+    <string name="b6r2_layout_full">This row is full</string>
 </resources>

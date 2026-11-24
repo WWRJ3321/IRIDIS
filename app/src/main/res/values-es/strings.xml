@@ -2422,4 +2422,6 @@
     <string name="b6_item_think">Pensar</string>
     <string name="b6_item_speed">Velocidad</string>
     <string name="b6_item_voice">Voz</string>
+    <string name="b6r2_layout_hint">Mantén pulsado un botón y arrástralo; la pantalla principal quedará igual</string>
+    <string name="b6r2_layout_full">Esta fila está llena</string>
 </resources>

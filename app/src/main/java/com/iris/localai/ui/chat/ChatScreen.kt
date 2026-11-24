@@ -667,7 +667,7 @@ private fun ChatScreenContent(
                     Modifier.fillMaxWidth().height(IrisDimens.topBarHeight + 8.dp).padding(horizontal = IrisDimens.screenMargin),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val roundCount = listOf(HomeItem.MENU, HomeItem.NEW_CHAT).count { homeLayout.slotOf(it).row == HomeLayout.Row.TOP }
+                    val roundCount = listOf(HomeItem.MENU, HomeItem.NEW_CHAT).size
                     val pillRoom = maxWidth - (IrisDimens.topBarControl + IrisDimens.space8) * roundCount
                     val compactChar = CharacterPick.compact(pillRoom.value.toInt(), character != null)
                     val topItem: @Composable (HomeItem, Modifier) -> Unit = { item, m ->

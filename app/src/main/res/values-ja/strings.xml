@@ -2422,4 +2422,6 @@
     <string name="b6_item_think">思考</string>
     <string name="b6_item_speed">速度</string>
     <string name="b6_item_voice">音声</string>
+    <string name="b6r2_layout_hint">ボタンを長押しして好きな位置へ。ホーム画面も同じになります</string>
+    <string name="b6r2_layout_full">この列はいっぱいです</string>
 </resources>

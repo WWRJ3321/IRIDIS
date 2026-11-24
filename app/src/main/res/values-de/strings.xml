@@ -2422,4 +2422,6 @@
     <string name="b6_item_think">Denken</string>
     <string name="b6_item_speed">Tempo</string>
     <string name="b6_item_voice">Sprache</string>
+    <string name="b6r2_layout_hint">Taste halten und an die gewünschte Stelle ziehen – die Startseite sieht genauso aus</string>
+    <string name="b6r2_layout_full">Diese Zeile ist voll</string>
 </resources>

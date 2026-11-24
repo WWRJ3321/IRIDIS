@@ -2423,4 +2423,6 @@
     <string name="b6_item_think">思考</string>
     <string name="b6_item_speed">速度</string>
     <string name="b6_item_voice">语音</string>
+    <string name="b6r2_layout_hint">按住按钮拖到想放的位置，主页会一模一样</string>
+    <string name="b6r2_layout_full">这一排放不下了</string>
 </resources>
