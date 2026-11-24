@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WWRJ3321/IRIDIS/releases"><b>Download APK</b></a> ·
+  <a href="https://github.com/WWRJ3321/IRIDIS/releases/latest"><b>Download APK</b></a> ·
   <a href="docs/BUILD.md">Build</a> ·
   <a href="docs/API.md">API</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
@@ -31,22 +31,24 @@
 <p align="center">
   <img alt="Android 12+" src="https://img.shields.io/badge/Android-12%2B%20arm64-3DDC84?logo=android&logoColor=white"/>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"/></a>
-  <a href="https://github.com/WWRJ3321/IRIDIS/releases"><img alt="Version" src="https://img.shields.io/github/v/release/WWRJ3321/IRIDIS?include_prereleases&label=version&color=5660F0"/></a>
+  <a href="https://github.com/WWRJ3321/IRIDIS/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/WWRJ3321/IRIDIS?label=version&color=5660F0"/></a>
 </p>
 
 <p align="center"><img src="docs/assets/cover-en.webp" alt="IRIDIS, all-in-one on-device AI for Android" width="720"></p>
 
 ---
 
-## What's new in 3.0
+## What's new in 3.0.0
 
-- **AI Toolbox**: image generation, floating bubble, text-to-speech, speech-to-text and file finder, one tile each
-- **Floating bubble**: a small bubble on the screen edge for AI translation, screen summaries and quick questions over any app; tucks into the edge when idle, drag to ✕ to close
-- **File finder**: describe a file in a sentence and find it in Downloads, Documents and your gallery; searches by meaning when an embedding model is installed
-- **In-app Dynamic Island**: download, image and model-loading progress at the top, tap to stop
-- **Smoother voice**: dictation appears word by word, hands-free voice chat with auto turn-taking, selectable ASR models
-- **Editable prompts**: rewrite agent rules, voice style, translation, floating bubble prompts and more; reset with one tap
-- **New look**: Liquid Glass style, new logo and wordmark, home-screen widget and app shortcuts, reworked sounds and haptics
+- **AI Toolbox** (sidebar): image generation, floating bubble, text-to-speech, speech-to-text and file finder, one tile each
+- **Floating bubble**: a small bubble on the screen edge for on-screen translation (overlaid on the original text), screen reading and Ask AI (with your clipboard) over any app; tucks into the edge when idle, drag to the bottom to close
+- **Dynamic Island**: download, image and model-loading progress in the bottom-left corner; finished images pop up large
+- **Arrange your home screen**: Settings › Home layout, drag the home buttons into place
+- **Better image generation**: sizes suggested per model, one-tap prompt cleanup; zoomable viewer with 2×/4× HD upscaling; take photos straight from chat attachments
+- **One-step setup**: download a recommended model in one tap, loaded automatically when done
+- **Editable prompts**, **Liquid Glass** style, home-screen widget and app shortcuts, hands-free voice chat, word-by-word dictation
+
+Full history in the [CHANGELOG](CHANGELOG.md) (Chinese). The story behind IRIDIS: [docs/STORY.md](docs/STORY.md) (Chinese).
 
 ## Highlights
 
@@ -66,7 +68,7 @@
 
 ## Quick start
 
-1. Install the APK from [Releases](https://github.com/WWRJ3321/IRIDIS/releases)
+1. Install the APK from [Releases](https://github.com/WWRJ3321/IRIDIS/releases/latest)
 2. Model menu › "Models & loading" › "Download models": pick from the list, search GGUF online, or import a file
 3. Start chatting; turn on "Agent" for tools, and find the rest in the sidebar's "AI Toolbox"
 

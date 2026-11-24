@@ -21,18 +21,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WWRJ3321/IRIDIS/releases"><b>下载 APK</b></a> ·
+  <a href="https://github.com/WWRJ3321/IRIDIS/releases/latest"><b>下载 APK</b></a> ·
   <a href="docs/BUILD.md">构建</a> ·
   <a href="docs/API.md">API</a> ·
   <a href="docs/ARCHITECTURE.md">架构</a> ·
   <a href="CHANGELOG.md">更新日志</a> ·
+  <a href="docs/STORY.md">IRIDIS的故事</a> ·
   <a href="#交流">QQ 群</a>
 </p>
 
 <p align="center">
   <img alt="Android 12+" src="https://img.shields.io/badge/Android-12%2B%20arm64-3DDC84?logo=android&logoColor=white"/>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"/></a>
-  <a href="https://github.com/WWRJ3321/IRIDIS/releases"><img alt="Version" src="https://img.shields.io/github/v/release/WWRJ3321/IRIDIS?include_prereleases&label=version&color=5660F0"/></a>
+  <a href="https://github.com/WWRJ3321/IRIDIS/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/WWRJ3321/IRIDIS?label=version&color=5660F0"/></a>
   <a href="#交流"><img alt="QQ 群" src="https://img.shields.io/badge/QQ%E7%BE%A4-1106294553-12B7F5?logo=tencentqq&logoColor=white"/></a>
 </p>
 
@@ -40,15 +41,17 @@
 
 ---
 
-## 3.0 新在哪
+## 3.0.0 新在哪
 
-- **AI 工具箱**：生图、悬浮窗、文本转语音、语音转文本、找文件，一格一个，点开就用
-- **悬浮窗**：屏幕边的小球，在任何应用上 AI 翻译、识屏讲要点、问 AI；闲置自动贴边半隐，拖到底部 ✕ 关闭
-- **找文件**：用一句话描述，在下载、文档、相册里找文件；装了嵌入模型时按意思找
-- **应用内灵动岛**：下载、生图、加载模型的进度都在顶部，点开可停止
-- **语音更顺**：识别文字逐字打出，语音聊天免提自动断句，可选识别模型
-- **可自定提示词**：智能体规则、语音风格、翻译、悬浮窗等逐条改写，一键恢复默认
-- **新外观**：液态玻璃界面风格、新品牌标志与字标、桌面小组件与图标快捷方式、重做的音效与振动
+- **AI 工具箱**（侧栏）：生图、悬浮窗、文本转语音、语音转文本、找文件，一格一个
+- **悬浮窗**：屏幕边的小球，在任何应用上屏幕翻译（译文盖在原文上）、识屏、问 AI（带上剪贴板）；闲置贴边半隐，拖到底部关闭
+- **灵动岛**：下载、生图、加载模型的进度显示在左下角，生图完成弹出大图
+- **主页布局随你摆**：设置 › 主页布局，拖动排列主页按钮
+- **生图更好用**：尺寸按模型给出，提示词一键整理；看图页可缩放，可高清放大 2×/4×；对话附件可直接拍照
+- **一步上手**：推荐模型一键下载，下完自动加载
+- **可自定提示词**、**液态玻璃**界面风格、桌面小组件与图标快捷方式、语音聊天免提、语音输入逐字打出
+
+完整记录见 [CHANGELOG](CHANGELOG.md)。
 
 ## 亮点
 
@@ -68,7 +71,7 @@
 
 ## 快速开始
 
-1. 从 [Releases](https://github.com/WWRJ3321/IRIDIS/releases) 安装 APK
+1. 从 [Releases](https://github.com/WWRJ3321/IRIDIS/releases/latest) 安装 APK
 2. 首页模型菜单 ›「模型与加载」›「下载模型」：从推荐列表下载、在线搜索 GGUF，或从文件导入
 3. 开聊；需要工具时打开「智能体」，其余功能在侧栏「AI 工具箱」
 
@@ -113,6 +116,10 @@ cp local.properties.example local.properties   # 填 sdk.dir / ndk.path
 ```
 
 JDK 17 · Android SDK 36 · NDK r27c+ · CMake。详见 [docs/BUILD.md](docs/BUILD.md)。
+
+## 故事
+
+为什么要做 IRIDIS、名字和标志从哪来、一路走来的版本：[IRIDIS的故事](docs/STORY.md)。
 
 ## 交流
 
