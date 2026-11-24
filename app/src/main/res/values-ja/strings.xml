@@ -6,7 +6,7 @@
     <string name="api_notification_text">OpenAI 互換 API · ポート %1$d</string>
     <string name="api_stop">停止</string>
     <string name="gui_a11y_label">IRIDIS GUI</string>
-    <string name="gui_a11y_desc">タスク開始時に IRIDIS の GUI エージェントが画面（スクリーンショットと UI 要素）を見て、代わりにタップ・スワイプ・入力します。動作はタスク実行中のみで、フローティングバーでいつでも停止できます。支払い・送信・削除などは事前に確認します。画面は端末内のモデルだけで処理され、アップロードされません。</string>
+    <string name="gui_a11y_desc">タスク開始時に IRIDIS の GUI エージェントが画面（スクリーンショットと UI 要素）を見て、代わりにタップ・スワイプ・入力します。動作はタスク実行中のみで、フローティングバーでいつでも停止できます。支払い・送信・削除などは事前に確認します。画面は端末内のモデルだけで処理され、アップロードされません。フローティングボタンの画面読み取りと画面翻訳も、画面の文字を読むためにこれを使います。</string>
     <string name="lang_system">システムに従う</string>
     <string name="lang_code">ja</string>
     <string name="kb232_meter">ナレッジ %1$s tok</string>
@@ -756,7 +756,7 @@
     <string name="agent_b2740e">GUI エージェント（試験運用）</string>
     <string name="agent_0413be">オン · 画面を見て、代わりにタップ・スワイプ・入力できます</string>
     <string name="agent_96cd4a">システム設定で有効化済み、接続中…</string>
-    <string name="agent_2696c0">オフ · タップして システム設定 › ユーザー補助 › ダウンロードしたアプリ › IRIDIS GUI エージェント を有効に</string>
+    <string name="agent_2696c0">オフ · タップして システム設定 › ユーザー補助 › ダウンロードしたアプリ › IRIDIS GUI を有効に</string>
     <string name="agent_fd59e1">「制限付き設定」と表示されたら：ここをタップしてアプリ情報を開き、右上の ⋮ › 制限付き設定を許可 を選んでから、戻って有効にしてください</string>
     <string name="agent_76907b">履歴からアプリを消すとシステムがユーザー補助をオフにします：最近のタスクで IRIDIS をロックし、バッテリーを制限なしに。</string>
     <string name="agent_b1aa64">画面を見る → 考える → 操作する。画像を理解できるローカル モデル（Qwen3-VL、MAI-UI、AutoGLM-Phone など）が必要です。上部のフローティングバーでいつでも停止でき、支払い・送信・削除の前に確認します。</string>
@@ -777,7 +777,7 @@
     <string name="agent_5e213d">オンにする</string>
     <string name="agent_0415c4">制限付き設定</string>
     <string name="agent_946fdd">画像対応モデルが必要</string>
-    <string name="agent_ca727f">端末の操作には「IRIDIS GUI エージェント」ユーザー補助サービスが必要です。\n「オンにする」をタップ：システム設定 › ユーザー補助 › ダウンロードしたアプリ › IRIDIS GUI エージェント › オン。\n「制限付き設定」と出たら「制限付き設定」をタップしてアプリ情報を開き、右上の ⋮ › 制限付き設定を許可 を選んでから戻ってオンにしてください。オンにしたらチャットでもう一度伝えてください。\n</string>
+    <string name="agent_ca727f">端末の操作には「IRIDIS GUI」ユーザー補助サービスが必要です。\n「オンにする」をタップ：システム設定 › ユーザー補助 › ダウンロードしたアプリ › IRIDIS GUI › オン。\n「制限付き設定」と出たら「制限付き設定」をタップしてアプリ情報を開き、右上の ⋮ › 制限付き設定を許可 を選んでから戻ってオンにしてください。オンにしたらチャットでもう一度伝えてください。\n</string>
     <string name="agent_88f86e">端末の操作には画面を読める画像対応モデルが必要です。画像対応モデル（Qwen3-VL MNN など）を読み込んでから、もう一度伝えてください。</string>
     <string name="agent_7e4333">ナレッジベース</string>
     <string name="agent_bc270f">ナレッジベースを参照</string>
@@ -1594,7 +1594,7 @@
     <string name="voice_077027">%1$s の検証に失敗しました。再ダウンロードしてください</string>
     <string name="agent_2b9315">モデルが %1$s 秒間出力を開始しないため停止しました（画像処理が遅いか停止）。小さい画像認識モデルに切り替えるか、ログをエクスポートしてください</string>
     <string name="agent_5efc4f">モデルが %1$s 秒以内に 1 ステップを完了しなかったため停止しました</string>
-    <string name="agent_13f110">先に 設定 › ユーザー補助 で「IRIDIS GUI エージェント」をオンにしてください</string>
+    <string name="agent_13f110">先に 設定 › ユーザー補助 で「IRIDIS GUI」をオンにしてください</string>
     <string name="agent_f3f28a">先に画像認識対応モデルを読み込んでください</string>
     <string name="agent_b50199">現在のモデルは画像を認識できません：GUI エージェントには視覚モデルが必要です（例：Qwen3-VL、MAI-UI、AutoGLM-Phone）</string>
     <string name="agent_c9e2c3">実行中</string>
@@ -2398,9 +2398,9 @@
     <string name="b4r3_copy">コピー</string>
     <string name="b5_take_photo">写真を撮る</string>
     <string name="b5_no_camera">カメラアプリがありません</string>
-    <string name="b5_upscale">拡大</string>
+    <string name="b5_upscale">高画質化</string>
     <string name="b5_upscale_x">%1$d× 拡大</string>
-    <string name="b5_upscale_dl">モデル %1$d%%</string>
+    <string name="b5_upscale_dl">モデルをダウンロード中 %1$d%%</string>
     <string name="b5_upscale_run">拡大中 %1$d%%</string>
     <string name="b5_upscale_done">拡大して履歴に保存しました</string>
     <string name="b5_upscale_failed">拡大に失敗：%1$s</string>
@@ -2424,4 +2424,26 @@
     <string name="b6_item_voice">音声</string>
     <string name="b6r2_layout_hint">ボタンを長押しして好きな位置へ。ホーム画面も同じになります</string>
     <string name="b6r2_layout_full">この列はいっぱいです</string>
+    <string name="b30_mic_denied">マイクの権限が必要です。システム設定で許可してください</string>
+    <string name="b30_find_perm">「すべてのファイルへのアクセス」がオフのため、見つかるファイルはごく一部です</string>
+    <string name="b30_find_perm_go">オンにする</string>
+    <string name="b30_upscale_big">画像が大きすぎます：%1$d× は一辺 %2$d px まで</string>
+    <string name="b30_upscale_oom">メモリ不足です。2× か小さい画像でお試しください</string>
+    <string name="b30_prompt_float_screen">以下はスマホ画面上のテキストです。この画面が何についてのものか、要点は何かを3〜5文で説明し、ユーザーが対応すべきことがあれば指摘してください。前置きなしで、日本語で答えてください。</string>
+    <string name="b30_prompt_float_ask">免責事項なしで、簡潔かつ率直に日本語で答えてください。</string>
+    <string name="b30_n1">AI ツールボックス（サイドバー）：画像生成、フローティングボタン、読み上げ、音声入力（長押しで話す・認識モデル選択可）、ファイル検索。</string>
+    <string name="b30_n2">フローティングボタン：タップでメニュー——画面翻訳（原文の上に表示）、画面読み取り、AI に質問（クリップボード付き・検索可）。放置で端に半分隠れ、下までドラッグで閉じる。</string>
+    <string name="b30_n3">アイランド：左下にダウンロード・画像生成・読み込みの進捗を表示、生成完了で大きく表示（設定 › 外観でオフ可）。</string>
+    <string name="b30_n4">設定 › ホームレイアウト：ドラッグでホームのボタンを並べ替え。上部バーのボタンはバー内のみ、入力欄のボタンは2段の間で移動可（1段最大4個）。</string>
+    <string name="b30_n5">設定 › プロンプト：すべての内蔵プロンプトを書き換え可（Hunyuan 翻訳を除く）。</string>
+    <string name="b30_n6">新しい外観「リキッドグラス」、ホーム画面ウィジェットとアイコン長押しショートカット。</string>
+    <string name="b30_n7">かんたん開始：おすすめモデルをワンタップでダウンロードして自動読み込み。既定モデル未設定でも送信時に自動読み込み。</string>
+    <string name="b30_n8">画像生成：モデル別のサイズ、プロンプトをワンタップで整理。ビューアを刷新し、ズームと高画質化 2×/4×（初回 18 MB のモデルをダウンロード）。</string>
+    <string name="b30_n9">カメラで撮影して直接添付、チャット内で現在のキャラクターを編集。</string>
+    <string name="b30_n10">ダウンロード：同じモデルの GGUF / MNN を1枚のカードに統合。</string>
+    <string name="b30_n11">音声チャットはハンズフリーに、音声入力は文字が順に表示。</string>
+    <string name="b30_n12">スマホ操作の一言（中国語、例「打开手电筒」）はその一文だけスマホツールを使用。</string>
+    <string name="b30_n13">外観：効果音と振動、情報ページ、ロゴ、アニメーションを更新。待ち時間のひとこと（オフ可）と隠し要素も。</string>
+    <string name="b30_n14">修正：音声入力後にカーソルが先頭へ移動、押下エフェクトが四角、メモリ十分でも「メモリ不足気味」表示、「思考」がオフにならない、Hunyuan 翻訳の繰り返し。</string>
+    <string name="b30_n15">いくつかのクラッシュと権限の問題を修正。</string>
 </resources>

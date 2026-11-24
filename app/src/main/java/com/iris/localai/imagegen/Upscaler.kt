@@ -52,7 +52,7 @@ object Upscaler {
         if (!UpscaleNative.available) throw IllegalStateException("upscale library missing")
         val bmp = BitmapFactory.decodeFile(src.path) ?: throw IllegalStateException("decode failed")
         val (w, h) = bmp.width to bmp.height
-        UpscaleRules.check(w, h)
+        UpscaleRules.check(w, h, factor)
         val rgb = UpscaleRules.argbToRgb(IntArray(w * h).also { bmp.getPixels(it, 0, w, 0, 0, w, h) })
         bmp.recycle()
         val handle = UpscaleNative.nativeLoad(modelFile(context).path, UpscaleRules.threads(Runtime.getRuntime().availableProcessors()), UpscaleRules.TILE)
@@ -65,7 +65,10 @@ object Upscaler {
         } finally { UpscaleNative.nativeFree(handle) }
             ?: throw IllegalStateException(UpscaleNative.nativeLastError().ifBlank { "upscale failed" })
         val (ow, oh) = UpscaleRules.header(out)
-        var big = Bitmap.createBitmap(UpscaleRules.rgbToArgb(out, 8, ow * oh), ow, oh, Bitmap.Config.ARGB_8888)
+        // 逐行转像素写进 Bitmap（像素在 native 堆），不再整张生成 ow·oh 的 IntArray
+        var big = Bitmap.createBitmap(ow, oh, Bitmap.Config.ARGB_8888)
+        val row = IntArray(ow)
+        for (y in 0 until oh) { UpscaleRules.rgbRow(out, 8 + y * ow * 3, row); big.setPixels(row, 0, ow, 0, y, ow, 1) }
         if (factor == 2) {
             val half = Bitmap.createScaledBitmap(big, ow / 2, oh / 2, true)
             big.recycle(); big = half
@@ -77,11 +80,22 @@ object Upscaler {
 
 /** 超分的纯逻辑（无 Android 依赖，单测 V300B5Test）。 */
 object UpscaleRules {
-    /** 输入边长上限：4× 后 ≤ 6144，避免一张图吃掉几 GB 内存。 */
+    /** 输入边长上限：2× 时 1536（中间 4× 结果 6144）。 */
     const val MAX_SIDE = 1536
+    /** 3.0.0：4× 输入边长上限 1024（输出 4096²），防 OOM。 */
+    const val MAX_SIDE_4X = 1024
     const val TILE = 128
-    fun check(w: Int, h: Int) {
-        require(w in 1..MAX_SIDE && h in 1..MAX_SIDE) { "image too large: ${w}x$h (max $MAX_SIDE)" }
+    fun maxSide(factor: Int): Int = if (factor >= 4) MAX_SIDE_4X else MAX_SIDE
+    fun fits(w: Int, h: Int, factor: Int = 2): Boolean = w in 1..maxSide(factor) && h in 1..maxSide(factor)
+    fun check(w: Int, h: Int, factor: Int = 2) {
+        require(fits(w, h, factor)) { "image too large: ${w}x$h (max ${maxSide(factor)})" }
+    }
+    /** 一行 RGB（从 [off] 起 row.size 个像素）→ ARGB。 */
+    fun rgbRow(b: ByteArray, off: Int, row: IntArray) {
+        for (i in row.indices) {
+            val p = off + i * 3
+            row[i] = (0xFF shl 24) or ((b[p].toInt() and 0xFF) shl 16) or ((b[p + 1].toInt() and 0xFF) shl 8) or (b[p + 2].toInt() and 0xFF)
+        }
     }
     /** 留一个核给界面。 */
     fun threads(cores: Int): Int = (cores - 1).coerceIn(1, 6)

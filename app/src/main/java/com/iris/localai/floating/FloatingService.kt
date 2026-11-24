@@ -236,12 +236,15 @@ class FloatingService : Service() {
         super.onCreate()
         wm = getSystemService(WindowManager::class.java)
         startForegroundCompat()
+        // 3.0.0：「显示在其他应用上层」被收回后 sticky 重启时不再 addView 闪退
+        if (!canDraw(this)) { stopSelf(); return }
         showBubble()
+        if (bubble == null) { stopSelf(); return }
         _running.value = true
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
+        if (intent?.action == ACTION_STOP || !canDraw(this)) { stopSelf(); return START_NOT_STICKY }
         return START_STICKY
     }
 
@@ -336,7 +339,7 @@ class FloatingService : Service() {
                 else -> false
             }
         }
-        wm.addView(v, bubbleLp)
+        if (runCatching { wm.addView(v, bubbleLp) }.onFailure { Log.w(TAG, "bubble addView failed: ${it.message}") }.isFailure) return
         bubble = v
         dockedLeft = false
         v.animate().alpha(0.95f).scaleX(1f).scaleY(1f).setInterpolator(OvershootInterpolator(2f)).setDuration(320).start()
@@ -633,7 +636,7 @@ class FloatingService : Service() {
         peekJob?.cancel()
         root.alpha = 0f; root.scaleX = 0.6f; root.scaleY = 0.6f; root.translationY = 0f
         root.pivotX = if (dockedLeft) 0f else w.toFloat(); root.pivotY = 0f
-        wm.addView(root, lp)
+        if (!canDraw(this) || runCatching { wm.addView(root, lp) }.onFailure { Log.w(TAG, "panel addView failed: ${it.message}") }.isFailure) { stopSelf(); return }
         panel = root; panelLp = lp
         alignBall(py)
         selectMode(mode)
@@ -643,8 +646,9 @@ class FloatingService : Service() {
         when (mode) {
             FloatingLogic.Mode.TRANSLATE, FloatingLogic.Mode.SCREEN -> root.post { run() }
             else -> {
-                pasteClipboard()
                 input?.let { f -> f.requestFocus(); f.setSelection(f.text.length); f.postDelayed({ getSystemService(InputMethodManager::class.java)?.showSoftInput(f, 0) }, 200) }
+                // Android 10+ 只有拿到焦点的窗口才能读剪贴板：等面板窗口获得焦点再读
+                pasteWhenFocused(root)
             }
         }
     }
@@ -669,6 +673,17 @@ class FloatingService : Service() {
         FloatingLogic.Mode.SCREEN -> I18n.s(R.string.v30_fl_screen)
         FloatingLogic.Mode.SEARCH -> I18n.s(R.string.v30_fl_search)
         FloatingLogic.Mode.ASK -> I18n.s(R.string.v30_fl_ask)
+    }
+
+    private fun pasteWhenFocused(root: View) {
+        if (root.hasWindowFocus()) { pasteClipboard(); return }
+        root.viewTreeObserver.addOnWindowFocusChangeListener(object : android.view.ViewTreeObserver.OnWindowFocusChangeListener {
+            override fun onWindowFocusChanged(hasFocus: Boolean) {
+                if (!hasFocus) return
+                root.viewTreeObserver.removeOnWindowFocusChangeListener(this)
+                if (panel === root && input?.text.isNullOrEmpty()) { pasteClipboard(); input?.let { it.setSelection(it.text.length) } }
+            }
+        })
     }
 
     private fun pasteClipboard() {

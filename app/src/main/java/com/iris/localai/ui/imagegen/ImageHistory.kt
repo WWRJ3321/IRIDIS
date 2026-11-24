@@ -263,7 +263,8 @@ internal fun HistoryViewer(
                             ui.upscaleDownloading -> I18n.s(R.string.b5_upscale_dl, (ui.upscaleProgress * 100).toInt())
                             else -> I18n.s(R.string.b5_upscale_run, (ui.upscaleProgress * 100).toInt())
                         }
-                        Box {
+                        // 包里没有 libiris_upscale.so 时不显示（免得先下 18 MB 再报错）
+                        if (androidx.compose.runtime.remember { com.iris.localai.imagegen.UpscaleNative.available }) Box {
                             ViewerAction(IrisIcons.Expand, upLabel) { if (!busy) upMenu = true }
                             com.iris.localai.ui.components.IrisMenu(upMenu, { upMenu = false }) {
                                 for (k in listOf(2, 4)) com.iris.localai.ui.components.IrisMenuItem(I18n.s(R.string.b5_upscale_x, k), IrisIcons.Expand) {

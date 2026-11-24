@@ -75,6 +75,14 @@ import com.iris.localai.ui.theme.IrisRadius
 import com.iris.localai.ui.theme.IrisType
 import kotlin.math.roundToInt
 
+/** 3.0.0：布局编辑页拖动收尾的纯逻辑（单测）。 */
+object LayoutDrag {
+    /** 拖动中显示预览；松手后到设置写回前显示 [pending]；否则显示已保存的。 */
+    fun shown(preview: HomeLayout?, pending: HomeLayout?, saved: HomeLayout): HomeLayout = preview ?: pending ?: saved
+    /** 设置已写回到和 [pending] 一样。 */
+    fun settled(pending: HomeLayout, saved: HomeLayout): Boolean = pending.encode() == saved.encode()
+}
+
 /** 3.0.0 Beta6 设置 › 主页布局：拖动按钮换格子。 */
 object LayoutText {
     fun label(i: HomeItem): String = I18n.s(when (i) {
@@ -118,7 +126,7 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
     val c = Iris.colors
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
-    // all rects in the editor box's own coordinates
+    // 3.0.0：rect 一律存 root 坐标；手势里用 down.position + 当时的 origin 比较（不再依赖组合时捕获的旧 origin）
     val rowRects = remember { mutableStateMapOf<HomeLayout.Row, Rect>() }
     val itemRects = remember { mutableStateMapOf<HomeItem, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -126,8 +134,15 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
     var grabRect by remember { mutableStateOf(Rect.Zero) }
     var drag by remember { mutableStateOf(Offset.Zero) }
     var preview by remember { mutableStateOf<HomeLayout?>(null) }
+    // 3.0.0：松手后保持新布局，直到设置真的写回（避免先闪回原位一帧）
+    var pending by remember { mutableStateOf<HomeLayout?>(null) }
     var full by remember { mutableStateOf(false) }
-    val shown = preview ?: saved
+    val shown = LayoutDrag.shown(preview, pending, saved)
+    androidx.compose.runtime.LaunchedEffect(saved, pending) {
+        val p = pending ?: return@LaunchedEffect
+        if (LayoutDrag.settled(p, saved)) pending = null
+        else { kotlinx.coroutines.delay(1500); pending = null }
+    }
 
     fun target(item: HomeItem, p: Offset, base: HomeLayout): HomeLayout {
         val rows = HomeLayout.rowsOf(item.group).mapNotNull { r -> rowRects[r]?.let { r to it } }
@@ -148,7 +163,7 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
         ScrollBody {
             Text(
                 I18n.s(if (full) R.string.b6r2_layout_full else R.string.b6r2_layout_hint),
-                style = IrisType.secondary, color = if (full) c.danger else c.textSecondary,
+                style = IrisType.secondary, color = if (full) c.danger else c.textSecondary, minLines = 2,
                 modifier = Modifier.padding(horizontal = IrisDimens.pageGutter, vertical = IrisDimens.space8),
             )
             Box(
@@ -162,7 +177,7 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            val hit = itemRects.entries.firstOrNull { it.value.inflate(6f).contains(down.position) }?.key
+                            val hit = itemRects.entries.firstOrNull { it.value.inflate(6f).contains(down.position + origin) }?.key
                                 ?: return@awaitEachGesture
                             val slop = awaitTouchSlopOrCancellation(down.id) { ch, _ -> ch.consume() }
                                 ?: return@awaitEachGesture
@@ -175,13 +190,13 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
                                 if (next != preview) { preview = next; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                             }
                             val end = preview
-                            if (ok && end != null && end != savedNow) save(end)
+                            if (ok && end != null && end != savedNow) { pending = end; save(end) }
                             dragging = null; drag = Offset.Zero; preview = null; full = false
                         }
                     },
             ) {
                 Column(Modifier.fillMaxWidth().padding(IrisDimens.space8)) {
-                    EditRow(shown, HomeLayout.Row.TOP, dragging, Modifier.height(48.dp), rowRects, itemRects, origin)
+                    EditRow(shown, HomeLayout.Row.TOP, dragging, Modifier.height(48.dp), rowRects, itemRects)
                     Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
                         Text(I18n.s(R.string.b6_layout_chat), style = IrisType.secondary, color = c.textTertiary)
                     }
@@ -192,12 +207,12 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
                             .border(1.dp, c.outline.copy(alpha = 0.6f), IrisRadius.composerShape)
                             .padding(IrisDimens.space8),
                     ) {
-                        EditRow(shown, HomeLayout.Row.UPPER, dragging, Modifier.height(44.dp), rowRects, itemRects, origin)
+                        EditRow(shown, HomeLayout.Row.UPPER, dragging, Modifier.height(44.dp), rowRects, itemRects)
                         Text(
                             I18n.s(R.string.b6_layout_input), style = IrisType.body, color = c.textTertiary,
                             modifier = Modifier.padding(horizontal = IrisDimens.space8, vertical = IrisDimens.space8),
                         )
-                        EditRow(shown, HomeLayout.Row.LOWER, dragging, Modifier.height(44.dp), rowRects, itemRects, origin)
+                        EditRow(shown, HomeLayout.Row.LOWER, dragging, Modifier.height(44.dp), rowRects, itemRects)
                     }
                 }
                 // the button under the finger, floating above everything
@@ -206,7 +221,7 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
                     Box(
                         Modifier
                             .zIndex(3f)
-                            .offset { val p = grabRect.topLeft + drag; IntOffset(p.x.roundToInt(), p.y.roundToInt()) }
+                            .offset { val p = grabRect.topLeft - origin + drag; IntOffset(p.x.roundToInt(), p.y.roundToInt()) }
                             .size(with(density) { grabRect.width.toDp() }, with(density) { grabRect.height.toDp() })
                             .graphicsLayer { scaleX = 1.08f; scaleY = 1.08f; shadowElevation = 12f; shape = CircleShape; clip = false },
                         contentAlignment = Alignment.Center,
@@ -227,14 +242,14 @@ fun LayoutPage(vm: SettingsViewModel, onBack: () -> Unit) {
 @Composable
 private fun EditRow(
     layout: HomeLayout, row: HomeLayout.Row, dragging: HomeItem?, modifier: Modifier,
-    rowRects: MutableMap<HomeLayout.Row, Rect>, itemRects: MutableMap<HomeItem, Rect>, origin: Offset,
+    rowRects: MutableMap<HomeLayout.Row, Rect>, itemRects: MutableMap<HomeItem, Rect>,
 ) {
     val c = Iris.colors
     Row(
         modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(if (dragging != null && dragging.group == row.group) c.surfaceVariant.copy(alpha = 0.35f) else Color.Transparent)
-            .onGloballyPositioned { rowRects[row] = it.boundsInRoot().translate(-origin) }
+            .onGloballyPositioned { rowRects[row] = it.boundsInRoot() }
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -242,7 +257,7 @@ private fun EditRow(
             key(item) {
                 Box(
                     Modifier
-                        .onGloballyPositioned { itemRects[item] = it.boundsInRoot().translate(-origin) }
+                        .onGloballyPositioned { itemRects[item] = it.boundsInRoot() }
                         .graphicsLayer { alpha = if (item == dragging) 0.25f else 1f },
                 ) { MiniButton(item, lifted = false) }
             }

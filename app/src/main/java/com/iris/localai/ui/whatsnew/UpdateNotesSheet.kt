@@ -128,7 +128,7 @@ private fun Group(title: String, items: List<UpdateNotes.Item>, tint: androidx.c
     items.forEach { item ->
         Row(Modifier.fillMaxWidth().padding(top = IrisDimens.space6)) {
             Box(Modifier.padding(top = 8.dp, start = 2.dp, end = 10.dp).size(3.dp).clip(CircleShape).background(c.textTertiary))
-            Text(item.text, style = IrisType.secondary, color = c.text.copy(alpha = 0.82f))
+            Text(if (item.res != 0) I18n.s(item.res) else item.text, style = IrisType.secondary, color = c.text.copy(alpha = 0.82f))
         }
     }
 }

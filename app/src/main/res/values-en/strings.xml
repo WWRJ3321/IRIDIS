@@ -6,7 +6,7 @@
     <string name="api_notification_text">OpenAI-compatible API · port %1$d</string>
     <string name="api_stop">Stop</string>
     <string name="gui_a11y_label">IRIDIS GUI</string>
-    <string name="gui_a11y_desc">Lets the IRIDIS GUI agent see the screen (screenshots and UI elements) and tap, swipe and type for you when you start a task. It acts only while a task runs and the floating bar can stop it anytime; it asks first before paying, sending or deleting. The screen is processed only by on-device models and never uploaded.</string>
+    <string name="gui_a11y_desc">Lets the IRIDIS GUI agent see the screen (screenshots and UI elements) and tap, swipe and type for you when you start a task. It acts only while a task runs and the floating bar can stop it anytime; it asks first before paying, sending or deleting. The screen is processed only by on-device models and never uploaded. The floating bubble\'s Read screen and Screen translation also use it to read on-screen text.</string>
     <string name="lang_system">Follow system</string>
     <string name="lang_code">en</string>
     <string name="kb232_meter">Knowledge %1$s tok</string>
@@ -756,7 +756,7 @@
     <string name="agent_b2740e">GUI agent (experimental)</string>
     <string name="agent_0413be">On · can see the screen and tap, swipe and type for you</string>
     <string name="agent_96cd4a">Enabled in system settings, connecting…</string>
-    <string name="agent_2696c0">Off · tap to enable in System settings › Accessibility › Downloaded apps › IRIDIS GUI agent</string>
+    <string name="agent_2696c0">Off · tap to enable in System settings › Accessibility › Downloaded apps › IRIDIS GUI</string>
     <string name="agent_fd59e1">If the system says \"Restricted setting\": tap here to open App info, then ⋮ (top right) › Allow restricted settings, and go back to enable it</string>
     <string name="agent_76907b">Clearing recent apps lets the system turn accessibility off: lock IRIDIS in Recents and set battery to unrestricted.</string>
     <string name="agent_b1aa64">See the screen → think → act. Needs a local vision model (e.g. Qwen3-VL, MAI-UI, AutoGLM-Phone). Stop it anytime from the floating bar at the top; it asks before paying, sending or deleting.</string>
@@ -777,7 +777,7 @@
     <string name="agent_5e213d">Turn on</string>
     <string name="agent_0415c4">Restricted settings</string>
     <string name="agent_946fdd">Vision model needed</string>
-    <string name="agent_ca727f">Controlling the phone needs the \"IRIDIS GUI agent\" accessibility service.\nTap \"Turn on\": System settings › Accessibility › Downloaded apps › IRIDIS GUI agent › On.\nIf it says \"Restricted setting\", tap \"Restricted settings\" to open App info, then ⋮ (top right) › Allow restricted settings, and go back to turn it on. Then say it again in the chat.\n</string>
+    <string name="agent_ca727f">Controlling the phone needs the \"IRIDIS GUI\" accessibility service.\nTap \"Turn on\": System settings › Accessibility › Downloaded apps › IRIDIS GUI › On.\nIf it says \"Restricted setting\", tap \"Restricted settings\" to open App info, then ⋮ (top right) › Allow restricted settings, and go back to turn it on. Then say it again in the chat.\n</string>
     <string name="agent_88f86e">Controlling the phone needs a model that can read images to see the screen. Load a vision model (e.g. Qwen3-VL MNN) and say it again.</string>
     <string name="agent_7e4333">Knowledge base</string>
     <string name="agent_bc270f">Use knowledge base</string>
@@ -1594,7 +1594,7 @@
     <string name="voice_077027">%1$s verification failed, please download again</string>
     <string name="agent_2b9315">Model produced no output for %1$s s (image reading too slow or stuck), stopped. Try a smaller vision model, or export logs for me to check</string>
     <string name="agent_5efc4f">Model didn\'t finish a step in %1$s s, stopped</string>
-    <string name="agent_13f110">First enable \"IRIDIS GUI Agent\" in Settings › Accessibility</string>
+    <string name="agent_13f110">First enable \"IRIDIS GUI\" in Settings › Accessibility</string>
     <string name="agent_f3f28a">Load a vision-capable model first</string>
     <string name="agent_b50199">Current model can\'t read images: GUI Agent needs a vision model (e.g. Qwen3-VL, MAI-UI, AutoGLM-Phone)</string>
     <string name="agent_c9e2c3">Running</string>
@@ -2398,9 +2398,9 @@
     <string name="b4r3_copy">Copy</string>
     <string name="b5_take_photo">Take photo</string>
     <string name="b5_no_camera">No camera app found</string>
-    <string name="b5_upscale">Upscale</string>
+    <string name="b5_upscale">HD upscale</string>
     <string name="b5_upscale_x">Upscale %1$d×</string>
-    <string name="b5_upscale_dl">Model %1$d%%</string>
+    <string name="b5_upscale_dl">Downloading model %1$d%%</string>
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Upscaled and saved to history</string>
     <string name="b5_upscale_failed">Upscale failed: %1$s</string>
@@ -2424,4 +2424,26 @@
     <string name="b6_item_voice">Voice</string>
     <string name="b6r2_layout_hint">Hold a button and drag it where you want; the home page will match</string>
     <string name="b6r2_layout_full">This row is full</string>
+    <string name="b30_mic_denied">Microphone permission needed — allow it in system settings</string>
+    <string name="b30_find_perm">Without \"All files access\" only a few files can be found</string>
+    <string name="b30_find_perm_go">Turn on</string>
+    <string name="b30_upscale_big">Image too large: %1$d× supports up to %2$d px per side</string>
+    <string name="b30_upscale_oom">Not enough memory — try 2× or a smaller image</string>
+    <string name="b30_prompt_float_screen">Below is the text on the phone screen. In three to five sentences, say what this screen is about and its key points; point out anything the user needs to act on. Be direct, no preamble. Reply in English.</string>
+    <string name="b30_prompt_float_ask">Answer briefly and directly, without disclaimers. Reply in English.</string>
+    <string name="b30_n1">AI Toolbox (side panel): image generation, floating bubble, text to speech, speech to text (hold to talk, choose the model), file finder.</string>
+    <string name="b30_n2">Floating bubble: tap for a menu — screen translation (overlaid on the original), read screen, ask AI (with clipboard, can search); tucks into the edge when idle, drag to the bottom to close.</string>
+    <string name="b30_n3">Island: download, image and loading progress at the bottom left; finished images pop up large (can be turned off in Settings › Appearance).</string>
+    <string name="b30_n4">Settings › Home layout: drag to arrange home buttons; top-bar buttons stay in the top bar, input-box buttons can move between its two rows (up to 4 per row).</string>
+    <string name="b30_n5">Settings › Prompts: rewrite every built-in prompt (except Hunyuan translation).</string>
+    <string name="b30_n6">New \"Liquid glass\" style; home-screen widget and long-press shortcuts.</string>
+    <string name="b30_n7">Quick start: one tap downloads a recommended model and loads it; sending a message loads a model even if no default is set.</string>
+    <string name="b30_n8">Image generation: sizes per model, one-tap prompt tidy-up; redesigned viewer with zoom and HD upscale 2×/4× (18 MB model on first use).</string>
+    <string name="b30_n9">Attach a photo straight from the camera; edit the current character right in the chat.</string>
+    <string name="b30_n10">Downloads: GGUF and MNN builds of the same model share one card.</string>
+    <string name="b30_n11">Voice chat is now hands-free; dictation types word by word.</string>
+    <string name="b30_n12">Quick phone commands (in Chinese, e.g. \"打开手电筒\") use phone tools for that message only.</string>
+    <string name="b30_n13">Look and feel: new sounds and haptics, About page, logo and motion; light quips while you wait (can be turned off), plus an easter egg.</string>
+    <string name="b30_n14">Fixed: cursor jumping to the start after dictation; square press highlight; false \"memory tight\" warning; Thinking not turning off; Hunyuan translation repeating itself.</string>
+    <string name="b30_n15">Fixed several crashes and permission issues.</string>
 </resources>

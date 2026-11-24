@@ -816,6 +816,15 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
     fun upscale(path: String, factor: Int, onDone: (String?) -> Unit) {
         if (_ui.value.upscaling != null) return
         val ctx = getApplication<Application>()
+        // 3.0.0：先查库和尺寸，不合适就别白下 18 MB 模型
+        if (!com.iris.localai.imagegen.UpscaleNative.available) {
+            _ui.update { it.copy(error = I18n.s(R.string.b5_upscale_failed, "upscale library missing")) }; onDone(null); return
+        }
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        runCatching { android.graphics.BitmapFactory.decodeFile(path, bounds) }
+        if (bounds.outWidth > 0 && !com.iris.localai.imagegen.UpscaleRules.fits(bounds.outWidth, bounds.outHeight, factor)) {
+            _ui.update { it.copy(error = I18n.s(R.string.b30_upscale_big, factor, com.iris.localai.imagegen.UpscaleRules.maxSide(factor))) }; onDone(null); return
+        }
         _ui.update { it.copy(upscaling = path, upscaleProgress = 0f, upscaleDownloading = !com.iris.localai.imagegen.Upscaler.modelReady(ctx)) }
         viewModelScope.launch {
             val r = runCatching {
@@ -833,7 +842,8 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
                 _ui.update { it.copy(upscaling = null, upscaleDownloading = false, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) }
                 onDone(f.path)
             }.onFailure { e ->
-                _ui.update { it.copy(upscaling = null, upscaleDownloading = false, error = I18n.s(R.string.b5_upscale_failed, e.message ?: e.javaClass.simpleName)) }
+                val msg = if (e is OutOfMemoryError) I18n.s(R.string.b30_upscale_oom) else I18n.s(R.string.b5_upscale_failed, e.message ?: e.javaClass.simpleName)
+                _ui.update { it.copy(upscaling = null, upscaleDownloading = false, error = msg) }
                 onDone(null)
             }
         }

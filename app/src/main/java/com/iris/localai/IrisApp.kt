@@ -112,6 +112,14 @@ class IrisApp : Application() {
     override fun onCreate() {
         super.onCreate()
         I18n.init(this) // 2.3.1
+        // 3.0.0：悬浮窗识屏 / 问 AI 的默认提示词跟随界面语言
+        com.iris.localai.prompts.Prompts.localized = { k ->
+            when (k) {
+                com.iris.localai.prompts.PromptKey.FLOAT_SCREEN -> I18n.s(R.string.b30_prompt_float_screen)
+                com.iris.localai.prompts.PromptKey.FLOAT_ASK -> I18n.s(R.string.b30_prompt_float_ask)
+                else -> null
+            }
+        }
         ModelAliases.init(this) // 模型自定义名，先于模型列表
         ImportedImages.init(filesDir) // 导入的生图模型（:imagegen 进程也要）
         // 2.7.1：生图低内存模式的默认值按本机内存（低于约 9.5 GB 默认开）

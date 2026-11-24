@@ -6,7 +6,7 @@
     <string name="api_notification_text">API compatible con OpenAI · puerto %1$d</string>
     <string name="api_stop">Detener</string>
     <string name="gui_a11y_label">IRIDIS GUI</string>
-    <string name="gui_a11y_desc">Permite que el agente GUI de IRIDIS vea la pantalla (capturas y elementos de la interfaz) y toque, deslice y escriba por ti cuando inicias una tarea. Solo actúa mientras la tarea está en curso y la barra flotante puede detenerlo en cualquier momento; antes de pagar, enviar o eliminar te pregunta. La pantalla solo la procesan modelos del dispositivo y nunca se sube.</string>
+    <string name="gui_a11y_desc">Permite que el agente GUI de IRIDIS vea la pantalla (capturas y elementos de la interfaz) y toque, deslice y escriba por ti cuando inicias una tarea. Solo actúa mientras la tarea está en curso y la barra flotante puede detenerlo en cualquier momento; antes de pagar, enviar o eliminar te pregunta. La pantalla solo la procesan modelos del dispositivo y nunca se sube. La lectura y la traducción de pantalla de la burbuja flotante también lo usan para leer el texto en pantalla.</string>
     <string name="lang_system">Según el sistema</string>
     <string name="lang_code">es</string>
     <string name="kb232_meter">Conocimiento %1$s tok</string>
@@ -756,7 +756,7 @@
     <string name="agent_b2740e">Agente GUI (experimental)</string>
     <string name="agent_0413be">Activado · puede ver la pantalla y tocar, deslizar y escribir por ti</string>
     <string name="agent_96cd4a">Activado en Ajustes, conectando…</string>
-    <string name="agent_2696c0">Desactivado · toca y actívalo en Ajustes › Accesibilidad › Apps descargadas › Agente GUI de IRIDIS</string>
+    <string name="agent_2696c0">Desactivado · toca y actívalo en Ajustes › Accesibilidad › Apps descargadas › IRIDIS GUI</string>
     <string name="agent_fd59e1">Si aparece «Ajuste restringido»: toca aquí para abrir la información de la app, ⋮ (arriba a la derecha) › Permitir ajustes restringidos y vuelve a activarlo</string>
     <string name="agent_76907b">Al cerrar las apps recientes el sistema apaga la accesibilidad: bloquea IRIDIS en Recientes y pon la batería sin restricciones.</string>
     <string name="agent_b1aa64">Ver la pantalla → pensar → actuar. Necesita un modelo local con visión (p. ej. Qwen3-VL, MAI-UI, AutoGLM-Phone). Puedes detenerlo en cualquier momento desde la barra flotante superior; pregunta antes de pagar, enviar o eliminar.</string>
@@ -777,7 +777,7 @@
     <string name="agent_5e213d">Activar</string>
     <string name="agent_0415c4">Ajustes restringidos</string>
     <string name="agent_946fdd">Se necesita un modelo con visión</string>
-    <string name="agent_ca727f">Para controlar el teléfono hace falta el servicio de accesibilidad «agente GUI de IRIDIS».\nToca «Activar»: Ajustes › Accesibilidad › Apps descargadas › Agente GUI de IRIDIS › Activar.\nSi aparece «Ajuste restringido», toca «Ajustes restringidos» para abrir la información de la app, ⋮ (arriba a la derecha) › Permitir ajustes restringidos y vuelve a activarlo. Luego dilo otra vez en el chat.\n</string>
+    <string name="agent_ca727f">Para controlar el teléfono hace falta el servicio de accesibilidad «IRIDIS GUI».\nToca «Activar»: Ajustes › Accesibilidad › Apps descargadas › IRIDIS GUI › Activar.\nSi aparece «Ajuste restringido», toca «Ajustes restringidos» para abrir la información de la app, ⋮ (arriba a la derecha) › Permitir ajustes restringidos y vuelve a activarlo. Luego dilo otra vez en el chat.\n</string>
     <string name="agent_88f86e">Para controlar el teléfono hace falta un modelo que lea imágenes. Carga un modelo con visión (p. ej. Qwen3-VL MNN) y vuelve a decirlo.</string>
     <string name="agent_7e4333">Base de conocimiento</string>
     <string name="agent_bc270f">Usar base de conocimiento</string>
@@ -1594,7 +1594,7 @@
     <string name="voice_077027">Falló la verificación de %1$s, vuelve a descargarlo</string>
     <string name="agent_2b9315">El modelo no generó nada en %1$s s (análisis de imagen lento o bloqueado), detenido. Prueba un modelo de visión más pequeño o exporta los registros</string>
     <string name="agent_5efc4f">El modelo no completó un paso en %1$s s, detenido</string>
-    <string name="agent_13f110">Primero activa «Agente GUI de IRIDIS» en Ajustes › Accesibilidad</string>
+    <string name="agent_13f110">Primero activa «IRIDIS GUI» en Ajustes › Accesibilidad</string>
     <string name="agent_f3f28a">Primero carga un modelo con visión</string>
     <string name="agent_b50199">El modelo actual no lee imágenes: el agente GUI necesita un modelo de visión (p. ej., Qwen3-VL, MAI-UI, AutoGLM-Phone)</string>
     <string name="agent_c9e2c3">En ejecución</string>
@@ -2398,9 +2398,9 @@
     <string name="b4r3_copy">Copiar</string>
     <string name="b5_take_photo">Tomar foto</string>
     <string name="b5_no_camera">No hay app de cámara</string>
-    <string name="b5_upscale">Ampliar</string>
+    <string name="b5_upscale">Ampliar en HD</string>
     <string name="b5_upscale_x">Ampliar %1$d×</string>
-    <string name="b5_upscale_dl">Modelo %1$d%%</string>
+    <string name="b5_upscale_dl">Descargando modelo %1$d%%</string>
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Ampliada y guardada en el historial</string>
     <string name="b5_upscale_failed">Error al ampliar: %1$s</string>
@@ -2424,4 +2424,26 @@
     <string name="b6_item_voice">Voz</string>
     <string name="b6r2_layout_hint">Mantén pulsado un botón y arrástralo; la pantalla principal quedará igual</string>
     <string name="b6r2_layout_full">Esta fila está llena</string>
+    <string name="b30_mic_denied">Se necesita permiso de micrófono: permítelo en los ajustes del sistema</string>
+    <string name="b30_find_perm">Sin «Acceso a todos los archivos» solo se encuentran pocos archivos</string>
+    <string name="b30_find_perm_go">Activar</string>
+    <string name="b30_upscale_big">Imagen demasiado grande: %1$d× admite hasta %2$d px por lado</string>
+    <string name="b30_upscale_oom">Memoria insuficiente: prueba 2× o una imagen más pequeña</string>
+    <string name="b30_prompt_float_screen">Abajo está el texto de la pantalla del teléfono. En tres a cinco frases, di de qué trata esta pantalla y cuáles son los puntos clave; señala lo que el usuario deba atender. Sé directo, sin introducción. Responde en español.</string>
+    <string name="b30_prompt_float_ask">Responde de forma breve y directa, sin descargos de responsabilidad, en español.</string>
+    <string name="b30_n1">Caja de herramientas IA (panel lateral): generar imágenes, burbuja flotante, texto a voz, voz a texto (mantén pulsado, modelo a elegir) y buscar archivos.</string>
+    <string name="b30_n2">Burbuja flotante: tócala para un menú: traducir pantalla (sobre el original), leer pantalla, preguntar a la IA (con portapapeles y búsqueda); se oculta en el borde en reposo y se cierra arrastrándola abajo.</string>
+    <string name="b30_n3">Isla: progreso de descargas, imágenes y carga abajo a la izquierda; la imagen terminada aparece en grande (se desactiva en Ajustes › Apariencia).</string>
+    <string name="b30_n4">Ajustes › Diseño de inicio: arrastra para ordenar los botones; los de la barra superior se quedan en ella y los del cuadro de texto pasan entre sus dos filas (máx. 4 por fila).</string>
+    <string name="b30_n5">Ajustes › Prompts: reescribe todos los prompts integrados (salvo la traducción Hunyuan).</string>
+    <string name="b30_n6">Nuevo estilo «Cristal líquido»; widget de inicio y accesos directos con pulsación larga.</string>
+    <string name="b30_n7">Inicio rápido: un toque descarga y carga un modelo recomendado; al enviar un mensaje se carga un modelo aunque no haya uno predeterminado.</string>
+    <string name="b30_n8">Imágenes: tamaños según el modelo y ordenar el prompt con un toque; visor rediseñado con zoom y ampliación HD 2×/4× (modelo de 18 MB la primera vez).</string>
+    <string name="b30_n9">Adjunta fotos directamente con la cámara; edita el personaje actual desde el chat.</string>
+    <string name="b30_n10">Descargas: las versiones GGUF y MNN de un mismo modelo comparten tarjeta.</string>
+    <string name="b30_n11">El chat de voz ahora es manos libres; el dictado aparece palabra a palabra.</string>
+    <string name="b30_n12">Las órdenes rápidas del teléfono (en chino, p. ej. «打开手电筒») usan las herramientas solo en ese mensaje.</string>
+    <string name="b30_n13">Aspecto: nuevos sonidos y vibración, página Acerca de, logotipo y animaciones; frases mientras esperas (desactivables) y un huevo de pascua.</string>
+    <string name="b30_n14">Corregido: el cursor saltaba al inicio tras dictar; resalte de pulsación cuadrado; aviso falso de «memoria justa»; «Pensar» no se desactivaba; la traducción Hunyuan se repetía.</string>
+    <string name="b30_n15">Corregidos varios cierres inesperados y problemas de permisos.</string>
 </resources>

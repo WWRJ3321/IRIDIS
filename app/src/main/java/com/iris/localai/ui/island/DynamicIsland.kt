@@ -74,6 +74,8 @@ object IslandLogic {
     /** r5：岛的三种形态；内容在它们之间只淡入淡出，尺寸由外层一条弹簧动画。 */
     enum class Mode { PILL, EXPANDED, BIG }
     fun mode(expanded: Boolean, big: Boolean): Mode = if (big) Mode.BIG else if (expanded) Mode.EXPANDED else Mode.PILL
+    /** 3.0.0：大图模式要显示的图；空 / null（任务已换）时返回 null。 */
+    fun bigShot(result: String?): String? = result?.takeIf { it.isNotBlank() }
     const val OPEN_RADIUS_DP = 28f
     /** r5：进退场、尺寸、圆角共用的一条弹簧（getter，测试里不加载 Compose）。 */
     val SPRING get() = IrisMotion.Snappy
@@ -222,7 +224,10 @@ private fun IslandPill(t: TaskProgress.Task, expanded: Boolean, pillH: Float, ga
       ) { m ->
         when (m) {
             IslandLogic.Mode.BIG -> Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                com.iris.localai.ui.imagegen.Thumb(t.result!!, Modifier.size(276.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), maxSide = 640)
+                // 退场动画里 t 可能已换成下一个任务（result 为 null）：没有图就留同尺寸空位，不再 !! 闪退
+                val shot = IslandLogic.bigShot(t.result)
+                if (shot != null) com.iris.localai.ui.imagegen.Thumb(shot, Modifier.size(276.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), maxSide = 640)
+                else Box(Modifier.size(276.dp))
                 Row(Modifier.padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(IrisIcons.Check, null, tint = c.success, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))

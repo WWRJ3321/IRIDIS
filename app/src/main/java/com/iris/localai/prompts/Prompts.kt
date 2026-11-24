@@ -28,7 +28,20 @@ object Prompts {
     /** 用户的改写（设置变化时由 SettingsRepository 刷新）。 */
     @Volatile var overrides: Map<String, String> = emptyMap()
 
-    fun default(k: PromptKey): String = when (k) {
+    /**
+     * 3.0.0：按界面语言给的默认文本（字符串资源，IrisApp 启动时接上）；返回 null 用下面的内置中文。
+     * 目前只有悬浮窗的识屏 / 问 AI 跟随界面语言，其余默认与旧版逐字相同。
+     */
+    @Volatile var localized: (PromptKey) -> String? = { null }
+
+    /** 跟随界面语言的提示词。 */
+    val LOCALIZED: Set<PromptKey> = setOf(PromptKey.FLOAT_SCREEN, PromptKey.FLOAT_ASK)
+
+    fun default(k: PromptKey): String =
+        (if (k in LOCALIZED) runCatching { localized(k) }.getOrNull()?.takeIf { it.isNotBlank() } else null) ?: builtin(k)
+
+    /** 内置中文默认（与 3.0 之前逐字相同）。 */
+    fun builtin(k: PromptKey): String = when (k) {
         PromptKey.AGENT_RULES ->
             "- Reply in Chinese. Answer directly and completely; no disclaimers, self-checks or hedging. Never claim actions you didn't take.\n" +
                 "- Chat/simple questions: plain text with NO tool block (\"system\" is not a tool).\n" +

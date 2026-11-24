@@ -38,7 +38,7 @@ object ScreenTool : SuspendTool {
 
     /** Chinese guide for the chat and the model (the model repeats it to the user). */
     fun blockerText(b: GuiBlocker): String = when (b) {
-        GuiBlocker.A11Y_OFF -> "无障碍服务未开启：请在 系统设置 › 无障碍 里开启「IRIDIS GUI 智能体」（已弹出开启引导），开好后再说一次"
+        GuiBlocker.A11Y_OFF -> "无障碍服务未开启：请在 系统设置 › 无障碍 里开启「IRIDIS GUI」（已弹出开启引导），开好后再说一次"
         GuiBlocker.NO_MODEL -> "还没有加载模型：请先加载一个能识图的模型（如 Qwen3-VL MNN），再说一次"
         GuiBlocker.NO_VISION -> "当前模型不能读图：操控手机需要识图模型（如 Qwen3-VL MNN），请在顶部切换后再说一次"
         GuiBlocker.BUSY -> "已有一个手机操控任务在运行，等它结束或点悬浮条「停止」"

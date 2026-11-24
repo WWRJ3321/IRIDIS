@@ -221,6 +221,10 @@ private fun SttSection(chat: ChatViewModel) {
     var busy by remember { mutableStateOf(false) }
     val st = chat.settings.collectAsStateWithLifecycle().value
     val lang = st.asrLanguage
+    // 3.0.0：第一次在工具箱里用语音转文本时先申请麦克风权限（以前直接 start，没权限就什么都不发生）
+    val ctx = LocalContext.current
+    var micDenied by remember { mutableStateOf(false) }
+    val micLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok -> micDenied = !ok }
     // Beta2：可选识别模型——列出已装的语音识别包，点选即设为当前（与 模型 页 的选择同一设置）
     val packStates by chat.voiceStore.states.collectAsStateWithLifecycle()
     val asrPacks = remember(packStates) {
@@ -251,6 +255,11 @@ private fun SttSection(chat: ChatViewModel) {
                     .pointerInput(lang) {
                         detectTapGestures(onPress = {
                             if (busy) return@detectTapGestures
+                            if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                micLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                return@detectTapGestures
+                            }
+                            micDenied = false
                             holding = true; haptic.perform(FeedbackEvent.LISTEN_START)
                             chat.dictation.warmLanguage = lang
                             chat.dictation.start()
@@ -272,6 +281,10 @@ private fun SttSection(chat: ChatViewModel) {
                     when { holding -> I18n.s(R.string.v30_ptt_release); busy -> I18n.s(R.string.v30_tb_recognizing); else -> I18n.s(R.string.v30_ptt_hold) },
                     transitionSpec = { motion(reduce) { IrisMotion.crossfade() } }, label = "ptt",
                 ) { t -> Text(t, style = IrisType.label, color = fg) }
+            }
+            if (micDenied) {
+                Spacer(Modifier.height(IrisDimens.space8))
+                Text(I18n.s(R.string.b30_mic_denied), style = IrisType.caption, color = c.danger)
             }
             // 清空时收起，退场期间仍显示最后一段
             val shownResult = rememberLast(result.ifBlank { null }).orEmpty()
@@ -300,12 +313,27 @@ private fun FindSection() {
     var searching by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
+    // 从系统「全部文件访问」页回来时重新读权限
+    var access by remember { mutableStateOf(FileFinder.hasAccess()) }
     DisposableEffect(owner) {
-        val o = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_STOP) FileFinder.release() }
+        val o = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_STOP) FileFinder.release()
+            if (e == Lifecycle.Event.ON_RESUME) access = FileFinder.hasAccess()
+        }
         owner.lifecycle.addObserver(o)
         onDispose { owner.lifecycle.removeObserver(o); FileFinder.release() }
     }
     SectionTitle(I18n.s(R.string.v30_tb_find))
+    if (!access) {
+        SettingsGroup {
+            Column(Modifier.padding(IrisDimens.space16)) {
+                Text(I18n.s(R.string.b30_find_perm), style = IrisType.body, color = c.text)
+                Spacer(Modifier.height(IrisDimens.space8))
+                IrisButton(I18n.s(R.string.b30_find_perm_go), { com.iris.localai.ui.models.openAllFilesAccess(ctx) }, compact = true, icon = IrisIcons.Folder)
+            }
+        }
+        Spacer(Modifier.height(IrisDimens.space12))
+    }
     SettingsGroup {
         Column(Modifier.padding(IrisDimens.space16)) {
             Text(

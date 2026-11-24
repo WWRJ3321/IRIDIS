@@ -141,7 +141,7 @@ class AccessibilityGuiDevice(
     private var shotNo = 0
 
     private fun svc(): IrisAccessibilityService =
-        IrisAccessibilityService.instance ?: throw IllegalStateException("无障碍服务未开启：系统设置 › 无障碍 › IRIDIS GUI 智能体")
+        IrisAccessibilityService.instance ?: throw IllegalStateException("无障碍服务未开启：系统设置 › 无障碍 › IRIDIS GUI")
 
     override suspend fun observe(): GuiObservation {
         val s = svc()

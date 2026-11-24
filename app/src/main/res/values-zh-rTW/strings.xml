@@ -6,7 +6,7 @@
     <string name="api_notification_text">OpenAI 相容介面 · 埠 %1$d</string>
     <string name="api_stop">停止</string>
     <string name="gui_a11y_label">IRIDIS GUI</string>
-    <string name="gui_a11y_desc">讓 IRIDIS 的 GUI 智慧代理在你發起任務時查看螢幕（截圖和介面元素）並代你點按、滑動、輸入。只在任務執行時操作，懸浮條可隨時停止；付款、傳送、刪除等操作會先問你。畫面只交給本機模型處理，不會上傳。</string>
+    <string name="gui_a11y_desc">讓 IRIDIS 的 GUI 智慧代理在你發起任務時查看螢幕（截圖和介面元素）並代你點按、滑動、輸入。只在任務執行時操作，懸浮條可隨時停止；付款、傳送、刪除等操作會先問你。畫面只交給本機模型處理，不會上傳。懸浮窗的識屏和螢幕翻譯也用它讀取螢幕文字。</string>
     <string name="lang_system">跟隨系統</string>
     <string name="lang_code">zh-TW</string>
     <string name="kb232_meter">知識庫 %1$s tok</string>
@@ -756,7 +756,7 @@
     <string name="agent_b2740e">GUI 智慧代理（實驗）</string>
     <string name="agent_0413be">已開啟 · 可以查看螢幕並代你點選、滑動、輸入</string>
     <string name="agent_96cd4a">已在系統設定裡開啟，正在連線…</string>
-    <string name="agent_2696c0">未開啟 · 輕觸去 系統設定 › 無障礙 › 已下載的應用 › IRIDIS GUI 智慧代理 開啟</string>
+    <string name="agent_2696c0">未開啟 · 輕觸去 系統設定 › 無障礙 › 已下載的應用 › IRIDIS GUI 開啟</string>
     <string name="agent_fd59e1">系統提示「受限設定」時：輕觸這裡開啟應用資訊，右上角 ⋮ › 允許受限制的設定，再回去開啟</string>
     <string name="agent_76907b">清背景會讓系統關掉無障礙：在最近任務裡把 IRIDIS 加鎖，省電策略設為無限制。</string>
     <string name="agent_b1aa64">看螢幕 → 思考 → 操作。需要能識圖的本地模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）。執行時可隨時在頂部懸浮條停止；支付、傳送、刪除前會先問你。</string>
@@ -777,7 +777,7 @@
     <string name="agent_5e213d">去開啟</string>
     <string name="agent_0415c4">受限設定</string>
     <string name="agent_946fdd">需要識圖模型</string>
-    <string name="agent_ca727f">操控手機要用到「IRIDIS GUI 智慧代理」無障礙服務。\n點「去開啟」：系統設定 › 無障礙 › 已下載的應用 › IRIDIS GUI 智慧代理 › 開啟。\n如果提示「受限設定」，點「受限設定」開啟應用資訊，右上角 ⋮ › 允許受限制的設定，再回去開啟。開好後在聊天裡再說一次。\n</string>
+    <string name="agent_ca727f">操控手機要用到「IRIDIS GUI」無障礙服務。\n點「去開啟」：系統設定 › 無障礙 › 已下載的應用 › IRIDIS GUI › 開啟。\n如果提示「受限設定」，點「受限設定」開啟應用資訊，右上角 ⋮ › 允許受限制的設定，再回去開啟。開好後在聊天裡再說一次。\n</string>
     <string name="agent_88f86e">操控手機需要能讀圖的模型看螢幕。請載入一個識圖模型（如 Qwen3-VL MNN），再說一次。</string>
     <string name="agent_7e4333">知識庫</string>
     <string name="agent_bc270f">引用知識庫</string>
@@ -1594,7 +1594,7 @@
     <string name="voice_077027">%1$s 校驗失敗，請重試下載</string>
     <string name="agent_2b9315">模型 %1$s 秒還沒開始輸出（看圖太慢或卡住），已停止。可換更小的識圖模型，或匯出日誌給我看</string>
     <string name="agent_5efc4f">模型 %1$s 秒沒寫完一步，已停止</string>
-    <string name="agent_13f110">先在 系統設定 › 無障礙 裡開啟「IRIDIS GUI 智慧代理」</string>
+    <string name="agent_13f110">先在 系統設定 › 無障礙 裡開啟「IRIDIS GUI」</string>
     <string name="agent_f3f28a">先載入一個能識圖的模型</string>
     <string name="agent_b50199">目前模型不能識圖：GUI 智慧代理需要視覺模型（如 Qwen3-VL、MAI-UI、AutoGLM-Phone）</string>
     <string name="agent_c9e2c3">正在執行</string>
@@ -2398,9 +2398,9 @@
     <string name="b4r3_copy">複製</string>
     <string name="b5_take_photo">拍照</string>
     <string name="b5_no_camera">沒有可用的相機應用</string>
-    <string name="b5_upscale">放大</string>
+    <string name="b5_upscale">高清放大</string>
     <string name="b5_upscale_x">放大 %1$d×</string>
-    <string name="b5_upscale_dl">下模型 %1$d%%</string>
+    <string name="b5_upscale_dl">下載模型 %1$d%%</string>
     <string name="b5_upscale_run">放大中 %1$d%%</string>
     <string name="b5_upscale_done">已放大，存進歷史</string>
     <string name="b5_upscale_failed">放大失敗：%1$s</string>
@@ -2424,4 +2424,26 @@
     <string name="b6_item_voice">語音</string>
     <string name="b6r2_layout_hint">按住按鈕拖到想放的位置，主頁會一模一樣</string>
     <string name="b6r2_layout_full">這一排放不下了</string>
+    <string name="b30_mic_denied">需要麥克風權限，請在系統設定裡允許</string>
+    <string name="b30_find_perm">沒開啟「所有檔案存取權」，只能找到很少的檔案</string>
+    <string name="b30_find_perm_go">去開啟</string>
+    <string name="b30_upscale_big">圖片太大：%1$d× 最大支援邊長 %2$d px</string>
+    <string name="b30_upscale_oom">記憶體不足，改用 2× 或小一點的圖再試</string>
+    <string name="b30_prompt_float_screen">下面是手機螢幕上的文字。用三到五句話說清這屏在講什麼、要點是什麼；有需要使用者處理的事就點出來。直接說，不加開場白。用繁體中文回答。</string>
+    <string name="b30_prompt_float_ask">簡短直接地回答，不加免責聲明，用繁體中文。</string>
+    <string name="b30_n1">AI 工具箱（側欄）：生圖、懸浮窗、文字轉語音、語音轉文字（按住說話，可選辨識模型）、找檔案。</string>
+    <string name="b30_n2">懸浮窗：點小球彈出選單——螢幕翻譯（譯文蓋在原文上）、識屏、問 AI（帶上剪貼簿，可搜尋）；閒置貼邊半隱，拖到底部關閉。</string>
+    <string name="b30_n3">動態島：左下角顯示下載、生圖、載入進度，生圖完成彈出大圖（設定 › 外觀可關）。</string>
+    <string name="b30_n4">設定 › 主頁佈局：拖動排列主頁按鈕；頂欄按鈕在頂欄內換位，輸入框按鈕可在兩排間互換，每排最多 4 個。</string>
+    <string name="b30_n5">設定 › 提示詞：可改寫全部提示詞（混元翻譯除外）。</string>
+    <string name="b30_n6">新介面風格「液態玻璃」；桌面小工具與長按圖示捷徑。</string>
+    <string name="b30_n7">一步上手：推薦模型一鍵下載，下完自動載入；沒選預設模型時發訊息也會自動載入。</string>
+    <string name="b30_n8">生圖：尺寸依模型給出，提示詞一鍵整理；看圖頁重做，可縮放，可高清放大 2×/4×（首次下載 18 MB 模型）。</string>
+    <string name="b30_n9">對話附件可直接拍照；對話裡可直接編輯目前角色。</string>
+    <string name="b30_n10">下載頁：同一模型的 GGUF / MNN 合成一張卡。</string>
+    <string name="b30_n11">語音聊天改為免持；語音輸入逐字打出。</string>
+    <string name="b30_n12">說「打開手電筒」「亮度調到最高」等，只在這一句臨時調用手機工具。</string>
+    <string name="b30_n13">外觀：音效與振動、關於頁、品牌標誌、動效更新；等待時輪播閒言碎語（可關），還藏了彩蛋。</string>
+    <string name="b30_n14">修復：語音輸入後游標跑到開頭；按壓回饋是方形；記憶體足夠也提示「記憶體偏緊」；「思考」關不掉；混元翻譯重複。</string>
+    <string name="b30_n15">修復若干閃退與權限問題。</string>
 </resources>

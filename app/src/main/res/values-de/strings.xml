@@ -6,7 +6,7 @@
     <string name="api_notification_text">OpenAI-kompatible API · Port %1$d</string>
     <string name="api_stop">Stopp</string>
     <string name="gui_a11y_label">IRIDIS GUI</string>
-    <string name="gui_a11y_desc">Lässt den IRIDIS-GUI-Agenten bei einer von dir gestarteten Aufgabe den Bildschirm sehen (Screenshots und UI-Elemente) und für dich tippen, wischen und schreiben. Er handelt nur während einer Aufgabe, die schwebende Leiste stoppt ihn jederzeit; vor Zahlen, Senden oder Löschen fragt er nach. Der Bildschirm wird nur von Modellen auf dem Gerät verarbeitet und nie hochgeladen.</string>
+    <string name="gui_a11y_desc">Lässt den IRIDIS-GUI-Agenten bei einer von dir gestarteten Aufgabe den Bildschirm sehen (Screenshots und UI-Elemente) und für dich tippen, wischen und schreiben. Er handelt nur während einer Aufgabe, die schwebende Leiste stoppt ihn jederzeit; vor Zahlen, Senden oder Löschen fragt er nach. Der Bildschirm wird nur von Modellen auf dem Gerät verarbeitet und nie hochgeladen. Auch „Bildschirm lesen“ und die Bildschirmübersetzung der schwebenden Blase lesen damit den Bildschirmtext.</string>
     <string name="lang_system">Wie System</string>
     <string name="lang_code">de</string>
     <string name="kb232_meter">Wissen %1$s Tok.</string>
@@ -756,7 +756,7 @@
     <string name="agent_b2740e">GUI-Agent (experimentell)</string>
     <string name="agent_0413be">An · kann den Bildschirm sehen und für dich tippen, wischen und schreiben</string>
     <string name="agent_96cd4a">In den Systemeinstellungen aktiviert, verbinde…</string>
-    <string name="agent_2696c0">Aus · tippen und unter Systemeinstellungen › Bedienungshilfen › Heruntergeladene Apps › IRIDIS-GUI-Agent einschalten</string>
+    <string name="agent_2696c0">Aus · tippen und unter Systemeinstellungen › Bedienungshilfen › Heruntergeladene Apps › IRIDIS GUI einschalten</string>
     <string name="agent_fd59e1">Bei „Eingeschränkte Einstellung“: hier tippen, um App-Info zu öffnen, oben rechts ⋮ › Eingeschränkte Einstellungen zulassen, dann zurück und einschalten</string>
     <string name="agent_76907b">Beim Leeren der letzten Apps schaltet das System die Bedienungshilfe ab: IRIDIS in den letzten Apps sperren und Akku auf uneingeschränkt setzen.</string>
     <string name="agent_b1aa64">Bildschirm sehen → denken → handeln. Benötigt ein lokales Vision-Modell (z. B. Qwen3-VL, MAI-UI, AutoGLM-Phone). Jederzeit über die schwebende Leiste oben stoppbar; vor Zahlen, Senden oder Löschen wird gefragt.</string>
@@ -777,7 +777,7 @@
     <string name="agent_5e213d">Einschalten</string>
     <string name="agent_0415c4">Eingeschränkte Einstellungen</string>
     <string name="agent_946fdd">Vision-Modell nötig</string>
-    <string name="agent_ca727f">Zum Steuern des Telefons wird der Bedienungshilfe-Dienst „IRIDIS-GUI-Agent“ benötigt.\nAuf „Einschalten“ tippen: Systemeinstellungen › Bedienungshilfen › Heruntergeladene Apps › IRIDIS-GUI-Agent › An.\nBei „Eingeschränkte Einstellung“ auf „Eingeschränkte Einstellungen“ tippen, App-Info öffnet sich, oben rechts ⋮ › Eingeschränkte Einstellungen zulassen, dann zurück und einschalten. Danach im Chat noch einmal sagen.\n</string>
+    <string name="agent_ca727f">Zum Steuern des Telefons wird der Bedienungshilfe-Dienst „IRIDIS GUI“ benötigt.\nAuf „Einschalten“ tippen: Systemeinstellungen › Bedienungshilfen › Heruntergeladene Apps › IRIDIS GUI › An.\nBei „Eingeschränkte Einstellung“ auf „Eingeschränkte Einstellungen“ tippen, App-Info öffnet sich, oben rechts ⋮ › Eingeschränkte Einstellungen zulassen, dann zurück und einschalten. Danach im Chat noch einmal sagen.\n</string>
     <string name="agent_88f86e">Zum Steuern des Telefons braucht es ein Modell, das Bilder lesen kann. Lade ein Vision-Modell (z. B. Qwen3-VL MNN) und sag es noch einmal.</string>
     <string name="agent_7e4333">Wissensbasis</string>
     <string name="agent_bc270f">Wissensbasis nutzen</string>
@@ -1594,7 +1594,7 @@
     <string name="voice_077027">Prüfung von %1$s fehlgeschlagen, bitte erneut herunterladen</string>
     <string name="agent_2b9315">Modell hat %1$s s lang nichts ausgegeben (Bildanalyse zu langsam oder hängt), gestoppt. Probiere ein kleineres Vision-Modell oder exportiere die Logs</string>
     <string name="agent_5efc4f">Modell hat in %1$s s keinen Schritt beendet, gestoppt</string>
-    <string name="agent_13f110">Aktiviere zuerst „IRIDIS GUI-Agent“ unter Einstellungen › Bedienungshilfen</string>
+    <string name="agent_13f110">Aktiviere zuerst „IRIDIS GUI“ unter Einstellungen › Bedienungshilfen</string>
     <string name="agent_f3f28a">Lade zuerst ein Modell mit Bilderkennung</string>
     <string name="agent_b50199">Aktuelles Modell kann keine Bilder lesen: Der GUI-Agent braucht ein Vision-Modell (z. B. Qwen3-VL, MAI-UI, AutoGLM-Phone)</string>
     <string name="agent_c9e2c3">Läuft</string>
@@ -2398,9 +2398,9 @@
     <string name="b4r3_copy">Kopieren</string>
     <string name="b5_take_photo">Foto aufnehmen</string>
     <string name="b5_no_camera">Keine Kamera-App gefunden</string>
-    <string name="b5_upscale">Hochskalieren</string>
+    <string name="b5_upscale">HD-Hochskalierung</string>
     <string name="b5_upscale_x">%1$d× hochskalieren</string>
-    <string name="b5_upscale_dl">Modell %1$d%%</string>
+    <string name="b5_upscale_dl">Modell wird geladen %1$d%%</string>
     <string name="b5_upscale_run">%1$d%%</string>
     <string name="b5_upscale_done">Hochskaliert, im Verlauf gespeichert</string>
     <string name="b5_upscale_failed">Hochskalieren fehlgeschlagen: %1$s</string>
@@ -2424,4 +2424,26 @@
     <string name="b6_item_voice">Sprache</string>
     <string name="b6r2_layout_hint">Taste halten und an die gewünschte Stelle ziehen – die Startseite sieht genauso aus</string>
     <string name="b6r2_layout_full">Diese Zeile ist voll</string>
+    <string name="b30_mic_denied">Mikrofonberechtigung nötig – bitte in den Systemeinstellungen erlauben</string>
+    <string name="b30_find_perm">Ohne „Zugriff auf alle Dateien“ werden nur wenige Dateien gefunden</string>
+    <string name="b30_find_perm_go">Einschalten</string>
+    <string name="b30_upscale_big">Bild zu groß: %1$d× unterstützt höchstens %2$d px pro Seite</string>
+    <string name="b30_upscale_oom">Nicht genug Speicher – 2× oder ein kleineres Bild versuchen</string>
+    <string name="b30_prompt_float_screen">Unten steht der Text auf dem Handybildschirm. Erkläre in drei bis fünf Sätzen, worum es auf diesem Bildschirm geht und was die Kernpunkte sind; weise auf alles hin, worum sich der Nutzer kümmern muss. Direkt, ohne Einleitung. Antworte auf Deutsch.</string>
+    <string name="b30_prompt_float_ask">Antworte kurz und direkt, ohne Haftungshinweise, auf Deutsch.</string>
+    <string name="b30_n1">KI-Werkzeugkasten (Seitenleiste): Bilderzeugung, schwebende Blase, Text zu Sprache, Sprache zu Text (gedrückt halten, Modell wählbar), Dateisuche.</string>
+    <string name="b30_n2">Schwebende Blase: Tippen öffnet ein Menü – Bildschirmübersetzung (über dem Original), Bildschirm lesen, KI fragen (mit Zwischenablage, Suche möglich); dockt im Leerlauf am Rand an, zum Schließen nach unten ziehen.</string>
+    <string name="b30_n3">Insel: Download-, Bild- und Ladefortschritt unten links; fertige Bilder erscheinen groß (abschaltbar unter Einstellungen › Darstellung).</string>
+    <string name="b30_n4">Einstellungen › Startlayout: Startseiten-Tasten per Ziehen anordnen; Tasten der oberen Leiste bleiben dort, Eingabefeld-Tasten wechseln zwischen zwei Reihen (max. 4 pro Reihe).</string>
+    <string name="b30_n5">Einstellungen › Prompts: alle eingebauten Prompts anpassbar (außer Hunyuan-Übersetzung).</string>
+    <string name="b30_n6">Neuer Stil „Flüssigglas“; Startbildschirm-Widget und Verknüpfungen per langem Drücken.</string>
+    <string name="b30_n7">Schnellstart: empfohlenes Modell mit einem Tippen laden und automatisch starten; ohne Standardmodell lädt eine Nachricht trotzdem eins.</string>
+    <string name="b30_n8">Bilderzeugung: Größen je Modell, Prompt mit einem Tippen aufräumen; neuer Bildbetrachter mit Zoom und HD-Hochskalierung 2×/4× (18-MB-Modell beim ersten Mal).</string>
+    <string name="b30_n9">Fotos direkt mit der Kamera anhängen; aktuellen Charakter direkt im Chat bearbeiten.</string>
+    <string name="b30_n10">Downloads: GGUF- und MNN-Versionen eines Modells auf einer Karte.</string>
+    <string name="b30_n11">Sprachchat jetzt freihändig; Diktat erscheint Wort für Wort.</string>
+    <string name="b30_n12">Kurze Handy-Befehle (auf Chinesisch, z. B. „打开手电筒“) nutzen die Handy-Werkzeuge nur für diese Nachricht.</string>
+    <string name="b30_n13">Optik: neue Töne und Vibration, Info-Seite, Logo und Animationen; kleine Sprüche beim Warten (abschaltbar) und ein Easter Egg.</string>
+    <string name="b30_n14">Behoben: Cursor springt nach Diktat an den Anfang; eckiges Tipp-Feedback; falsche „Speicher knapp“-Warnung; „Denken“ ließ sich nicht abschalten; Hunyuan-Übersetzung wiederholte sich.</string>
+    <string name="b30_n15">Mehrere Abstürze und Berechtigungsprobleme behoben.</string>
 </resources>
