@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">換頭像</string>
     <string name="b4r3_prompt">提示詞</string>
     <string name="b4r3_copy">複製</string>
+    <string name="b5_take_photo">拍照</string>
+    <string name="b5_no_camera">沒有可用的相機應用</string>
+    <string name="b5_upscale">放大</string>
+    <string name="b5_upscale_x">放大 %1$d×</string>
+    <string name="b5_upscale_dl">下模型 %1$d%%</string>
+    <string name="b5_upscale_run">放大中 %1$d%%</string>
+    <string name="b5_upscale_done">已放大，存進歷史</string>
+    <string name="b5_upscale_failed">放大失敗：%1$s</string>
 </resources>

@@ -3,6 +3,8 @@
      Download/IRIDIS for the 「文件」 page (open / share one file the user picked; read-only grants). -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <!-- 3.0 Beta5：附件「拍照」，系统相机写到 cache/camera/。 -->
+    <cache-path name="camera" path="camera/" />
     <external-path name="iridis" path="Download/IRIDIS/" />
     <!-- 3.0 工具箱 · 找文件：打开用户点选的那一个文件（只读授权）。 -->
     <external-path name="found" path="." />

@@ -36,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +47,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -253,6 +254,24 @@ internal fun HistoryViewer(
                             val ok = runCatching { ChatImageLoader.saveToGallery(context, file.readBytes()) }.getOrDefault(false)
                             toast(if (ok) I18n.s(R.string.imagegen_e8561b) else I18n.s(R.string.imagegen_6de920))
                         }
+                        // Beta5：放大 2×/4×（第一次用时下 17.9 MB 模型），结果作为新图存进历史并切过去
+                        val ui by vm.ui.collectAsState()
+                        var upMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                        val busy = ui.upscaling != null
+                        val upLabel = when {
+                            ui.upscaling == null -> I18n.s(R.string.b5_upscale)
+                            ui.upscaleDownloading -> I18n.s(R.string.b5_upscale_dl, (ui.upscaleProgress * 100).toInt())
+                            else -> I18n.s(R.string.b5_upscale_run, (ui.upscaleProgress * 100).toInt())
+                        }
+                        Box {
+                            ViewerAction(IrisIcons.Expand, upLabel) { if (!busy) upMenu = true }
+                            com.iris.localai.ui.components.IrisMenu(upMenu, { upMenu = false }) {
+                                for (k in listOf(2, 4)) com.iris.localai.ui.components.IrisMenuItem(I18n.s(R.string.b5_upscale_x, k), IrisIcons.Expand) {
+                                    upMenu = false
+                                    vm.upscale(path, k) { np -> if (np != null) { toast(I18n.s(R.string.b5_upscale_done)); onIndex(0) } }
+                                }
+                            }
+                        }
                         ViewerAction(IrisIcons.Share, ImageGenText.SHARE) { runCatching { ChatImageLoader.share(context, file.readBytes()) } }
                         ViewerAction(IrisIcons.Chat, ImageGenText.TO_CHAT) { onClose(); onSendToChat(path) }
                         ViewerAction(IrisIcons.Trash, ImageGenText.DELETE, tint = ViewerChrome.DANGER) { onDelete(path) }
@@ -275,7 +294,7 @@ private object ViewerChrome {
 @Composable
 private fun ViewerAction(icon: ImageVector, label: String, tint: Color = Color.White, onClick: () -> Unit) {
     Column(
-        Modifier.width(64.dp).clip(IrisRadius.mediumShape).clickable(onClick = onClick).padding(vertical = IrisDimens.space6),
+        Modifier.width(58.dp).clip(IrisRadius.mediumShape).clickable(onClick = onClick).padding(vertical = IrisDimens.space6),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {

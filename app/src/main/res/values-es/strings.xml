@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">Cambiar avatar</string>
     <string name="b4r3_prompt">Prompt</string>
     <string name="b4r3_copy">Copiar</string>
+    <string name="b5_take_photo">Tomar foto</string>
+    <string name="b5_no_camera">No hay app de cámara</string>
+    <string name="b5_upscale">Ampliar</string>
+    <string name="b5_upscale_x">Ampliar %1$d×</string>
+    <string name="b5_upscale_dl">Modelo %1$d%%</string>
+    <string name="b5_upscale_run">%1$d%%</string>
+    <string name="b5_upscale_done">Ampliada y guardada en el historial</string>
+    <string name="b5_upscale_failed">Error al ampliar: %1$s</string>
 </resources>

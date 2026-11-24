@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">アイコンを変更</string>
     <string name="b4r3_prompt">プロンプト</string>
     <string name="b4r3_copy">コピー</string>
+    <string name="b5_take_photo">写真を撮る</string>
+    <string name="b5_no_camera">カメラアプリがありません</string>
+    <string name="b5_upscale">拡大</string>
+    <string name="b5_upscale_x">%1$d× 拡大</string>
+    <string name="b5_upscale_dl">モデル %1$d%%</string>
+    <string name="b5_upscale_run">拡大中 %1$d%%</string>
+    <string name="b5_upscale_done">拡大して履歴に保存しました</string>
+    <string name="b5_upscale_failed">拡大に失敗：%1$s</string>
 </resources>

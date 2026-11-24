@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">Avatar ändern</string>
     <string name="b4r3_prompt">Prompt</string>
     <string name="b4r3_copy">Kopieren</string>
+    <string name="b5_take_photo">Foto aufnehmen</string>
+    <string name="b5_no_camera">Keine Kamera-App gefunden</string>
+    <string name="b5_upscale">Hochskalieren</string>
+    <string name="b5_upscale_x">%1$d× hochskalieren</string>
+    <string name="b5_upscale_dl">Modell %1$d%%</string>
+    <string name="b5_upscale_run">%1$d%%</string>
+    <string name="b5_upscale_done">Hochskaliert, im Verlauf gespeichert</string>
+    <string name="b5_upscale_failed">Hochskalieren fehlgeschlagen: %1$s</string>
 </resources>

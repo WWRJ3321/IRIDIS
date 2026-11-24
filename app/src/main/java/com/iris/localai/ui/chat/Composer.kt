@@ -177,6 +177,7 @@ object ComposerText {
     val SPEED: String get() = I18n.s(R.string.chat_03f385)
     val ATTACH: String get() = I18n.s(R.string.chat_ca0b5e)
     val ATTACH_PHOTOS: String get() = I18n.s(R.string.chat_d2fb1e)
+    val TAKE_PHOTO: String get() = I18n.s(R.string.b5_take_photo)
     val ATTACH_FILES: String get() = I18n.s(R.string.chat_2a0c47)
     // 2.2 composer: one voice capsule + 「技能」.
     val CALL_HOLD: String get() = I18n.s(R.string.chat_83c923)
@@ -221,6 +222,7 @@ fun Composer(
     onToggleAgent: () -> Unit = {},
     /** 「附件」 menu — 照片 (system photo picker) / 文件 (document picker). */
     onPickPhotos: () -> Unit = {},
+    onTakePhoto: () -> Unit = {},
     onPickFiles: () -> Unit = {},
     onRemoveAttachment: (Attachment) -> Unit = {},
     onMoveAttachment: (from: Int, to: Int) -> Unit = { _, _ -> },
@@ -322,6 +324,7 @@ fun Composer(
                 PressableIcon(IrisIcons.Plus, ComposerText.ATTACH, modifier = Modifier.tourTarget(TourId.ATTACH), size = ComposerPillStyle.COMPACT_HEIGHT_DP.dp, iconSize = 22.dp, tint = c.textSecondary, onClick = { attachMenu = true })
                 IrisMenu(attachMenu, { attachMenu = false }) {
                     IrisMenuItem(ComposerText.ATTACH_PHOTOS, IrisIcons.Image) { attachMenu = false; onPickPhotos() }
+                    IrisMenuItem(ComposerText.TAKE_PHOTO, IrisIcons.Camera) { attachMenu = false; onTakePhoto() }
                     IrisMenuItem(ComposerText.ATTACH_FILES, IrisIcons.Folder) { attachMenu = false; onPickFiles() }
                     // translate the draft before sending (default 中↔英 by detection).
                     if (state.text.isNotBlank() && !state.translating) {

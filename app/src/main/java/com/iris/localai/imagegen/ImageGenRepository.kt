@@ -162,6 +162,13 @@ class ImageGenRepository(internal val context: Context) {
             .getOrElse { ImageGenFiles.write(ImageGenFiles.outputFile(agent.privateRoot, time), png, params) }
     }
 
+    /** Beta5 超分结果：存在原图同一个 images/ 里，参数沿用原图并注明放大倍数。 */
+    fun saveUpscaled(src: File, png: ByteArray, factor: Int): File {
+        val old = runCatching { PngParams.read(src.readBytes()) }.getOrNull()
+        val root = src.parentFile?.parentFile ?: workspaceRoot()
+        return ImageGenFiles.write(ImageGenFiles.outputFile(root, LocalDateTime.now()), png, UpscaleRules.parameters(old, factor))
+    }
+
     /** The folder of [model] in whichever root holds a complete download, null when none does. */
     fun downloadedDir(model: ImageModel): File? =
         modelsLocation().listDirs.firstOrNull { ImageGenFiles.isDownloaded(it, model) }?.let { ImageGenFiles.modelDir(it, model) }

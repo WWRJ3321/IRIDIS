@@ -16,6 +16,10 @@ object UpdateNotes {
     private fun b(t: String) = Item(Tag.FIX, t)
 
     val RELEASES: List<Release> = listOf(
+        Release("3.0.0 Beta5", listOf(
+            f("生图看图页新增「放大」：2× 或 4×，用 Real-ESRGAN 动漫模型在本机放大，结果作为新图存进历史；第一次用时下载 18 MB 模型。"),
+            f("对话附件新增「拍照」：直接调用相机，拍完作为图片附件。"),
+        )),
         Release("3.0.0 Beta4", listOf(
             f("一步上手：还没模型时，对话页直接给出本机推荐模型，一点就下载，下完自动加载；失败可重试。"),
             f("刚下载完、从没选过默认模型时，直接发消息也会自动加载第一个模型，不再提示先去选模型。"),

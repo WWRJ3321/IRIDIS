@@ -40,3 +40,4 @@ third_party/qnn-api/
 
 # 2.7.6 vc283: sd.cpp 本机构建目录（scripts/build-sd-native-arm64host.sh），2.7.0 Beta 误提交过
 /build-sd-arm64host/
+build-upscale-arm64host/

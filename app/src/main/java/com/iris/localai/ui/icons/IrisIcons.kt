@@ -128,6 +128,9 @@ object IrisIcons {
     /** 自定义背景 (picture) */
     val Image: ImageVector by lazy { icon("Image", "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3.5 16.5l5-5 4 4 2.5-2.5 5.5 5.5 M15.5 8.5h0.01") }
 
+    /** 附件 · 拍照 (3.0 Beta5) */
+    val Camera: ImageVector by lazy { icon("Camera", "M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z M12 10a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7z") }
+
     /** selected swatch */
     val Check: ImageVector by lazy { icon("Check", "M5 12.5l4.5 4.5L19 7.5") }
 

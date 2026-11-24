@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">अवतार बदलें</string>
     <string name="b4r3_prompt">प्रॉम्प्ट</string>
     <string name="b4r3_copy">कॉपी</string>
+    <string name="b5_take_photo">फ़ोटो लें</string>
+    <string name="b5_no_camera">कोई कैमरा ऐप नहीं मिला</string>
+    <string name="b5_upscale">बड़ा करें</string>
+    <string name="b5_upscale_x">%1$d× बड़ा करें</string>
+    <string name="b5_upscale_dl">मॉडल %1$d%%</string>
+    <string name="b5_upscale_run">%1$d%%</string>
+    <string name="b5_upscale_done">बड़ा करके इतिहास में सहेजा</string>
+    <string name="b5_upscale_failed">बड़ा करना विफल: %1$s</string>
 </resources>

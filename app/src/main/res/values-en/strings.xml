@@ -2396,4 +2396,12 @@
     <string name="b4r2_char_avatar">Change avatar</string>
     <string name="b4r3_prompt">Prompt</string>
     <string name="b4r3_copy">Copy</string>
+    <string name="b5_take_photo">Take photo</string>
+    <string name="b5_no_camera">No camera app found</string>
+    <string name="b5_upscale">Upscale</string>
+    <string name="b5_upscale_x">Upscale %1$d×</string>
+    <string name="b5_upscale_dl">Model %1$d%%</string>
+    <string name="b5_upscale_run">%1$d%%</string>
+    <string name="b5_upscale_done">Upscaled and saved to history</string>
+    <string name="b5_upscale_failed">Upscale failed: %1$s</string>
 </resources>

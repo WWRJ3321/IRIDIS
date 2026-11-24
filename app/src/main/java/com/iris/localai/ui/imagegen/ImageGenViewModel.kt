@@ -126,6 +126,10 @@ data class ImageGenUi(
     val history: List<String> = emptyList(),
     /** disk used by [history]. */
     val historyBytes: Long = 0L,
+    /** Beta5 超分：进行中的那张图、进度 0..1（下载模型时为下载进度）、是否在下模型。 */
+    val upscaling: String? = null,
+    val upscaleProgress: Float = 0f,
+    val upscaleDownloading: Boolean = false,
     val report: String? = null,
     /** sd.cpp — the GPU crashed last time (runs on the CPU until 「重试 GPU」). */
     val sdGpuCrashed: Boolean = false,
@@ -807,6 +811,33 @@ class ImageGenViewModel(app: Application) : AndroidViewModel(app) {
 
     /** parameters embedded in a history image (prompt, seed, size …), null when it has none. */
     suspend fun params(path: String): ImageGenFiles.Params? = withContext(Dispatchers.IO) { repo.params(path) }
+
+    /** Beta5：看图页「放大」——第一次先下模型（17.9 MB），放大结果作为新图存进历史，[onDone] 拿到新图路径。 */
+    fun upscale(path: String, factor: Int, onDone: (String?) -> Unit) {
+        if (_ui.value.upscaling != null) return
+        val ctx = getApplication<Application>()
+        _ui.update { it.copy(upscaling = path, upscaleProgress = 0f, upscaleDownloading = !com.iris.localai.imagegen.Upscaler.modelReady(ctx)) }
+        viewModelScope.launch {
+            val r = runCatching {
+                withContext(Dispatchers.IO) {
+                    com.iris.localai.imagegen.Upscaler.ensureModel(ctx) { b ->
+                        _ui.update { it.copy(upscaleProgress = (b.toFloat() / com.iris.localai.imagegen.Upscaler.MODEL_SIZE).coerceIn(0f, 1f)) }
+                    }
+                }
+                _ui.update { it.copy(upscaleDownloading = false, upscaleProgress = 0f) }
+                val src = java.io.File(path)
+                val png = com.iris.localai.imagegen.Upscaler.upscale(ctx, src, factor) { p -> _ui.update { it.copy(upscaleProgress = p) } }
+                withContext(Dispatchers.IO) { repo.saveUpscaled(src, png, factor) }
+            }
+            r.onSuccess { f ->
+                _ui.update { it.copy(upscaling = null, upscaleDownloading = false, history = listOf(f.path) + it.history.filter { p -> p != f.path }, historyBytes = it.historyBytes + f.length()) }
+                onDone(f.path)
+            }.onFailure { e ->
+                _ui.update { it.copy(upscaling = null, upscaleDownloading = false, error = I18n.s(R.string.b5_upscale_failed, e.message ?: e.javaClass.simpleName)) }
+                onDone(null)
+            }
+        }
+    }
 
     /** 「删除」 in the history (one image or a multi-select), after the page's confirm dialog. */
     fun deleteHistory(paths: Collection<String>) {

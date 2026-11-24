@@ -306,6 +306,22 @@ private fun ChatScreenContent(
     val pickPhotos = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(Attachments.MAX_PER_MESSAGE),
     ) { addPicked(it) }
+    // 3.0 Beta5：附件「拍照」——系统相机写到 cache/camera/，拍完当普通图片附件导入。
+    var cameraFile by rememberSaveable { mutableStateOf<String?>(null) }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val f = cameraFile?.let { java.io.File(it) }
+        cameraFile = null
+        if (ok && f != null && f.length() > 0) addPicked(listOf(androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", f)))
+        else f?.delete()
+    }
+    fun launchCamera() {
+        val dir = java.io.File(context.cacheDir, "camera").apply { mkdirs() }
+        dir.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 86_400_000L }?.forEach { it.delete() }
+        val f = java.io.File(dir, "IMG_" + System.currentTimeMillis() + ".jpg")
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", f)
+        cameraFile = f.path
+        runCatching { takePhoto.launch(uri) }.onFailure { cameraFile = null; vm.showNotice(I18n.s(R.string.b5_no_camera)) }
+    }
     /** 「查看提示内容」 text (null = closed). */
     var promptView by remember { mutableStateOf<String?>(null) }
     // the model pill morphs into the model panel (container transform).
@@ -775,6 +791,7 @@ private fun ChatScreenContent(
                     },
                     onRemoveRef = { r -> refs = refs - r },
                     onHoldToTalkCancel = { if (listening) { listening = false; vm.dictation.cancel(); dictBase?.let { input = it }; dictBase = null } },
+                    onTakePhoto = { if (pending.size >= Attachments.MAX_PER_MESSAGE) vm.showNotice(I18n.s(R.string.chat_926679, Attachments.MAX_PER_MESSAGE)) else launchCamera() },
                     onPickPhotos = { pickPhotos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                     onPickFiles = { pickFiles.launch(arrayOf("*/*")) },
                     onRemoveAttachment = { a -> pending = pending - a; vm.discardAttachments(listOf(a)) },
